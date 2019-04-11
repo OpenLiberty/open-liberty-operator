@@ -1,0 +1,5 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  name: open-liberty-0.0.1
+  namespace: placeholder
