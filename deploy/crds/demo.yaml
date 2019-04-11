@@ -1,0 +1,28 @@
+apiVersion: charts.helm.k8s.io/v1alpha1
+kind: OpenLiberty
+metadata:
+  name: demo4-openliberty
+spec:
+  image:
+    repository: quay.io/arthurdm/microservice-vote
+    tag: latest
+    extraEnvs:
+    - name: "dbUrl"
+      value: "http://couchdb-svc-couchdb:5984"
+    - name: dbUsername
+      valueFrom:
+        secretKeyRef:
+          name: couchdb-couchdb
+          key: adminUsername
+    - name: dbPassword
+      valueFrom:
+        secretKeyRef:
+          name: couchdb-couchdb
+          key: adminPassword 
+
+  replicaCount: 3
+
+  arch:
+    amd64: "3 - Most preferred"
+    ppc64le: "0 - Do not use"
+    s390x: "0 - Do not use"
