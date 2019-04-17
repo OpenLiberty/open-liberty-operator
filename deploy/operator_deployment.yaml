@@ -15,7 +15,7 @@ spec:
       serviceAccountName: open-liberty-operator
       containers:
         - name: open-liberty-operator
-          image: openliberty/operator:1.0.0
+          image: openliberty/operator:0.0.1
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
