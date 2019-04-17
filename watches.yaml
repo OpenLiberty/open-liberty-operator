@@ -1,5 +1,5 @@
 ---
 - version: v1alpha1
-  group: charts.helm.k8s.io
+  group: openliberty.io
   kind: OpenLiberty
   chart: /opt/helm/helm-charts/ibm-open-liberty
