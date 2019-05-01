@@ -68,7 +68,7 @@ for POD in ${PODS[@]}
 do
   kubectl exec -n ${NAMESPACE} ${POD} -- server dump defaultServer
   kubectl cp ${NAMESPACE}/${POD}:/logs ${RELEASE_NAME}/pod/${POD}/logs
-  kubectl cp ${NAMESPACE}/${POD}:/opt/ol/wlp/output/defaultServer ${RELEASE_NAME}/pod/${POD}/output
+  kubectl cp ${NAMESPACE}/${POD}:/opt/ibm/wlp/output/defaultServer ${RELEASE_NAME}/pod/${POD}/output
 done
 
 tar -zcf ${RELEASE_NAME}.tar.gz ${RELEASE_NAME}

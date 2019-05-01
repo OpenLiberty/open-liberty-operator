@@ -1,0 +1,10 @@
+image:
+  repository: websphere-liberty
+  tag: javaee8
+
+service:
+  port: 9080
+  targetPort: 9080
+
+ssl:
+  enabled: false

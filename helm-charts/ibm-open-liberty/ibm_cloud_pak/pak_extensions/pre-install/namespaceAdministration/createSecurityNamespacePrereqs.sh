@@ -1,20 +1,13 @@
 #!/bin/bash
 #
-###############################################################################
-# Copyright (c) 2017 IBM Corp.
-# 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-# 
-#     http://www.apache.org/licenses/LICENSE-2.0
-# 
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-###############################################################################
+#################################################################
+# Licensed Materials - Property of IBM
+# (C) Copyright IBM Corp. 2018.  All Rights Reserved.
+#
+# US Government Users Restricted Rights - Use, duplication or
+# disclosure restricted by GSA ADP Schedule Contract with
+# IBM Corp.
+#################################################################
 #
 # You need to run this script for each namespace.
 #
@@ -24,6 +17,8 @@
 #     ./createSecurityNamespacePrereqs.sh myNamespace
 #
 
+. ../../common/kubhelper.sh
+
 if [ "$#" -lt 1 ]; then
 	echo "Usage: createSecurityNamespacePrereqs.sh NAMESPACE"
   exit 1
@@ -31,11 +26,17 @@ fi
 
 namespace=$1
 
-# Replace the NAMESPACE tag with the namespace specified in a temporary yaml file.
-sed 's/{{ NAMESPACE }}/'$namespace'/g' ibm-open-liberty-rb.yaml > $namespace-ibm-open-liberty-rb.yaml
+kubectl get namespace $namespace &> /dev/null
+if [ $? -ne 0 ]; then
+  echo "ERROR: Namespace $namespace does not exist."
+  exit 1
+fi
 
-# Create the role binding for all service accounts in the current namespace
-kubectl create -f $namespace-ibm-open-liberty-rb.yaml -n $namespace
-
-# Clean up - delete the temporary yaml file.
-rm $namespace-ibm-open-liberty-rb.yaml
+if supports_scc; then
+  echo "Adding all namespace users to SCC..."
+  if command -v oc >/dev/null 2>&1 ; then
+    oc adm policy add-scc-to-group ibm-websphere-liberty-rhel-scc system:serviceaccounts:$namespace
+  else
+    echo "ERROR:  The OpenShift CLI is not available..." 
+  fi
+fi

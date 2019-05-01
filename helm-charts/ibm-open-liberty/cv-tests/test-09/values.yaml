@@ -1,0 +1,7 @@
+image:
+  repository: websphere-liberty
+  tag: javaee8
+
+ingress:
+  enabled: true
+  path: "/CV_RELEASE"

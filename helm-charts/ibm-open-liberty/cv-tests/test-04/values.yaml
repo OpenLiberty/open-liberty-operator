@@ -1,0 +1,14 @@
+image:
+  repository: websphere-liberty
+  tag: microProfile2
+
+service:
+  port: 9080
+  targetPort: 9080
+
+ssl:
+  enabled: false
+
+microprofile:
+  health:
+    enabled: true

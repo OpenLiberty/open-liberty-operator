@@ -1,0 +1,9 @@
+image:
+  repository: hyc-icpcontent-docker-local.artifactory.swg-devops.com/websphere-liberty/trans-logs
+  tag: 19.0.0.1
+
+ssl:
+  enabled: true
+
+logs:
+  persistTransactionLogs: true

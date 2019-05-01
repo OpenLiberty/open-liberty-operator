@@ -1,0 +1,10 @@
+image:
+  repository: websphere-liberty
+  tag: microProfile2
+
+ssl:
+  enabled: true
+
+microprofile:
+  health:
+    enabled: true

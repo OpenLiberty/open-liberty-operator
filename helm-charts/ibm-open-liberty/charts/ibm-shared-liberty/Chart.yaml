@@ -1,6 +1,0 @@
-apiVersion: v1
-description: Shared Liberty Templates (SLT)
-kubeVersion: '>=1.9.0'
-name: ibm-shared-liberty
-tillerVersion: '>=2.7.0'
-version: 1.9.0

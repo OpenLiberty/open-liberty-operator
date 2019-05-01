@@ -1,7 +1,7 @@
 apiVersion: openliberty.io/v1alpha1
 kind: OpenLiberty
 metadata:
-  name: demo4-openliberty
+  name: operator-demo-openliberty
 spec:
   image:
     repository: quay.io/arthurdm/microservice-vote

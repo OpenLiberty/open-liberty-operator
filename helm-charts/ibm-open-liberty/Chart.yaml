@@ -1,20 +1,14 @@
 ###############################################################################
-# Copyright (c) 2017 IBM Corp.
+# Licensed Materials - Property of IBM.
+# Copyright IBM Corporation 2018. All Rights Reserved.
+# U.S. Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Contributors:
+#  IBM Corporation - initial API and implementation
 ###############################################################################
 apiVersion: v1
-description: Open Liberty, an open source runtime for Java microservices & cloud-native apps.
+description: WebSphere Liberty is a fast, dynamic, and easy-to-use Java application server.
 keywords:
   - Open Liberty
   - Liberty
@@ -22,19 +16,16 @@ keywords:
   - server
   - microservices
   - MicroProfile
-  - OpenSource
+  - open source
   - amd64
-  - ppc64le
-  - s390x
-  - ICP
-  - IKS
-home: https://openliberty.io
-icon: https://raw.githubusercontent.com/OpenLiberty/open-liberty/master/images/OpenLiberty-Logo.png
-maintainers:
-  - name: Open Liberty
+  - ICPRHOCP
+home: https://store.docker.com/images/websphere-liberty
+icon: https://developer.ibm.com/wasdev/wp-content/uploads/sites/9/2015/10/liberty-logo-01.png
 name: ibm-open-liberty
 sources:
   - https://github.com/IBM/charts/tree/master/stable
+maintainers:
+  - name: Open Liberty
 version: 1.9.0
-tillerVersion: ">=2.8.0"
-kubeVersion: ">=1.10.11"
+tillerVersion: ">=2.9.1"
+kubeVersion: ">=1.9.0"

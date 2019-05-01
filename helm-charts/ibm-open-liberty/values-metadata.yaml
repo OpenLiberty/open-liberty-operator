@@ -1,17 +1,11 @@
 ###############################################################################
-# Copyright (c) 2017 IBM Corp.
+# Licensed Materials - Property of IBM.
+# Copyright IBM Corporation 2017. All Rights Reserved.
+# U.S. Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Contributors:
+#  IBM Corporation - initial API and implementation
 ###############################################################################
 image:
   __metadata:
@@ -48,13 +42,25 @@ image:
         value: "Never"
       - label: "IfNotPresent"
         value: "IfNotPresent"
-  pullSecret:
+  license:
     __metadata:
-      name: "pullSecret"
-      label: "Image pull secret"
-      description: "If using a registry that requires authentication, the name of the secret containing credentials"
+      name: "license"
+      label: "License"
+      description: "The license state of the image being deployed. Empty (default) for development or 'accept' if you have previously accepted the production license."
       type: "string"
+      immutable: false
       required: false
+      options:
+      - label: "development"
+        value: ""
+      - label: "accept"
+        value: "accept"
+      - label: "core"
+        value: "core"
+      - label: "base"
+        value: "base"
+      - label: "nd"
+        value: "nd"
   readinessProbe:
     __metadata:
       name: "readinessProbe"
@@ -848,3 +854,32 @@ rbac:
       type: "boolean"
       immutable: false
       required: true
+## OpenID Connect Client
+oidcClient:
+  __metadata:
+    label: "OpenID Connect Client"
+    description: "OpenID Connect Client settings that will be passed to the pods as environment variables"
+  enabled:
+    __metadata:
+      label: "Enabled"
+      description: "Set to true to enable security using OpenId Connect."
+      type: "boolean"
+      required: false
+  clientId:
+    __metadata:
+      label: "Client ID"
+      description: "The client ID that has been obtained from the OpenId Connect Provider. OIDC_CLIENT_ID pod environment variable."
+      type: "string"
+      required: false
+  clientSecretName:
+    __metadata:
+      label: "Client secret name"
+      description: "The Kubernetes Secret that holds the client secret which has been obtained from the OpenId Connect Provider. OIDC_CLIENT_SECRET pod environment variable."
+      type: "string"
+      required: false      
+  discoveryURL:
+    __metadata:
+      label: "Discovery URL"
+      description: "The discovery URL of the OpenId Connect Provider. OIDC_DISCOVERY_URL pod environment variable."
+      type: "string"
+      required: false 

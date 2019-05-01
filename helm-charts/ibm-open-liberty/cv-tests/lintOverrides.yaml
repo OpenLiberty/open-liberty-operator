@@ -1,0 +1,41 @@
+# This yaml file contains options to ignore or reduce the severity specific cv 
+# lint messages using regular expression to match on message text.  
+#
+# Ignored message: '\[WARNING\] Parameter is used, but not defined: slt\.[Values|isICP|isMonitoringEnabled|isOpenLiberty|isWebSphereLiberty|isWebSphereLibertyRhel]'
+# Reason: Liberty Helm Chart uses Shared Liberty Templates (SLT), which uses  
+#         the defined parameters, so this message can be safely ignored.
+#
+# Ignored message: '\[ERROR\] Parameter is defined but never used in a template or requirements.yaml: sessioncache.hazelcast.*'
+# Ignored message: '\[ERROR\] parameter is defined but not used: .Values.sessioncache.*'
+# Reason: The option to use Hazelcast as a Session Cache provider is moved to the image layer. Added documentation.
+#
+# Ignored message: '\[WARNING\] Multiple yaml documents defined in single template file: .*shared.yaml'
+# Ignored message: '\[WARNING\] templates/shared.yaml: multiple YAML documents in one file is not allowed (OneYAMLDocPerFile)'
+# Reason: Liberty Helm Chart uses Shared Liberty Templates (SLT) to get common template. 
+#         The subchart composes the resources, based on the defined logic, into one yaml file.
+#
+# Ignored message: '\[WARNING\] Description is too long.*'
+# Ignored message: '\[WARNING\] values-metadata.yaml: description may be too long to render properly in the ICP UI.*'
+# Reason: The long description is needed to give users meaningful information. Verified that even 
+#         the longest message we have is rendered correctly by UI. So this message can be safely ignored.
+#
+# Ignored message: '\[WARNING\] Use of \"storageClassName\" should be within conditional logic which uses.*'
+# Reason: This seems to be an issue with linter. Don't see what's the issue with chart.
+#
+# Ignored message: '\[INFO\] No version of SCH was found in chart templates'
+# Reason: Changing the charts to use SCH requires some effort and also testing to verify, at this point it's not feasible.
+#
+# Ignored message: \[WARNING\] Missing optional readme sections: \"PodSecurityPolicy Requirements\" in README.md'
+# Reason: RHOS-only chart and PodSecurityPolicy does not apply to the chart.
+#
+ignoreMessages:
+  - '\[INFO\] No version of SCH was found in chart templates'
+  - '\[WARNING\] Parameter is used, but not defined: slt\.[Values|isICP|isMonitoringEnabled|isOpenLiberty|isWebSphereLiberty|isWebSphereLibertyRhel]'
+  - '\[ERROR\] Parameter is defined but never used in a template or requirements.yaml: sessioncache.hazelcast.*'
+  - '\[ERROR\] parameter is defined but not used: .Values.sessioncache.*'
+  - '\[WARNING\] Description is too long.*'
+  - '\[WARNING\] values-metadata.yaml: description may be too long to render properly in the ICP UI.*'
+  - '\[WARNING\] Multiple yaml documents defined in single template file: .*shared.yaml'
+  - '\[WARNING\] templates/shared.yaml: multiple YAML documents in one file is not allowed \(OneYAMLDocPerFile\)'
+  - '\[WARNING\] Use of \"storageClassName\" should be within conditional logic which uses.*'
+  - '\[WARNING\] Missing optional readme sections: \"PodSecurityPolicy Requirements\" in README.md'
