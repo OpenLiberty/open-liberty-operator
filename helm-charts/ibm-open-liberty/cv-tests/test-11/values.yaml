@@ -1,8 +1,10 @@
 image:
-  repository: websphere-liberty
+  repository: open-liberty
   tag: javaee8
+  pullPolicy: Always
 
 ingress:
   enabled: true
   secretName: "CV_RELEASE-ing-tls"
-  path: "/CV_RELEASE"
+  path: "/"
+  host: "CV_RELEASE.IP.nip.io"

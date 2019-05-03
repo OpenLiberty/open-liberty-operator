@@ -12,11 +12,17 @@ command -v kubectl > /dev/null 2>&1 || { echo "kubectl pre-req is missing."; exi
 
 # Process parameters notify of any unexpected
 while test $# -gt 0; do
-  [[ $1 =~ ^-c|--chartrelease$ ]] && { chartRelease="$2"; shift 2; continue; };
-  echo "Parameter not recognized: $1, ignored"
-  shift
+	[[ $1 =~ ^-c|--chartrelease$ ]] && { chartRelease="$2"; shift 2; continue; };
+	echo "Parameter not recognized: $1, ignored"
+	shift
 done
 : "${chartRelease:="default"}"
+
+if [ "$CV_TEST_PROD" == "ics" ]
+then
+	printf "This test is invalid in this environment..."
+	exit 0
+fi
 
 echo "Testing ingress:"
 
@@ -36,7 +42,7 @@ until [ -n "$ingress_secret_name" ]; do
     i=$((i+1))
     if [ $i -gt 10 ]
     then
-      printf " Could not get secret name of the ingress\n"
+			printf " Could not get secret name of the ingress\n"
       kubectl get ing -o json
       exit 2
     fi
@@ -44,20 +50,22 @@ until [ -n "$ingress_secret_name" ]; do
 done
 
 # Check whether the secret is created
+# Example of getting secret name: kubectl get secret test-02-ibm-open-liberty-tls -o jsonpath="{.metadata.name}"
+
 kubectl get secret $ingress_secret_name
 if [ $? -eq 0 ]
 then
-  echo "Secret name matched"
+	echo "Secret name matched"
 else
-  echo "Secret name does not match"
-  kubectl get secret
-  exit 3
+	echo "Secret name does not match"
+	kubectl get secret
+	exit 3
 fi
 
-ingress_ip=$(kubectl get ing -l release=${chartRelease} -o jsonpath="{.items[0].status.loadBalancer.ingress[*]['hostname','ip']}")
+ingress_ip=$(kubectl get ing -l release=${chartRelease} -o jsonpath="{.items[0].status.loadBalancer.ingress[0].ip}")
 until [ -n "$ingress_ip" ]; do
     printf '.'
-    ingress_ip=$(kubectl get ing -l release=${chartRelease} -o jsonpath="{.items[0].status.loadBalancer.ingress[*]['hostname','ip']}")
+    ingress_ip=$(kubectl get ing -l release=${chartRelease} -o jsonpath="{.items[0].status.loadBalancer.ingress[0].ip}")
     i=$((i+1))
     if [ $i -gt 10 ]
 
@@ -71,9 +79,10 @@ done
 
 # Hit the ingress endpoint
 # NOTE: /$chartRelease is setup in the test's values.yaml -> .Values.ingress.path
-ingress_url=https://$ingress_ip:3443/$chartRelease
+nipIO=".nip.io"
+ingress_url=https://${chartRelease}.${ingress_ip}${nipIO}
 printf "Checking if the ingress endpoint '$ingress_url' is available\n"
-curl -k --connect-timeout 180 --output /dev/null --head --fail $ingress_url
+curl -k --connect-timeout 180 --output /dev/null --head --fail --silent $ingress_url
 _testResult=$?
 
 if [ $_testResult -eq 0 ]; then
@@ -81,7 +90,6 @@ if [ $_testResult -eq 0 ]; then
 else
   echo "FAIL - Could not reach ingress"
 fi
-
 
 # Check the functionality of the secret
 curl $ingress_url -v -k > website_response 2> extra_stuff
@@ -93,15 +101,23 @@ cat need | grep CN | cut -d "=" -f 3 > needdd
 
 check="$(cat needdd)"
 # need to grab subject in secret
-if [ "$check" != "Kubernetes Ingress Controller Fake Certificate" ]
+if [ "$check" != "${chartRelease}.${ingress_ip}${nipIO}" ]
 then
-  printf "tls_subject does not match\n"
-  exit 5
+	printf "tls_subject does not match\n"
+	exit 5
 else
-  printf "tls is working properly\n"
+	printf "tls is working properly\n"
 fi
 
 rm website_response
 rm extra_stuff
 rm need
 rm needdd
+
+_testResult=0
+if [ $_testResult -eq 0 ]; then
+  echo "SUCCESS - Ingress secret name is working"
+else
+  echo "FAIL - Ingress secret name did not work"
+fi
+exit $_testResult

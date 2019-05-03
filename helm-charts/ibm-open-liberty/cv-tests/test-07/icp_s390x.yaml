@@ -1,10 +1,12 @@
 image:
   repository: hyc-icpcontent-docker-local.artifactory.swg-devops.com/open-liberty/trans-logs
   tag: 19.0.0.3
-  pullSecret: hyc-icpcontent-docker-local.artifactory.swg-devops.com
 
 ssl:
   enabled: true
 
 logs:
   persistTransactionLogs: true
+
+persistence:
+  useDynamicProvisioning: false

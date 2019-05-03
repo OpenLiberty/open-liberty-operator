@@ -12,11 +12,13 @@ command -v kubectl > /dev/null 2>&1 || { echo "kubectl pre-req is missing."; exi
 
 # Process parameters notify of any unexpected
 while test $# -gt 0; do
+  [[ $1 =~ ^-e|--ipAddress$ ]] && { ipAddress="$2"; shift 2; continue; };
 	[[ $1 =~ ^-c|--chartrelease$ ]] && { chartRelease="$2"; shift 2; continue; };
 	echo "Parameter not recognized: $1, ignored"
 	shift
 done
 : "${chartRelease:="default"}"
+: "${ipAddress:=""}"
 
 # Setup and execute application test on installation
 echo "Running application test"
@@ -25,7 +27,20 @@ echo "Testing Persist Transaction Logs"
 
 # Get the NodePort service
 full_name=$(kubectl get statefulset -l release=${chartRelease} -o jsonpath="{.items[0].metadata.name}")
-node_ip=$CV_TEST_INSTANCE_ADDR
+
+if [ "$CV_TEST_PROD" == "ics" ]
+then
+	printf "This test is invalid in this environment..."
+	exit 0
+else
+  if [ -z "$ipAddress" ]
+  then
+    node_ip=$(kubectl get nodes -o jsonpath="{.items[0].status.addresses[0].address}")
+  else
+    node_ip=${ipAddress}
+  fi
+fi
+
 node_port=$(kubectl get services -l release=${chartRelease} -o jsonpath="{.items[?(@.spec.type==\"NodePort\")].spec.ports[0].nodePort}")
 nodeport_url=https://$node_ip:$node_port
 printf "Found ${full_name} endpoint: ${nodeport_url}\n"
@@ -40,10 +55,10 @@ kubectl delete pods ${full_name}-0
 # Wait for the pod to be available again
 printf 'Waiting for to the txlog app to be available'
 i=0
-restult=$(curl -k --connect-timeout 180 --silent $nodeport_url/txlog?test=ready) || true
-until [[ $restult = *"COMPLETED SUCCESSFULLY"* ]]; do
+result=$(curl -k --connect-timeout 180 --silent $nodeport_url/txlog?test=ready) || true
+until [[ $result = *"COMPLETED SUCCESSFULLY"* ]]; do
   printf '.'
-  restult=$(curl -k --connect-timeout 180 --silent $nodeport_url/txlog?test=ready) || true
+  result=$(curl -k --connect-timeout 180 --silent $nodeport_url/txlog?test=ready) || true
   i=$((i+1))
   if [ $i -gt 10 ]
   then
@@ -55,10 +70,10 @@ done
 
 printf '\nChecking the test results\n'
 i=1
-restult=$(curl -k --connect-timeout 180 --silent $nodeport_url/txlog?test=check) || true
-until [[ $restult = *"COMPLETED SUCCESSFULLY"* ]]; do
-  restult=$(curl -k --connect-timeout 180 --silent $nodeport_url/txlog?test=check) || true
-  printf "Check $i of 10:\n$restult\n"
+result=$(curl -k --connect-timeout 180 --silent $nodeport_url/txlog?test=check) || true
+until [[ $result = *"COMPLETED SUCCESSFULLY"* ]]; do
+  result=$(curl -k --connect-timeout 180 --silent $nodeport_url/txlog?test=check) || true
+  printf "Check $i of 10:\n$result\n"
   i=$((i+1))
   if [ $i -gt 10 ]
   then

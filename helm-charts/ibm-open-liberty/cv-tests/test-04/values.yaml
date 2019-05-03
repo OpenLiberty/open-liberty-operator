@@ -1,6 +1,7 @@
 image:
-  repository: websphere-liberty
+  repository: open-liberty
   tag: microProfile2
+  pullPolicy: Always
 
 service:
   port: 9080

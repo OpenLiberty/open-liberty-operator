@@ -30,8 +30,8 @@ done
 command -v kubectl > /dev/null 2>&1 || { echo "kubectl pre-req is missing."; exit 1; }
 
 # Delete the secret
-kubectl delete -f $preinstallDir/pre-install/secret.yaml
-
-rm -r $preinstallDir/pre-install/secret.yaml
-rm -r $preinstallDir/pre-install/$chartRelease.crt
-rm -r $preinstallDir/pre-install/$chartRelease.key
+if [ "$CV_TEST_PROD" != "ics" ]
+then
+    kubectl delete -f $preinstallDir/pre-install/ingress.yaml
+fi
+rm -r $preinstallDir/pre-install/ingress.yaml

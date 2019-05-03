@@ -25,10 +25,16 @@ command -v kubectl > /dev/null 2>&1 || { echo "kubectl pre-req is missing."; exi
 
 # Process parameters notify of any unexpected
 while test $# -gt 0; do
-  [[ $1 =~ ^-c|--chartrelease$ ]] && { chartRelease="$2"; shift 2; continue; };
-  echo "Parameter not recognized: $1, ignored"
-  shift
+	[[ $1 =~ ^-c|--chartrelease$ ]] && { chartRelease="$2"; shift 2; continue; };
+    echo "Parameter not recognized: $1, ignored"
+    shift
 done
 : "${chartRelease:="default"}" 
 
-sed -i.bak "s/{{ .cv.release }}/$chartRelease/g" "$preinstallDir/../values.yaml"
+if [ "$CV_TEST_PROD" == "ics" ]
+then
+	printf "This test is invalid in this environment..."
+	exit 0
+fi
+
+sed -i.bak "s/CV_RELEASE/$chartRelease/g" "$preinstallDir/../values.yaml"

@@ -1,3 +1,4 @@
 The clusterAdministration directory contains scripts that an IBM Cloud Private cluster admininistrator needs to perform before installing the chart:
 
-* Create SecurityContextConstraints
+* Create ClusterRoles
+* Create PodSecurityPolicy

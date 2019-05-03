@@ -1,10 +1,9 @@
-image:
-  repository: websphere-liberty
-  tag: javaee8
-
 ssl:
   enabled: true
 
 microprofile:
   health:
     enabled: false
+    
+image:
+  pullPolicy: Always

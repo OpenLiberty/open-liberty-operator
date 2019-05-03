@@ -59,9 +59,9 @@ metadata:
 {{ toYaml . | indent 4 }}
 {{- end }}
 spec:
-  {{- if $root.Values.ssl.enabled }}
+  {{- if and $root.Values.ssl.enabled $root.Values.ingress.host }}
   tls:
-  - secretName: {{ default (printf "%s-tls" $fullname) $root.Values.ingress.secretName }}
+  - secretName: {{ $root.Values.ingress.secretName }}
     {{- if $root.Values.ingress.host }}
     hosts:
     - {{ $root.Values.ingress.host }}
@@ -77,28 +77,5 @@ spec:
       {{- if $root.Values.ingress.host }}
       host: {{ $root.Values.ingress.host }}
       {{- end -}}
-{{- end }}
-{{- end -}}
-
-{{- define "slt.ingress.secret" -}}
-  {{- $params := . -}}
-  {{- $root := first $params -}}
-{{- if and $root.Values.ssl.enabled (not $root.Values.ingress.secretName) }}
----
-{{- $hostname := default "localhost" $root.Values.ingress.host -}}
-{{- $cert := genSelfSignedCert $hostname nil (list $hostname) 365 }}
-apiVersion: v1
-kind: Secret
-metadata:
-  labels:
-    chart: "{{ $root.Chart.Name }}-{{ $root.Chart.Version | replace "+" "_" }}"
-    app: {{ include "slt.utils.fullname" (list $root) }}
-    release: "{{ $root.Release.Name }}"
-    heritage: "{{ $root.Release.Service }}"
-  name: "{{ include "slt.utils.fullname" (list $root) }}-tls"
-type: Opaque
-data:
-  tls.crt: {{ b64enc $cert.Cert }}
-  tls.key: {{ b64enc $cert.Key }}
 {{- end }}
 {{- end -}}

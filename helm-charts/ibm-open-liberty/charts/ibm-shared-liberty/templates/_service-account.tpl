@@ -32,5 +32,8 @@ metadata:
     heritage: "{{ $root.Release.Service }}"
 imagePullSecrets:
   - name: sa-{{ $root.Release.Namespace }}
+{{- if $root.Values.image.pullSecret }}
+  - name: {{ $root.Values.image.pullSecret }}
+{{- end }}
 {{ end }}
 {{- end -}}

@@ -29,6 +29,7 @@ metadata:
     app: {{ $name }}
   annotations:
     "helm.sh/hook": test-success
+    "helm.sh/hook-delete-policy": hook-succeeded
 spec:
   affinity:
 {{- include "slt.affinity.nodeaffinity" (list .) | indent 2 }}
