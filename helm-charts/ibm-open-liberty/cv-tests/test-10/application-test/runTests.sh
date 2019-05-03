@@ -18,6 +18,12 @@ while test $# -gt 0; do
 done
 : "${chartRelease:="default"}"
 
+if [ "$CV_TEST_PROD" == "ics" ]
+then
+	printf "This test is invalid in this environment..."
+	exit 0
+fi
+
 echo "Testing ingress:"
 
 # Check if any ingress is deoployed for the relase
@@ -26,15 +32,23 @@ if [ "$(kubectl get ing -l release=${chartRelease} -o jsonpath="{.items}")" = "[
   exit 1
 fi
 
-[[ `dirname $0 | cut -c1` = '/' ]] && appDir=`dirname $0`/ || appDir=`pwd`/`dirname $0`/
-ingress_ip=$(cat $appDir/../values.yaml | grep host | cut -d: -f 2 | sed 's/"//g')
-endpoint=$(cat $appDir/../values.yaml | grep path | cut -d: -f 2 | sed 's/"//g')
-echo $ingress_ip $endpoint
+i=0
+ingress_ip=$(kubectl get ing -l release=${chartRelease} -o jsonpath="{.items[0].status.loadBalancer.ingress[0].ip}")
+until [ -n "$ingress_ip" ]; do
+    printf '.'
+    ingress_ip=$(kubectl get ing -l release=${chartRelease} -o jsonpath="{.items[0].status.loadBalancer.ingress[0].ip}")
+    i=$((i+1))
+    if [ $i -gt 10 ]
+    then
+      printf "Could not get IP of the ingress\n"
+      kubectl get ing -o json
+      exit 4
+    fi
+    sleep 15
+done
 
-# Hit the ingress endpoint
-newIP=$(echo -e ${ingress_ip} | sed -e 's/^[[:space:]]*//')
-newEndpoint=$(echo -e ${endpoint} | sed -e 's/^[[:space:]]*//')
-ingress_url=https://$newIP:3443$newEndpoint
+nipIO=".nip.io"
+ingress_url=https://${ingress_ip}${nipIO}/${chartRelease}
 printf "\nChecking if the ingress endpoint '$ingress_url' is available\n"
 curl -k --connect-timeout 180 --output /dev/null --head --fail $ingress_url
 _testResult=$?

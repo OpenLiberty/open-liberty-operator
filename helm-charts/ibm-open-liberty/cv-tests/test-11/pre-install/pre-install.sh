@@ -31,8 +31,42 @@ while test $# -gt 0; do
 done
 : "${chartRelease:="default"}" 
 
+if [ "$CV_TEST_PROD" == "ics" ]
+then
+	ingress_ip="1.1.1.1"
+else
+echo "
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: ${chartRelease}-test-ingress
+spec:
+  backend:
+    serviceName: testsvc
+    servicePort: 80
+" > "$preinstallDir/ingress.yaml"
+kubectl create -f "$preinstallDir/ingress.yaml"
+
+i=0
+ingress_ip=$(kubectl get ing ${chartRelease}-test-ingress -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+until [ -n "$ingress_ip" ]; do
+    printf '.'
+    ingress_ip=$(kubectl get ing ${chartRelease}-test-ingress -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+    i=$((i+1))
+    if [ $i -gt 10 ]
+
+    then
+      printf " Could not get IP of the ingress\n"
+      kubectl get ing -o json
+      exit 2
+    fi
+    sleep 15
+done
+fi
+
+nipIO=".nip.io"
 # Create temporary tls.key and tls.crt
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout $preinstallDir/$chartRelease.key -out $preinstallDir/$chartRelease.crt -subj "/CN=ingress-test"
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout "$preinstallDir/$chartRelease.key" -out "$preinstallDir/$chartRelease.crt" -subj "/CN=${chartRelease}.${ingress_ip}${nipIO}/O=${chartRelease}.${ingress_ip}${nipIO}"
 
 # Create temporary secrect.yaml file
 echo "
@@ -43,9 +77,10 @@ metadata:
 data:
   tls.crt: `base64 -w 0 $preinstallDir/$chartRelease.crt`
   tls.key: `base64 -w 0 $preinstallDir/$chartRelease.key`
-" > $preinstallDir/secret.yaml
+" > "$preinstallDir/secret.yaml"
 
 # Create secret for Object store server credential
-kubectl create -f $preinstallDir/secret.yaml
+kubectl create -f "$preinstallDir/secret.yaml"
 
-sed -i.bak "s/CV_RELEASE/$chartRelease/g" "$preinstallDir/../values.yaml"
+
+sed -i.bak "s/CV_RELEASE/$chartRelease/g; s/IP/$ingress_ip/g;" "$preinstallDir/../values.yaml"

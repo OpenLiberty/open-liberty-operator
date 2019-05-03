@@ -7,10 +7,10 @@ Shared templates:
 Usage of "slt.shared.templates.*" requires the following line be include at 
 the begining of template:
 {{- include "slt.config.init" (list . "slt.chart.config.values") -}}
- 
+ 
 ********************************************************************
-*** This file is shared across multiple charts, and changes must be 
-*** made in centralized and controlled process. 
+*** This file is shared across multiple charts, and changes must be 
+*** made in centralized and controlled process. 
 *** Do NOT modify this file with chart specific changes.
 *****************************************************************
 */ -}}
@@ -29,7 +29,6 @@ This is included by the product (parent) chart (see templates/shared.yaml in par
 {{ include "slt.deployment" . }}
 {{ include "slt.job.secret.generator" . }}
 {{ include "slt.ingress" . }}
-{{ include "slt.ingress.secret" . }}
 {{ include "slt.hpa" . }}
 {{ include "slt.security.context.pod" . }}
 {{ include "slt.security.context.container" . }}

@@ -21,6 +21,36 @@ while test $# -gt 0; do
 done
 : "${chartRelease:="default"}"
 
-newIP=$CV_TEST_INSTANCE_ADDR
+echo "
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: ${chartRelease}-test-ingress
+spec:
+  backend:
+    serviceName: testsvc
+    servicePort: 80
+" > "$preinstallDir/ingress.yaml"
 
-sed -i.bak "s/CV_RELEASE/$chartRelease/g; s/CV_HOST/$newIP/g;" "$preinstallDir/../values.yaml"
+if [ "$CV_TEST_PROD" == "ics" ]
+then
+	ingress_ip="1.1.1.1"
+else
+  kubectl create -f "$preinstallDir/ingress.yaml"
+  i=0
+  ingress_ip=$(kubectl get ing ${chartRelease}-test-ingress -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+  until [ -n "$ingress_ip" ]; do
+      printf '.'
+      ingress_ip=$(kubectl get ing ${chartRelease}-test-ingress -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+      i=$((i+1))
+      if [ $i -gt 10 ]
+
+      then
+        printf " Could not get IP of the ingress\n"
+        kubectl get ing -o json
+        exit 2
+      fi
+      sleep 15
+  done
+fi
+sed -i.bak "s/CV_RELEASE/$chartRelease/g; s/CV_HOST/$ingress_ip.nip.io/g;" "$preinstallDir/../values.yaml"

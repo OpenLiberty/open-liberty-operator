@@ -14,7 +14,7 @@
 # limitations under the License.
 ###############################################################################
 {{- include "slt.config.init" (list . "slt.chart.config.values") -}}
-{{ if .Values.logs.persistLogs }}
+{{ if and .Values.logs.persistLogs (contains "icp" .Capabilities.KubeVersion.GitVersion) }}
 {{- $name := include "slt.utils.name" (list .) -}}
 {{- $fullname := include "slt.utils.fullname" (list .) }}
 apiVersion: v1
@@ -28,6 +28,7 @@ metadata:
     app: {{ $name }}
   annotations:
     "helm.sh/hook": test-success
+    "helm.sh/hook-delete-policy": hook-succeeded
 spec:
   affinity:
 {{- include "slt.affinity.nodeaffinity" (list .) | indent 2 }}

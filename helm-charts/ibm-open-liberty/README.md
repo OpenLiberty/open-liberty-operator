@@ -1,20 +1,103 @@
-# WebSphere Liberty Helm Chart for RHOS
+# Open Liberty Helm Chart
 
-## Introduction
+## Introduction 
 
-WebSphere Liberty is a fast, dynamic, and easy-to-use Java EE application server. Ideal for developers, but also ready for production, Liberty is a combination of IBM technology and open source software, with fast startup times (<2 seconds), and a simple XML configuration. All in a package that's <70 MB to download. You can be developing applications in no time. With a flexible, modular runtime, you can download additional features from the Liberty Repository or strip it back to the essentials for deployment into production environments. Everything in Liberty is designed to help you get your job done how you want to do it.
+Open Liberty provides developers with proven Java EE 7 technology and the latest Eclipse MicroProfile™ capabilities for building microservices. Building cloud-native apps and microservices has never been more efficient, since you only have to run what you need. Our goal is to give you just enough to get the job done without getting in your way.
 
 ## Resources Required
 
+### System resources
+- CPU Requested : 500m (500 millicpu)
+- Memory Requested : 512Mi (~ 537 MB)
+
+### Storage
 A persistent volume is required, if you plan on using the transaction service within Liberty. The `server.xml` Liberty configuration file must be configured to place the transaction log on this volume so that it persists, if the server fails and restarts.
-
-## Accessing WebSphere Liberty
-
-From a browser, use http://*external-ip*:*nodeport* to access the application.
 
 ## Chart Details
 
+  - Installs one `Deployment` or `StatefulSet` running Open Liberty image
+  - Installs a `Service` and optionally an `Ingress`
+  to route traffic to Open Liberty server
+  - Optionally persistence can be configured to retain server logs and transaction logs
+
 ## Prerequisites
+
+### PodSecurityPolicy Requirements
+
+This chart requires a PodSecurityPolicy to be bound to the target namespace prior to installation. Choose either a predefined PodSecurityPolicy or have your cluster administrator create a custom PodSecurityPolicy for you:
+
+* Predefined PodSecurityPolicy name: [`ibm-restricted-psp`](https://ibm.biz/cpkspec-psp)
+* Custom PodSecurityPolicy definition:
+
+```yaml
+apiVersion: extensions/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: ibm-open-liberty-psp
+spec:
+  allowPrivilegeEscalation: false
+  forbiddenSysctls:
+  - '*'
+  fsGroup:
+    ranges:
+    - max: 65535
+      min: 1
+    rule: MustRunAs
+  requiredDropCapabilities:
+  - ALL
+  runAsUser:
+    rule: MustRunAsNonRoot
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    ranges:
+    - max: 65535
+      min: 1
+    rule: MustRunAs
+  volumes:
+  - configMap
+  - emptyDir
+  - projected
+  - secret
+  - downwardAPI
+  - persistentVolumeClaim
+```
+
+* Custom ClusterRole for the custom PodSecurityPolicy:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ibm-open-liberty-clusterrole
+rules:
+- apiGroups:
+  - extensions
+  resourceNames:
+  - ibm-open-liberty-psp
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - use
+```
+
+#### Configuration scripts can be used to create the required resources
+
+Download the following scripts located at [/ibm_cloud_pak/pak_extensions/pre-install](https://github.com/IBM/charts/tree/master/stable/ibm-open-liberty/ibm_cloud_pak/pak_extensions/pre-install) directory.
+
+* The pre-install instructions are located at `clusterAdministration/createSecurityClusterPrereqs.sh` for cluster admins to create the PodSecurityPolicy and ClusterRole for all releases of this chart.
+
+* The namespace scoped instructions are located at `namespaceAdministration/createSecurityNamespacePrereqs.sh` for team admin/operator to create the RoleBinding for the namespace. This script takes one argument; the name of a pre-existing namespace where the chart will be installed.
+  * Example usage: `./createSecurityNamespacePrereqs.sh myNamespace`
+
+#### Configuration scripts can be used to clean up resources created
+
+Download the following scripts located at [/ibm_cloud_pak/pak_extensions/post-delete](https://github.com/IBM/charts/tree/master/stable/ibm-open-liberty/ibm_cloud_pak/pak_extensions/post-delete) directory.
+
+* The post-delete instructions are located at `clusterAdministration/deleteSecurityClusterPrereqs.sh` for cluster admins to delete the PodSecurityPolicy and ClusterRole for all releases of this chart.
+
+* The namespace scoped instructions are located at `namespaceAdministration/deleteSecurityNamespacePrereqs.sh` for team admin/operator to delete the RoleBinding for the namespace. This script takes one argument; the name of the namespace where the chart was installed.
+  * Example usage: `./deleteSecurityNamespacePrereqs.sh myNamespace`
 
 ### Red Hat OpenShift `SecurityContextConstraints` Requirements
 
@@ -34,7 +117,7 @@ This chart defines a custom `SecurityContextConstraints` which can be used to fi
   kind: SecurityContextConstraints
   metadata:
     annotations:
-    name: ibm-websphere-liberty-rhel-scc
+    name: ibm-open-liberty-scc
   allowHostDirVolumePlugin: false
   allowHostIPC: false
   allowHostNetwork: false
@@ -82,39 +165,44 @@ This chart defines a custom `SecurityContextConstraints` which can be used to fi
 
 ### Limitations
 
-Please refer to the Release Notes.
+See [RELEASENOTES.md](https://github.com/IBM/charts/tree/master/stable/ibm-open-liberty/RELEASENOTES.md)
 
 ### Installing the Chart
 
 The Helm chart has the following values that can be overridden by using `--set name=value`. For example:
 
-```bash
-$ helm repo add ibm-charts https://raw.githubusercontent.com/IBM/charts/master/repo/stable/
-$ helm install --tls --name my-release --set resources.constraints.enabled=true --set autoscaling.enabled=true --set autoscaling.minReplicas=2 ibm-charts/ibm-websphere-liberty-rhel --debug
-```
+*    `helm repo add ibm-charts https://raw.githubusercontent.com/IBM/charts/master/repo/stable/`
+*    `helm install --name open-liberty --set resources.constraints.enabled=true --set autoscaling.enabled=true --set autoscaling.minReplicas=2 ibm-charts/ibm-open-liberty --debug`
+
+### Verifying the Chart
+
+See the instruction after the helm installation completes for chart verification. The instruction can also be displayed by viewing the installed helm release under Menu -> Workloads -> Helm Releases or by running the command: helm status `my-release` --tls.
+
 
 ### Uninstalling the Chart
 
 To uninstall/delete the `my-release` deployment:
 
 ```bash
-$ helm delete my-release --purge --tls
+helm delete my-release --purge --tls
 ```
 
-The command removes all the Kubernetes components associated with the chart and deletes the release.
+This command removes all the Kubernetes components associated with the chart, except any persistent volume claims (PVCs) which is created when `logs.persistLogs` or `logs.persistTransactionLogs` is set to `true`. This is the default behavior of Kubernetes, and ensures that valuable data is not deleted. In order to delete the server data, you can delete the PVC using the following command:
 
-#### Cleanup any prerequisite resources that were created
+```bash
+kubectl delete pvc my-pvc
+```
 
-Run cleanup scripts included in the `pak_extensions/post-delete` directory to clean up namespace and cluster scoped resources when appropriate.
+Note: You can use `kubectl get pvc` to see the list of available PVCs.
 
-### Configuration
+### Configuration 
 
 | Qualifier | Parameter  | Definition | Allowed Value |
 |---|---|---|---|
 | `image`   | `pullPolicy` | Image Pull Policy | `Always`, `Never`, or `IfNotPresent`. Defaults to `Always` if `:latest` tag is specified, or `IfNotPresent` otherwise. See Kubernetes - [Updating Images](https://kubernetes.io/docs/concepts/containers/images/#updating-images)  |
 |           | `repository` | Name of image, including repository prefix (if required). | See Docker - [Extended tag description](https://docs.docker.com/engine/reference/commandline/tag/#parent-command) |
 |           | `tag`        | Docker image tag. | See Docker - [Tag](https://docs.docker.com/engine/reference/commandline/tag/) |
-|           | `license`    |  The license state of the image being deployed. | `Empty` (default) for development. `accept` if you have previously accepted the production license. `base` `core` or `nd` to apply the license at deployment time (see below). |
+|           | `pullSecret`        | Image pull secret, if using a Docker registry that requires credentials. | See Kubernetes - [ImagePullSecrets](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-imagepullsecrets-to-a-service-account) |
 |           | `readinessProbe`       | Configure when container is ready to start accepting traffic. Use this to override the default readiness probe configuration. See [Configure Liveness and Readiness Probes](#configure-liveness-and-readiness-probes) for more information. | YAML object of readiness probe |
 |           | `livenessProbe`        | Configure when to restart container. Use this to override the default liveness probe configuration. See [Configure Liveness and Readiness Probes](#configure-liveness-and-readiness-probes) for more information. | YAML object of liveness probe |
 |           | `extraEnvs`        | Extra environment variables for the image. | YAML array of environment variables |
@@ -156,11 +244,11 @@ Run cleanup scripts included in the `pak_extensions/post-delete` directory to cl
 | `ingress` | `enabled`        | Specifies whether to use ingress.        |  `false` (default) or `true`  |
 |           | `rewriteTarget`  | Specifies the target URI where the traffic must be redirected. | See Kubernetes - Annotation `ingress.kubernetes.io/rewrite-target` - [Rewrite Target](https://github.com/kubernetes/ingress-nginx/tree/master/docs/examples/rewrite)  |
 |           | `path`           | Specifies the path for the Ingress HTTP rule.    |  See Kubernetes - [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/)  |
-|           | `host`           | Specifies a fully qualified domain names of Ingress, as defined by RFC 3986. |  See [Ingress configuration](#ingress-configuration) for more into on this. |
-|           | `secretName`     | Specifies the name of the Kubernetes secret that contains Ingress' TLS certificate and key.   |  See [Ingress configuration](#ingress-configuration) for more into on this. |
+|           | `host`           | Specifies a fully qualified domain names of Ingress, as defined by RFC 3986. |  See [Ingress configuration](#ingress-configuration) for more info on this. |
+|           | `secretName`     | Specifies the name of the Kubernetes secret that contains Ingress' TLS certificate and key.   |  See [Ingress configuration](#ingress-configuration) for more info on this. |
 |           | `labels`         | Specifies custom labels.         |  YAML object of labels  |
 |           | `annotations`    | Specifies custom annotations.    |  YAML object of annotations  |
-| `persistence` | `name`                   | Descriptive name that will be used as a prefix for the generated persistence volume claim. A volume is only bound if either `tranlog.persistLogs` or `logs.persistLogs` is set to `true`. | |
+| `persistence` | `name`                   | Descriptive name that will be used as a prefix for the generated persistence volume claim. A volume is only bound if either `logs.persistTransactionLog` or `logs.persistLogs` is set to `true`. | |
 |             | `useDynamicProvisioning` | If `true`, the persistent volume claim will use the storageClassName to bind the volume. If `storageClassName` is not set then it will use the default StorageClass setup by kube Administrator.  If `false`, the selector will be used for the binding process. | `true` (default) or `false` |
 |             | `fsGroupGid`             | Defines file system group ID for volumes that support ownership management. This value is added to the container’s supplemental groups.  | `nil` |
 |             | `storageClassName`       | Specifies a StorageClass pre-created by the Kubernetes sysadmin. When set to `""`, then the PVC is bound to the default `storageClass` setup by kube Administrator. | |
@@ -184,32 +272,36 @@ Run cleanup scripts included in the `pak_extensions/post-delete` directory to cl
 |           | `limits.memory`       | Describes the maximum amount of memory allowed. | Default is `512Mi`. See Kubernetes - [meaning of Memory](https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#meaning-of-memory) |
 |           | `requests.cpu`        | Describes the minimum amount of CPU required. If not specified, the CPU amount will default to the limit (if specified) or implementation-defined value. | Default is 500m. See Kubernetes - [meaning of CPU](https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#meaning-of-cpu) |
 |           | `requests.memory`     | Describes the minimum amount of memory required. If not specified, the memory amount will default to the limit (if specified) or the implementation-defined value. | Default is 512Mi. See Kubernetes - [meaning of Memory](https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#meaning-of-memory) |
+| `arch`    | `amd64` | Architecture preference for amd64 worker node.   | `0 - Do not use`, `1 - Least preferred`, `2 - No preference` (default) or `3 - Most preferred`  |
+|           | `ppc64le`          | Architecture preference for ppc64le worker node. | `0 - Do not use`, `1 - Least preferred`, `2 - No preference` (default) or `3 - Most preferred`  |
+|           | `s390x`       | Architecture preference for s390x worker node. | `0 - Do not use`, `1 - Least preferred`, `2 - No preference` (default) or `3 - Most preferred` |
 | `env`       | `jvmArgs`             | Specifies the `JVM_ARGS` environmental variable for the Liberty runtime. | |
 | `sessioncache` | `hazelcast.enabled` | Enable session caching using Hazelcast | `false` |
 | `sessioncache` | `hazelcast.embedded` | Hazelcast Topology. Embedded (true). Client/Server (false). | `false` |
-|              | `hazelcast.image.repository` | Name of Hazelcast image, including repository prefix (if required).| `hazelcast/hazelcast-kubernetes` |
+|              | `hazelcast.image.repository` | Name of Hazelcast image, including repository prefix (if required).| `hazelcast/hazelcast` |
 |              | `hazelcast.image.tag` | Docker image tag | `3.10.6` |
 |              | `hazelcast.image.pullPolicy` | Image Pull Policy | `IfNotPresent` |
 | `rbac`      | `install`             | Install RBAC. Set to `true` if using a namespace with RBAC. | `true` |
-| `oidcClient`| `enabled`         | Set to `true` to enable security using OpenId Connect. |   `false` (default) or `true`  |
-|                | `clientId`     | The client ID that has been obtained from the OpenId Connect Provider. |  a string  |
-|                | `clientSecretName` | The Kubernetes secret containing the client secret that has been obtained from the OpenId Connect Provider. The key inside this secret must be named `clientSecret`. |  a string  |
-|                | `discoveryURL` | The discovery URL of the OpenId Connect Provider. |  a URL  |
 
-### Configuring Liberty
+### Configuring Open Liberty
+ 
+#### Open Liberty Docker image requirements
 
-#### Liberty Docker image requirements
+The Helm chart requires the Docker image to have certain directories linked. The `open-liberty` image from Docker Hub will already have the expected links. If you are not using that image, either directly or as parent image, then you must add the following to your Dockerfile:
 
-The Helm chart requires the Docker image to have certain directories linked. The `websphere-liberty` image from Docker Hub will already have the expected links. If you are not using this image, you must add the following to your Dockerfile:
 ```shell
-ENV LOG_DIR /logs
-ENV WLP_OUTPUT_DIR /opt/ibm/wlp/output
-RUN mkdir /logs \
+ENV PATH /opt/ol/wlp/bin:/opt/ol/docker/:$PATH
+ENV LOG_DIR /logs 
+ENV WLP_OUTPUT_DIR /opt/ol/wlp/output
+
+RUN mkdir -p /logs \
+    && mkdir -p $WLP_OUTPUT_DIR/defaultServer \
     && ln -s $WLP_OUTPUT_DIR/defaultServer /output \
-    && ln -s /opt/ibm/wlp/usr/servers/defaultServer /config
+    && ln -s /opt/ol/wlp/usr/servers/defaultServer /config \
+    && ln -s /logs $WLP_OUTPUT_DIR/defaultServer/logs
 ```
 
-Configuration values related to monitoring, health, JMS, IIOP, HTTP and SSL require the Liberty server to be configured appropriately at Docker image layer. See [WASDev/ci.docker](https://github.com/WASdev/ci.docker) for more information.
+Configuration values related to monitoring, health, JMS, IIOP, HTTP and SSL require the Liberty server to be configured appropriately at Docker image layer. See [OpenLiberty/ci.docker](https://github.com/OpenLiberty/ci.docker) for more information.
 
 #### ConfigMap
 
@@ -231,28 +323,17 @@ data:
 
 If you are including other server configuration files in the `configDropins/overrides` directory, note that the files are processed in alphabetical order.
 
-#### Applying a production license
-
-##### 18.0.0.3+
-
-If your application container is using WebSphere Liberty 18.0.0.3 binary and newer version you no longer have to apply a production license - you only need to have entitlement to use WebSphere Liberty in production (either via ICP or other sales channels).
-
-##### 18.0.0.2-
-
-For WebSphere Liberty 18.0.0.2 binaries and older versions, please see instruction on [how to apply a license](https://github.com/WASdev/ci.docker#applying-a-license) to obtain production support.
-
 #### Transaction logs
 
 If the server fails and restarts, then to persist the transaction logs (preserve them through server restarts) you must set logs.persistTransactionLogs to true and configure persistence in the helm chart. You must also add the following to your server.xml in your docker image.
 
 ```xml
-<transaction
-    recoverOnStartup="true"
+<transaction 
+    recoverOnStartup="true" 
     waitForRecovery="true" />
 ```
 
 For more information about the transaction element and its attributes, see [transaction - Transaction Manager](https://www.ibm.com/support/knowledgecenter/en/SSAW57_liberty/com.ibm.websphere.liberty.autogen.nd.doc/ae/rwlp_config_transaction.html) in the Liberty documentation.
-
 
 #### Persisting logs
 
@@ -284,15 +365,11 @@ You can also create a PV from IBM Cloud Private dashboard by following these ste
 2.  Copy and paste the PV template.
 3.  Click Create.
 
-_Note:_ For volumes that support ownership management, specify the group ID of the group owning the persistent volumes' file systems using the `persistence.fsGroupGid` parameter. Some storage management solutions automatically add persistent volumes' GID to the supplementary groups. If this is not setup properly, the Liberty server fails to write to the log files and the following error appears in the container logs: `TRAS0036E: The system could not create file /logs/messages.log because of the following exception: java.security.PrivilegedActionException: java.io.IOException: Permission denied`.
+Note: For volumes that support ownership management, specify the group ID of the group owning the persistent volumes' file systems using the `persistence.fsGroupGid` parameter.
 
 #### Analyzing Liberty messages
 
-Logging in JSON format is enabled by default. Log events are forwarded to Elasticsearch automatically. In 18.0.0.3+, audit events can also be forwarded to Elasticsearch. Audit events may contain sensitive data. Make sure you have enabled security in the logging stack if you are deploying your chart into IBM Cloud Private.
-
-Use Kibana to monitor and analyze the log events. Sample Kibana dashboards are provided in the `/ibm_cloud_pak/pak_extensions/dashboards` directory. Ensure Liberty log events exist in Elasticsearch before creating an index pattern and importing dashboards in Kibana.
-
-For more information, see [Analyzing Liberty messages in IBM Cloud Private](https://www.ibm.com/support/knowledgecenter/en/SSEQTP_liberty/com.ibm.websphere.wlp.doc/ae/twlp_icp_json_logging.html) in the Knowledge Center.
+Logging in JSON format is enabled by default. Log events are forwarded to Elasticsearch automatically. Use Kibana to monitor and analyze the log events. Sample Kibana dashboards are provided at the Helm chart's [dashboards](https://github.com/IBM/charts/tree/master/stable/ibm-open-liberty/ibm_cloud_pak/pak_extensions/dashboards/) folder. Ensure Liberty log events exist in Elasticsearch before creating an index pattern and importing dashboards in Kibana.
 
 #### SSL Configuration
 
@@ -313,12 +390,12 @@ If you are deploying your chart into IBM Cloud Private:
 
 * `ingress.host` can be provided and set to a fully-qualified domain name that resolves to the IP address of your cluster’s proxy node. For example `example.com` resolved to the proxy node. When a domain name is not available, the service [`nip.io`](http://nip.io) can be used to provide a resolution based on an IP address. For example, `liberty.<IP>.nip.io` where `<IP>` would be replaced with the IP address of your cluster’s proxy node. The IP address of your cluster’s proxy node can be found by using the following command: `kubectl get nodes -l proxy=true`. Users can also leave this parameter as empty.
 
-* `ingress.secretName` set to the name of the secret containing Ingress TLS certificate and key. If this is not provided, it dynamically creates a self-signed certificate/key, stores it in a Kubernetes secret and uses the secret in Ingress' TLS.
+* `ingress.secretName` set to the name of the secret containing Ingress TLS certificate and key. If this is not provided, the default certificate of the ingress controller is used.
 
 If the chart is deployed into IBM Cloud Kubernetes Service:
 
-* `ingress.host` must be provided and set to the IBM-provided Ingress _subdomain_ or your custom domain. See [Select an app domain and TLS termination](https://console.bluemix.net/docs/containers/cs_ingress.html#public_inside_2) for more info on how to get this value in IBM Cloud Kubernetes Service.
-* `ingress.secretName` must be provided. If you are using the IBM-provided Ingress domain, set this parameter to the name of the IBM-provided Ingress secret. However, if you are using a custom domain, set this parameter to the secret that you created earlier that holds your custom TLS certificate and key. See [IBM Cloud Kubernetes Service documentation](https://console.bluemix.net/docs/containers/cs_ingress.html#public_inside_2) for more info on how to get these value in an IBM Cloud Kubernetes Service cluster.
+* `ingress.host` must be provided and set to the IBM-provided Ingress _subdomain_ or your custom domain. See [Select an app domain and TLS termination](https://cloud.ibm.com/docs/containers/cs_ingress.html#public_inside_2) for more info on how to get this value in IBM Cloud Kubernetes Service.
+* `ingress.secretName` must be provided. If you are using the IBM-provided Ingress domain, set this parameter to the name of the IBM-provided Ingress secret. However, if you are using a custom domain, set this parameter to the secret that you created earlier that holds your custom TLS certificate and key. See [IBM Cloud Kubernetes Service documentation](https://cloud.ibm.com/docs/containers/cs_ingress.html#public_inside_2) for more info on how to get these value in an IBM Cloud Kubernetes Service cluster.
 
 #### Configure Liveness and Readiness Probes
 
@@ -332,25 +409,15 @@ More information about configuring liveness and readiness probes can be found [h
 
 #### Session Caching
 
-The option to enable session caching in the ibm-websphere-liberty-rhel helm chart has been deprecated. The option to use Hazelcast as a Session Cache provider is moved to the image layer, see [WASDev/ci.docker](https://github.com/WASdev/ci.docker).
+The option to enable session caching in the ibm-open-liberty helm chart has been deprecated. The option to use Hazelcast as a Session Cache provider is moved to the image layer, see [OpenLiberty/ci.docker](https://github.com/OpenLiberty/ci.docker).
 
 #### Monitoring
 
-Monitoring is disabled by default. To use monitoring, the HTTP service must be enabled. Also, in the Liberty server configuration, features `mpMetrics-1.1` and `monitor-1.0` must be enabled and metrics endpoint `/metrics` must be configured without authentication. `mpMetrics-1.1` works with Java EE 7 features.
+Monitoring is disabled by default. To use monitoring, the HTTP service must be enabled. Also, in the Liberty server configuration, features `mpMetrics-1.1` and `monitor-1.0` must be enabled and metrics endpoint `/metrics` must be configured without authentication.
 
 When SSL is enabled, an additional service (ClusterIP type) is created using port 9080 to provide metrics data to prometheus. This also means the applications and other endpoints can also be accessed within the cluster on port 9080. When SSL is not enabled, the user-specified port of the HTTP service is used. If the service is exposed outside of the cluster then the unauthenticated metrics endpoint `/metrics` will be exposed as well.
 
 Metrics are collected by Prometheus automatically. Use Grafana to monitor and analyze the metrics.
-#### OpenID Connect 
-Liberty can function as an OpenID Connect Client, to secure applications using OpenID Connect. In this case, user authentication to access secured applications is performed remotely by an OpenID Connect Provider, and the result is returned to Liberty. First you must obtain a client ID, client secret, and discovery URL from the provider you intend to use. The process for obtaining these values is provider-specific. Please refer to documentation of the OpenID Connect Provider you intend to use.
-
-Create a Kubernetes secret resource containing a key named `clientSecret` with client secret value you obtained from the OpenID Connect Provider. See [Creating your own Secrets](https://kubernetes.io/docs/concepts/configuration/secret/#creating-your-own-secrets) for more information. The name of the secret you created should be passed to `oidcClient.clientSecretName` parameter.
-
-When your Docker image contains secured applications, you can specify your provider's client parameters, then user authentication will be performed using OpenID Connect. 
-
-For additional information about configuring and using OpenID Connect, see  [Using OpenID Connect](https://www.ibm.com/support/knowledgecenter/SSEQTP_liberty/com.ibm.websphere.wlp.doc/ae/rwlp_using_oidc.html).
-
-To use additional features beyond what are supported in this chart, your Docker image build can replace /opt/ibm/helpers/build/configuration_snippets/oidc-config.xml with a modified copy. 
 
 #### Resource Reference
 
@@ -369,6 +436,7 @@ The helm chart creates the following Kubernetes resources that drive the configu
 |             | cluster-ssl.xml                    | /etc/wlp/configmap/                      | Configures `SSL` with cluster/namespace `mb` secrets. |
 
 
+
 The helm chart augments the Liberty container with the following environmental variables.
 
 | Environmental Variable | Description |
@@ -382,11 +450,11 @@ The helm chart augments the Liberty container with the following environmental v
 | `KEYSTORE_REQUIRED` | Determines whether keystore is generated. |
 | `MB_KEYSTORE_PASSWORD` | Namespace scope JKS keystore password. |
 | `MB_TRUSTSTORE_PASSWORD` | Namespace scope JKS truststore password. |
-| `OIDC_CLIENT_ID`  | OpenID Connect client ID. |
-| `OIDC_CLIENT_SECRET` | OpenID Connect client secret. |
-| `OIDC_DISCOVERY_URL ` | OpenID Connect provider discovery URL. |
 
+## Documentation
 
-## More information
-See the [WebSphere Liberty documentation](https://www.ibm.com/support/knowledgecenter/en/SSAW57_liberty/as_ditamaps/was900_welcome_liberty_ndmp.html) for configuration options for deploying the Liberty server.
+See [Open Liberty website](https://openliberty.io/) for configuration options for deploying the Open Liberty server.
 
+## Service information
+
+This Helm chart installs the open source product Open Liberty. Refer to the [Open Liberty website](https://openliberty.io/) to get service for Open Liberty.

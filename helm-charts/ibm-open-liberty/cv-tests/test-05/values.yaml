@@ -1,8 +1,7 @@
-image:
-  repository: websphere-liberty
-  tag: javaee8
-
 ingress:
   enabled: true
   rewriteTarget: "/"
-  path: "/{{ .cv.release }}"
+  path: "/CV_RELEASE"
+
+image:
+  pullPolicy: Always

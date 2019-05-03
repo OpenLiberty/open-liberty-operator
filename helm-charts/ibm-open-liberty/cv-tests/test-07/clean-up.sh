@@ -26,4 +26,10 @@ command -v kubectl > /dev/null 2>&1 || { echo "kubectl pre-req is missing."; exi
 
 # Execute clean-up kubectl commands.
 # Deleting PVC gets rid of the bound PV
-kubectl delete pvc -l app=$chartRelease-ibm-websphere-li || true
+kubectl get pvc -o yaml
+kubectl delete pvc -l app=$chartRelease-ibm-open-liberty || true
+
+if [ "$CV_TEST_ARCHITECTURE" == "s390x" ]
+then
+    kubectl delete pv $chartRelease-liberty-logs-pv || true
+fi
