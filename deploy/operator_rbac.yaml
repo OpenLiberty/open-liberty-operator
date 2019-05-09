@@ -28,6 +28,12 @@ rules:
   verbs:
   - '*'
 - apiGroups:
+  - "autoscaling"
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - '*'
+- apiGroups:
   - ""
   resources:
   - namespaces
