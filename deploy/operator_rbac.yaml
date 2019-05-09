@@ -33,6 +33,12 @@ rules:
   - horizontalpodautoscalers
   verbs:
   - '*'
+ - apiGroups:
+  - "batch"
+  resources:
+  - jobs
+  verbs:
+  - '*' 
 - apiGroups:
   - ""
   resources:
