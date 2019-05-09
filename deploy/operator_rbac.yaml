@@ -22,6 +22,12 @@ rules:
   verbs:
   - '*'
 - apiGroups:
+  - "extensions"
+  resources:
+  - ingresses
+  verbs:
+  - '*'
+- apiGroups:
   - ""
   resources:
   - namespaces
