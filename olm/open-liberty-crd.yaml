@@ -85,12 +85,10 @@ spec:
                 nonSecurePort:
                   type: integer
                 nonSecureTargetPort:
-                  # values-metadata.yaml -- implies this is a string, but values.yaml and full_cr.yaml imply integer.
                   type: integer
                 securePort:
                   type: integer
                 secureTargetPort:
-                  # values-metadata.yaml -- implies this is a string, but values.yaml and full_cr.yaml imply integer.
                   type: integer                 
                 type:
                   enum:
@@ -162,7 +160,6 @@ spec:
                   type: string
                 pullSecret:
                   type: string                
-                # Not sure if we should applied min/max restrictions...defaults are 2s,5s for readiness 20s,5s for liveness in the _deployment.tpl
                 readinessProbe:
                   properties:
                     failureThreshold:
@@ -221,7 +218,6 @@ spec:
                 port:
                   type: integer
                 targetPort:
-                  # values-metadata.yaml -- implies this is a string, but values.yaml and full_cr.yaml imply integer.
                   type: integer                  
                 type:
                   enum:
@@ -245,6 +241,7 @@ spec:
                   - audit
                   - error
                   - info
+                  # off must be in quotes.  Otherwise, assumed to be a boolean which fails validation.
                   - "off"
                   - warning
                   type: string       
@@ -364,10 +361,8 @@ spec:
                   type: object  
                 limits: 
                   properties:
-                    # Could validate more here...Validate it ends with a "m"??
                     cpu:
                       type: string
-                    # Could validate: Specify integers with suffixes: E, P, T, G, M, K, or power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.
                     memory:
                       type: string
                   required:
@@ -376,10 +371,8 @@ spec:
                   type: object                      
                 requests: 
                   properties:
-                    # Could validate more here...Validate it ends with a "m"??
                     cpu:
                       type: string
-                    # Could validate: Specify integers with suffixes: E, P, T, G, M, K, or power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.
                     memory:
                       type: string
                   required:
@@ -419,7 +412,6 @@ spec:
                 port:
                   type: integer  
                 targetPort:
-                  # values-metadata.yaml -- implies this is a string, but values.yaml and full_cr.yaml imply integer.
                   type: integer                                    
                 type: 
                   enum:
