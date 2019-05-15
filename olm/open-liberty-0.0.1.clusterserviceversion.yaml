@@ -126,6 +126,24 @@ spec:
               verbs:
               - '*'
             - apiGroups:
+              - "extensions"
+              resources:
+              - ingresses
+              verbs:
+              - '*'
+            - apiGroups:
+              - "autoscaling"
+              resources:
+              - horizontalpodautoscalers
+              verbs:
+              - '*'
+            - apiGroups:
+              - "batch"
+              resources:
+              - jobs
+              verbs:
+              - '*' 
+            - apiGroups:
               - ""
               resources:
               - namespaces
