@@ -204,6 +204,12 @@ spec:
       - kind: Deployment
         name: ""
         version: v1
+      - kind: Ingress
+        name: ""
+        version: v1beta1
+      - kind: HorizontalPodAutoscaler
+        name: ""
+        version: v1
       - kind: Namespaces
         name: ""
         version: v1
