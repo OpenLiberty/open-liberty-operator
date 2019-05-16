@@ -4,11 +4,11 @@ metadata:
   name: open-liberty-0.0.1
   namespace: placeholder
   annotations:
-    capabilities: Basic Install, Seamless Upgrades, Full Lifecycle
-    categories: "Application Server, Runtime, Java Container"
+    capabilities: Seamless Upgrades
+    categories: "Integration & Delivery"
     certified: "false"
     containerImage: openliberty/operator:0.0.1
-    createdAt: The date that the operator was created. The format should match yyyy-mm-ddThh:mm:ssZ
+    createdAt: 2019-05-16T12:00:00.000-0500
     description: Installs a Jakarta EE / MicroProfile / Spring application running on Open Liberty.        
     repository: https://github.com/OpenLiberty/open-liberty-operator
     support: IBM
@@ -169,6 +169,14 @@ spec:
   maintainers:
   - name: Arthur De Magalhaes
     email: arthurdm@ca.ibm.com
+  - name: Tim Kaczynski
+    email: kaczynsk@us.ibm.com
+  - name: Ed Mezarina
+    email: mezarina@us.ibm.com
+  - name: Tim Spewak
+    email: spewak@us.ibm.com
+  - name: Mike Ginnick
+    email: ginnick@us.ibm.com
   provider:
     name: IBM
   links:
