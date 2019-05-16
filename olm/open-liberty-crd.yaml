@@ -363,8 +363,10 @@ spec:
                   properties:
                     cpu:
                       type: string
+                      pattern: '^[0-9]+m?$'
                     memory:
                       type: string
+                      pattern: '^[0-9]+([kKmMgGtTpPeE][i]?|[e][0-9]*)?$'
                   required:
                   - cpu
                   - memory
@@ -373,8 +375,10 @@ spec:
                   properties:
                     cpu:
                       type: string
+                      pattern: '^[0-9]+m?$'
                     memory:
                       type: string
+                      pattern: '^[0-9]+([kKmMgGtTpPeE][i]?|[e][0-9]*)?$'
                   required:
                   - cpu
                   - memory
