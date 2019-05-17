@@ -149,6 +149,7 @@ metadata:
 spec:
   minKubeVersion: 1.11.0
   displayName: Open Liberty Operator
+  maturity: beta
   description: |
     Installs a Jakarta EE / MicroProfile / Spring application running on Open Liberty.  
   
