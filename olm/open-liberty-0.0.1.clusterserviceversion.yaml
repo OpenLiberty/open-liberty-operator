@@ -198,19 +198,44 @@ spec:
       kind: OpenLiberty
       name: openliberties.openliberty.io
       resources:
-      - kind: Service
-        name: ""
-        version: v1
-      - kind: StatefulSet
-        name: ""
-        version: v1
-      - kind: Pod
+      - kind: ConfigMap
         name: ""
         version: v1
       - kind: Deployment
         name: ""
         version: v1
-      - kind: ConfigMap
+      - kind: Ingress
+        name: ""
+        version: v1beta1
+      - kind: HorizontalPodAutoscaler
+        name: ""
+        version: v1
+      - kind: Namespaces
+        name: ""
+        version: v1
+      - kind: OpenLiberty
+        name: ""
+        version: v1alpha1
+      - kind: Pod
+        name: ""
+        version: v1
+      - kind: Role
+        name: ""
+        version: v1
+      - kind: RoleBinding
+        name: ""
+        version: v1
+      - kind: Secret
+        name: ""
+        version: v1
+      - kind: Service
+        name: ""
+        version: v1
+      - kind: ServiceAccount
+        name: ""
+        version: v1
+      - kind: StatefulSet
+        name: ""
         version: v1
       version: v1alpha1
       specDescriptors:
