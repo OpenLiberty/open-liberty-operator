@@ -1,0 +1,5 @@
+cr-manifest: "../deploy/full_cr.yaml"
+csv-path: "../olm/open-liberty-0.0.1.clusterserviceversion.yaml"
+namespaced-manifest: "deploy/operator_rbac2.yaml"
+global-manifest: "../olm/open-liberty-crd.yaml"
+
