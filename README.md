@@ -24,8 +24,10 @@ Current image in Docker Hub:  `openliberty/operator:0.0.1`
   * `git clone https://github.com/OpenLiberty/open-liberty-operator.git`
   * `cd open-liberty-operator`
   * `kubectl apply -f olm/open-liberty-crd.yaml`
-  * `kubectl apply -f deploy/operator_rbac.yaml`
-  * `kubectl apply -f deploy/operator_deployment.yaml`
+  * `kubectl apply -f deploy/service_account.yaml`
+  * `kubectl apply -f deploy/role.yaml`
+  * `kubectl apply -f deploy/role_binding.yaml`
+  * `kubectl apply -f deploy/operator.yaml`
 
 * Install SCC
   * `cd helm-charts/ibm-open-liberty/ibm_cloud_pak/pak_extensions/pre-install/clusterAdministration`
@@ -35,7 +37,7 @@ Current image in Docker Hub:  `openliberty/operator:0.0.1`
 
 * Test Operator with default CR
   * cd back up to project root
-  * `kubectl apply -f deploy/full_cr.yaml`
+  * `kubectl apply -f deploy/crds/full_cr.yaml`
 
 * Bringing down the cluster:
   * `oc cluster down`

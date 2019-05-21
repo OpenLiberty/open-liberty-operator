@@ -1,0 +1,4 @@
+cr-manifest: "deploy/crds/full_cr.yaml"
+csv-path: "olm/open-liberty-0.0.1.clusterserviceversion.yaml"
+crds-dir: "olm"
+init-timeout: 120
