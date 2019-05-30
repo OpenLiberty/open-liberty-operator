@@ -1,5 +1,0 @@
-logs:
-  persistLogs: true
-
-persistence:
-  useDynamicProvisioning: false

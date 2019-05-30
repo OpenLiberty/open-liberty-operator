@@ -1,5 +1,0 @@
-logs:
-  persistLogs: true
-  
-image:
-  pullPolicy: Always  

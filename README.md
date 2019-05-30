@@ -30,13 +30,17 @@ Current image in Docker Hub:  `openliberty/operator:0.0.1`
   * `kubectl apply -f deploy/operator.yaml`
 
 * Install SCC
-  * `cd helm-charts/ibm-open-liberty/ibm_cloud_pak/pak_extensions/pre-install/clusterAdministration`
+  * `cd ..`
+  * `git clone https://github.com/IBM/charts.git` 
+    * Should be cloned to the same directory that contains the cloned open-liberty-operator
+  * `cd charts/stable/ibm-open-liberty/ibm_cloud_pak/pak_extensions/pre-install/clusterAdministration`
   * `./createSecurityClusterPrereqs.sh`
   * `cd ../namespaceAdministration`
   * `./createSecurityNamespacePrereqs.sh <namespace>`
 
 * Test Operator with default CR
-  * cd back up to project root
+  * `cd ../../../../../../../open-liberty-operator`
+    * This gets you back up to the project root of open-liberty-operator
   * `kubectl apply -f deploy/crds/full_cr.yaml`
 
 * Bringing down the cluster:

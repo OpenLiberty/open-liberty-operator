@@ -1,9 +1,0 @@
-ssl:
-  enabled: true
-
-microprofile:
-  health:
-    enabled: false
-    
-image:
-  pullPolicy: Always
