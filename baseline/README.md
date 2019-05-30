@@ -9,11 +9,9 @@ The contents were generated using the following version of
 The version of the Open Liberty helm chart used was 1.9.1.
 
 Following is one way to generate the baseline directory 
-* git clone https://github.com/IBM/charts.git  to the same directory that contains the cloned open-liberty-operator 
-
 * cd open-liberty-operator/baseline
 
-* `operator-sdk new open-liberty-operator --api-version=openliberty.io/v1alpha1 --helm-chart=../../charts/stable/ibm-open-liberty --kind=OpenLiberty --type=helm --skip-git-init`
+* `operator-sdk new open-liberty-operator --kind=OpenLiberty --type=helm --helm-chart=ibm-open-liberty --helm-chart-repo=https://raw.githubusercontent.com/IBM/charts/master/repo/stable/`
 
 This readme should be updated when the version of `operator-sdk` or
 the version of the Open Liberty helm chart used to build the Open
