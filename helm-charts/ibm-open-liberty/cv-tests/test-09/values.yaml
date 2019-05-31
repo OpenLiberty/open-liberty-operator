@@ -1,9 +1,0 @@
-image:
-  repository: open-liberty
-  tag: microProfile2
-  pullPolicy: Always
-
-ingress:
-  enabled: true
-  rewriteTarget: "/openapi"
-  path: "/CV_RELEASE"

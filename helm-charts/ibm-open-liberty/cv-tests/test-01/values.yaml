@@ -1,9 +1,0 @@
-service:
-  port: 9080
-  targetPort: 9080
-
-ssl:
-  enabled: false
-
-image:
-  pullPolicy: Always

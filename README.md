@@ -29,14 +29,19 @@ Current image in Docker Hub:  `openliberty/operator:0.0.1`
   * `kubectl apply -f deploy/role_binding.yaml`
   * `kubectl apply -f deploy/operator.yaml`
 
-* Install SCC
-  * `cd helm-charts/ibm-open-liberty/ibm_cloud_pak/pak_extensions/pre-install/clusterAdministration`
-  * `./createSecurityClusterPrereqs.sh`
-  * `cd ../namespaceAdministration`
-  * `./createSecurityNamespacePrereqs.sh <namespace>`
+* Install security
+  * For OpenShift install SCC
+    * `kubectl apply -f deploy/ibm-open-liberty-scc.yaml --validate=false`
+    * `oc adm policy add-scc-to-group ibm-open-liberty-scc system:serviceaccounts:<namespace>`
+      * `Update <namespace> with the appropriate namespace`
+  * For IBM Cloud Private install PSP
+    * `kubectl apply -f deploy/ibm-open-liberty-psp.yaml`
+    * `kubectl apply -f deploy/ibm-open-liberty-cr.yaml`
+    * `edit deploy/ibm-open-liberty-rb.yaml and update NAMESPACE with the appropriate namespace`
+    * `kubectl create -f deploy/ibm-open-liberty-rb.yaml -n <namespace>`
+      * `Update <namespace> with the appropriate namespace`
 
 * Test Operator with default CR
-  * cd back up to project root
   * `kubectl apply -f deploy/crds/full_cr.yaml`
 
 * Bringing down the cluster:

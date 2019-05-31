@@ -1,7 +1,0 @@
-ingress:
-  enabled: true
-  rewriteTarget: "/"
-  path: "/CV_RELEASE"
-
-image:
-  pullPolicy: Always
