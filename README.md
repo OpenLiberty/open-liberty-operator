@@ -34,11 +34,12 @@ Current image in Docker Hub:  `openliberty/operator:0.0.1`
     * `kubectl apply -f deploy/ibm-open-liberty-scc.yaml --validate=false`
     * `oc adm policy add-scc-to-group ibm-open-liberty-scc system:serviceaccounts:<namespace>`
       * `Update <namespace> with the appropriate namespace`
-  * `kubectl apply -f deploy/ibm-open-liberty-psp.yaml`
-  * `kubectl apply -f deploy/ibm-open-liberty-cr.yaml`
-  * `edit deploy/ibm-open-liberty-rb.yaml and change NAMESPACE`
-  * `kubectl create -f deploy/ibm-open-liberty-rb.yaml -n <namespace>`
-    * `Update <namespace> with the appropriate namespace`
+  * For IBM Cloud Private install PSP
+    * `kubectl apply -f deploy/ibm-open-liberty-psp.yaml`
+    * `kubectl apply -f deploy/ibm-open-liberty-cr.yaml`
+    * `edit deploy/ibm-open-liberty-rb.yaml and update NAMESPACE with the appropriate namespace`
+    * `kubectl create -f deploy/ibm-open-liberty-rb.yaml -n <namespace>`
+      * `Update <namespace> with the appropriate namespace`
 
 * Test Operator with default CR
   * `kubectl apply -f deploy/crds/full_cr.yaml`
