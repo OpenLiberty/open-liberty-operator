@@ -48,3 +48,5 @@ Current image in Docker Hub:  `openliberty/operator:0.0.1`
   * `oc cluster down`
   * `rm -rf <oc/openshift.local.clusterup>`
     * If you get an error about a busy device, reboot the VM, and re-run rm -rf
+
+For an example on how to deploy an application see [Deploying An Application](docs/app-deployment-sample.md).
