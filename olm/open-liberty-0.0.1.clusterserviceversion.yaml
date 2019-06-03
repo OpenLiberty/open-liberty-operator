@@ -149,10 +149,11 @@ metadata:
 spec:
   minKubeVersion: 1.11.0
   displayName: Open Liberty Operator
-  maturity: beta
+  maturity: alpha
   description: |
     Installs a Jakarta EE / MicroProfile / Spring application running on Open Liberty.  
-  
+    This is an alpha version and is not intended to be used in production. 
+ 
     ## Building an Application Image
       
       The first step is to build an application image that contains your application and Open Liberty configuration.
