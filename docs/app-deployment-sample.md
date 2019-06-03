@@ -156,7 +156,7 @@ $ curl -kL https://x.x.x.x:30835/resorts
 ```
 
 ### 6. Cleanup.
-* `kubectl delete -f deploy/apps/v1.0.0/app-mod_cr.yaml`
+* `kubectl delete -f deploy/apps/appmod/v1.0.0/app-mod_cr.yaml`
 * `kubectl delete -f deploy/operator.yaml`
 * `kubectl delete -f deploy/role_binding.yaml`
 * `kubectl delete -f deploy/role.yaml`
