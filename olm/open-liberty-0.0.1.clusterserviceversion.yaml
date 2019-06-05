@@ -242,80 +242,42 @@ spec:
         version: v1
       version: v1alpha1
       specDescriptors:
-        # Image.
-        - description: Stored instance of a container that holds a set of software needed to run an application.
-          displayName: Image
-          path: image
         - description: Docker registry to pull Liberty image from.
           displayName: Liberty image repository
           path: image.repository
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: A tag is a label applied to a image in a repository. Tags are how various images in a repository are distinguished from each other.
           displayName: Image tag
           path: image.tag
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: The default pull policy is IfNotPresent which causes the Kubelet to skip pulling an image if it already exists.
           displayName: Image pull policy
           path: image.pullPolicy
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: If using a registry that requires authentication, the name of the secret containing credentials.
           displayName: Image pull secret
           path: image.pullSecret
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
-        - description: Configure when container is ready to start accepting traffic.
-          displayName: Readiness Probe
-          path: image.readinessProbe
-        - description: Configure when to restart container.
-          displayName: Liveness Probe
-          path: image.livenessProbe
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: Additional environment variables that will be set.
-          displayName: Additional Environment Variables
+          displayName: Image Additional Environment Variables
           path: image.extraEnvs
-        - description: Handlers for the PostStart and PreStop lifecycle events of container.
-          displayName: Lifecycle
-          path: image.lifecycle
         - description: Name of the ConfigMap that contains server configuration overrides (within key 'server-overrides.xml') to configure your Liberty server at deployment.
           displayName: ConfigMap with server configuration overrides
           path: image.serverOverridesConfigMapName
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: Additional Volume Mounts for server pods.
           displayName: Extra Volume Mounts
           path: image.extraVolumeMounts
-        - description: Configure the security attributes of the image.
-          displayName: Security
-          path: image.security
         - description: This name will be appended to the release name to form the name of resources created by the chart.
           displayName: Resource Name Override
           path: resourceNameOverride
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
-
-        # Deployment.
-        - description: Configure Deployment (or StatefulSet if persistence is enabled).
-          displayName: Deployment
-          path: deployment
-        - description: Custom deployment annotations.
-          displayName: Deployment Annotations
-          path: deployment.annotations
-        - description: Custom deployment labels.
-          displayName: Deployment Labels
-          path: deployment.labels
-
-        # Pod.
-        - description: Configure pods.
-          displayName: Pod
-          path: pod
-        - description: Custom pod annotations.
-          displayName: Pod Annotations
-          path: pod.annotations
-        - description: Custom pod labels.
-          displayName: Pod Labels
-          path: pod.labels
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: Additional Init Containers which are run before the containers are started.
           displayName: Extra Init Containers
           path: pod.extraInitContainers
@@ -325,112 +287,84 @@ spec:
         - description: Additional Volumes for server pods.
           displayName: Extra Volumes
           path: pod.extraVolumes
-        - description: Configure the security attributes of the pod.
-          displayName: Security
-          path: pod.security
-
-        # Service.
-        - description: Service settings.
-          displayName: Service
-          path: service
+        # Service (HTTP).
         - description: An API object that describes how to access applications, such as a set of Pods, and can describe ports and load-balancers.
-          displayName: Service Type
+          displayName: HTTP Service Type
           path: service.type
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: The name of the service.
-          displayName: Name
+          displayName: HTTP Service Name
           path: service.name
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: The HTTP port that the container will expose.
-          displayName: HTTP Port
+          displayName: HTTP Service Port
           path: service.port
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: A service can map an incoming HTTP port to the targetPort.
-          displayName: HTTP Target Port
+          displayName: HTTP Service Target Port
           path: service.targetPort
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: Specifies whether HTTP protocol is enabled.
-          displayName: Enable HTTP
+          displayName: Enable HTTP Service
           path: service.enabled
-        - description: Custom service annotations.
-          displayName: Service Annotations
-          path: service.annotations
-        - description: Custom service labels.
-          displayName: Service Label
-          path: service.labels
         - description: List of additional ports that are exposed by this service.
-          displayName: Additional Service Ports
+          displayName: Additional HTTP Service Ports
           path: service.extraPorts
-        - description: List of additional label keys and values.
-          displayName: Additional Selectors
-          path: service.extraSelectors
-
         # JmsService.
-        - description: JMS Service settings.
-          displayName: JMS Service
-          path: jmsService
         - description: An API object that describes how to access applications, such as a set of Pods, and can describe ports and load-balancers.
-          displayName: Service Type
+          displayName: JMS Service Type
           path: jmsService.type
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: The JMS port that the container will expose. This port uses SSL encryption if you enable SSL for this chart.
-          displayName: Port
+          displayName: JMS Port
           path: jmsService.port
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: A service can map an incoming JMS port to the targetPort. This port uses SSL encryption if you enable SSL for this chart.
-          displayName: Target port
+          displayName: JMS Target port
           path: jmsService.targetPort
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: Specifies whether JMS port is enabled.
-          displayName: Enable JMS
+          displayName: Enable JMS Service
           path: jmsService.enabled
-
         # IIOPService.
-        - description: IIOP Service settings.
-          displayName: IIOP Service
-          path: iiopService
         - description: An API object that describes how to access applications, such as a set of Pods, and can describe ports and load-balancers.
-          displayName: Service Type
+          displayName: IIOP Service Type
           path: iiopService.type
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: The IIOP port that the container will expose.
-          displayName: Port
+          displayName: IIOP Port
           path: iiopService.nonSecurePort
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: A service can map an incoming IIOP port to the targetPort.
-          displayName: Target port
+          displayName: IIOP Target port
           path: iiopService.nonSecureTargetPort
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: The secure IIOP port that the container will expose.
-          displayName: Secure Port
+          displayName: IIOP Secure Port
           path: iiopService.securePort
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: A service can map an incoming secure IIOP port to the targetPort.
-          displayName: Secure Target port
+          displayName: IIOP Secure Target port
           path: iiopService.secureTargetPort
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: Specifies whether IIOP port is enabled.
-          displayName: Enable IIOP
+          displayName: Enable IIOP Service
           path: iiopService.enabled
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
-
+          - urn:alm:descriptor:com.tectonic.ui:label
         # SSL.
-        - description: Configure SSL.
-          displayName: SSL
-          path: ssl
         - description: Specifies whether SSL is enabled. Set to true if SSL will be enabled via generated SSL configuration or if Liberty is configured to use SSL in the Docker image.
           displayName: Enable SSL
           path: ssl.enabled
@@ -440,233 +374,182 @@ spec:
         - description: Specifies whether to generate Liberty SSL ConfigMap and secrets to be used in the cluster. Only generate the SSL configuration one time. If you generate the configuration a second time, errors might occur.
           displayName: Create cluster SSL configuration
           path: ssl.createClusterSSLConfiguration
-
         # Ingress.
-        - description: Configure ingress rules that allow inbound connections to reach the cluster services.
-          displayName: Ingress
-          path: ingress
         - description: Specifies whether to use Ingress.
           displayName: Enable Ingress
           path: ingress.enabled
         - description: In some scenarios the exposed URL in the backend service differs from the specified path in the Ingress rule. Without a rewrite any request will return 404. To circumvent this, you can set rewrite target to the path expected by the service.
-          displayName: Rewrite target
+          displayName: Ingress Rewrite target
           path: ingress.rewriteTarget
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: Path must match the content of an incoming request before the loadbalancer directs traffic to the backend.
-          displayName: Path
+          displayName: Ingress Path
           path: ingress.path
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: Hostname used to access Liberty via Ingress (e.g. liberty.<icp proxy node address>.nip.io). See chart readme documentation for more details.
-          displayName: Host
+          displayName: Ingress Host
           path: ingress.host
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: Name of the secret containing Ingress TLS certificate and key. See chart readme documentation for more details.
-          displayName: Secret name
+          displayName: Ingress Secret name
           path: ingress.secretName
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
-        - description: Custom Ingress annotations.
-          displayName: Ingress Annotations
-          path: ingress.annotations
-        - description: Custom Ingress labels.
-          displayName: Ingress Label
-          path: ingress.labels
-
+          - urn:alm:descriptor:com.tectonic.ui:label
         # Persistence.
-        - description: Configure persistent storage.
-          displayName: Persistence
-          path: persistence
         - description: A prefix for the name of the persistence volume claim (PVC). A PVC will not be created unless either 'Persist logs' or 'Persist transaction logs' is checked.
-          displayName: Name
+          displayName: PVC Prefix Name
           path: persistence.name
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: Size of the volume to hold all the persisted data.        
-          displayName: Size
+          displayName: PV Size
           path: persistence.size
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: The file system group ID to use for volumes that support ownership management.
-          displayName: File system group ID
+          displayName: PV File system group ID
           path: persistence.fsGroupGid
         - description: Select this checkbox to allow the cluster to automatically provision new storage resource and create PersistentVolume objects.
-          displayName: Use dynamic provisioning
+          displayName: PV Use dynamic provisioning
           path: persistence.useDynamicProvisioning
         - description: Specifies a StorageClass pre-created by the sysadmin. When set to "", then the PVC is bound to the default storageClass setup by the Kube Administrator.
-          displayName: Storage class name
+          displayName: PV Storage class name
           path: persistence.storageClassName
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: When matching a PV, the label is used to find a match on the key.
-          displayName: Selector label
+          displayName: PV Selector label
           path: persistence.selector.label
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: When matching a PV, the value is used to find a match on the value.
-          displayName: Selector value
+          displayName: PV Selector value
           path: persistence.selector.value
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
-
+          - urn:alm:descriptor:com.tectonic.ui:label
         # Logs.
-        - description: Configure logs.
-          displayName: Logs
-          path: logs
         - description: Select this checkbox to store server logs on a persistent volume so that the data is preserved if the pod is stopped.
-          displayName: Persist logs
+          displayName: Persist Liberty logs
           path: logs.persistLogs
         - description: Select this checkbox to store transaction logs data on a persistent volume so that the transaction logs can be recovered if the pod is stopped.
           displayName: Persist transaction logs
           path: logs.persistTransactionLogs
         - description: Specifies container log output format.
-          displayName: Console logging format
+          displayName: Liberty Console logging format
           path: logs.consoleFormat
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: Controls the granularity of messages that go to the container log. 
-          displayName: Console logging level
+          displayName: Liberty Console logging level
           path: logs.consoleLogLevel
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: Specify sources that are written to the container log. Use a comma separated list for multiple sources.
-          displayName: Console logging sources
+          displayName: Liberty Console logging sources
           path: logs.consoleSource
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
-
+          - urn:alm:descriptor:com.tectonic.ui:label
         # Microprofiling.
-        - description: Configure MicroProfile.
-          displayName: MicroProfile
-          path: microprofile
         - description: Specifies whether to use the MicroProfile health endpoint (`/health`) as a readiness probe of the container. Requires HTTP service to be enabled.    
-          displayName: Enable health
+          displayName: Enable Microprofile health
           path: microprofile.health.enabled
-
         # Monitoring.
-        - description: Configure monitoring.
-          displayName: Monitoring
-          path: monitoring
         - description: Specifies whether to use Liberty features `monitor-1.0` and `mpMetrics-1.1` to monitor the server runtime environment and application metrics. Requires HTTP service to be enabled.
-          displayName: Enable monitoring
+          displayName: Enable Liberty monitoring
           path: monitoring.enabled
-
         # ReplicaCount.
         - description: The number of desired replica pods that run simultaneously.
-          displayName: Number of replicas
+          displayName: Number of pod replicas
           path: replicaCount
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:podCount'
-
+          - urn:alm:descriptor:com.tectonic.ui:podCount
         # AutoScaling.
-        - description: Automatically scale pods.
-          displayName: Autoscaling
-          path: autoscaling
         - description: Specifies whether a horizontal pod autoscaler (HPA) is deployed. Note that enabling this field disables the Number of replicas field.
           displayName: Enable automatic scaling
           path: autoscaling.enabled
         - description: Target average CPU utilization (represented as a percentage of requested CPU) over all the pods.
-          displayName: Target CPU utilization percentage
+          displayName: Autoscale Target CPU utilization percentage
           path: autoscaling.targetCPUUtilizationPercentage
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: Lower limit for the number of pods that can be set by the autoscaler.
-          displayName: Minimum number of replicas
+          displayName: Autoscale Minimum replicas
           path: autoscaling.minReplicas
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: Upper limit for the number of pods that can be set by the autoscaler.  Cannot be lower than the minimum number of replicas.
-          displayName: Maximum number of replicas
+          displayName: Autoscale Maximum replicas
           path: autoscaling.maxReplicas
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
-
+          - urn:alm:descriptor:com.tectonic.ui:label
         # Resources.
-        - description: Resource quotas.
-          displayName: Resources
-          path: resources
         - description: Specifies whether the resource constraints in this Helm chart are enabled.
-          displayName: Enable constraints
+          displayName: Enable Helm resource constraints
           path: resources.constraints.enabled
         - description: The upper limit of CPU core. Specify integers, fractions (e.g. 0.5), or millicores values(e.g. 100m, where 100m is equivalent to .1 core).
           displayName: CPU limit
           path: resources.limits.cpu
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: The memory upper limit in bytes. Specify integers with suffixes E, P, T, G, M, K, or power-of-two equivalents Ei, Pi, Ti, Gi, Mi, Ki.
           displayName: Memory limit
           path: resources.limits.memory
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: The minimum required CPU core. Specify integers, fractions (e.g. 0.5), or millicore values(e.g. 100m, where 100m is equivalent to .1 core).
           displayName: CPU request
           path: resources.requests.cpu
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: The minimum memory in bytes. Specify integers with one of these suffixes E, P, T, G, M, K or power-of-two equivalents Ei, Pi, Ti, Gi, Mi, Ki.
           displayName: Memory request
           path: resources.requests.memory
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
-
+          - urn:alm:descriptor:com.tectonic.ui:label
         # Arch
-        - description: Specify architecture scheduling preferences.
-          displayName: Architecture scheduling preferences
-          path: arch
         - description: Scheduling priority for using the Intel 64-bit architecture for worker nodes.
-          displayName: Intel 64-bit architecture preference for target worker node
+          displayName: Intel 64-bit architecture preference
           path: arch.amd64 
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: Scheduling priority for using the PowerPC 64-bit LE architecture for worker nodes.
-          displayName: PowerPC 64-bit LE architecture preference for target worker node
+          displayName: PowerPC 64-bit LE architecture preference
           path: arch.ppc64le
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
+          - urn:alm:descriptor:com.tectonic.ui:label
         - description: Scheduling priority for using s390x zLinux architecture for worker nodes.
-          displayName: s390x zLinux architecture preference for target worker node
+          displayName: s390x zLinux architecture preference
           path: arch.s390x
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
-
+          - urn:alm:descriptor:com.tectonic.ui:label
         # Env.
-        - description: Configure environmental variables.
-          displayName: Environmental Variables
-          path: env
         - description: Liberty runtime JVM arguments.
-          displayName: JVM_ARGS
+          displayName: Liberty JVM_ARGS
           path: env.jvmArgs
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
-
+          - urn:alm:descriptor:com.tectonic.ui:label
         # SessionCache
-        - description: Configure session cache.
-          displayName: Session Cache
-          path: sessioncache
         - description: Enable Hazelcast Session Caching by enabling and configuring Liberty feature sessionCaching-1.0 and enabling Hazelcast client provider libraries.
           displayName: Enable Hazelcast Session Caching
           path: sessioncache.enabled
         - description: Embedded Hazelcast Topology (true). Client/Server Hazelcast Topology (false).
           displayName: Embedded Hazelcast Topology
-          path: sessioncache.embedded
+          path: sessioncache.hazelcast.embedded
         - description: Hazelcast Docker image repository for client provider libraries.
           displayName: Hazelcast Docker image repository
-          path: sessioncache.image.repository
+          path: sessioncache.hazelcast.image.repository
         - description: Hazelcast Docker image tag for client provider libraries.
           displayName: Hazelcast Docker image tag
-          path: sessioncache.image.tag
+          path: sessioncache.hazelcast.image.tag
         - description: Defaults to 'Always' when the latest tag is specified. Otherwise the default is 'IfNotPresent'.
           displayName: Hazelcast Docker image pull policy
-          path: sessioncache.image.pullPolicy
+          path: sessioncache.hazelcast.image.pullPolicy
           x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
-
+          - urn:alm:descriptor:com.tectonic.ui:label
         # RBAC
-        - description: Role-based access control.
-          displayName: RBAC roles and bindings
-          path: rbac
         - description: Install RBAC roles and bindings.
           displayName: Install
           path: rbac.install
