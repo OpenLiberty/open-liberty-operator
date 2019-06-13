@@ -311,6 +311,8 @@ spec:
         - description: Specifies whether HTTP protocol is enabled.
           displayName: Enable HTTP Service
           path: service.enabled
+          x-descriptors:
+          - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
         - description: List of additional ports that are exposed by this service.
           displayName: Additional HTTP Service Ports
           path: service.extraPorts
@@ -333,6 +335,8 @@ spec:
         - description: Specifies whether JMS port is enabled.
           displayName: Enable JMS Service
           path: jmsService.enabled
+          x-descriptors:
+          - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
         # IIOPService.
         - description: An API object that describes how to access applications, such as a set of Pods, and can describe ports and load-balancers.
           displayName: IIOP Service Type
@@ -363,21 +367,29 @@ spec:
           displayName: Enable IIOP Service
           path: iiopService.enabled
           x-descriptors:
-          - urn:alm:descriptor:com.tectonic.ui:label
+          - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
         # SSL.
         - description: Specifies whether SSL is enabled. Set to true if SSL will be enabled via generated SSL configuration or if Liberty is configured to use SSL in the Docker image.
           displayName: Enable SSL
           path: ssl.enabled
+          x-descriptors:
+          - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
         - description: Set to true if you want to use the generated SSL ConfigMap and secrets. This setting requires you to check 'Create cluster SSL configuration' the very first use. The benefit of reusing the generated SSL configuration between multiple Liberty servers is so that they can easily communicate with each other over SSL. Set to false if the Docker image already has SSL configured.
           displayName: Use cluster SSL configuration
           path: ssl.useClusterSSLConfiguration
+          x-descriptors:
+          - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
         - description: Specifies whether to generate Liberty SSL ConfigMap and secrets to be used in the cluster. Only generate the SSL configuration one time. If you generate the configuration a second time, errors might occur.
           displayName: Create cluster SSL configuration
           path: ssl.createClusterSSLConfiguration
+          x-descriptors:
+          - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
         # Ingress.
         - description: Specifies whether to use Ingress.
           displayName: Enable Ingress
           path: ingress.enabled
+          x-descriptors:
+          - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
         - description: In some scenarios the exposed URL in the backend service differs from the specified path in the Ingress rule. Without a rewrite any request will return 404. To circumvent this, you can set rewrite target to the path expected by the service.
           displayName: Ingress Rewrite target
           path: ingress.rewriteTarget
@@ -415,6 +427,8 @@ spec:
         - description: Select this checkbox to allow the cluster to automatically provision new storage resource and create PersistentVolume objects.
           displayName: PV Use dynamic provisioning
           path: persistence.useDynamicProvisioning
+          x-descriptors:
+          - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
         - description: Specifies a StorageClass pre-created by the sysadmin. When set to "", then the PVC is bound to the default storageClass setup by the Kube Administrator.
           displayName: PV Storage class name
           path: persistence.storageClassName
@@ -434,9 +448,13 @@ spec:
         - description: Select this checkbox to store server logs on a persistent volume so that the data is preserved if the pod is stopped.
           displayName: Persist Liberty logs
           path: logs.persistLogs
+          x-descriptors:
+          - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
         - description: Select this checkbox to store transaction logs data on a persistent volume so that the transaction logs can be recovered if the pod is stopped.
           displayName: Persist transaction logs
           path: logs.persistTransactionLogs
+          x-descriptors:
+          - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
         - description: Specifies container log output format.
           displayName: Liberty Console logging format
           path: logs.consoleFormat
@@ -456,10 +474,14 @@ spec:
         - description: Specifies whether to use the MicroProfile health endpoint (`/health`) as a readiness probe of the container. Requires HTTP service to be enabled.    
           displayName: Enable Microprofile health
           path: microprofile.health.enabled
+          x-descriptors:
+          - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
         # Monitoring.
         - description: Specifies whether to use Liberty features `monitor-1.0` and `mpMetrics-1.1` to monitor the server runtime environment and application metrics. Requires HTTP service to be enabled.
           displayName: Enable Liberty monitoring
           path: monitoring.enabled
+          x-descriptors:
+          - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
         # ReplicaCount.
         - description: The number of desired replica pods that run simultaneously.
           displayName: Number of pod replicas
@@ -470,6 +492,8 @@ spec:
         - description: Specifies whether a horizontal pod autoscaler (HPA) is deployed. Note that enabling this field disables the Number of replicas field.
           displayName: Enable automatic scaling
           path: autoscaling.enabled
+          x-descriptors:
+          - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
         - description: Target average CPU utilization (represented as a percentage of requested CPU) over all the pods.
           displayName: Autoscale Target CPU utilization percentage
           path: autoscaling.targetCPUUtilizationPercentage
@@ -479,36 +503,23 @@ spec:
           displayName: Autoscale Minimum replicas
           path: autoscaling.minReplicas
           x-descriptors:
-          - urn:alm:descriptor:com.tectonic.ui:label
+          - urn:alm:descriptor:com.tectonic.ui:podCount
         - description: Upper limit for the number of pods that can be set by the autoscaler.  Cannot be lower than the minimum number of replicas.
           displayName: Autoscale Maximum replicas
           path: autoscaling.maxReplicas
           x-descriptors:
-          - urn:alm:descriptor:com.tectonic.ui:label
+          - urn:alm:descriptor:com.tectonic.ui:podCount
         # Resources.
         - description: Specifies whether the resource constraints in this Helm chart are enabled.
           displayName: Enable Helm resource constraints
           path: resources.constraints.enabled
+          x-descriptors:
+          - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
         - description: The upper limit of CPU core. Specify integers, fractions (e.g. 0.5), or millicores values(e.g. 100m, where 100m is equivalent to .1 core).
           displayName: CPU limit
-          path: resources.limits.cpu
+          path: resources
           x-descriptors:
-          - urn:alm:descriptor:com.tectonic.ui:label
-        - description: The memory upper limit in bytes. Specify integers with suffixes E, P, T, G, M, K, or power-of-two equivalents Ei, Pi, Ti, Gi, Mi, Ki.
-          displayName: Memory limit
-          path: resources.limits.memory
-          x-descriptors:
-          - urn:alm:descriptor:com.tectonic.ui:label
-        - description: The minimum required CPU core. Specify integers, fractions (e.g. 0.5), or millicore values(e.g. 100m, where 100m is equivalent to .1 core).
-          displayName: CPU request
-          path: resources.requests.cpu
-          x-descriptors:
-          - urn:alm:descriptor:com.tectonic.ui:label
-        - description: The minimum memory in bytes. Specify integers with one of these suffixes E, P, T, G, M, K or power-of-two equivalents Ei, Pi, Ti, Gi, Mi, Ki.
-          displayName: Memory request
-          path: resources.requests.memory
-          x-descriptors:
-          - urn:alm:descriptor:com.tectonic.ui:label
+          - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
         # Arch
         - description: Scheduling priority for using the Intel 64-bit architecture for worker nodes.
           displayName: Intel 64-bit architecture preference
@@ -535,6 +546,8 @@ spec:
         - description: Enable Hazelcast Session Caching by enabling and configuring Liberty feature sessionCaching-1.0 and enabling Hazelcast client provider libraries.
           displayName: Enable Hazelcast Session Caching
           path: sessioncache.enabled
+          x-descriptors:
+          - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
         - description: Embedded Hazelcast Topology (true). Client/Server Hazelcast Topology (false).
           displayName: Embedded Hazelcast Topology
           path: sessioncache.hazelcast.embedded
@@ -553,6 +566,8 @@ spec:
         - description: Install RBAC roles and bindings.
           displayName: Install
           path: rbac.install
+          x-descriptors:
+          - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       statusDescriptors:
         - description: Current conditions.
           displayName: Conditions
