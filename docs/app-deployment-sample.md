@@ -38,7 +38,7 @@ The following commands shows how to build a docker image and how to push it to d
 
 * `git clone https://github.com/OpenLiberty/open-liberty-operator.git`
 * `cd open-liberty-operator`
-* `kubectl apply -f olm/open-liberty-crd.yaml`
+* `kubectl apply -f olm/open-liberty.crd.yaml`
 * `kubectl apply -f deploy/service_account.yaml`
 * `kubectl apply -f deploy/role.yaml`
 * `kubectl apply -f deploy/role_binding.yaml`
