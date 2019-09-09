@@ -1,9 +1,9 @@
 [
   {
-    "_id": "Liberty-Traffic-K5-20190609",
+    "_id": "Liberty-Traffic-K5-20190909",
     "_type": "dashboard",
     "_source": {
-      "title": "Liberty-Traffic-K5-20190609",
+      "title": "Liberty-Traffic-K5-20190909",
       "hits": 0,
       "description": "Dashboard visualizes access log information for Liberty servers. Use this dashboard to look for which requests are slow or failing.",
       "panelsJSON": "[{\"col\":1,\"id\":\"liberty_trafficinfo\",\"panelIndex\":1,\"row\":1,\"size_x\":12,\"size_y\":1,\"type\":\"visualization\"},{\"col\":7,\"id\":\"liberty_slowestURLs\",\"panelIndex\":5,\"row\":6,\"size_x\":6,\"size_y\":3,\"type\":\"visualization\"},{\"col\":1,\"id\":\"liberty_accessLogResponseCodeGraph\",\"panelIndex\":6,\"row\":9,\"size_x\":4,\"size_y\":3,\"type\":\"visualization\"},{\"col\":9,\"id\":\"liberty_accessLogElapsedTimeGraph\",\"panelIndex\":7,\"row\":9,\"size_x\":4,\"size_y\":3,\"type\":\"visualization\"},{\"col\":1,\"id\":\"liberty_topURLs\",\"panelIndex\":9,\"row\":6,\"size_x\":6,\"size_y\":3,\"type\":\"visualization\"},{\"col\":5,\"id\":\"liberty_accessLogAverageElapsedTimeGraph\",\"panelIndex\":10,\"row\":9,\"size_x\":4,\"size_y\":3,\"type\":\"visualization\"},{\"col\":1,\"id\":\"33082f60-c265-11e8-b344-7d7a26e293da\",\"panelIndex\":15,\"row\":2,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":5,\"id\":\"41600f60-c265-11e8-b344-7d7a26e293da\",\"panelIndex\":16,\"row\":2,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":9,\"id\":\"4ae69130-c265-11e8-b344-7d7a26e293da\",\"panelIndex\":17,\"row\":2,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":1,\"columns\":[\"ibm_remoteHost\",\"ibm_uriPath\",\"ibm_responseCode\",\"ibm_bytesReceived\",\"ibm_elapsedTime\",\"kubernetes.pod_name\",\"ibm_sequence\"],\"id\":\"liberty_accessLogSearch\",\"panelIndex\":18,\"row\":12,\"size_x\":12,\"size_y\":4,\"sort\":[\"@timestamp\",\"desc\"],\"type\":\"search\"},{\"col\":1,\"id\":\"liberty_host_traffic\",\"panelIndex\":19,\"row\":4,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":5,\"id\":\"liberty_userDir_traffic\",\"panelIndex\":20,\"row\":4,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":9,\"id\":\"liberty_server_traffic\",\"panelIndex\":21,\"row\":4,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"}]",
