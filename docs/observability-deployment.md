@@ -1,5 +1,5 @@
 
-# Observability with Open liberty
+# Observability with Open Liberty
 The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in the OpenShift cluster.
 
 ## How to deploy Kibana dashboards to monitor Open Liberty logging events 
@@ -11,7 +11,7 @@ Kibana dashboards are provided for visualizing events from the Open Liberty runt
 To leverage the use of these dashboards the logging events must be emitted in JSON format into standard-out. For information regarding how to configure an Open Liberty image with JSON logging please see:   https://github.com/OpenLiberty/ci.docker#logging
 
 
-Retrieve available Kibana dashboards tuned for Liberty logging events under https://github.com/OpenLiberty/open-liberty-operator/deploy/dashboards
+Retrieve available Kibana dashboards tuned for Open Liberty logging events under https://github.com/OpenLiberty/open-liberty-operator/deploy/dashboards
 
 
 
@@ -105,7 +105,7 @@ See https://github.com/OpenLiberty/open-liberty-operator/blob/master/deploy/crds
 There are IBM provided Grafana dashboards that leverage the metrics tracked from the JVM provided information as well as the Open Liberty runtime. 
 
 
-An Open Liberty server configured with MicroProfile Metrics 1.1 will be instrumented with the `mpMerics-1.1` feature in the server's `server.xml`.  Similarly a MicroProfile Metrics 2.0  configured OpenLiberty server will be instrumented with the `mpMetrics-2.0` feature. Find the appropriate dashboards at:
+An Open Liberty server configured with MicroProfile Metrics 1.1 will be instrumented with the `mpMerics-1.1` feature in the server's `server.xml`.  Similarly a MicroProfile Metrics 2.0  configured Open Liberty server will be instrumented with the `mpMetrics-2.0` feature. Find the appropriate dashboards at:
 https://github.com/OpenLiberty/open-liberty-operator/deploy/dashboards/
 
 
@@ -156,10 +156,10 @@ COPY server_mpHealth_2.0.xml /config/configDropins/overrides/
 
 Kubernetes provides liveness and readiness probes that are used to check the health of your containers. These probes can check certain files in your containers, check a TCP socket, or make HTTP requests. MicroProfile Health Check exposes readiness and liveness endpoints on your microservices. Kubernetes polls these endpoints as specified by the probes to react appropriately to any change in the microservice’s status.
  
-1.    Configure the readiness and liveness probes fields to point to the MicroProfile Health Check REST endpoints in your OpenLiberty Operator YAML configuration file:
+1.    Configure the readiness and liveness probes fields to point to the MicroProfile Health Check REST endpoints in your Open Liberty Operator YAML configuration file:
 See https://github.com/OpenLiberty/open-liberty-operator/blob/master/deploy/crds/full_cr.yaml for full template of available fields.
 For mpHealth-1.0:
-Enable the MicroProfile Health Check in your OpenLiberty Operator YAML configuration file, with the following snippet:
+Enable the MicroProfile Health Check in your Open Liberty Operator YAML configuration file, with the following snippet:
 microprofile:  
    health:     
      enabled: true
