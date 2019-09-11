@@ -20,7 +20,7 @@ Retrieve available Kibana dashboards tuned for Open Liberty logging events under
 A Microprofile metrics enabled Open Liberty runtime is capable of tracking and observing metrics from the JVM and Open Liberty server as well as tracking Microprofile Metrics instrumented within a deployed application. The tracked metric data can then be scraped by Prometheus and visualized with Grafana.
 
 
-As a prerequisite Prometheus and  Grafana will need to be first deployed before their functionality can be leveraged.
+As a prerequisite Prometheus and Grafana will need to be first deployed before their functionality can be leveraged.
 
 
 ### MicroProfile Metrics 1.x
@@ -102,8 +102,14 @@ See https://github.com/OpenLiberty/open-liberty-operator/blob/master/deploy/crds
 ### Visualizing your data with Grafana
 
 
-There are IBM provided Grafana dashboards that leverage the metrics tracked from the JVM provided information as well as the Open Liberty runtime. 
+There are IBM provided Grafana dashboards that leverage the metrics tracked from the JVM provided information as well as the Open Liberty runtime.  Details regarding how to deploy and configure Grafana is covered in the following document https://github.com/kabanero-io/guide-app-monitoring#deploy-grafana
 
+You can find out the access point of Grafana by running the following:
+
+```
+oc get routes -n grafana
+```
+The `grafana` value is the namespace that you used to deploy Grafana to.
 
 An Open Liberty server configured with MicroProfile Metrics 1.1 will be instrumented with the `mpMerics-1.1` feature in the server's `server.xml`.  Similarly a MicroProfile Metrics 2.0  configured Open Liberty server will be instrumented with the `mpMetrics-2.0` feature. Find the appropriate dashboards at:
 https://github.com/OpenLiberty/open-liberty-operator/deploy/dashboards/
