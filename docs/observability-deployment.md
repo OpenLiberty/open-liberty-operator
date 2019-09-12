@@ -11,16 +11,14 @@ Kibana dashboards are provided for visualizing events from the Open Liberty runt
 To leverage the use of these dashboards the logging events must be emitted in JSON format into standard-out. For information regarding how to configure an Open Liberty image with JSON logging please see:   https://github.com/OpenLiberty/ci.docker#logging
 
 
-Retrieve available Kibana dashboards tuned for Open Liberty logging events under https://github.com/OpenLiberty/open-liberty-operator/deploy/dashboards
+Retrieve available Kibana dashboards tuned for Open Liberty logging events under https://github.com/OpenLiberty/open-liberty-operator/deploy/dashboards/logging
 
-
+For information regarding how to import Kibana dashboards see the official documentation here:
+https://www.elastic.co/guide/en/kibana/5.6/loading-a-saved-dashboard.html
 
 
 ## How to monitor your Liberty runtimes 
 A Microprofile metrics enabled Open Liberty runtime is capable of tracking and observing metrics from the JVM and Open Liberty server as well as tracking Microprofile Metrics instrumented within a deployed application. The tracked metric data can then be scraped by Prometheus and visualized with Grafana.
-
-
-As a prerequisite Prometheus and Grafana will need to be first deployed before their functionality can be leveraged.
 
 
 ### MicroProfile Metrics 1.x
@@ -61,20 +59,15 @@ The build process provided by https://github.com/OpenLiberty/ci.docker does not 
 <server>
    <featureManager>
        <feature>mpMetrics-2.0</feature>
-<feature>monitor-1.0</feature>
+       <feature>monitor-1.0</feature>
    </featureManager>
    <mpMetrics authentication="false" />
 </server>
 ```
 
-2.    In your DockerFile, create the `configDropins/overrides` directory, by adding the following line:
+2.    In your DockerFile, add the following line to copy the `server_mpMetrics_2.0.xml` file into the `configDropins/overrides` directory:
 ```
-MKDIR /config/configDropins/overrides
-```
-
-3.    In your DockerFile, add the following line to copy the `server_mpMetrics_2.0.xml` file into the `configDropins/overrides` directory:
-```
-COPY server_mpMetrics_2.0.xml /config/configDropins/overrides/
+COPY --chown=1001:0 server_mpMetrics_2.0.xml /config/configDropins/overrides/
 ```
 
 Proceed to _Enabling Prometheus to scrape data_ on instructions on how to configure your deployment with Prometheus.
@@ -86,10 +79,10 @@ Proceed to _Enabling Prometheus to scrape data_ on instructions on how to config
 There are two ways in which Prometheus can be deployed and configured for log consumption. The first approach is to deploy the Prometheus through the Prometheus Operator which will then utilize Service Monitors to monitor and scrape logs from target services.  The second approach is considered the _legacy_ approach in which Prometheus is deployed directly and configured to listen to deployments with specific annotations. Details regarding how to deploy and configure Prometheus in both approaches are covered in the following document https://github.com/kabanero-io/guide-logging-monitoring.
 
 
-Using a Service Monitor would be the desired approach and will provide your micro service environment with greater inter-operability as your environment scales and evolves.
+Using a Service Monitor would be the desired approach and will provide your microservice environment with greater inter-operability as your environment scales and evolves.
 
 
-With regards to the _legacy approach_ the Open Liberty operator offers a configuration value to easily instrument the annotations. You can enable Prometheus to begin scraping metrics data from the Open Liberty /metrics endpoint by implementing the following snippet into your Open Liberty Operator YAML configuration file.
+With regards to the _legacy approach_ the Open Liberty operator offers a configuration value to easily instrument the annotations. You can enable Prometheus to begin scraping metrics data from the Open Liberty `/metrics` endpoint by implementing the following snippet into your Open Liberty Operator YAML configuration file.
 
 
 ```
@@ -107,12 +100,14 @@ There are IBM provided Grafana dashboards that leverage the metrics tracked from
 You can find out the access point of Grafana by running the following:
 
 ```
-oc get routes -n grafana
+# oc get routes -n grafana
+NAME          HOST/PORT                                      PATH      SERVICES      PORT      TERMINATION   WILDCARD
+grafana-ocp   grafana-ocp-grafana.apps.9.37.135.153.nip.io             grafana-ocp   <all>     reencrypt     None
 ```
 The `grafana` value is the namespace that you used to deploy Grafana to.
 
 An Open Liberty server configured with MicroProfile Metrics 1.1 will be instrumented with the `mpMerics-1.1` feature in the server's `server.xml`.  Similarly a MicroProfile Metrics 2.0  configured Open Liberty server will be instrumented with the `mpMetrics-2.0` feature. Find the appropriate dashboards at:
-https://github.com/OpenLiberty/open-liberty-operator/deploy/dashboards/
+https://github.com/OpenLiberty/open-liberty-operator/deploy/dashboards/metrics
 
 
 ## How to use health info with service orchestrator 
@@ -147,14 +142,9 @@ Configure mpHealth-2.0 feature in server.xml:
 </server>
 ```
 
-2.    In your DockerFile, create the `configDropins/overrides` directory, by adding the following line:
+2.    In your DockerFile, add the following line to copy the `server_mpHealth_2.0.xml` file into the `configDropins/overrides` directory:
 ```
-MKDIR /config/configDropins/overrides
-```
-
-3.    In your DockerFile, add the following line to copy the `server_mpHealth_2.0.xml` file into the `configDropins/overrides` directory:
-```
-COPY server_mpHealth_2.0.xml /config/configDropins/overrides/
+COPY --chown=1001:0 server_mpHealth_2.0.xml /config/configDropins/overrides/
 ```
 
 ## Configure the Kubernetes Liveness and Readiness Probes with the MicroProfile Health Check REST Endpoints
@@ -162,15 +152,19 @@ COPY server_mpHealth_2.0.xml /config/configDropins/overrides/
 
 Kubernetes provides liveness and readiness probes that are used to check the health of your containers. These probes can check certain files in your containers, check a TCP socket, or make HTTP requests. MicroProfile Health Check exposes readiness and liveness endpoints on your microservices. Kubernetes polls these endpoints as specified by the probes to react appropriately to any change in the microservice’s status.
  
-1.    Configure the readiness and liveness probes fields to point to the MicroProfile Health Check REST endpoints in your Open Liberty Operator YAML configuration file:
+Configure the readiness and liveness probes fields to point to the MicroProfile Health Check REST endpoints in your Open Liberty Operator YAML configuration file:
 See https://github.com/OpenLiberty/open-liberty-operator/blob/master/deploy/crds/full_cr.yaml for full template of available fields.
-For mpHealth-1.0:
+
+### For mpHealth-1.0:
 Enable the MicroProfile Health Check in your Open Liberty Operator YAML configuration file, with the following snippet:
+```
 microprofile:  
    health:     
      enabled: true
+```
     
-For mpHealth-2.0:
+### For mpHealth-2.0:
+
 Modify the readiness and liveness probes fields to point to the MicroProfile Health Check REST endpoints:
 ```
 spec:
