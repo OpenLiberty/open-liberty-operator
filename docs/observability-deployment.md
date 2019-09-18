@@ -89,8 +89,8 @@ Using a Service Monitor would be the desired approach and will provide your micr
 With regards to the _legacy approach_ the Open Liberty operator offers a configuration value to easily configure the Open Liberty service with Prometheus scrape annotations. You can enable Prometheus to begin scraping metrics data from the Open Liberty `/metrics` endpoint by implementing the following snippet into your Open Liberty Operator YAML configuration file.
 
 ```YAML
-  monitoring:
-    enabled: true
+monitoring:
+  enabled: true
 ```
 
 See <https://github.com/OpenLiberty/open-liberty-operator/blob/master/deploy/crds/full_cr.yaml> for full template of available fields.
@@ -121,7 +121,7 @@ MicroProfile Health Check allows services to report their health, and it publish
 1.    Follow the instructions from the ci.docker GitHub README <https://github.com/WASdev/ci.docker>.
 
   a. Set the `MP_HEALTH_CHECK` argument to true in your DockerFile.  
-     This will add the mpHealth-1.0 feature in the server configuration.:
+     This will add the mpHealth-1.0 feature in the server configuration:
 
   ```DockerFile
   ARG MP_HEALTH_CHECK=true
@@ -130,7 +130,7 @@ MicroProfile Health Check allows services to report their health, and it publish
   b. Add the following line in your DockerFile to run the script, which will add the requested XML snippets from the ARG arguments:
 
   ```DockerFile
-     RUN configure.sh
+  RUN configure.sh
   ```
 
 ### MicroProfile Health Check 2.0
@@ -138,7 +138,8 @@ MicroProfile Health Check allows services to report their health, and it publish
 The build process provided by <https://github.com/OpenLiberty/ci.docker> does not currently include a configurable optional enterprise functionality `ARG` parameter for MicroProfile Health Check 2.0. The following steps outline how to manually create and modify a server.xml to add the mpHealth-2.0 feature that will be built as part of your Open Liberty image.
 
 Configure mpHealth-2.0 feature in server.xml:
-1.    Create a XML file named `server_mpHealth_2.0.xml`, with the following contents and place it in the same directory as your DockerFile:
+
+1.    Create a XML file named `server_mpHealth_2.0.xml`, with the following contents and place it in the same directory as your DockerFile:
 
 ```XML
 <?xml version=“1.0” encoding=“UTF-8"?>
@@ -149,7 +150,7 @@ Configure mpHealth-2.0 feature in server.xml:
 </server>
 ```
 
-2.    In your DockerFile, add the following line to copy the `server_mpHealth_2.0.xml` file into the `configDropins/overrides` directory:
+2.    In your DockerFile, add the following line to copy the `server_mpHealth_2.0.xml` file into the `configDropins/overrides` directory:
 
 ```DockerFile
 COPY --chown=1001:0 server_mpHealth_2.0.xml /config/configDropins/overrides/
@@ -182,16 +183,16 @@ spec:
    ...
    readinessProbe: {  
       httpGet:
-      path: /health/ready
-      port: 9080
+         path: /health/ready
+         port: 9080
       initialDelaySeconds: 3
       periodSeconds: 5
    }
 
    livenessProbe: {
       httpGet:
-      path: /health/live
-      port: 9080
+         path: /health/live
+         port: 9080
       initialDelaySeconds: 40
       periodSeconds: 10
    }
