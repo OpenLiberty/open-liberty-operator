@@ -1974,10 +1974,7 @@
     "list": [
       {
         "allValue": null,
-        "current": {
-          "text": "myapp2",
-          "value": "myapp2"
-        },
+        "current": {},
         "datasource": "Prometheus",
         "definition": "base_cpu_processCpuLoad_percent",
         "hide": 0,
@@ -1999,10 +1996,7 @@
       },
       {
         "allValue": null,
-        "current": {
-          "text": "com_ibm_ws_microprofile_health_2_0_HealthCheckServlet",
-          "value": "com_ibm_ws_microprofile_health_2_0_HealthCheckServlet"
-        },
+        "current": {},
         "datasource": "Prometheus",
         "definition": "",
         "hide": 0,
@@ -2046,12 +2040,12 @@
             "value": "[5m]"
           },
           {
-            "selected": false,
+            "selected": true,
             "text": "[10m]",
             "value": "[10m]"
           },
           {
-            "selected": true,
+            "selected": false,
             "text": "[30m]",
             "value": "[30m]"
           },

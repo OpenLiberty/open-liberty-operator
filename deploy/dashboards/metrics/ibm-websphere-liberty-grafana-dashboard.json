@@ -1986,12 +1986,7 @@
     "list": [
       {
         "allValue": null,
-        "current": {
-          "text": "myapp",
-          "value": [
-            "myapp"
-          ]
-        },
+        "current": {},
         "datasource": "Prometheus",
         "definition": "base:cpu_available_processors",
         "hide": 0,
@@ -2013,10 +2008,7 @@
       },
       {
         "allValue": null,
-        "current": {
-          "text": "com_ibm_ws_microprofile_metrics_public_public_metrics_rest_proxy_servlet",
-          "value": "com_ibm_ws_microprofile_metrics_public_public_metrics_rest_proxy_servlet"
-        },
+        "current": {},
         "datasource": "Prometheus",
         "definition": "{__name__=~\"vendor:servlet.*_response_time_total_seconds\",service=~`[[service]]`}",
         "hide": 0,
