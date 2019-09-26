@@ -1,40 +1,40 @@
 {
   "__inputs": [
-    {
-      "name": "DS_PROMETHEUS",
-      "label": "prometheus",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
+     {
+       "name": "DS_PROMETHEUS",
+       "label": "Prometheus",
+       "description": "",
+       "type": "datasource",
+       "pluginId": "prometheus",
+       "pluginName": "Prometheus"
+     }
+   ],
   "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "5.2.0"
-    },
-    {
-      "type": "panel",
-      "id": "graph",
-      "name": "Graph",
-      "version": "5.0.0"
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "5.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "table",
-      "name": "Table",
-      "version": "5.0.0"
-    }
-  ],
+     {
+       "type": "grafana",
+       "id": "grafana",
+       "name": "Grafana",
+       "version": "5.2.0"
+     },
+     {
+       "type": "panel",
+       "id": "graph",
+       "name": "Graph",
+       "version": "5.0.0"
+     },
+     {
+       "type": "datasource",
+       "id": "prometheus",
+       "name": "Prometheus",
+       "version": "5.0.0"
+     },
+     {
+       "type": "panel",
+       "id": "table",
+       "name": "Table",
+       "version": "5.0.0"
+     }
+   ],
   "annotations": {
     "list": [
       {
@@ -51,8 +51,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": null,
-  "iteration": 1558445746439,
+  "id": 2,
+  "iteration": 1569354180705,
   "links": [],
   "panels": [
     {
@@ -72,6 +72,7 @@
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 9,
             "w": 8,
@@ -93,6 +94,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -103,15 +107,16 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "base:cpu_available_processors{app=~`[[app]]`}",
+              "expr": "base:cpu_available_processors{service=~`[[service]]`}",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "app: {{app}}, instance: {{instance}}",
+              "legendFormat": "service: {{service}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Available CPU Processors",
           "tooltip": {
@@ -157,6 +162,7 @@
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 9,
             "w": 8,
@@ -179,6 +185,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -189,15 +198,17 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "base:cpu_process_cpu_load_percent{app=~`[[app]]`}",
+              "expr": "base:cpu_process_cpu_load_percent{service=~`[[service]]`}",
               "format": "time_series",
+              "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "app: {{app}}, instance: {{instance}}",
+              "legendFormat": "service: {{service}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "CPU Load Percent",
           "tooltip": {
@@ -244,6 +255,7 @@
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 9,
             "w": 8,
@@ -265,6 +277,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -275,15 +290,17 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "base:cpu_system_load_average{app=~`[[app]]`}",
+              "expr": "base:cpu_system_load_average{service=~`[[service]]`}",
               "format": "time_series",
+              "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "app: {{app}}, instance: {{instance}}",
+              "legendFormat": "service: {{service}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "CPU System Load Average",
           "tooltip": {
@@ -349,12 +366,13 @@
           },
           "id": 54,
           "links": [],
+          "options": {},
           "pageSize": null,
           "scroll": true,
           "showHeader": true,
           "sort": {
-            "col": 0,
-            "desc": true
+            "col": null,
+            "desc": false
           },
           "styles": [
             {
@@ -388,7 +406,7 @@
                 "rgba(50, 172, 45, 0.97)"
               ],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
-              "decimals": 0,
+              "decimals": 2,
               "mappingType": 1,
               "pattern": "Value",
               "thresholds": [],
@@ -412,7 +430,7 @@
           ],
           "targets": [
             {
-              "expr": "base:memory_max_heap_bytes{app=~`[[app]]`}",
+              "expr": "base:memory_max_heap_bytes{service=~`[[service]]`}",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -430,6 +448,7 @@
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 24,
@@ -453,6 +472,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -463,15 +485,17 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "(base:memory_used_heap_bytes{app=~`[[app]]`}/base:memory_max_heap_bytes{app=~`[[app]]`})",
+              "expr": "(base:memory_used_heap_bytes{service=~`[[service]]`}/base:memory_max_heap_bytes{service=~`[[service]]`})",
               "format": "time_series",
+              "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "app: {{app}}, instance: {{instance}}",
+              "legendFormat": "service: {{service}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Heap Usage Percentage",
           "tooltip": {
@@ -538,6 +562,7 @@
           },
           "id": 44,
           "links": [],
+          "options": {},
           "pageSize": null,
           "scroll": true,
           "showHeader": true,
@@ -614,7 +639,7 @@
           ],
           "targets": [
             {
-              "expr": "{__name__=~\"vendor:servlet.*_request_total\",app=~`[[app]]`}",
+              "expr": "{__name__=~\"vendor:servlet.*_request_total\",service=~`[[service]]`}",
               "format": "table",
               "instant": true,
               "intervalFactor": 2,
@@ -633,6 +658,7 @@
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
           "fill": 0,
+          "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 12,
@@ -654,6 +680,9 @@
           "linewidth": 0,
           "links": [],
           "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -664,15 +693,17 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "vendor:servlet_[[servlet]]_request_total{app=~`[[app]]`}",
+              "expr": "vendor:servlet_[[servlet]]_request_total{service=~`[[service]]`}",
               "format": "time_series",
+              "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "app: {{app}}, instance: {{instance}}",
+              "legendFormat": "service: {{service}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Request Count for [[servlet]]",
           "tooltip": {
@@ -718,6 +749,7 @@
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 12,
@@ -740,6 +772,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -750,16 +785,17 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(vendor:servlet_[[servlet]]_response_time_total_seconds{app=~`[[app]]`}[[dur]])/rate(vendor:servlet_[[servlet]]_request_total{app=~`[[app]]`}[[dur]])",
+              "expr": "rate(vendor:servlet_[[servlet]]_response_time_total_seconds{service=~`[[service]]`}[[dur]])/rate(vendor:servlet_[[servlet]]_request_total{service=~`[[service]]`}[[dur]])",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "app: {{app}}, instance: {{instance}}",
+              "legendFormat": "service: {{service}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Response Time for [[servlet]] [[dur]] moving average",
           "tooltip": {
@@ -820,6 +856,7 @@
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 24,
@@ -843,6 +880,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -853,15 +893,17 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "{__name__=~\"vendor:connectionpool_.*_free_connections\",app=~`[[app]]`}",
+              "expr": "{__name__=~\"vendor:connectionpool_.*_free_connections\",service=~`[[service]]`}",
               "format": "time_series",
+              "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "name: {{__name__}} app: {{app}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} service: {{service}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Free Connections",
           "tooltip": {
@@ -907,6 +949,7 @@
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 24,
@@ -930,6 +973,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -940,15 +986,17 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "{__name__=~\"vendor:connectionpool_.*_connection_handles\",app=~`[[app]]`}",
+              "expr": "{__name__=~\"vendor:connectionpool_.*_connection_handles\",service=~`[[service]]`}",
               "format": "time_series",
+              "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "name: {{__name__}} app: {{app}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} service: {{service}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Connection Handles",
           "tooltip": {
@@ -994,6 +1042,7 @@
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 24,
@@ -1017,6 +1066,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -1027,15 +1079,17 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "{__name__=~\"vendor:connectionpool_.*_create_total\",app=~`[[app]]`}",
+              "expr": "{__name__=~\"vendor:connectionpool_.*_create_total\",service=~`[[service]]`}",
               "format": "time_series",
+              "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "name: {{__name__}} app: {{app}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} service: {{service}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Create Total",
           "tooltip": {
@@ -1081,6 +1135,7 @@
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 24,
@@ -1104,6 +1159,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -1114,15 +1172,17 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "{__name__=~\"vendor:connectionpool_.*_destroy_total\",app=~`[[app]]`}",
+              "expr": "{__name__=~\"vendor:connectionpool_.*_destroy_total\",service=~`[[service]]`}",
               "format": "time_series",
+              "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "name: {{__name__}} app: {{app}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} service: {{service}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Destroy Total",
           "tooltip": {
@@ -1168,6 +1228,7 @@
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 24,
@@ -1191,6 +1252,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -1201,15 +1265,17 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "{__name__=~\"vendor:connectionpool_.*_managed_connections\",app=~`[[app]]`}",
+              "expr": "{__name__=~\"vendor:connectionpool_.*_managed_connections\",service=~`[[service]]`}",
               "format": "time_series",
+              "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "name: {{__name__}} app: {{app}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} service: {{service}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Managed Connections",
           "tooltip": {
@@ -1270,6 +1336,7 @@
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 24,
@@ -1294,6 +1361,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -1304,15 +1374,17 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "{__name__=~\"vendor:session_.*_active_sessions\",app=~`[[app]]`}",
+              "expr": "{__name__=~\"vendor:session_.*_active_sessions\",service=~`[[service]]`}",
               "format": "time_series",
+              "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "name: {{__name__}} app: {{app}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} service: {{service}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Active Sessions",
           "tooltip": {
@@ -1358,6 +1430,7 @@
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 24,
@@ -1383,6 +1456,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -1393,15 +1469,17 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "{__name__=~\"vendor:session_.*_live_sessions\",app=~`[[app]]`}",
+              "expr": "{__name__=~\"vendor:session_.*_live_sessions\",service=~`[[service]]`}",
               "format": "time_series",
+              "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "name: {{__name__}} app: {{app}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} service: {{service}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Live  Sessions",
           "tooltip": {
@@ -1462,6 +1540,7 @@
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 24,
@@ -1484,6 +1563,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -1494,15 +1576,17 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "{__name__=~\"vendor:threadpool_.*_active_threads\",app=~`[[app]]`}",
+              "expr": "{__name__=~\"vendor:threadpool_.*_active_threads\",service=~`[[service]]`}",
               "format": "time_series",
+              "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "name: {{__name__}} app: {{app}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} service: {{service}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Active Threads",
           "tooltip": {
@@ -1549,6 +1633,7 @@
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 24,
@@ -1572,6 +1657,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -1582,15 +1670,17 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "{__name__=~\"vendor:threadpool_.*_size\",app=~`[[app]]`}",
+              "expr": "{__name__=~\"vendor:threadpool_.*_size\",service=~`[[service]]`}",
               "format": "time_series",
+              "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "name: {{__name__}} app: {{app}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} service: {{service}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Threadpool Size",
           "tooltip": {
@@ -1651,6 +1741,7 @@
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 8,
             "w": 12,
@@ -1672,6 +1763,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -1682,15 +1776,17 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(base:gc_global_time_seconds{app=~`[[app]]`}[[dur]]) / rate(base:gc_global_count{app=~`[[app]]`}[[dur]])",
+              "expr": "rate(base:gc_global_time_seconds{service=~`[[service]]`}[[dur]]) / rate(base:gc_global_count{service=~`[[service]]`}[[dur]])",
               "format": "time_series",
+              "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "app: {{app}}, instance: {{instance}}",
+              "legendFormat": "service: {{service}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Time per Global GC Cycle [[dur]] moving average",
           "tooltip": {
@@ -1736,6 +1832,7 @@
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 8,
             "w": 12,
@@ -1757,6 +1854,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -1767,15 +1867,16 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(base:gc_scavenge_time_seconds{app=~`[[app]]`}[[dur]]) / rate(base:gc_scavenge_count{app=~`[[app]]`}[[dur]])",
+              "expr": "rate(base:gc_scavenge_time_seconds{service=~`[[service]]`}[[dur]]) / rate(base:gc_scavenge_count{service=~`[[service]]`}[[dur]])",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "app: {{app}}, instance: {{instance}}",
+              "legendFormat": "service: {{service}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Time per Scavenge GC Cycle [[dur]] moving average",
           "tooltip": {
@@ -1841,6 +1942,7 @@
           },
           "id": 43,
           "links": [],
+          "options": {},
           "pageSize": null,
           "scroll": true,
           "showHeader": true,
@@ -1902,17 +2004,11 @@
           ],
           "targets": [
             {
-              "expr": "base:jvm_uptime_seconds{app=~`[[app]]`}",
+              "expr": "base:jvm_uptime_seconds{service=~`[[service]]`}",
               "format": "table",
               "instant": true,
               "intervalFactor": 2,
               "refId": "A"
-            },
-            {
-              "expr": "",
-              "format": "table",
-              "intervalFactor": 2,
-              "refId": "B"
             }
           ],
           "timeFrom": null,
@@ -1927,7 +2023,7 @@
     }
   ],
   "refresh": "10s",
-  "schemaVersion": 16,
+  "schemaVersion": 19,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -1936,16 +2032,18 @@
         "allValue": null,
         "current": {},
         "datasource": "${DS_PROMETHEUS}",
+        "definition": "base:cpu_available_processors",
         "hide": 0,
         "includeAll": true,
-        "label": "app",
+        "label": "service",
         "multi": true,
-        "name": "app",
+        "name": "service",
         "options": [],
         "query": "base:cpu_available_processors",
         "refresh": 1,
-        "regex": "/base:cpu_available_processors{app=\"(.*)\",chart/",
-        "sort": 0,
+        "regex": "/base:cpu_available_processors{.*service=\"(.*)\"/",
+        "skipUrlSync": false,
+        "sort": 1,
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",
@@ -1956,15 +2054,17 @@
         "allValue": null,
         "current": {},
         "datasource": "${DS_PROMETHEUS}",
+        "definition": "{__name__=~\"vendor:servlet.*_response_time_total_seconds\",service=~`[[service]]`}",
         "hide": 0,
         "includeAll": false,
         "label": null,
         "multi": false,
         "name": "servlet",
         "options": [],
-        "query": "{__name__=~\"vendor:servlet.*_response_time_total_seconds\",app=~`[[app]]`}",
+        "query": "{__name__=~\"vendor:servlet.*_response_time_total_seconds\",service=~`[[service]]`}",
         "refresh": 1,
         "regex": "/vendor:servlet_(.*)_response_time_total_seconds.*/",
+        "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
@@ -2022,6 +2122,7 @@
           }
         ],
         "query": "[1m],[5m],[10m],[30m],[1h],[1d],[7d]",
+        "skipUrlSync": false,
         "type": "custom"
       }
     ]
@@ -2058,5 +2159,5 @@
   "timezone": "",
   "title": "Liberty-Metrics-G5-20190521",
   "uid": "websphere-liberty",
-  "version": 5
+  "version": 2
 }
