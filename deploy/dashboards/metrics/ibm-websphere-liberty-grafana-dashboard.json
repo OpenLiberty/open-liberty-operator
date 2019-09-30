@@ -107,10 +107,10 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "base:cpu_available_processors{service=~`[[service]]`}",
+              "expr": "base:cpu_available_processors{pod=~`[[pod]]`}",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "service: {{service}}, instance: {{instance}}",
+              "legendFormat": "pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -198,11 +198,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "base:cpu_process_cpu_load_percent{service=~`[[service]]`}",
+              "expr": "base:cpu_process_cpu_load_percent{pod=~`[[pod]]`}",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "service: {{service}}, instance: {{instance}}",
+              "legendFormat": "pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -290,11 +290,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "base:cpu_system_load_average{service=~`[[service]]`}",
+              "expr": "base:cpu_system_load_average{pod=~`[[pod]]`}",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "service: {{service}}, instance: {{instance}}",
+              "legendFormat": "pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -430,7 +430,7 @@
           ],
           "targets": [
             {
-              "expr": "base:memory_max_heap_bytes{service=~`[[service]]`}",
+              "expr": "base:memory_max_heap_bytes{pod=~`[[pod]]`}",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -485,11 +485,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "(base:memory_used_heap_bytes{service=~`[[service]]`}/base:memory_max_heap_bytes{service=~`[[service]]`})",
+              "expr": "(base:memory_used_heap_bytes{pod=~`[[pod]]`}/base:memory_max_heap_bytes{pod=~`[[pod]]`})",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "service: {{service}}, instance: {{instance}}",
+              "legendFormat": "pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -639,7 +639,7 @@
           ],
           "targets": [
             {
-              "expr": "{__name__=~\"vendor:servlet.*_request_total\",service=~`[[service]]`}",
+              "expr": "{__name__=~\"vendor:servlet.*_request_total\",pod=~`[[pod]]`}",
               "format": "table",
               "instant": true,
               "intervalFactor": 2,
@@ -693,11 +693,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "vendor:servlet_[[servlet]]_request_total{service=~`[[service]]`}",
+              "expr": "vendor:servlet_[[servlet]]_request_total{pod=~`[[pod]]`}",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "service: {{service}}, instance: {{instance}}",
+              "legendFormat": "pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -785,11 +785,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(vendor:servlet_[[servlet]]_response_time_total_seconds{service=~`[[service]]`}[[dur]])/rate(vendor:servlet_[[servlet]]_request_total{service=~`[[service]]`}[[dur]])",
+              "expr": "rate(vendor:servlet_[[servlet]]_response_time_total_seconds{pod=~`[[pod]]`}[[dur]])/rate(vendor:servlet_[[servlet]]_request_total{pod=~`[[pod]]`}[[dur]])",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "service: {{service}}, instance: {{instance}}",
+              "legendFormat": "pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -893,11 +893,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "{__name__=~\"vendor:connectionpool_.*_free_connections\",service=~`[[service]]`}",
+              "expr": "{__name__=~\"vendor:connectionpool_.*_free_connections\",pod=~`[[pod]]`}",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "name: {{__name__}} service: {{service}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -986,11 +986,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "{__name__=~\"vendor:connectionpool_.*_connection_handles\",service=~`[[service]]`}",
+              "expr": "{__name__=~\"vendor:connectionpool_.*_connection_handles\",pod=~`[[pod]]`}",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "name: {{__name__}} service: {{service}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -1079,11 +1079,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "{__name__=~\"vendor:connectionpool_.*_create_total\",service=~`[[service]]`}",
+              "expr": "{__name__=~\"vendor:connectionpool_.*_create_total\",pod=~`[[pod]]`}",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "name: {{__name__}} service: {{service}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -1172,11 +1172,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "{__name__=~\"vendor:connectionpool_.*_destroy_total\",service=~`[[service]]`}",
+              "expr": "{__name__=~\"vendor:connectionpool_.*_destroy_total\",pod=~`[[pod]]`}",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "name: {{__name__}} service: {{service}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -1265,11 +1265,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "{__name__=~\"vendor:connectionpool_.*_managed_connections\",service=~`[[service]]`}",
+              "expr": "{__name__=~\"vendor:connectionpool_.*_managed_connections\",pod=~`[[pod]]`}",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "name: {{__name__}} service: {{service}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -1374,11 +1374,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "{__name__=~\"vendor:session_.*_active_sessions\",service=~`[[service]]`}",
+              "expr": "{__name__=~\"vendor:session_.*_active_sessions\",pod=~`[[pod]]`}",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "name: {{__name__}} service: {{service}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -1469,11 +1469,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "{__name__=~\"vendor:session_.*_live_sessions\",service=~`[[service]]`}",
+              "expr": "{__name__=~\"vendor:session_.*_live_sessions\",pod=~`[[pod]]`}",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "name: {{__name__}} service: {{service}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -1576,11 +1576,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "{__name__=~\"vendor:threadpool_.*_active_threads\",service=~`[[service]]`}",
+              "expr": "{__name__=~\"vendor:threadpool_.*_active_threads\",pod=~`[[pod]]`}",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "name: {{__name__}} service: {{service}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -1670,11 +1670,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "{__name__=~\"vendor:threadpool_.*_size\",service=~`[[service]]`}",
+              "expr": "{__name__=~\"vendor:threadpool_.*_size\",pod=~`[[pod]]`}",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "name: {{__name__}} service: {{service}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -1776,11 +1776,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(base:gc_global_time_seconds{service=~`[[service]]`}[[dur]]) / rate(base:gc_global_count{service=~`[[service]]`}[[dur]])",
+              "expr": "rate(base:gc_global_time_seconds{pod=~`[[pod]]`}[[dur]]) / rate(base:gc_global_count{pod=~`[[pod]]`}[[dur]])",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "service: {{service}}, instance: {{instance}}",
+              "legendFormat": "pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -1867,10 +1867,10 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(base:gc_scavenge_time_seconds{service=~`[[service]]`}[[dur]]) / rate(base:gc_scavenge_count{service=~`[[service]]`}[[dur]])",
+              "expr": "rate(base:gc_scavenge_time_seconds{pod=~`[[pod]]`}[[dur]]) / rate(base:gc_scavenge_count{pod=~`[[pod]]`}[[dur]])",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "service: {{service}}, instance: {{instance}}",
+              "legendFormat": "pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -2004,7 +2004,7 @@
           ],
           "targets": [
             {
-              "expr": "base:jvm_uptime_seconds{service=~`[[service]]`}",
+              "expr": "base:jvm_uptime_seconds{pod=~`[[pod]]`}",
               "format": "table",
               "instant": true,
               "intervalFactor": 2,
@@ -2035,13 +2035,13 @@
         "definition": "base:cpu_available_processors",
         "hide": 0,
         "includeAll": true,
-        "label": "service",
+        "label": "pod",
         "multi": true,
-        "name": "service",
+        "name": "pod",
         "options": [],
         "query": "base:cpu_available_processors",
         "refresh": 1,
-        "regex": "/base:cpu_available_processors{.*service=\"(.*)\"/",
+        "regex": "/base:cpu_available_processors{.*pod=\"(.*)\",service=.*/",
         "skipUrlSync": false,
         "sort": 1,
         "tagValuesQuery": "",
@@ -2054,14 +2054,14 @@
         "allValue": null,
         "current": {},
         "datasource": "${DS_PROMETHEUS}",
-        "definition": "{__name__=~\"vendor:servlet.*_response_time_total_seconds\",service=~`[[service]]`}",
+        "definition": "{__name__=~\"vendor:servlet.*_response_time_total_seconds\",pod=~`[[pod]]`}",
         "hide": 0,
         "includeAll": false,
         "label": null,
         "multi": false,
         "name": "servlet",
         "options": [],
-        "query": "{__name__=~\"vendor:servlet.*_response_time_total_seconds\",service=~`[[service]]`}",
+        "query": "{__name__=~\"vendor:servlet.*_response_time_total_seconds\",pod=~`[[pod]]`}",
         "refresh": 1,
         "regex": "/vendor:servlet_(.*)_response_time_total_seconds.*/",
         "skipUrlSync": false,
