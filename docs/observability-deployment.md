@@ -184,7 +184,8 @@ spec:
    readinessProbe: {  
       httpGet:
          path: /health/ready
-         port: 9080
+         port: 9443
+         scheme: HTTPS
       initialDelaySeconds: 3
       periodSeconds: 5
    }
@@ -192,7 +193,8 @@ spec:
    livenessProbe: {
       httpGet:
          path: /health/live
-         port: 9080
+         port: 9443
+         scheme: HTTPS
       initialDelaySeconds: 40
       periodSeconds: 10
    }
