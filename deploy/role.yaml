@@ -9,38 +9,14 @@ rules:
   resources:
   - pods
   - services
+  - services/finalizers
   - endpoints
   - persistentvolumeclaims
   - events
   - configmaps
   - secrets
-  - serviceaccounts
   verbs:
   - '*'
-- apiGroups:
-  - "extensions"
-  resources:
-  - ingresses
-  verbs:
-  - '*'
-- apiGroups:
-  - "autoscaling"
-  resources:
-  - horizontalpodautoscalers
-  verbs:
-  - '*'
-- apiGroups:
-  - "batch"
-  resources:
-  - jobs
-  verbs:
-  - '*' 
-- apiGroups:
-  - ""
-  resources:
-  - namespaces
-  verbs:
-  - get
 - apiGroups:
   - apps
   resources:
@@ -66,15 +42,20 @@ rules:
   verbs:
   - update
 - apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+- apiGroups:
+  - apps
+  resources:
+  - replicasets
+  verbs:
+  - get
+- apiGroups:
   - openliberty.io
   resources:
   - '*'
-  verbs:
-  - '*'
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
-  - roles
-  - rolebindings
   verbs:
   - '*'
