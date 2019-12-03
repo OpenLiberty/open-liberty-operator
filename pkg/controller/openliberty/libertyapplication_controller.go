@@ -45,7 +45,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	reconciler := &ReconcileOpenLiberty{ReconcilerBase: autils.NewReconcilerBase(mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetRecorder(("open-liberty-operator")))}
+	reconciler := &ReconcileOpenLiberty{ReconcilerBase: autils.NewReconcilerBase(mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor(("open-liberty-operator")))}
 	return reconciler
 }
 
@@ -102,6 +102,64 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if err != nil {
 		return err
 	}
+
+	predSubResource := predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Ignore updates to CR status in which case metadata.Generation does not change
+			return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration() && (isClusterWide || watchNamespacesMap[e.MetaOld.GetNamespace()])
+		},
+		CreateFunc: func(e event.CreateEvent) bool {
+			return false
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return isClusterWide || watchNamespacesMap[e.Meta.GetNamespace()]
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return false
+		},
+	}
+
+	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &openlibertyv1beta1.LibertyApplication{},
+	}, predSubResource)
+	if err != nil {
+		return err
+	}
+
+	err = c.Watch(&source.Kind{Type: &appsv1.StatefulSet{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &openlibertyv1beta1.LibertyApplication{},
+	}, predSubResource)
+	if err != nil {
+		return err
+	}
+
+	err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &openlibertyv1beta1.LibertyApplication{},
+	}, predSubResource)
+	if err != nil {
+		return err
+	}
+
+	err = c.Watch(&source.Kind{Type: &autoscalingv1.HorizontalPodAutoscaler{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &openlibertyv1beta1.LibertyApplication{},
+	}, predSubResource)
+	if err != nil {
+		return err
+	}
+
+	err = c.Watch(&source.Kind{Type: &routev1.Route{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &openlibertyv1beta1.LibertyApplication{},
+	}, predSubResource)
+
+	err = c.Watch(&source.Kind{Type: &servingv1alpha1.Service{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &openlibertyv1beta1.LibertyApplication{},
+	}, predSubResource)
 
 	return nil
 }
@@ -168,6 +226,16 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 	defaultMeta := metav1.ObjectMeta{
 		Name:      instance.Name,
 		Namespace: instance.Namespace,
+	}
+
+	result, err := r.ReconcileProvides(instance)
+	if err != nil || result != (reconcile.Result{}) {
+		return result, err
+	}
+
+	result, err = r.ReconcileConsumes(instance)
+	if err != nil || result != (reconcile.Result{}) {
+		return result, err
 	}
 
 	if instance.Spec.ServiceAccountName == nil || *instance.Spec.ServiceAccountName == "" {
@@ -239,10 +307,10 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		autils.CustomizeService(svc, ba)
 		svc.Annotations = instance.Spec.Service.Annotations
 		if instance.Spec.Monitoring != nil {
-			svc.Labels["app.appsody.dev/monitor"] = "true"
+			svc.Labels["app."+ba.GetGroupName()+"/monitor"] = "true"
 		} else {
-			if _, ok := svc.Labels["app.appsody.dev/monitor"]; ok {
-				delete(svc.Labels, "app.appsody.dev/monitor")
+			if _, ok := svc.Labels["app."+ba.GetGroupName()+"/monitor"]; ok {
+				delete(svc.Labels, "app."+ba.GetGroupName()+"/monitor")
 			}
 		}
 		return nil

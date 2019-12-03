@@ -42,6 +42,9 @@ type LibertyApplicationSpec struct {
 	CreateKnativeService *bool                         `json:"createKnativeService,omitempty"`
 	Monitoring           *LibertyApplicationMonitoring `json:"monitoring,omitempty"`
 	CreateAppDefinition  *bool                         `json:"createAppDefinition,omitempty"`
+	// +listType=map
+	// +listMapKey=name
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 }
 
 // LibertyApplicationAutoScaling ...
@@ -64,6 +67,9 @@ type LibertyApplicationService struct {
 	Port int32 `json:"port,omitempty"`
 
 	Annotations map[string]string `json:"annotations,omitempty"`
+	// +listType=atomic
+	Consumes []ServiceBindingConsumes `json:"consumes,omitempty"`
+	Provides *ServiceBindingProvides  `json:"provides,omitempty"`
 }
 
 // LibertyApplicationStorage ...
@@ -87,7 +93,8 @@ type LibertyApplicationMonitoring struct {
 type LibertyApplicationStatus struct {
 	// +listType=map
 	// +listMapKey=type
-	Conditions []StatusCondition `json:"conditions,omitempty"`
+	Conditions       []StatusCondition       `json:"conditions,omitempty"`
+	ConsumedServices common.ConsumedServices `json:"consumedServices,omitempty"`
 }
 
 // StatusCondition ...
@@ -99,6 +106,32 @@ type StatusCondition struct {
 	Message            string                 `json:"message,omitempty"`
 	Status             corev1.ConditionStatus `json:"status,omitempty"`
 	Type               StatusConditionType    `json:"type,omitempty"`
+}
+
+// ServiceBindingAuth allows a service to provide authentication information
+type ServiceBindingAuth struct {
+	// The secret that contains the username for authenticating
+	Username corev1.SecretKeySelector `json:"username,omitempty"`
+	// The secret that contains the password for authenticating
+	Password corev1.SecretKeySelector `json:"password,omitempty"`
+}
+
+// ServiceBindingProvides represents information about
+// +k8s:openapi-gen=true
+type ServiceBindingProvides struct {
+	Category common.ServiceBindingCategory `json:"category"`
+	Context  string                        `json:"context,omitempty"`
+	Protocol string                        `json:"protocol,omitempty"`
+	Auth     *ServiceBindingAuth           `json:"auth,omitempty"`
+}
+
+// ServiceBindingConsumes represents a service to be consumed
+// +k8s:openapi-gen=true
+type ServiceBindingConsumes struct {
+	Name      string                        `json:"name"`
+	Namespace string                        `json:"namespace,omitempty"`
+	Category  common.ServiceBindingCategory `json:"category"`
+	MountPath string                        `json:"mountPath,omitempty"`
 }
 
 // StatusConditionType ...
@@ -113,12 +146,14 @@ const (
 
 // LibertyApplication is the Schema for the LibertyApplications API
 // +k8s:openapi-gen=true
+// +kubebuilder:resource:path=libertyapplications,scope=Namespaced
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Image",type="string",JSONPath=".spec.applicationImage",priority=0,description="Absolute name of the deployed image containing registry and tag"
 // +kubebuilder:printcolumn:name="Exposed",type="boolean",JSONPath=".spec.expose",priority=0,description="Specifies whether deployment is exposed externally via default Route"
 // +kubebuilder:printcolumn:name="Reconciled",type="string",JSONPath=".status.conditions[?(@.type=='Reconciled')].status",priority=0,description="Status of the reconcile condition"
 // +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.type=='Reconciled')].reason",priority=1,description="Reason for the failure of reconcile condition"
 // +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Reconciled')].message",priority=1,description="Failure message from reconcile condition"
+// +kubebuilder:printcolumn:name="DependenciesSatisfied",type="string",JSONPath=".status.conditions[?(@.type=='DependenciesSatisfied')].status",priority=1,description="Status of the application dependencies"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",priority=0,description="Age of the resource"
 type LibertyApplication struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -265,6 +300,29 @@ func (cr *LibertyApplication) GetStatus() common.BaseApplicationStatus {
 	return &cr.Status
 }
 
+// GetInitContainers returns list of init containers
+func (cr *LibertyApplication) GetInitContainers() []corev1.Container {
+	return cr.Spec.InitContainers
+}
+
+// GetGroupName returns group name to be used in labels and annotation
+func (cr *LibertyApplication) GetGroupName() string {
+	return "openliberty.io"
+}
+
+// GetConsumedServices returns a map of all the service names to be consumed by the application
+func (s *LibertyApplicationStatus) GetConsumedServices() common.ConsumedServices {
+	if s.ConsumedServices == nil {
+		return nil
+	}
+	return s.ConsumedServices
+}
+
+// SetConsumedServices sets ConsumedServices
+func (s *LibertyApplicationStatus) SetConsumedServices(c common.ConsumedServices) {
+	s.ConsumedServices = c
+}
+
 // GetMinReplicas returns minimum replicas
 func (a *LibertyApplicationAutoScaling) GetMinReplicas() *int32 {
 	return a.MinReplicas
@@ -311,6 +369,76 @@ func (s *LibertyApplicationService) GetPort() int32 {
 // GetType returns service type
 func (s *LibertyApplicationService) GetType() *corev1.ServiceType {
 	return &s.Type
+}
+
+// GetProvides returns service provider configuration
+func (s *LibertyApplicationService) GetProvides() common.ServiceBindingProvides {
+	if s.Provides == nil {
+		return nil
+	}
+	return s.Provides
+}
+
+// GetName returns service name of a service consumer configuration
+func (c *ServiceBindingConsumes) GetName() string {
+	return c.Name
+}
+
+// GetNamespace returns namespace of a service consumer configuration
+func (c *ServiceBindingConsumes) GetNamespace() string {
+	return c.Namespace
+}
+
+// GetCategory returns category of a service consumer configuration
+func (c *ServiceBindingConsumes) GetCategory() common.ServiceBindingCategory {
+	return common.ServiceBindingCategoryOpenAPI
+}
+
+// GetMountPath returns mount path of a service consumer configuration
+func (c *ServiceBindingConsumes) GetMountPath() string {
+	return c.MountPath
+}
+
+// GetUsername returns username of a service binding auth object
+func (a *ServiceBindingAuth) GetUsername() corev1.SecretKeySelector {
+	return a.Username
+}
+
+// GetPassword returns password of a service binding auth object
+func (a *ServiceBindingAuth) GetPassword() corev1.SecretKeySelector {
+	return a.Password
+}
+
+// GetCategory returns category of a service provider configuration
+func (p *ServiceBindingProvides) GetCategory() common.ServiceBindingCategory {
+	return p.Category
+}
+
+// GetContext returns context of a service provider configuration
+func (p *ServiceBindingProvides) GetContext() string {
+	return p.Context
+}
+
+// GetAuth returns secret of a service provider configuration
+func (p *ServiceBindingProvides) GetAuth() common.ServiceBindingAuth {
+	if p.Auth == nil {
+		return nil
+	}
+	return p.Auth
+}
+
+// GetProtocol returns protocol of a service provider configuration
+func (p *ServiceBindingProvides) GetProtocol() string {
+	return p.Protocol
+}
+
+// GetConsumes returns a list of service consumers' configuration
+func (s *LibertyApplicationService) GetConsumes() []common.ServiceBindingConsumes {
+	consumes := make([]common.ServiceBindingConsumes, len(s.Consumes))
+	for i := range s.Consumes {
+		consumes[i] = &s.Consumes[i]
+	}
+	return consumes
 }
 
 // GetLabels returns labels to be added on ServiceMonitor
