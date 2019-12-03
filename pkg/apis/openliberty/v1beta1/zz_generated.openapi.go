@@ -17,6 +17,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"./pkg/apis/openliberty/v1beta1.LibertyApplicationSpec":        schema_pkg_apis_openliberty_v1beta1_LibertyApplicationSpec(ref),
 		"./pkg/apis/openliberty/v1beta1.LibertyApplicationStatus":      schema_pkg_apis_openliberty_v1beta1_LibertyApplicationStatus(ref),
 		"./pkg/apis/openliberty/v1beta1.LibertyApplicationStorage":     schema_pkg_apis_openliberty_v1beta1_LibertyApplicationStorage(ref),
+		"./pkg/apis/openliberty/v1beta1.ServiceBindingConsumes":        schema_pkg_apis_openliberty_v1beta1_ServiceBindingConsumes(ref),
+		"./pkg/apis/openliberty/v1beta1.ServiceBindingProvides":        schema_pkg_apis_openliberty_v1beta1_ServiceBindingProvides(ref),
 		"./pkg/apis/openliberty/v1beta1.StatusCondition":               schema_pkg_apis_openliberty_v1beta1_StatusCondition(ref),
 	}
 }
@@ -129,9 +131,33 @@ func schema_pkg_apis_openliberty_v1beta1_LibertyApplicationService(ref common.Re
 							},
 						},
 					},
+					"consumes": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("./pkg/apis/openliberty/v1beta1.ServiceBindingConsumes"),
+									},
+								},
+							},
+						},
+					},
+					"provides": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("./pkg/apis/openliberty/v1beta1.ServiceBindingProvides"),
+						},
+					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"./pkg/apis/openliberty/v1beta1.ServiceBindingConsumes", "./pkg/apis/openliberty/v1beta1.ServiceBindingProvides"},
 	}
 }
 
@@ -320,12 +346,30 @@ func schema_pkg_apis_openliberty_v1beta1_LibertyApplicationSpec(ref common.Refer
 							Format: "",
 						},
 					},
+					"initContainers": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-map-keys": "name",
+								"x-kubernetes-list-type":     "map",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/api/core/v1.Container"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"applicationImage"},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/openliberty/v1beta1.LibertyApplicationAutoScaling", "./pkg/apis/openliberty/v1beta1.LibertyApplicationMonitoring", "./pkg/apis/openliberty/v1beta1.LibertyApplicationService", "./pkg/apis/openliberty/v1beta1.LibertyApplicationStorage", "k8s.io/api/core/v1.EnvFromSource", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.Probe", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Volume", "k8s.io/api/core/v1.VolumeMount"},
+			"./pkg/apis/openliberty/v1beta1.LibertyApplicationAutoScaling", "./pkg/apis/openliberty/v1beta1.LibertyApplicationMonitoring", "./pkg/apis/openliberty/v1beta1.LibertyApplicationService", "./pkg/apis/openliberty/v1beta1.LibertyApplicationStorage", "k8s.io/api/core/v1.Container", "k8s.io/api/core/v1.EnvFromSource", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.Probe", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Volume", "k8s.io/api/core/v1.VolumeMount"},
 	}
 }
 
@@ -349,6 +393,27 @@ func schema_pkg_apis_openliberty_v1beta1_LibertyApplicationStatus(ref common.Ref
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Ref: ref("./pkg/apis/openliberty/v1beta1.StatusCondition"),
+									},
+								},
+							},
+						},
+					},
+					"consumedServices": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type: []string{"array"},
+										Items: &spec.SchemaOrArray{
+											Schema: &spec.Schema{
+												SchemaProps: spec.SchemaProps{
+													Type:   []string{"string"},
+													Format: "",
+												},
+											},
+										},
 									},
 								},
 							},
@@ -391,6 +456,83 @@ func schema_pkg_apis_openliberty_v1beta1_LibertyApplicationStorage(ref common.Re
 		},
 		Dependencies: []string{
 			"k8s.io/api/core/v1.PersistentVolumeClaim"},
+	}
+}
+
+func schema_pkg_apis_openliberty_v1beta1_ServiceBindingConsumes(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ServiceBindingConsumes represents a service to be consumed",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"namespace": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"category": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"mountPath": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+				},
+				Required: []string{"name", "category"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_openliberty_v1beta1_ServiceBindingProvides(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ServiceBindingProvides represents information about",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"category": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"context": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"protocol": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"auth": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("./pkg/apis/openliberty/v1beta1.ServiceBindingAuth"),
+						},
+					},
+				},
+				Required: []string{"category"},
+			},
+		},
+		Dependencies: []string{
+			"./pkg/apis/openliberty/v1beta1.ServiceBindingAuth"},
 	}
 }
 
