@@ -307,7 +307,7 @@ func (cr *LibertyApplication) GetInitContainers() []corev1.Container {
 
 // GetGroupName returns group name to be used in labels and annotation
 func (cr *LibertyApplication) GetGroupName() string {
-	return "appsody.dev"
+	return "openliberty.io"
 }
 
 // GetConsumedServices returns a map of all the service names to be consumed by the application
