@@ -5,11 +5,14 @@ go 1.13
 require (
 	github.com/appsody/appsody-operator v0.3.0
 	github.com/coreos/prometheus-operator v0.29.0
+	github.com/go-logfmt/logfmt v0.4.0 // indirect
 	github.com/go-openapi/spec v0.19.0
 	github.com/knative/serving v0.7.1-0.20190701162519-7ca25646a186
+	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/openshift/api v3.9.1-0.20190424152011-77b8897ec79a+incompatible
 	github.com/operator-framework/operator-sdk v0.12.0
 	github.com/spf13/pflag v1.0.3
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	k8s.io/api v0.0.0
 	k8s.io/apimachinery v0.0.0
 	k8s.io/client-go v11.0.0+incompatible

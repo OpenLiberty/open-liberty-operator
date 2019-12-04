@@ -45,6 +45,7 @@ type LibertyApplicationSpec struct {
 	// +listType=map
 	// +listMapKey=name
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`
+	Logs           *LibertyLogs       `json:"logs,omitempty"`
 }
 
 // LibertyApplicationAutoScaling ...
@@ -95,6 +96,10 @@ type LibertyApplicationStatus struct {
 	// +listMapKey=type
 	Conditions       []StatusCondition       `json:"conditions,omitempty"`
 	ConsumedServices common.ConsumedServices `json:"consumedServices,omitempty"`
+}
+
+type LibertyLogs struct {
+	ConsoleFormat *string `json:"consoleFormat,omitempty"`
 }
 
 // StatusCondition ...
@@ -308,6 +313,14 @@ func (cr *LibertyApplication) GetInitContainers() []corev1.Container {
 // GetGroupName returns group name to be used in labels and annotation
 func (cr *LibertyApplication) GetGroupName() string {
 	return "openliberty.io"
+}
+
+// GetLogs returns liberty logging settings
+func (cr *LibertyApplication) GetLogs() *LibertyLogs {
+	if cr.Spec.Logs == nil {
+		return nil
+	}
+	return cr.Spec.Logs
 }
 
 // GetConsumedServices returns a map of all the service names to be consumed by the application
