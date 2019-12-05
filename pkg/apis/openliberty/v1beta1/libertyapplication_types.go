@@ -100,12 +100,12 @@ type LibertyApplicationStatus struct {
 // StatusCondition ...
 // +k8s:openapi-gen=true
 type StatusCondition struct {
-	LastTransitionTime *metav1.Time           `json:"lastTransitionTime,omitempty"`
-	LastUpdateTime     metav1.Time            `json:"lastUpdateTime,omitempty"`
-	Reason             string                 `json:"reason,omitempty"`
-	Message            string                 `json:"message,omitempty"`
-	Status             corev1.ConditionStatus `json:"status,omitempty"`
-	Type               StatusConditionType    `json:"type,omitempty"`
+	LastTransitionTime *metav1.Time               `json:"lastTransitionTime,omitempty"`
+	LastUpdateTime     metav1.Time                `json:"lastUpdateTime,omitempty"`
+	Reason             string                     `json:"reason,omitempty"`
+	Message            string                     `json:"message,omitempty"`
+	Status             corev1.ConditionStatus     `json:"status,omitempty"`
+	Type               common.StatusConditionType `json:"type,omitempty"`
 }
 
 // ServiceBindingAuth allows a service to provide authentication information
@@ -454,6 +454,7 @@ func (m *LibertyApplicationMonitoring) GetEndpoints() []prometheusv1.Endpoint {
 // GetLabels returns set of labels to be added to all resources
 func (cr *LibertyApplication) GetLabels() map[string]string {
 	labels := map[string]string{
+		"app.kubernetes.io/instance":   cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
 		"app.kubernetes.io/managed-by": "open-liberty-operator",
 	}
@@ -463,7 +464,7 @@ func (cr *LibertyApplication) GetLabels() map[string]string {
 	}
 
 	for key, value := range cr.Labels {
-		if key != "app.kubernetes.io/name" {
+		if key != "app.kubernetes.io/instance" {
 			labels[key] = value
 		}
 	}
@@ -473,12 +474,12 @@ func (cr *LibertyApplication) GetLabels() map[string]string {
 
 // GetType returns status condition type
 func (c *StatusCondition) GetType() common.StatusConditionType {
-	return common.StatusConditionTypeReconciled
+	return c.Type
 }
 
 // SetType returns status condition type
 func (c *StatusCondition) SetType(ct common.StatusConditionType) {
-	c.Type = StatusConditionTypeReconciled
+	c.Type = ct
 }
 
 // GetLastTransitionTime return time of last status change
