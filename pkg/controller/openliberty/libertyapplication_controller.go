@@ -456,5 +456,33 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		reqLogger.V(1).Info(fmt.Sprintf("%s is not supported", routev1.SchemeGroupVersion.String()))
 	}
 
+	if instance.Spec.CreateAppDefinition != nil && *instance.Spec.CreateAppDefinition {
+		deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
+		statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
+
+		m := make(map[string]string)
+		m["kappnav.subkind"] = "Liberty"
+
+		err = r.CreateOrUpdate(deploy, instance, func() error {
+			autils.CustomizeDeployment(deploy, instance)
+			deploy.Annotations = autils.MergeMaps(deploy.GetAnnotations(), m)
+			return nil
+		})
+		if err != nil {
+			reqLogger.Error(err, "Failed to reconcile Deployment")
+			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		}
+
+		err = r.CreateOrUpdate(statefulSet, instance, func() error {
+			autils.CustomizeStatefulSet(statefulSet, instance)
+			statefulSet.Annotations = autils.MergeMaps(statefulSet.GetAnnotations(), m)
+			return nil
+		})
+		if err != nil {
+			reqLogger.Error(err, "Failed to reconcile StatefulSet")
+			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		}
+	}
+
 	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
 }
