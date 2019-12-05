@@ -457,30 +457,32 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 	}
 
 	if instance.Spec.CreateAppDefinition != nil && *instance.Spec.CreateAppDefinition {
-		deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
-		statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
-
 		m := make(map[string]string)
 		m["kappnav.subkind"] = "Liberty"
-
-		err = r.CreateOrUpdate(deploy, instance, func() error {
-			autils.CustomizeDeployment(deploy, instance)
-			deploy.Annotations = autils.MergeMaps(deploy.GetAnnotations(), m)
-			return nil
-		})
-		if err != nil {
-			reqLogger.Error(err, "Failed to reconcile Deployment")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-
-		err = r.CreateOrUpdate(statefulSet, instance, func() error {
-			autils.CustomizeStatefulSet(statefulSet, instance)
-			statefulSet.Annotations = autils.MergeMaps(statefulSet.GetAnnotations(), m)
-			return nil
-		})
-		if err != nil {
-			reqLogger.Error(err, "Failed to reconcile StatefulSet")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		if instance.Spec.Storage != nil {
+			statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
+			err = r.CreateOrUpdate(statefulSet, instance, func() error {
+				autils.CustomizeStatefulSet(statefulSet, instance)
+				autils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
+				autils.CustomizePersistence(statefulSet, instance)
+				statefulSet.Annotations = autils.MergeMaps(statefulSet.GetAnnotations(), m)
+				return nil
+			})
+			if err != nil {
+				reqLogger.Error(err, "Failed to reconcile StatefulSet")
+				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			}
+		} else {
+			deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
+			err = r.CreateOrUpdate(deploy, instance, func() error {
+				autils.CustomizeDeployment(deploy, instance)
+				deploy.Annotations = autils.MergeMaps(deploy.GetAnnotations(), m)
+				return nil
+			})
+			if err != nil {
+				reqLogger.Error(err, "Failed to reconcile Deployment")
+				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			}
 		}
 	}
 
