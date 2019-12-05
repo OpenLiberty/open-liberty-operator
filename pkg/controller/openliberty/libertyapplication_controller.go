@@ -346,6 +346,11 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			autils.CustomizeStatefulSet(statefulSet, instance)
 			autils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
 			autils.CustomizePersistence(statefulSet, instance)
+			if instance.Spec.CreateAppDefinition != nil && *instance.Spec.CreateAppDefinition {
+				m := make(map[string]string)
+				m["kappnav.subkind"] = "Liberty"
+				statefulSet.Annotations = autils.MergeMaps(statefulSet.GetAnnotations(), m)
+			}
 			return nil
 		})
 		if err != nil {
@@ -374,6 +379,11 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		err = r.CreateOrUpdate(deploy, instance, func() error {
 			autils.CustomizeDeployment(deploy, instance)
 			autils.CustomizePodSpec(&deploy.Spec.Template, instance)
+			if instance.Spec.CreateAppDefinition != nil && *instance.Spec.CreateAppDefinition {
+				m := make(map[string]string)
+				m["kappnav.subkind"] = "Liberty"
+				deploy.Annotations = autils.MergeMaps(deploy.GetAnnotations(), m)
+			}
 			return nil
 		})
 		if err != nil {
@@ -454,36 +464,6 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 
 	} else {
 		reqLogger.V(1).Info(fmt.Sprintf("%s is not supported", routev1.SchemeGroupVersion.String()))
-	}
-
-	if instance.Spec.CreateAppDefinition != nil && *instance.Spec.CreateAppDefinition {
-		m := make(map[string]string)
-		m["kappnav.subkind"] = "Liberty"
-		if instance.Spec.Storage != nil {
-			statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
-			err = r.CreateOrUpdate(statefulSet, instance, func() error {
-				autils.CustomizeStatefulSet(statefulSet, instance)
-				autils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
-				autils.CustomizePersistence(statefulSet, instance)
-				statefulSet.Annotations = autils.MergeMaps(statefulSet.GetAnnotations(), m)
-				return nil
-			})
-			if err != nil {
-				reqLogger.Error(err, "Failed to reconcile StatefulSet")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
-		} else {
-			deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
-			err = r.CreateOrUpdate(deploy, instance, func() error {
-				autils.CustomizeDeployment(deploy, instance)
-				deploy.Annotations = autils.MergeMaps(deploy.GetAnnotations(), m)
-				return nil
-			})
-			if err != nil {
-				reqLogger.Error(err, "Failed to reconcile Deployment")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
-		}
 	}
 
 	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
