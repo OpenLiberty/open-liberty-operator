@@ -403,24 +403,6 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		}
 	}
 
-	// TODO: Check in with Artur or Navid about this as an approach
-	if logs := instance.Spec.Logs; logs != nil {
-		consoleFormat := "json"
-		if logs.ConsoleFormat != nil {
-			consoleFormat = logs.ConsoleFormat
-		}
-
-		logEnv := &corev1.EnvVar{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: consoleFormat}
-		append(instance.Spec.Env, logEnv)
-
-		deployment := &corev1.Deployment{ObjectMeta: defaultMeta}
-
-		err = r.CreateOrUpdate(logEnv, instance, func() error {
-			autils.CustomizeDeployment(deployment, instance)
-			return nil
-		})
-	}
-
 	if ok, err := r.IsGroupVersionSupported(routev1.SchemeGroupVersion.String()); err != nil {
 		reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", routev1.SchemeGroupVersion.String()))
 		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
