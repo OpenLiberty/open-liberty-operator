@@ -44,7 +44,8 @@ type LibertyApplicationSpec struct {
 	CreateAppDefinition  *bool                         `json:"createAppDefinition,omitempty"`
 	// +listType=map
 	// +listMapKey=name
-	InitContainers []corev1.Container `json:"initContainers,omitempty"`
+	InitContainers []corev1.Container      `json:"initContainers,omitempty"`
+	Logs           *LibertyApplicationLogs `json:"logs,omitempty"`
 }
 
 // LibertyApplicationAutoScaling ...
@@ -95,6 +96,11 @@ type LibertyApplicationStatus struct {
 	// +listMapKey=type
 	Conditions       []StatusCondition       `json:"conditions,omitempty"`
 	ConsumedServices common.ConsumedServices `json:"consumedServices,omitempty"`
+}
+
+// LibertyApplicationLogs defines the configuration for how liberty creates logs
+type LibertyApplicationLogs struct {
+	ConsoleFormat *string `json:"consoleFormat,omitempty"`
 }
 
 // StatusCondition ...
