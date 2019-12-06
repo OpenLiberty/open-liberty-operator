@@ -4,10 +4,5 @@ metadata:
   name: example-trace
   namespace: default
 spec:
-  podNamespace: "default"
   podName: 
   traceSpecification: "com.ibm.ws.webcontainer*=all"
-  maxFileSize: "20"
-  maxFiles: "10"
-
-#<server><logging traceSpecification="com.ibm.ws.webcontainer*=all" logDirectory="/liberty/serviceability/logs/demo-app-fc88c9484-bpw97" traceFileName="trace.log" maxFileSize="20" maxFiles="10"/></server>
