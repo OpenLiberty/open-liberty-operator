@@ -1213,6 +1213,13 @@ spec:
                   format: int32
                   type: integer
               type: object
+            logs:
+              description: LibertyApplicationLogs defines the configuration for how
+                liberty creates logs
+              properties:
+                consoleFormat:
+                  type: string
+              type: object
             monitoring:
               description: LibertyApplicationMonitoring ...
               properties:
