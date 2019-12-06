@@ -6,6 +6,7 @@ import (
 	"time"
 
 	autils "github.com/appsody/appsody-operator/pkg/utils"
+	"github.com/go-logr/logr"
 
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 	"github.com/OpenLiberty/open-liberty-operator/pkg/utils"
@@ -113,6 +114,8 @@ type ReconcileOpenLibertyTrace struct {
 	restConfig *rest.Config
 }
 
+const traceFinalizer = "finalizer.openlibertytraces.openliberty.io"
+
 // Reconcile reads that state of the cluster for a OpenLibertyTrace object and makes changes based on the state read
 // and what is in the OpenLibertyTrace.Spec
 // Note:
@@ -145,21 +148,39 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(request reconcile.Request) (reconc
 	prevTraceEnabled := instance.GetStatus().GetCondition(openlibertyv1beta1.OperationStatusConditionTypeTrace).Status
 	podChanged := prevPodName != podName
 
-	//If pod name changed, then stop tracing on previous pod (if trace was enabled on it)
-	if podChanged && (prevTraceEnabled == corev1.ConditionTrue) {
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: prevPodName, Namespace: podNamespace}, &corev1.Pod{})
-		if err != nil && errors.IsNotFound(err) {
-			//Previous Pod is not found. No-op
-			reqLogger.Info("Previous pod " + prevPodName + " was not found in namespace " + podNamespace)
-		} else {
-			//Stop tracing on previous Pod
-			_, err = utils.ExecuteCommandInContainer(r.restConfig, prevPodName, podNamespace, "app", []string{"/bin/sh", "-c", "rm /config/configDropins/overrides/add_trace.xml", "."})
-			if err == nil {
-				reqLogger.Info("Disabled trace on previous pod " + prevPodName + " of namespace " + podNamespace)
-			} else {
-				reqLogger.Error(err, "Encountered error while disabling trace on previous pod "+podName+" of namespace "+podNamespace)
+	// Check if the OpenLibertyTrace instance is marked to be deleted, which is
+	// indicated by the deletion timestamp being set.
+	isInstanceMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
+	if isInstanceMarkedToBeDeleted {
+		if contains(instance.GetFinalizers(), traceFinalizer) {
+			// Run finalization logic for traceFinalizer. If the
+			// finalization logic fails, don't remove the finalizer so
+			// that we can retry during the next reconciliation.
+			if err := r.finalizeOpenLibertyTrace(reqLogger, instance, prevTraceEnabled, prevPodName, podNamespace); err != nil {
+				return reconcile.Result{}, err
+			}
+
+			// Remove traceFinalizer. Once all finalizers have been
+			// removed, the object will be deleted.
+			instance.SetFinalizers(remove(instance.GetFinalizers(), traceFinalizer))
+			err := r.client.Update(context.TODO(), instance)
+			if err != nil {
+				return reconcile.Result{}, err
 			}
 		}
+		return reconcile.Result{}, nil
+	}
+
+	// Add finalizer for this CR
+	if !contains(instance.GetFinalizers(), traceFinalizer) {
+		if err := r.addFinalizer(reqLogger, instance); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	//If pod name changed, then stop tracing on previous pod (if trace was enabled on it)
+	if podChanged && (prevTraceEnabled == corev1.ConditionTrue) {
+		r.disableTraceOnPrevPod(reqLogger, prevPodName, podNamespace)
 	} else {
 		reqLogger.Info("No clean up was needed")
 	}
@@ -234,4 +255,60 @@ func (r *ReconcileOpenLibertyTrace) UpdateStatus(conditionType openlibertyv1beta
 
 	log.Info("Updated status")
 	return reconcile.Result{Requeue: false}, nil
+}
+
+func (r *ReconcileOpenLibertyTrace) disableTraceOnPrevPod(reqLogger logr.Logger, prevPodName string, podNamespace string) {
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: prevPodName, Namespace: podNamespace}, &corev1.Pod{})
+	if err != nil && errors.IsNotFound(err) {
+		//Previous Pod is not found. No-op
+		reqLogger.Info("Previous pod " + prevPodName + " was not found in namespace " + podNamespace)
+	} else {
+		//Stop tracing on previous Pod
+		_, err = utils.ExecuteCommandInContainer(r.restConfig, prevPodName, podNamespace, "app", []string{"/bin/sh", "-c", "rm /config/configDropins/overrides/add_trace.xml", "."})
+		if err == nil {
+			reqLogger.Info("Disabled trace on previous pod " + prevPodName + " of namespace " + podNamespace)
+		} else {
+			reqLogger.Error(err, "Encountered error while disabling trace on previous pod "+prevPodName+" of namespace "+podNamespace)
+		}
+	}
+}
+
+func (r *ReconcileOpenLibertyTrace) finalizeOpenLibertyTrace(reqLogger logr.Logger, olt *openlibertyv1beta1.OpenLibertyTrace, prevTraceEnabled corev1.ConditionStatus, prevPodName string, podNamespace string) error {
+	if prevTraceEnabled == corev1.ConditionTrue {
+		r.disableTraceOnPrevPod(reqLogger, prevPodName, podNamespace)
+	} else {
+		reqLogger.Info("Finalizer: No clean up was needed")
+	}
+	return nil
+}
+
+func (r *ReconcileOpenLibertyTrace) addFinalizer(reqLogger logr.Logger, olt *openlibertyv1beta1.OpenLibertyTrace) error {
+	reqLogger.Info("Adding Finalizer for OpenLibertyTrace")
+	olt.SetFinalizers(append(olt.GetFinalizers(), traceFinalizer))
+
+	// Update CR
+	err := r.client.Update(context.TODO(), olt)
+	if err != nil {
+		reqLogger.Error(err, "Failed to update OpenLibertyTrace with finalizer")
+		return err
+	}
+	return nil
+}
+
+func contains(list []string, s string) bool {
+	for _, v := range list {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
+
+func remove(list []string, s string) []string {
+	for i, v := range list {
+		if v == s {
+			list = append(list[:i], list[i+1:]...)
+		}
+	}
+	return list
 }
