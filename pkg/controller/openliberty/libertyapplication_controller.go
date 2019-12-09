@@ -348,6 +348,11 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			autils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
 			autils.CustomizePersistence(statefulSet, instance)
 			lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance)
+      		if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
+				m := make(map[string]string)
+				m["kappnav.subkind"] = "Liberty"
+				statefulSet.Annotations = autils.MergeMaps(statefulSet.GetAnnotations(), m)
+			}
 			return nil
 		})
 		if err != nil {
@@ -377,6 +382,11 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			autils.CustomizeDeployment(deploy, instance)
 			autils.CustomizePodSpec(&deploy.Spec.Template, instance)
 			lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance)
+      		if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
+				m := make(map[string]string)
+				m["kappnav.subkind"] = "Liberty"
+				deploy.Annotations = autils.MergeMaps(deploy.GetAnnotations(), m)
+			}
 			return nil
 		})
 		if err != nil {
