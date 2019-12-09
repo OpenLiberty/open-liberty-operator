@@ -6,15 +6,19 @@ import (
 	"os"
 	"testing"
 
+	"strconv"
+
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 	autils "github.com/appsody/appsody-operator/pkg/utils"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	routev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/discovery"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -35,8 +39,7 @@ var (
 	autoscaling                = &openlibertyv1beta1.LibertyApplicationAutoScaling{MaxReplicas: 3}
 	pullPolicy                 = corev1.PullAlways
 	serviceType                = corev1.ServiceTypeClusterIP
-	service                    = &openlibertyv1beta1.LibertyApplicationService{Type: serviceType, Port: 8443}
-	genService                 = &openlibertyv1beta1.LibertyApplicationService{Type: serviceType, Port: 9080}
+	service                    = &openlibertyv1beta1.LibertyApplicationService{Type: serviceType, Port: 9080}
 	expose                     = true
 	serviceAccountName         = "service-account"
 	volumeCT                   = &corev1.PersistentVolumeClaim{TypeMeta: metav1.TypeMeta{Kind: "StatefulSet"}}
@@ -89,6 +92,17 @@ func TestOpenLibertyController(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
+	if err := testKnativeService(t, r, rb); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	if err := testExposeRoute(t, r, rb); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	if err := testAutoscaling(t, r, rb); err != nil {
+		t.Fatalf("%v", err)
+	}
 }
 
 // Test methods
@@ -98,7 +112,7 @@ func testBasicReconcile(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconci
 	req := createReconcileRequest(name, namespace)
 	res, err := r.Reconcile(req)
 
-	if err = verifyReconcile(res, err, t); err != nil {
+	if err = verifyReconcile(res, err); err != nil {
 		return err
 	}
 
@@ -124,7 +138,7 @@ func testStorage(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase
 	updateOpenLiberty(r, openliberty, t)
 
 	res, err := r.Reconcile(req)
-	if err = verifyReconcile(res, err, t); err != nil {
+	if err = verifyReconcile(res, err); err != nil {
 		return err
 	}
 
@@ -145,7 +159,7 @@ func testStorage(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase
 		{"pull policy", name, statefulset.Spec.Template.Spec.ServiceAccountName},
 		{"service account name", statefulSetSN, statefulset.Spec.ServiceName},
 	}
-	if err = verifyTests("Stateful Set", tests, t); err != nil {
+	if err = verifyTests("Stateful Set", tests); err != nil {
 		return err
 	}
 
@@ -165,7 +179,7 @@ func testKnativeService(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconci
 	updateOpenLiberty(r, openliberty, t)
 
 	res, err := r.Reconcile(req)
-	if err = verifyReconcile(res, err, t); err != nil {
+	if err = verifyReconcile(res, err); err != nil {
 		return err
 	}
 
@@ -185,6 +199,80 @@ func testKnativeService(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconci
 	if err = r.GetClient().Get(context.TODO(), req.NamespacedName, statefulset); err == nil {
 		return fmt.Errorf("StatefulSet was not deleted")
 	}
+
+	// Check updated values in KnativeService
+	ksvcTests := []Test{
+		{"service image name", ksvcAppImage, ksvc.Spec.Template.Spec.Containers[0].Image},
+		{"pull policy", pullPolicy, ksvc.Spec.Template.Spec.Containers[0].ImagePullPolicy},
+		{"service account name", name, ksvc.Spec.Template.Spec.ServiceAccountName},
+	}
+	if err = verifyTests("ksvc", ksvcTests); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func testExposeRoute(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
+	spec := openlibertyv1beta1.LibertyApplicationSpec{}
+	openliberty := createOpenLibertyApp(name, namespace, spec)
+	req := createReconcileRequest(name, namespace)
+
+	expose := true
+	openliberty.Spec = openlibertyv1beta1.LibertyApplicationSpec{
+		Expose: &expose,
+	}
+	updateOpenLiberty(r, openliberty, t)
+
+	res, err := r.Reconcile(req)
+	if rerr := verifyReconcile(res, err); rerr != nil {
+		return err
+	}
+
+	route := &routev1.Route{}
+	if err = r.GetClient().Get(context.TODO(), req.NamespacedName, route); err != nil {
+		return fmt.Errorf("Route (%v)", err)
+	}
+
+	routeTests := []Test{{"target port", intstr.FromString(strconv.Itoa(int(service.Port)) + "-tcp"), route.Spec.Port.TargetPort}}
+	if err = verifyTests("Route", routeTests); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func testAutoscaling(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
+	spec := openlibertyv1beta1.LibertyApplicationSpec{}
+	openliberty := createOpenLibertyApp(name, namespace, spec)
+	req := createReconcileRequest(name, namespace)
+
+	openliberty.Spec = openlibertyv1beta1.LibertyApplicationSpec{
+		Autoscaling: autoscaling,
+	}
+	updateOpenLiberty(r, openliberty, t)
+
+	res, err := r.Reconcile(req)
+	if err = verifyReconcile(res, err); err != nil {
+		return err
+	}
+
+	hpa := &autoscalingv1.HorizontalPodAutoscaler{}
+	if err = r.GetClient().Get(context.TODO(), req.NamespacedName, hpa); err != nil {
+		return fmt.Errorf("Autoscaling (%v)", err)
+	}
+	// verify that the route has been deleted now that expose is disabled
+	route := &routev1.Route{}
+	if err = r.GetClient().Get(context.TODO(), req.NamespacedName, route); err == nil {
+		return fmt.Errorf("Failed to delete Route")
+	}
+
+	// Check updated values in hpa
+	hpaTests := []Test{{"max replicas", autoscaling.MaxReplicas, hpa.Spec.MaxReplicas}}
+	if err = verifyTests("hpa", hpaTests); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Helper Functions
@@ -232,7 +320,7 @@ func createConfigMap(n, ns string, data map[string]string) *corev1.ConfigMap {
 }
 
 // verifyReconcile checks that there was no error and that the reconcile is valid
-func verifyReconcile(res reconcile.Result, err error, t *testing.T) error {
+func verifyReconcile(res reconcile.Result, err error) error {
 	if err != nil {
 		return fmt.Errorf("reconcile: (%v)", err)
 	}
@@ -244,7 +332,7 @@ func verifyReconcile(res reconcile.Result, err error, t *testing.T) error {
 	return nil
 }
 
-func verifyTests(n string, tests []Test, t *testing.T) error {
+func verifyTests(n string, tests []Test) error {
 	for _, tt := range tests {
 		if tt.actual != tt.expected {
 			return fmt.Errorf("%s %s test expected: (%v) actual: (%v)", n, tt.test, tt.expected, tt.actual)
