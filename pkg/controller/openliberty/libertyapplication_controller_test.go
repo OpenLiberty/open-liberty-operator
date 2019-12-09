@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
 	"testing"
 
 	"strconv"
@@ -35,6 +36,7 @@ var (
 	namespace                  = "openliberty"
 	appImage                   = "my-image"
 	ksvcAppImage               = "ksvc-image"
+	defaultMeta                = metav1.ObjectMeta{Name: name, Namespace: namespace}
 	replicas             int32 = 3
 	autoscaling                = &openlibertyv1beta1.LibertyApplicationAutoScaling{MaxReplicas: 3}
 	pullPolicy                 = corev1.PullAlways
@@ -103,6 +105,14 @@ func TestOpenLibertyController(t *testing.T) {
 	if err := testAutoscaling(t, r, rb); err != nil {
 		t.Fatalf("%v", err)
 	}
+
+	if err := testServiceMonitoring(t, r, rb); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	if err := testServiceAccount(t, r, rb); err != nil {
+		t.Fatalf("%v", err)
+	}
 }
 
 // Test methods
@@ -159,7 +169,7 @@ func testStorage(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase
 		{"pull policy", name, statefulset.Spec.Template.Spec.ServiceAccountName},
 		{"service account name", statefulSetSN, statefulset.Spec.ServiceName},
 	}
-	if err = verifyTests("Stateful Set", tests); err != nil {
+	if err = verifyTests(tests); err != nil {
 		return err
 	}
 
@@ -206,7 +216,7 @@ func testKnativeService(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconci
 		{"pull policy", pullPolicy, ksvc.Spec.Template.Spec.Containers[0].ImagePullPolicy},
 		{"service account name", name, ksvc.Spec.Template.Spec.ServiceAccountName},
 	}
-	if err = verifyTests("ksvc", ksvcTests); err != nil {
+	if err = verifyTests(ksvcTests); err != nil {
 		return err
 	}
 
@@ -235,7 +245,7 @@ func testExposeRoute(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconciler
 	}
 
 	routeTests := []Test{{"target port", intstr.FromString(strconv.Itoa(int(service.Port)) + "-tcp"), route.Spec.Port.TargetPort}}
-	if err = verifyTests("Route", routeTests); err != nil {
+	if err = verifyTests(routeTests); err != nil {
 		return err
 	}
 
@@ -269,21 +279,16 @@ func testAutoscaling(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconciler
 
 	// Check updated values in hpa
 	hpaTests := []Test{{"max replicas", autoscaling.MaxReplicas, hpa.Spec.MaxReplicas}}
-	if err = verifyTests("hpa", hpaTests); err != nil {
+	if err = verifyTests(hpaTests); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Here we verify behaviour surrounding user *specified* Service Account Names
 func testServiceAccount(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
 	spec := openlibertyv1beta1.LibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	req := createReconcileRequest(name, namespace)
-	defaultMeta := metav1.ObjectMeta{
-		Name:      name,
-		Namespace: namespace,
-	}
 
 	updateOpenLiberty(r, openliberty, t)
 
@@ -306,6 +311,55 @@ func testServiceAccount(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconci
 	if err = r.GetClient().Get(context.TODO(), req.NamespacedName, serviceaccount); err == nil {
 		return err
 	}
+	return nil
+}
+
+// most of this functionality is handled by autils, only verifying liberty logic
+func testServiceMonitoring(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
+	spec := openlibertyv1beta1.LibertyApplicationSpec{}
+	openliberty := createOpenLibertyApp(name, namespace, spec)
+	req := createReconcileRequest(name, namespace)
+
+	// Test with monitoring specified
+	openliberty.Spec.Monitoring = &openlibertyv1beta1.LibertyApplicationMonitoring{}
+	updateOpenLiberty(r, openliberty, t)
+	res, err := r.Reconcile(req)
+	if err = verifyReconcile(res, err); err != nil {
+		return err
+	}
+
+	svc := &corev1.Service{ObjectMeta: defaultMeta}
+	if err = r.GetClient().Get(context.TODO(), req.NamespacedName, svc); err != nil {
+		return err
+	}
+
+	monitorTests := []Test{
+		{"Monitor label assigned", "true", svc.Labels["app."+openliberty.GetGroupName()+"/monitor"]},
+	}
+	if err = verifyTests(monitorTests); err != nil {
+		return err
+	}
+
+	// Test without monitoring on
+	openliberty.Spec.Monitoring = nil
+	updateOpenLiberty(r, openliberty, t)
+	res, err = r.Reconcile(req)
+	if err = verifyReconcile(res, err); err != nil {
+		return err
+	}
+
+	svc = &corev1.Service{ObjectMeta: defaultMeta}
+	if err = r.GetClient().Get(context.TODO(), req.NamespacedName, svc); err != nil {
+		return err
+	}
+
+	monitorTests = []Test{
+		{"Monitor label unassigned", "", svc.Labels["app."+openliberty.GetGroupName()+"/monitor"]},
+	}
+	if err = verifyTests(monitorTests); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -366,10 +420,10 @@ func verifyReconcile(res reconcile.Result, err error) error {
 	return nil
 }
 
-func verifyTests(n string, tests []Test) error {
+func verifyTests(tests []Test) error {
 	for _, tt := range tests {
-		if tt.actual != tt.expected {
-			return fmt.Errorf("%s %s test expected: (%v) actual: (%v)", n, tt.test, tt.expected, tt.actual)
+		if !reflect.DeepEqual(tt.actual, tt.expected) {
+			return fmt.Errorf("%s test expected: (%v) actual: (%v)", tt.test, tt.expected, tt.actual)
 		}
 	}
 	return nil
