@@ -275,6 +275,40 @@ func testAutoscaling(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconciler
 	return nil
 }
 
+// Here we verify behaviour surrounding user *specified* Service Account Names
+func testServiceAccount(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
+	spec := openlibertyv1beta1.LibertyApplicationSpec{}
+	openliberty := createOpenLibertyApp(name, namespace, spec)
+	req := createReconcileRequest(name, namespace)
+	defaultMeta := metav1.ObjectMeta{
+		Name:      name,
+		Namespace: namespace,
+	}
+
+	updateOpenLiberty(r, openliberty, t)
+
+	res, err := r.Reconcile(req)
+	if err = verifyReconcile(res, err); err != nil {
+		return err
+	}
+
+	serviceaccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
+	if err = r.GetClient().Get(context.TODO(), req.NamespacedName, serviceaccount); err != nil {
+		return err
+	}
+
+	openliberty.Spec = openlibertyv1beta1.LibertyApplicationSpec{
+		ServiceAccountName: &serviceAccountName,
+	}
+	updateOpenLiberty(r, openliberty, t)
+
+	// check that the default service account was deleted
+	if err = r.GetClient().Get(context.TODO(), req.NamespacedName, serviceaccount); err == nil {
+		return err
+	}
+	return nil
+}
+
 // Helper Functions
 func createOpenLibertyApp(n, ns string, spec openlibertyv1beta1.LibertyApplicationSpec) *openlibertyv1beta1.LibertyApplication {
 	app := &openlibertyv1beta1.LibertyApplication{
