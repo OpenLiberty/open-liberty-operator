@@ -9,13 +9,21 @@ The following document covers various topics for configuring and integrating you
 
 Kibana dashboards are provided for visualizing events from the Open Liberty runtime.
 
-To leverage these dashboards the logging events must be emitted in JSON format to standard-out. For information regarding how to configure an Open Liberty image with JSON logging please see [here](https://github.com/OpenLiberty/ci.docker#logging).
+To leverage these dashboards the logging events must be emitted in JSON format to standard-out. For information regarding how to configure an Open Liberty image with JSON logging please see [here](https://github.com/OpenLiberty/ci.docker#logging). 
 
 Retrieve available Kibana dashboards tuned for Open Liberty logging events [here](https://github.com/OpenLiberty/open-liberty-operator/tree/master/deploy/dashboards/logging).
 
 For information regarding how to import Kibana dashboards see the official documentation [here](https://www.elastic.co/guide/en/kibana/5.6/loading-a-saved-dashboard.html).
 
 For effective management of logs emitted from applications, deploy your own Elasticsearch, FluentD and Kibana (EFK) stack. For more information see the following [guide](https://kabanero.io/guides/app-logging/). 
+
+Command-line JSON parsers, like JSON Query tool (jq), can be used to create human-readable views of JSON-formatted logs. In the following example, the logs are piped through grep to ensure that the message field is there before jq parses the line:
+
+```
+oc logs -f pod_name -n namespace | \
+  grep --line-buffered message | \
+  jq .message -r
+```
 
 ## How to monitor your Liberty runtimes  
 
