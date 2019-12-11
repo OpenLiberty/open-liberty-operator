@@ -364,12 +364,17 @@ func schema_pkg_apis_openliberty_v1beta1_LibertyApplicationSpec(ref common.Refer
 							},
 						},
 					},
+					"logs": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("./pkg/apis/openliberty/v1beta1.LibertyApplicationLogs"),
+						},
+					},
 				},
 				Required: []string{"applicationImage"},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/openliberty/v1beta1.LibertyApplicationAutoScaling", "./pkg/apis/openliberty/v1beta1.LibertyApplicationMonitoring", "./pkg/apis/openliberty/v1beta1.LibertyApplicationService", "./pkg/apis/openliberty/v1beta1.LibertyApplicationStorage", "k8s.io/api/core/v1.Container", "k8s.io/api/core/v1.EnvFromSource", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.Probe", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Volume", "k8s.io/api/core/v1.VolumeMount"},
+			"./pkg/apis/openliberty/v1beta1.LibertyApplicationAutoScaling", "./pkg/apis/openliberty/v1beta1.LibertyApplicationLogs", "./pkg/apis/openliberty/v1beta1.LibertyApplicationMonitoring", "./pkg/apis/openliberty/v1beta1.LibertyApplicationService", "./pkg/apis/openliberty/v1beta1.LibertyApplicationStorage", "k8s.io/api/core/v1.Container", "k8s.io/api/core/v1.EnvFromSource", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.Probe", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Volume", "k8s.io/api/core/v1.VolumeMount"},
 	}
 }
 

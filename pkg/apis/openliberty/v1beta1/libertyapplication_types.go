@@ -44,8 +44,8 @@ type LibertyApplicationSpec struct {
 	CreateAppDefinition  *bool                         `json:"createAppDefinition,omitempty"`
 	// +listType=map
 	// +listMapKey=name
-	InitContainers []corev1.Container `json:"initContainers,omitempty"`
-	Logs           *LibertyLogs       `json:"logs,omitempty"`
+	InitContainers []corev1.Container      `json:"initContainers,omitempty"`
+	Logs           *LibertyApplicationLogs `json:"logs,omitempty"`
 }
 
 // LibertyApplicationAutoScaling ...
@@ -98,19 +98,20 @@ type LibertyApplicationStatus struct {
 	ConsumedServices common.ConsumedServices `json:"consumedServices,omitempty"`
 }
 
-type LibertyLogs struct {
+// LibertyApplicationLogs defines the configuration for how liberty creates logs
+type LibertyApplicationLogs struct {
 	ConsoleFormat *string `json:"consoleFormat,omitempty"`
 }
 
 // StatusCondition ...
 // +k8s:openapi-gen=true
 type StatusCondition struct {
-	LastTransitionTime *metav1.Time           `json:"lastTransitionTime,omitempty"`
-	LastUpdateTime     metav1.Time            `json:"lastUpdateTime,omitempty"`
-	Reason             string                 `json:"reason,omitempty"`
-	Message            string                 `json:"message,omitempty"`
-	Status             corev1.ConditionStatus `json:"status,omitempty"`
-	Type               StatusConditionType    `json:"type,omitempty"`
+	LastTransitionTime *metav1.Time               `json:"lastTransitionTime,omitempty"`
+	LastUpdateTime     metav1.Time                `json:"lastUpdateTime,omitempty"`
+	Reason             string                     `json:"reason,omitempty"`
+	Message            string                     `json:"message,omitempty"`
+	Status             corev1.ConditionStatus     `json:"status,omitempty"`
+	Type               common.StatusConditionType `json:"type,omitempty"`
 }
 
 // ServiceBindingAuth allows a service to provide authentication information
@@ -315,14 +316,6 @@ func (cr *LibertyApplication) GetGroupName() string {
 	return "openliberty.io"
 }
 
-// GetLogs returns liberty logging settings
-func (cr *LibertyApplication) GetLogs() *LibertyLogs {
-	if cr.Spec.Logs == nil {
-		return nil
-	}
-	return cr.Spec.Logs
-}
-
 // GetConsumedServices returns a map of all the service names to be consumed by the application
 func (s *LibertyApplicationStatus) GetConsumedServices() common.ConsumedServices {
 	if s.ConsumedServices == nil {
@@ -467,6 +460,7 @@ func (m *LibertyApplicationMonitoring) GetEndpoints() []prometheusv1.Endpoint {
 // GetLabels returns set of labels to be added to all resources
 func (cr *LibertyApplication) GetLabels() map[string]string {
 	labels := map[string]string{
+		"app.kubernetes.io/instance":   cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
 		"app.kubernetes.io/managed-by": "open-liberty-operator",
 	}
@@ -476,7 +470,7 @@ func (cr *LibertyApplication) GetLabels() map[string]string {
 	}
 
 	for key, value := range cr.Labels {
-		if key != "app.kubernetes.io/name" {
+		if key != "app.kubernetes.io/instance" {
 			labels[key] = value
 		}
 	}
@@ -486,12 +480,12 @@ func (cr *LibertyApplication) GetLabels() map[string]string {
 
 // GetType returns status condition type
 func (c *StatusCondition) GetType() common.StatusConditionType {
-	return common.StatusConditionTypeReconciled
+	return c.Type
 }
 
 // SetType returns status condition type
 func (c *StatusCondition) SetType(ct common.StatusConditionType) {
-	c.Type = StatusConditionTypeReconciled
+	c.Type = ct
 }
 
 // GetLastTransitionTime return time of last status change
