@@ -9,20 +9,16 @@ import (
 
 // CustomizeLibertyEnv adds configured env variables appending configured liberty settings
 func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *openlibertyv1beta1.LibertyApplication) {
-	// update or set to default depending on CRD config
-	if la.Spec.Logs != nil && la.Spec.Logs.ConsoleFormat != nil {
-		logVar := corev1.EnvVar{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: *la.Spec.Logs.ConsoleFormat}
-		if env, ok := findEnvVar(logVar.Name, pts.Spec.Containers[0].Env); ok {
-			// in this case the defined val for consoleFormat is higher priority
-			env.Value = *la.Spec.Logs.ConsoleFormat
-		} else {
-			pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, logVar)
-		}
-	} else {
-		// if undefined set to default, otherwise leave as user defined env
-		logVar := corev1.EnvVar{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: "json"}
-		if _, ok := findEnvVar(logVar.Name, pts.Spec.Containers[0].Env); !ok {
-			pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, logVar)
+	// ENV variables have already been set, check if they exist before setting defaults
+	targetEnv := []corev1.EnvVar{
+		{Name: "WLP_LOGGING_CONSOLE_LOGLEVEL", Value: "info"},
+		{Name: "WLP_LOGGING_CONSOLE_SOURCE", Value: "message,trace,accessLog,ffdc"},
+		{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: "json"},
+	}
+	envList := pts.Spec.Containers[0].Env
+	for _, v := range targetEnv {
+		if _, found := findEnvVar(v.Name, envList); !found {
+			pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, v)
 		}
 	}
 }

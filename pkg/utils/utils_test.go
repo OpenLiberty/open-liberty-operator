@@ -38,84 +38,52 @@ func TestCustomizeLibertyEnv(t *testing.T) {
 	logf.SetLogger(logf.ZapLogger(true))
 	os.Setenv("WATCH_NAMESPACE", namespace)
 
-	// Test with only consoleFormat defined
-	spec := openlibertyv1beta1.LibertyApplicationSpec{
-		Logs: &openlibertyv1beta1.LibertyApplicationLogs{
-			ConsoleFormat: &consoleFormat,
-		},
-	}
-	envList := []corev1.EnvVar{{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: consoleFormat}}
+	// Test default values no config
+	spec := openlibertyv1beta1.LibertyApplicationSpec{}
 	pts := &corev1.PodTemplateSpec{}
 
+	targetEnv := []corev1.EnvVar{
+		{Name: "WLP_LOGGING_CONSOLE_LOGLEVEL", Value: "info"},
+		{Name: "WLP_LOGGING_CONSOLE_SOURCE", Value: "message,trace,accessLog,ffdc"},
+		{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: "json"},
+	}
 	// Always call CustomizePodSpec to populate Containers & simulate real behaviour
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	autils.CustomizePodSpec(pts, openliberty)
 	CustomizeLibertyEnv(pts, openliberty)
 
 	testEnv := []Test{
-		{"Test consoleFormat variable", envList, pts.Spec.Containers[0].Env},
+		{"Test environment defaults", pts.Spec.Containers[0].Env, targetEnv},
 	}
 
 	if err := verifyTests(testEnv); err != nil {
 		t.Fatalf("%v", err)
 	}
 
-	// Test with both env var set and consoleFormat defined (consoleFormat takes priority)
-	pts = &corev1.PodTemplateSpec{}
+	// test with env variables set by user
+
+	targetEnv = []corev1.EnvVar{
+		{Name: "WLP_LOGGING_CONSOLE_LOGLEVEL", Value: "error"},
+		{Name: "WLP_LOGGING_CONSOLE_SOURCE", Value: "trace,accessLog,ffdc"},
+		{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: "basic"},
+	}
+
 	spec = openlibertyv1beta1.LibertyApplicationSpec{
-		Env: []corev1.EnvVar{{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: "yaml"}},
-		Logs: &openlibertyv1beta1.LibertyApplicationLogs{
-			ConsoleFormat: &consoleFormat,
-		},
+		Env: targetEnv,
 	}
-
-	openliberty = createOpenLibertyApp(name, namespace, spec)
-	autils.CustomizePodSpec(pts, openliberty)
-	CustomizeLibertyEnv(pts, openliberty)
-
-	testEnv = []Test{
-		{"Test w/ consoleFormat & EnvVar", envList, pts.Spec.Containers[0].Env},
-	}
-
-	if err := verifyTests(testEnv); err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	// Test with only direct EnvVar set
 	pts = &corev1.PodTemplateSpec{}
-	envList = []corev1.EnvVar{{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: "yaml"}}
-	spec = openlibertyv1beta1.LibertyApplicationSpec{
-		Env: envList,
-	}
 
 	openliberty = createOpenLibertyApp(name, namespace, spec)
 	autils.CustomizePodSpec(pts, openliberty)
 	CustomizeLibertyEnv(pts, openliberty)
 
 	testEnv = []Test{
-		{"Test w/ EnvVar", envList, pts.Spec.Containers[0].Env},
+		{"Test environment config", pts.Spec.Containers[0].Env, targetEnv},
 	}
-
 	if err := verifyTests(testEnv); err != nil {
 		t.Fatalf("%v", err)
 	}
 
-	// Remove all consoleFormat declarations
-	pts = &corev1.PodTemplateSpec{}
-	envList = []corev1.EnvVar{{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: consoleFormat}}
-	spec = openlibertyv1beta1.LibertyApplicationSpec{}
-
-	openliberty = createOpenLibertyApp(name, namespace, spec)
-	autils.CustomizePodSpec(pts, openliberty)
-	CustomizeLibertyEnv(pts, openliberty)
-
-	testEnv = []Test{
-		{"Test default consoleFormat value", envList, pts.Spec.Containers[0].Env},
-	}
-
-	if err := verifyTests(testEnv); err != nil {
-		t.Fatalf("%v", err)
-	}
 }
 
 // Helper Functions
