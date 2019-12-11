@@ -203,7 +203,7 @@ spec:
   applicationImage: quay.io/my-repo/my-app:1.0
   env:
     - name: WLP_LOGGING_CONSOLE_FORMAT
-      value: "yaml"
+      value: "basic"
     - name: WLP_LOGGING_CONSOLE_SOURCE
       value: "messages,trace,accessLog"
     - name: WLP_LOGGING_CONSOLE_LOGLEVEL
