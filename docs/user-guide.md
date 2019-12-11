@@ -1,6 +1,6 @@
 # Open Liberty Operator
 
-The Open Liberty Operator can be used to deploy applications created by [Appsody Application Stacks](https://appsody.dev/) into [OKD](https://www.okd.io/) or [OpenShift](https://www.openshift.com/) clusters.
+The Open Liberty Operator can be used to deploy applications running on Open Liberty into [OKD](https://www.okd.io/) or [OpenShift](https://www.openshift.com/) clusters.
 
 ## Operator installation
 
