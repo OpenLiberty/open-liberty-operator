@@ -3107,6 +3107,7 @@ spec:
               description: ConsumedServices stores status of the service binding dependencies
               type: object
           type: object
+      type: object
   version: v1beta1
   versions:
   - name: v1beta1
