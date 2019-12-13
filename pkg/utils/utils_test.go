@@ -39,7 +39,7 @@ func TestCustomizeLibertyEnv(t *testing.T) {
 	os.Setenv("WATCH_NAMESPACE", namespace)
 
 	// Test default values no config
-	spec := openlibertyv1beta1.LibertyApplicationSpec{}
+	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	pts := &corev1.PodTemplateSpec{}
 
 	targetEnv := []corev1.EnvVar{
@@ -68,7 +68,7 @@ func TestCustomizeLibertyEnv(t *testing.T) {
 		{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: "basic"},
 	}
 
-	spec = openlibertyv1beta1.LibertyApplicationSpec{
+	spec = openlibertyv1beta1.OpenLibertyApplicationSpec{
 		Env: targetEnv,
 	}
 	pts = &corev1.PodTemplateSpec{}
@@ -87,8 +87,8 @@ func TestCustomizeLibertyEnv(t *testing.T) {
 }
 
 // Helper Functions
-func createOpenLibertyApp(n, ns string, spec openlibertyv1beta1.LibertyApplicationSpec) *openlibertyv1beta1.LibertyApplication {
-	app := &openlibertyv1beta1.LibertyApplication{
+func createOpenLibertyApp(n, ns string, spec openlibertyv1beta1.OpenLibertyApplicationSpec) *openlibertyv1beta1.OpenLibertyApplication {
+	app := &openlibertyv1beta1.OpenLibertyApplication{
 		ObjectMeta: metav1.ObjectMeta{Name: n, Namespace: ns},
 		Spec:       spec,
 	}

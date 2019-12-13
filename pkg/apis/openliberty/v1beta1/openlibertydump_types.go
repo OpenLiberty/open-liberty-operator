@@ -9,7 +9,8 @@ import (
 // OpenLibertyDumpSpec defines the desired state of OpenLibertyDump
 // +k8s:openapi-gen=true
 type OpenLibertyDumpSpec struct {
-	PodName string   `json:"podName"`
+	PodName string `json:"podName"`
+	// +listType=set
 	Include []string `json:"include,omitempty"`
 }
 

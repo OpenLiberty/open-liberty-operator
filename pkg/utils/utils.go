@@ -63,7 +63,7 @@ func ExecuteCommandInContainer(config *rest.Config, podName, podNamespace, conta
 }
 
 // CustomizeLibertyEnv adds configured env variables appending configured liberty settings
-func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *openlibertyv1beta1.LibertyApplication) {
+func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *openlibertyv1beta1.OpenLibertyApplication) {
 	// ENV variables have already been set, check if they exist before setting defaults
 	targetEnv := []corev1.EnvVar{
 		{Name: "WLP_LOGGING_CONSOLE_LOGLEVEL", Value: "info"},
