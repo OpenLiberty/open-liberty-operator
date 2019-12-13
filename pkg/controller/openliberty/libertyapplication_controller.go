@@ -7,6 +7,7 @@ import (
 
 	"github.com/appsody/appsody-operator/pkg/common"
 
+	lutils "github.com/OpenLiberty/open-liberty-operator/pkg/utils"
 	autils "github.com/appsody/appsody-operator/pkg/utils"
 
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
@@ -346,6 +347,12 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			autils.CustomizeStatefulSet(statefulSet, instance)
 			autils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
 			autils.CustomizePersistence(statefulSet, instance)
+			lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance)
+      		if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
+				m := make(map[string]string)
+				m["kappnav.subkind"] = "Liberty"
+				statefulSet.Annotations = autils.MergeMaps(statefulSet.GetAnnotations(), m)
+			}
 			return nil
 		})
 		if err != nil {
@@ -374,6 +381,12 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		err = r.CreateOrUpdate(deploy, instance, func() error {
 			autils.CustomizeDeployment(deploy, instance)
 			autils.CustomizePodSpec(&deploy.Spec.Template, instance)
+			lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance)
+      		if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
+				m := make(map[string]string)
+				m["kappnav.subkind"] = "Liberty"
+				deploy.Annotations = autils.MergeMaps(deploy.GetAnnotations(), m)
+			}
 			return nil
 		})
 		if err != nil {
