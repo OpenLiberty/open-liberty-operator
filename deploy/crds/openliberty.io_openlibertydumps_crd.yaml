@@ -42,8 +42,29 @@ spec:
           type: object
         status:
           description: OpenLibertyDumpStatus defines the observed state of OpenLibertyDump
+          properties:
+            conditions:
+              items:
+                description: OperationStatusCondition ...
+                properties:
+                  lastTransitionTime:
+                    format: date-time
+                    type: string
+                  lastUpdateTime:
+                    format: date-time
+                    type: string
+                  message:
+                    type: string
+                  reason:
+                    type: string
+                  status:
+                    type: string
+                  type:
+                    description: OperationStatusConditionType ...
+                    type: string
+                type: object
+              type: array
           type: object
-      type: object
   version: v1beta1
   versions:
   - name: v1beta1
