@@ -16,6 +16,8 @@ type OpenLibertyDumpSpec struct {
 // OpenLibertyDumpStatus defines the observed state of OpenLibertyDump
 // +k8s:openapi-gen=true
 type OpenLibertyDumpStatus struct {
+	// +listType=atomic
+	Conditions []OperationStatusCondition `json:"conditions,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

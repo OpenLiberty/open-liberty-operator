@@ -589,4 +589,10 @@ func (cr *LibertyApplication) Initialize() {
 	if cr.Spec.Service.Type == "" {
 		cr.Spec.Service.Type = corev1.ServiceTypeClusterIP
 	}
+
+	pp := corev1.PullIfNotPresent
+
+	if cr.Spec.PullPolicy == nil {
+		cr.Spec.PullPolicy = &pp
+	}
 }

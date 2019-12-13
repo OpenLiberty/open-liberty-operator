@@ -3,3 +3,7 @@ kind: OpenLibertyDump
 metadata:
   name: example-openlibertydump
 spec:
+  podName: dump-app-f6f5997-mrlmh
+  include:
+    - heap
+    - thread

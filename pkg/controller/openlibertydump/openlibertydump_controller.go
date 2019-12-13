@@ -2,6 +2,9 @@ package openlibertydump
 
 import (
 	"context"
+	"time"
+
+	"github.com/OpenLiberty/open-liberty-operator/pkg/utils"
 
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -83,16 +86,70 @@ func (r *ReconcileOpenLibertyDump) Reconcile(request reconcile.Request) (reconci
 		return reconcile.Result{}, err
 	}
 
+	//do not reconcile if the dump already started
+	oc := openlibertyv1beta1.GetOperationCondtion(instance.Status.Conditions, openlibertyv1beta1.OperationStatusConditionTypeStarted)
+	if oc != nil && oc.Status == corev1.ConditionTrue {
+		return reconcile.Result{}, err
+	}
+
 	//check if Pod exists and running
 	pod := &corev1.Pod{}
 
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.PodName, Namespace: request.Namespace}, pod)
-	if err != nil {
+	if err != nil || pod.Status.Phase != corev1.PodRunning {
 		//handle error
-	}
-	if pod.Status.Phase != corev1.PodRunning {
-		//handle error
+		log.Error(err, "Failed to find pod")
+		c := openlibertyv1beta1.OperationStatusCondition{
+			Type:    openlibertyv1beta1.OperationStatusConditionTypeStarted,
+			Status:  corev1.ConditionFalse,
+			Reason:  "Error",
+			Message: "Failed to find a pod or pod is not in running state",
+		}
+		instance.Status.Conditions = openlibertyv1beta1.SetOperationCondtion(instance.Status.Conditions, c)
+		r.client.Status().Update(context.TODO(), instance)
+		return reconcile.Result{}, nil
 	}
 
+	time := time.Now()
+	dumpFolder := "/serviceability/" + pod.Namespace + "/" + pod.Name
+	dumpCmd := "mkdir -p " + dumpFolder + ";  server dump --archive=" + dumpFolder + "/" + time.Format("2006-01-02_15:04:05") + ".zip"
+	if len(instance.Spec.Include) > 0 {
+		dumpCmd += " --include="
+		for i := range instance.Spec.Include {
+			dumpCmd += instance.Spec.Include[i] + ","
+		}
+	}
+
+	c := openlibertyv1beta1.OperationStatusCondition{
+		Type:   openlibertyv1beta1.OperationStatusConditionTypeStarted,
+		Status: corev1.ConditionTrue,
+	}
+
+	instance.Status.Conditions = openlibertyv1beta1.SetOperationCondtion(instance.Status.Conditions, c)
+	r.client.Status().Update(context.TODO(), instance)
+
+	_, err = utils.ExecuteCommandInContainer(r.restConfig, pod.Name, pod.Namespace, "app", []string{"/bin/sh", "-c", dumpCmd})
+	if err != nil {
+		//handle error
+		log.Error(err, "Execute dump cmd failed ", dumpCmd)
+		c = openlibertyv1beta1.OperationStatusCondition{
+			Type:    openlibertyv1beta1.OperationStatusConditionTypeCompleted,
+			Status:  corev1.ConditionFalse,
+			Reason:  "Error",
+			Message: err.Error(),
+		}
+		instance.Status.Conditions = openlibertyv1beta1.SetOperationCondtion(instance.Status.Conditions, c)
+		r.client.Status().Update(context.TODO(), instance)
+		return reconcile.Result{}, nil
+
+	}
+
+	c = openlibertyv1beta1.OperationStatusCondition{
+		Type:   openlibertyv1beta1.OperationStatusConditionTypeCompleted,
+		Status: corev1.ConditionTrue,
+	}
+
+	instance.Status.Conditions = openlibertyv1beta1.SetOperationCondtion(instance.Status.Conditions, c)
+	r.client.Status().Update(context.TODO(), instance)
 	return reconcile.Result{}, nil
 }
