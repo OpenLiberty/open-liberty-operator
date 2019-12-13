@@ -1,39 +1,29 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: openlibertytraces.openliberty.io
+  name: openlibertydumps.openliberty.io
 spec:
   additionalPrinterColumns:
-  - JSONPath: .status.operatedResource.resourceName
-    description: Name of the pod
-    name: PodName
+  - JSONPath: .status.conditions[?(@.type=='Started')].status
+    description: Indicates if dump operation has started
+    name: Started
     type: string
-  - JSONPath: .status.conditions[?(@.type=='Tracing')].status
-    description: Status of the trace condition
-    name: Tracing
-    type: string
-  - JSONPath: .status.conditions[?(@.type=='Tracing')].reason
-    description: Reason for the failure of trace condition
-    name: Reason
-    priority: 1
-    type: string
-  - JSONPath: .status.conditions[?(@.type=='Tracing')].message
-    description: Failure message from trace condition
-    name: Message
-    priority: 1
+  - JSONPath: .status.conditions[?(@.type=='Completed')].status
+    description: Indicates if dump operation has completed
+    name: Completed
     type: string
   group: openliberty.io
   names:
-    kind: OpenLibertyTrace
-    listKind: OpenLibertyTraceList
-    plural: openlibertytraces
-    singular: openlibertytrace
+    kind: OpenLibertyDump
+    listKind: OpenLibertyDumpList
+    plural: openlibertydumps
+    singular: openlibertydump
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: OpenLibertyTrace is the schema for the openlibertytraces API
+      description: OpenLibertyDump is the Schema for the openlibertydumps API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -48,27 +38,19 @@ spec:
         metadata:
           type: object
         spec:
-          description: OpenLibertyTraceSpec defines the desired state of OpenLibertyTrace
+          description: OpenLibertyDumpSpec defines the desired state of OpenLibertyDump
           properties:
-            disable:
-              type: boolean
-            maxFileSize:
-              format: int32
-              type: integer
-            maxFiles:
-              format: int32
-              type: integer
+            include:
+              items:
+                type: string
+              type: array
             podName:
-              type: string
-            traceSpecification:
               type: string
           required:
           - podName
-          - traceSpecification
           type: object
         status:
-          description: OpenLibertyTraceStatus defines the observed state of OpenLibertyTrace
-            operation
+          description: OpenLibertyDumpStatus defines the observed state of OpenLibertyDump
           properties:
             conditions:
               items:
@@ -91,15 +73,8 @@ spec:
                     type: string
                 type: object
               type: array
-            operatedResource:
-              description: OperatedResource ...
-              properties:
-                resourceName:
-                  type: string
-                resourceType:
-                  type: string
-              type: object
           type: object
+      type: object
   version: v1beta1
   versions:
   - name: v1beta1

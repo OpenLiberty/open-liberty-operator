@@ -24,14 +24,6 @@ type OpenLibertyTraceStatus struct {
 	OperatedResource OperatedResource           `json:"operatedResource,omitempty"`
 }
 
-// OperationStatusConditionType ...
-type OperationStatusConditionType string
-
-const (
-	// OperationStatusConditionTypeTrace ...
-	OperationStatusConditionTypeTrace OperationStatusConditionType = "Tracing"
-)
-
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // OpenLibertyTrace is the schema for the openlibertytraces API
@@ -57,10 +49,6 @@ type OpenLibertyTraceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []OpenLibertyTrace `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&OpenLibertyTrace{}, &OpenLibertyTraceList{})
 }
 
 // GetType returns status condition type
@@ -184,4 +172,8 @@ func (s *OpenLibertyTraceStatus) GetOperatedResource() *OperatedResource {
 // SetOperatedResource ...
 func (s *OpenLibertyTraceStatus) SetOperatedResource(or OperatedResource) {
 	s.OperatedResource = or
+}
+
+func init() {
+	SchemeBuilder.Register(&OpenLibertyTrace{}, &OpenLibertyTraceList{})
 }

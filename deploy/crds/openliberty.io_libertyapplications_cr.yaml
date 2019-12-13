@@ -4,4 +4,6 @@ metadata:
   name: demo-app
 spec:
   replicas: 1
-  applicationImage: openliberty/open-liberty:microProfile3-ubi-min
+  applicationImage: openliberty/open-liberty:full-java8-openj9-ubi
+  expose: true
+  
