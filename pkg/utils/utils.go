@@ -20,7 +20,7 @@ func ExecuteCommandInContainer(config *rest.Config, podName, podNamespace, conta
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		log.Error(err, "Failed to create Clientset")
-		return "", fmt.Errorf("Failed to create Clientset: %v", err)
+		return "", fmt.Errorf("Failed to create Clientset: %v", err.Error())
 	}
 
 	req := clientset.CoreV1().RESTClient().Post().
@@ -41,7 +41,7 @@ func ExecuteCommandInContainer(config *rest.Config, podName, podNamespace, conta
 
 	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
 	if err != nil {
-		return "", fmt.Errorf("Encountered error while creating Executor: %v", err)
+		return "", fmt.Errorf("Encountered error while creating Executor: %v", err.Error())
 	}
 
 	var stdout, stderr bytes.Buffer
@@ -52,7 +52,7 @@ func ExecuteCommandInContainer(config *rest.Config, podName, podNamespace, conta
 	})
 
 	if err != nil {
-		return stderr.String(), fmt.Errorf("Encountered error while running command: %v : Stderr %v : %v", command, stderr.String(), err)
+		return stderr.String(), fmt.Errorf("Encountered error while running command: %v ; Stderr: %v ; Error: %v", command, stderr.String(), err.Error())
 	}
 
 	return stderr.String(), nil

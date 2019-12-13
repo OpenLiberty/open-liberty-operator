@@ -4,28 +4,24 @@ metadata:
   name: openlibertytraces.openliberty.io
 spec:
   additionalPrinterColumns:
-  - JSONPath: .status.operatedResource.podName
+  - JSONPath: .status.operatedResource.resourceName
     description: Name of the pod
     name: PodName
     type: string
-  - JSONPath: .status.conditions[?(@.type=='Trace')].status
+  - JSONPath: .status.conditions[?(@.type=='Tracing')].status
     description: Status of the trace condition
     name: Tracing
     type: string
-  - JSONPath: .status.conditions[?(@.type=='Trace')].reason
+  - JSONPath: .status.conditions[?(@.type=='Tracing')].reason
     description: Reason for the failure of trace condition
     name: Reason
     priority: 1
     type: string
-  - JSONPath: .status.conditions[?(@.type=='Trace')].message
+  - JSONPath: .status.conditions[?(@.type=='Tracing')].message
     description: Failure message from trace condition
     name: Message
     priority: 1
     type: string
-  - JSONPath: .metadata.creationTimestamp
-    description: Age of the resource
-    name: Age
-    type: date
   group: openliberty.io
   names:
     kind: OpenLibertyTrace
@@ -37,7 +33,7 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
-      description: OpenLibertyTrace is the Schema for the openlibertytraces API
+      description: OpenLibertyTrace is the schema for the openlibertytraces API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -54,12 +50,14 @@ spec:
         spec:
           description: OpenLibertyTraceSpec defines the desired state of OpenLibertyTrace
           properties:
-            disableTrace:
+            disable:
               type: boolean
             maxFileSize:
-              type: string
+              format: int32
+              type: integer
             maxFiles:
-              type: string
+              format: int32
+              type: integer
             podName:
               type: string
             traceSpecification:

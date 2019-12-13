@@ -12,9 +12,9 @@ import (
 type OpenLibertyTraceSpec struct {
 	PodName            string `json:"podName"`
 	TraceSpecification string `json:"traceSpecification"`
-	MaxFileSize        string `json:"maxFileSize,omitempty"`
-	MaxFiles           string `json:"maxFiles,omitempty"`
-	DisableTrace       *bool  `json:"disableTrace,omitempty"`
+	MaxFileSize        *int32 `json:"maxFileSize,omitempty"`
+	MaxFiles           *int32 `json:"maxFiles,omitempty"`
+	Disable            *bool  `json:"disable,omitempty"`
 }
 
 // OpenLibertyTraceStatus defines the observed state of OpenLibertyTrace operation
@@ -29,20 +29,19 @@ type OperationStatusConditionType string
 
 const (
 	// OperationStatusConditionTypeTrace ...
-	OperationStatusConditionTypeTrace OperationStatusConditionType = "Trace"
+	OperationStatusConditionTypeTrace OperationStatusConditionType = "Tracing"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// OpenLibertyTrace is the Schema for the openlibertytraces API
+// OpenLibertyTrace is the schema for the openlibertytraces API
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=openlibertytraces,scope=Namespaced
-// +kubebuilder:printcolumn:name="PodName",type="string",JSONPath=".status.operatedResource.podName",priority=0,description="Name of the pod"
-// +kubebuilder:printcolumn:name="Tracing",type="string",JSONPath=".status.conditions[?(@.type=='Trace')].status",priority=0,description="Status of the trace condition"
-// +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.type=='Trace')].reason",priority=1,description="Reason for the failure of trace condition"
-// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Trace')].message",priority=1,description="Failure message from trace condition"
-// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",priority=0,description="Age of the resource"
+// +kubebuilder:printcolumn:name="PodName",type="string",JSONPath=".status.operatedResource.resourceName",priority=0,description="Name of the pod"
+// +kubebuilder:printcolumn:name="Tracing",type="string",JSONPath=".status.conditions[?(@.type=='Tracing')].status",priority=0,description="Status of the trace condition"
+// +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.type=='Tracing')].reason",priority=1,description="Reason for the failure of trace condition"
+// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Tracing')].message",priority=1,description="Failure message from trace condition"
 type OpenLibertyTrace struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -69,7 +68,7 @@ func (c *OperationStatusCondition) GetType() OperationStatusConditionType {
 	return OperationStatusConditionTypeTrace
 }
 
-// SetType returns status condition type
+// SetType sets status condition type
 func (c *OperationStatusCondition) SetType(ct OperationStatusConditionType) {
 	c.Type = OperationStatusConditionTypeTrace
 }
@@ -172,7 +171,6 @@ func (s *OpenLibertyTraceStatus) SetCondition(c OperationStatusCondition) {
 	condition.SetMessage(c.GetMessage())
 	condition.SetStatus(c.GetStatus())
 	condition.SetType(c.GetType())
-	//condition.SetPodName(c.GetPodName())
 	if !found {
 		s.Conditions = append(s.Conditions, *condition)
 	}
