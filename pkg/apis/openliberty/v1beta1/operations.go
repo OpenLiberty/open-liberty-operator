@@ -49,7 +49,7 @@ type OperationStatusConditionType string
 
 const (
 	// OperationStatusConditionTypeTrace ...
-	OperationStatusConditionTypeTrace OperationStatusConditionType = "Trace"
+	OperationStatusConditionTypeTrace OperationStatusConditionType = "Tracing"
 	// OperationStatusConditionTypeStarted indicates operation is has been started
 	OperationStatusConditionTypeStarted OperationStatusConditionType = "Started"
 	// OperationStatusConditionTypeCompleted indicates operation is has been completed

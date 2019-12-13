@@ -1,9 +1,9 @@
 apiVersion: openliberty.io/v1beta1
 kind: LibertyApplication
 metadata:
-  name: dump-app
+  name: demo-app
 spec:
   replicas: 1
-  applicationImage: arturdzm/appsody-app-operator:dumpTest
+  applicationImage: openliberty/open-liberty:full-java8-openj9-ubi
   expose: true
   
