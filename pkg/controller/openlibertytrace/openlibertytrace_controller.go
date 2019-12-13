@@ -102,7 +102,7 @@ type ReconcileOpenLibertyTrace struct {
 
 const traceFinalizer = "finalizer.openlibertytraces.openliberty.io"
 const traceConfigFile = "/config/configDropins/overrides/add_trace.xml"
-const serviceabilityDir = "/liberty/serviceability"
+const serviceabilityDir = "/serviceability"
 
 // Reconcile reads that state of the cluster for a OpenLibertyTrace object and makes changes based on the state read
 // and what is in the OpenLibertyTrace.Spec
@@ -168,8 +168,6 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(request reconcile.Request) (reconc
 	//If pod name changed, then stop tracing on previous pod (if trace was enabled on it)
 	if podChanged && (prevTraceEnabled == corev1.ConditionTrue) {
 		r.disableTraceOnPrevPod(reqLogger, prevPodName, podNamespace)
-	} else {
-		reqLogger.Info("Clean up was not needed")
 	}
 
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: podName, Namespace: podNamespace}, &corev1.Pod{})
@@ -195,30 +193,31 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(request reconcile.Request) (reconc
 	} else {
 
 		traceOutputDir := serviceabilityDir + "/" + podNamespace + "/" + podName
-		//_, err = utils.ExecuteCommandInContainer(r.restConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "mkdir -p " + traceOutputDir})
-		//if err != nil {
-		//	reqLogger.Error(err, "Couldn't create a log output directory under "+serviceabilityDir+" for pod "+podName+" in namespace "+podNamespace+". Ensure serviceability directory is mounted for persistence.")
-		//}
-
-		traceConfig := "<server><logging traceSpecification=\"" + instance.Spec.TraceSpecification + "\" logDirectory=\"" + traceOutputDir + "\""
-		if instance.Spec.MaxFileSize != nil {
-			traceConfig += " maxFileSize=\"" + strconv.Itoa(int(*instance.Spec.MaxFileSize)) + "\""
-		}
-		if instance.Spec.MaxFiles != nil {
-			traceConfig += " maxFiles=\"" + strconv.Itoa(int(*instance.Spec.MaxFiles)) + "\""
-		}
-		traceConfig += "/></server>"
-
-		_, err = utils.ExecuteCommandInContainer(r.restConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "echo '" + traceConfig + "' > " + traceConfigFile})
-		if err == nil {
-			if podChanged || prevTraceEnabled == corev1.ConditionFalse {
-				reqLogger.Info("Enabled trace for pod " + podName + " in namespace " + podNamespace)
-			} else {
-				reqLogger.Info("Updated trace for pod " + podName + " in namespace " + podNamespace)
+		_, err = utils.ExecuteCommandInContainer(r.restConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "mkdir -p " + traceOutputDir})
+		if err != nil {
+			reqLogger.Error(err, "Couldn't create a log output directory under "+serviceabilityDir+" for pod "+podName+" in namespace "+podNamespace+". Ensure serviceability directory is mounted for persistence.")
+			//TODO: report reconcile failure here
+		} else {
+			traceConfig := "<server><logging traceSpecification=\"" + instance.Spec.TraceSpecification + "\" logDirectory=\"" + traceOutputDir + "\""
+			if instance.Spec.MaxFileSize != nil {
+				traceConfig += " maxFileSize=\"" + strconv.Itoa(int(*instance.Spec.MaxFileSize)) + "\""
 			}
-			return r.UpdateStatus(openlibertyv1beta1.OperationStatusConditionTypeTrace, *instance, corev1.ConditionTrue, podName, podChanged)
+			if instance.Spec.MaxFiles != nil {
+				traceConfig += " maxFiles=\"" + strconv.Itoa(int(*instance.Spec.MaxFiles)) + "\""
+			}
+			traceConfig += "/></server>"
+
+			_, err = utils.ExecuteCommandInContainer(r.restConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "echo '" + traceConfig + "' > " + traceConfigFile})
+			if err == nil {
+				if podChanged || prevTraceEnabled == corev1.ConditionFalse {
+					reqLogger.Info("Enabled trace for pod " + podName + " in namespace " + podNamespace)
+				} else {
+					reqLogger.Info("Updated trace for pod " + podName + " in namespace " + podNamespace)
+				}
+				return r.UpdateStatus(openlibertyv1beta1.OperationStatusConditionTypeTrace, *instance, corev1.ConditionTrue, podName, podChanged)
+			}
+			reqLogger.Error(err, "Encountered error while setting up trace for pod "+podName+" in namespace "+podNamespace)
 		}
-		reqLogger.Error(err, "Encountered error while setting up trace for pod "+podName+" in namespace "+podNamespace)
 	}
 
 	return reconcile.Result{Requeue: false}, nil
@@ -278,8 +277,6 @@ func (r *ReconcileOpenLibertyTrace) disableTraceOnPrevPod(reqLogger logr.Logger,
 func (r *ReconcileOpenLibertyTrace) finalizeOpenLibertyTrace(reqLogger logr.Logger, olt *openlibertyv1beta1.OpenLibertyTrace, prevTraceEnabled corev1.ConditionStatus, prevPodName string, podNamespace string) error {
 	if prevTraceEnabled == corev1.ConditionTrue {
 		r.disableTraceOnPrevPod(reqLogger, prevPodName, podNamespace)
-	} else {
-		reqLogger.Info("Finalizer: No clean up was needed")
 	}
 	return nil
 }
