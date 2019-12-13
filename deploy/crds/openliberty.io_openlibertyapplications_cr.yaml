@@ -1,5 +1,5 @@
 apiVersion: openliberty.io/v1beta1
-kind: LibertyApplication
+kind: OpenLibertyApplication
 metadata:
   name: demo-app
 spec:

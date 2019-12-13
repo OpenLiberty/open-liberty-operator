@@ -20,6 +20,7 @@ type OpenLibertyTraceSpec struct {
 // OpenLibertyTraceStatus defines the observed state of OpenLibertyTrace operation
 // +k8s:openapi-gen=true
 type OpenLibertyTraceStatus struct {
+	// +listType=atomic
 	Conditions       []OperationStatusCondition `json:"conditions,omitempty"`
 	OperatedResource OperatedResource           `json:"operatedResource,omitempty"`
 }
