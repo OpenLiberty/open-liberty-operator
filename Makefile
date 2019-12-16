@@ -76,4 +76,6 @@ install-all: install-crd install-rbac install-operator
 
 uninstall-all:
 	kubectl delete -n ${OPERATOR_NAMESPACE} -f deploy/crds/operator.yaml
-	kubectl delete -f deploy/crds/openliberty.io_libertyapplications_crd.yaml
+	kubectl delete -f deploy/crds/openliberty.io_openlibertyapplications_crd.yaml
+	kubectl delete -f deploy/crds/openliberty.io_openlibertydumps_crd.yaml
+	kubectl delete -f deploy/crds/opemliberty.io_openlibertytraces_crd.yaml
