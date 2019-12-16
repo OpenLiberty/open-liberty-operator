@@ -57,5 +57,7 @@ rules:
   - openliberty.io
   resources:
   - '*'
+  - openlibertytraces
+  - openlibertydumps
   verbs:
   - '*'

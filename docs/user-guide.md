@@ -182,6 +182,35 @@ spec:
 
 Use `envFrom` to define all data in a `ConfigMap` or a `Secret` as environment variables in a container. Keys from `ConfigMap` or `Secret` resources become environment variable name in your container.
 
+#### Console Logging Variables
+
+The Open Liberty Operator sets a number of environment variables related to console logging by default. The following table shows the variables and their corresponding values.
+
+| Name                         | Value                        |
+|------------------------------|------------------------------|
+| WLP_LOGGING_CONSOLE_LOGLEVEL | info                         |
+| WLP_LOGGING_CONSOLE_SOURCE   | message,trace,accessLog,ffdc |
+| WLP_LOGGING_CONSOLE_FORMAT   | json                         |
+
+To override these default values with your own values, set them manually in your CR `env` list.
+
+```yaml
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyApplication
+metadata:
+  name: my-liberty-app
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  env:
+    - name: WLP_LOGGING_CONSOLE_FORMAT
+      value: "basic"
+    - name: WLP_LOGGING_CONSOLE_SOURCE
+      value: "messages,trace,accessLog"
+    - name: WLP_LOGGING_CONSOLE_LOGLEVEL
+      value: "error"
+```
+
+
 ### High availability
 
 Run multiple instances of your application for high availability using one of the following mechanisms: 

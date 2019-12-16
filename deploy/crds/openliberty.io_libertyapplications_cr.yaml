@@ -1,7 +1,0 @@
-apiVersion: openliberty.io/v1beta1
-kind: LibertyApplication
-metadata:
-  name: demo-app
-spec:
-  replicas: 1
-  applicationImage: openliberty/open-liberty:microProfile3-ubi-min

@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/appsody/appsody-operator v0.3.0
 	github.com/coreos/prometheus-operator v0.29.0
+	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.0
 	github.com/knative/serving v0.7.1-0.20190701162519-7ca25646a186
 	github.com/openshift/api v3.9.1-0.20190424152011-77b8897ec79a+incompatible

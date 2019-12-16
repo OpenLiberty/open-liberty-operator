@@ -38,14 +38,14 @@ var (
 	ksvcAppImage               = "ksvc-image"
 	defaultMeta                = metav1.ObjectMeta{Name: name, Namespace: namespace}
 	replicas             int32 = 3
-	autoscaling                = &openlibertyv1beta1.LibertyApplicationAutoScaling{MaxReplicas: 3}
+	autoscaling                = &openlibertyv1beta1.OpenLibertyApplicationAutoScaling{MaxReplicas: 3}
 	pullPolicy                 = corev1.PullAlways
 	serviceType                = corev1.ServiceTypeClusterIP
-	service                    = &openlibertyv1beta1.LibertyApplicationService{Type: serviceType, Port: 9080}
+	service                    = &openlibertyv1beta1.OpenLibertyApplicationService{Type: serviceType, Port: 9080}
 	expose                     = true
 	serviceAccountName         = "service-account"
 	volumeCT                   = &corev1.PersistentVolumeClaim{TypeMeta: metav1.TypeMeta{Kind: "StatefulSet"}}
-	storage                    = openlibertyv1beta1.LibertyApplicationStorage{Size: "10Mi", MountPath: "/mnt/data", VolumeClaimTemplate: volumeCT}
+	storage                    = openlibertyv1beta1.OpenLibertyApplicationStorage{Size: "10Mi", MountPath: "/mnt/data", VolumeClaimTemplate: volumeCT}
 	createKnativeService       = true
 	statefulSetSN              = name + "-headless"
 )
@@ -60,7 +60,7 @@ func TestOpenLibertyController(t *testing.T) {
 	logf.SetLogger(logf.ZapLogger(true))
 	os.Setenv("WATCH_NAMESPACE", namespace)
 
-	spec := openlibertyv1beta1.LibertyApplicationSpec{}
+	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 
 	// Set objects to track in the fake client and register operator types with the runtime scheme.
@@ -136,11 +136,11 @@ func testBasicReconcile(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconci
 }
 
 func testStorage(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
-	spec := openlibertyv1beta1.LibertyApplicationSpec{}
+	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	req := createReconcileRequest(name, namespace)
 
-	openliberty.Spec = openlibertyv1beta1.LibertyApplicationSpec{
+	openliberty.Spec = openlibertyv1beta1.OpenLibertyApplicationSpec{
 		Storage:          &storage,
 		Replicas:         &replicas,
 		ApplicationImage: appImage,
@@ -177,11 +177,11 @@ func testStorage(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase
 }
 
 func testKnativeService(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
-	spec := openlibertyv1beta1.LibertyApplicationSpec{}
+	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	req := createReconcileRequest(name, namespace)
 
-	openliberty.Spec = openlibertyv1beta1.LibertyApplicationSpec{
+	openliberty.Spec = openlibertyv1beta1.OpenLibertyApplicationSpec{
 		CreateKnativeService: &createKnativeService,
 		PullPolicy:           &pullPolicy,
 		ApplicationImage:     ksvcAppImage,
@@ -224,12 +224,12 @@ func testKnativeService(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconci
 }
 
 func testExposeRoute(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
-	spec := openlibertyv1beta1.LibertyApplicationSpec{}
+	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	req := createReconcileRequest(name, namespace)
 
 	expose := true
-	openliberty.Spec = openlibertyv1beta1.LibertyApplicationSpec{
+	openliberty.Spec = openlibertyv1beta1.OpenLibertyApplicationSpec{
 		Expose: &expose,
 	}
 	updateOpenLiberty(r, openliberty, t)
@@ -253,11 +253,11 @@ func testExposeRoute(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconciler
 }
 
 func testAutoscaling(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
-	spec := openlibertyv1beta1.LibertyApplicationSpec{}
+	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	req := createReconcileRequest(name, namespace)
 
-	openliberty.Spec = openlibertyv1beta1.LibertyApplicationSpec{
+	openliberty.Spec = openlibertyv1beta1.OpenLibertyApplicationSpec{
 		Autoscaling: autoscaling,
 	}
 	updateOpenLiberty(r, openliberty, t)
@@ -286,7 +286,7 @@ func testAutoscaling(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconciler
 }
 
 func testServiceAccount(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
-	spec := openlibertyv1beta1.LibertyApplicationSpec{}
+	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	req := createReconcileRequest(name, namespace)
 
@@ -302,7 +302,7 @@ func testServiceAccount(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconci
 		return err
 	}
 
-	openliberty.Spec = openlibertyv1beta1.LibertyApplicationSpec{
+	openliberty.Spec = openlibertyv1beta1.OpenLibertyApplicationSpec{
 		ServiceAccountName: &serviceAccountName,
 	}
 	updateOpenLiberty(r, openliberty, t)
@@ -316,12 +316,12 @@ func testServiceAccount(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconci
 
 // most of this functionality is handled by autils, only verifying liberty logic
 func testServiceMonitoring(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
-	spec := openlibertyv1beta1.LibertyApplicationSpec{}
+	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	req := createReconcileRequest(name, namespace)
 
 	// Test with monitoring specified
-	openliberty.Spec.Monitoring = &openlibertyv1beta1.LibertyApplicationMonitoring{}
+	openliberty.Spec.Monitoring = &openlibertyv1beta1.OpenLibertyApplicationMonitoring{}
 	updateOpenLiberty(r, openliberty, t)
 	res, err := r.Reconcile(req)
 	if err = verifyReconcile(res, err); err != nil {
@@ -364,8 +364,8 @@ func testServiceMonitoring(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reco
 }
 
 // Helper Functions
-func createOpenLibertyApp(n, ns string, spec openlibertyv1beta1.LibertyApplicationSpec) *openlibertyv1beta1.LibertyApplication {
-	app := &openlibertyv1beta1.LibertyApplication{
+func createOpenLibertyApp(n, ns string, spec openlibertyv1beta1.OpenLibertyApplicationSpec) *openlibertyv1beta1.OpenLibertyApplication {
+	app := &openlibertyv1beta1.OpenLibertyApplication{
 		ObjectMeta: metav1.ObjectMeta{Name: n, Namespace: ns},
 		Spec:       spec,
 	}
@@ -429,7 +429,7 @@ func verifyTests(tests []Test) error {
 	return nil
 }
 
-func updateOpenLiberty(r *ReconcileOpenLiberty, openliberty *openlibertyv1beta1.LibertyApplication, t *testing.T) {
+func updateOpenLiberty(r *ReconcileOpenLiberty, openliberty *openlibertyv1beta1.OpenLibertyApplication, t *testing.T) {
 	if err := r.GetClient().Update(context.TODO(), openliberty); err != nil {
 		t.Fatalf("Update openliberty: (%v)", err)
 	}

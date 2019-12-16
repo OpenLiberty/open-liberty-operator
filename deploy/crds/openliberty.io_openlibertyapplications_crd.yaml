@@ -1,7 +1,7 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: libertyapplications.openliberty.io
+  name: openlibertyapplications.openliberty.io
 spec:
   additionalPrinterColumns:
   - JSONPath: .spec.applicationImage
@@ -37,16 +37,17 @@ spec:
     type: date
   group: openliberty.io
   names:
-    kind: LibertyApplication
-    listKind: LibertyApplicationList
-    plural: libertyapplications
-    singular: libertyapplication
+    kind: OpenLibertyApplication
+    listKind: OpenLibertyApplicationList
+    plural: openlibertyapplications
+    singular: openlibertyapplication
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: LibertyApplication is the Schema for the LibertyApplications API
+      description: OpenLibertyApplication is the Schema for the OpenLibertyApplications
+        API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -61,7 +62,7 @@ spec:
         metadata:
           type: object
         spec:
-          description: LibertyApplicationSpec defines the desired state of LibertyApplication
+          description: OpenLibertyApplicationSpec defines the desired state of OpenLibertyApplication
           properties:
             applicationImage:
               type: string
@@ -70,7 +71,7 @@ spec:
                 type: string
               type: array
             autoscaling:
-              description: LibertyApplicationAutoScaling ...
+              description: OpenLibertyApplicationAutoScaling ...
               properties:
                 maxReplicas:
                   format: int32
@@ -1213,15 +1214,8 @@ spec:
                   format: int32
                   type: integer
               type: object
-            logs:
-              description: LibertyApplicationLogs defines the configuration for how
-                liberty creates logs
-              properties:
-                consoleFormat:
-                  type: string
-              type: object
             monitoring:
-              description: LibertyApplicationMonitoring ...
+              description: OpenLibertyApplicationMonitoring ...
               properties:
                 endpoints:
                   items:
@@ -1566,7 +1560,7 @@ spec:
                   type: object
               type: object
             service:
-              description: LibertyApplicationService ...
+              description: OpenLibertyApplicationService ...
               properties:
                 annotations:
                   additionalProperties:
@@ -1658,7 +1652,7 @@ spec:
             serviceAccountName:
               type: string
             storage:
-              description: LibertyApplicationStorage ...
+              description: OpenLibertyApplicationStorage ...
               properties:
                 mountPath:
                   type: string
@@ -3083,7 +3077,8 @@ spec:
           - applicationImage
           type: object
         status:
-          description: LibertyApplicationStatus defines the observed state of LibertyApplication
+          description: OpenLibertyApplicationStatus defines the observed state of
+            OpenLibertyApplication
           properties:
             conditions:
               items:

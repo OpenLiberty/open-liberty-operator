@@ -9,27 +9,27 @@ import (
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// LibertyApplicationSpec defines the desired state of LibertyApplication
+// OpenLibertyApplicationSpec defines the desired state of OpenLibertyApplication
 // +k8s:openapi-gen=true
-type LibertyApplicationSpec struct {
-	Version          string                         `json:"version,omitempty"`
-	ApplicationImage string                         `json:"applicationImage"`
-	Replicas         *int32                         `json:"replicas,omitempty"`
-	Autoscaling      *LibertyApplicationAutoScaling `json:"autoscaling,omitempty"`
-	PullPolicy       *corev1.PullPolicy             `json:"pullPolicy,omitempty"`
-	PullSecret       *string                        `json:"pullSecret,omitempty"`
+type OpenLibertyApplicationSpec struct {
+	Version          string                             `json:"version,omitempty"`
+	ApplicationImage string                             `json:"applicationImage"`
+	Replicas         *int32                             `json:"replicas,omitempty"`
+	Autoscaling      *OpenLibertyApplicationAutoScaling `json:"autoscaling,omitempty"`
+	PullPolicy       *corev1.PullPolicy                 `json:"pullPolicy,omitempty"`
+	PullSecret       *string                            `json:"pullSecret,omitempty"`
 
 	// +listType=map
 	// +listMapKey=name
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
 	// +listType=map
 	// +listMapKey=name
-	VolumeMounts        []corev1.VolumeMount         `json:"volumeMounts,omitempty"`
-	ResourceConstraints *corev1.ResourceRequirements `json:"resourceConstraints,omitempty"`
-	ReadinessProbe      *corev1.Probe                `json:"readinessProbe,omitempty"`
-	LivenessProbe       *corev1.Probe                `json:"livenessProbe,omitempty"`
-	Service             LibertyApplicationService    `json:"service,omitempty"`
-	Expose              *bool                        `json:"expose,omitempty"`
+	VolumeMounts        []corev1.VolumeMount          `json:"volumeMounts,omitempty"`
+	ResourceConstraints *corev1.ResourceRequirements  `json:"resourceConstraints,omitempty"`
+	ReadinessProbe      *corev1.Probe                 `json:"readinessProbe,omitempty"`
+	LivenessProbe       *corev1.Probe                 `json:"livenessProbe,omitempty"`
+	Service             OpenLibertyApplicationService `json:"service,omitempty"`
+	Expose              *bool                         `json:"expose,omitempty"`
 	// +listType=atomic
 	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
 	// +listType=map
@@ -37,20 +37,19 @@ type LibertyApplicationSpec struct {
 	Env                []corev1.EnvVar `json:"env,omitempty"`
 	ServiceAccountName *string         `json:"serviceAccountName,omitempty"`
 	// +listType=set
-	Architecture         []string                      `json:"architecture,omitempty"`
-	Storage              *LibertyApplicationStorage    `json:"storage,omitempty"`
-	CreateKnativeService *bool                         `json:"createKnativeService,omitempty"`
-	Monitoring           *LibertyApplicationMonitoring `json:"monitoring,omitempty"`
-	CreateAppDefinition  *bool                         `json:"createAppDefinition,omitempty"`
+	Architecture         []string                          `json:"architecture,omitempty"`
+	Storage              *OpenLibertyApplicationStorage    `json:"storage,omitempty"`
+	CreateKnativeService *bool                             `json:"createKnativeService,omitempty"`
+	Monitoring           *OpenLibertyApplicationMonitoring `json:"monitoring,omitempty"`
+	CreateAppDefinition  *bool                             `json:"createAppDefinition,omitempty"`
 	// +listType=map
 	// +listMapKey=name
-	InitContainers []corev1.Container      `json:"initContainers,omitempty"`
-	Logs           *LibertyApplicationLogs `json:"logs,omitempty"`
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 }
 
-// LibertyApplicationAutoScaling ...
+// OpenLibertyApplicationAutoScaling ...
 // +k8s:openapi-gen=true
-type LibertyApplicationAutoScaling struct {
+type OpenLibertyApplicationAutoScaling struct {
 	TargetCPUUtilizationPercentage *int32 `json:"targetCPUUtilizationPercentage,omitempty"`
 	MinReplicas                    *int32 `json:"minReplicas,omitempty"`
 
@@ -58,9 +57,9 @@ type LibertyApplicationAutoScaling struct {
 	MaxReplicas int32 `json:"maxReplicas,omitempty"`
 }
 
-// LibertyApplicationService ...
+// OpenLibertyApplicationService ...
 // +k8s:openapi-gen=true
-type LibertyApplicationService struct {
+type OpenLibertyApplicationService struct {
 	Type corev1.ServiceType `json:"type,omitempty"`
 
 	// +kubebuilder:validation:Maximum=65536
@@ -73,34 +72,29 @@ type LibertyApplicationService struct {
 	Provides *ServiceBindingProvides  `json:"provides,omitempty"`
 }
 
-// LibertyApplicationStorage ...
+// OpenLibertyApplicationStorage ...
 // +k8s:openapi-gen=true
-type LibertyApplicationStorage struct {
+type OpenLibertyApplicationStorage struct {
 	// +kubebuilder:validation:Pattern=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
 	Size                string                        `json:"size,omitempty"`
 	MountPath           string                        `json:"mountPath,omitempty"`
 	VolumeClaimTemplate *corev1.PersistentVolumeClaim `json:"volumeClaimTemplate,omitempty"`
 }
 
-// LibertyApplicationMonitoring ...
-type LibertyApplicationMonitoring struct {
+// OpenLibertyApplicationMonitoring ...
+type OpenLibertyApplicationMonitoring struct {
 	Labels map[string]string `json:"labels,omitempty"`
 	// +listType=atomic
 	Endpoints []prometheusv1.Endpoint `json:"endpoints,omitempty"`
 }
 
-// LibertyApplicationStatus defines the observed state of LibertyApplication
+// OpenLibertyApplicationStatus defines the observed state of OpenLibertyApplication
 // +k8s:openapi-gen=true
-type LibertyApplicationStatus struct {
+type OpenLibertyApplicationStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	Conditions       []StatusCondition       `json:"conditions,omitempty"`
 	ConsumedServices common.ConsumedServices `json:"consumedServices,omitempty"`
-}
-
-// LibertyApplicationLogs defines the configuration for how liberty creates logs
-type LibertyApplicationLogs struct {
-	ConsoleFormat *string `json:"consoleFormat,omitempty"`
 }
 
 // StatusCondition ...
@@ -140,19 +134,11 @@ type ServiceBindingConsumes struct {
 	MountPath string                        `json:"mountPath,omitempty"`
 }
 
-// StatusConditionType ...
-type StatusConditionType string
-
-const (
-	// StatusConditionTypeReconciled ...
-	StatusConditionTypeReconciled StatusConditionType = "Reconciled"
-)
-
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// LibertyApplication is the Schema for the LibertyApplications API
+// OpenLibertyApplication is the Schema for the OpenLibertyApplications API
 // +k8s:openapi-gen=true
-// +kubebuilder:resource:path=libertyapplications,scope=Namespaced
+// +kubebuilder:resource:path=openlibertyapplications,scope=Namespaced
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Image",type="string",JSONPath=".spec.applicationImage",priority=0,description="Absolute name of the deployed image containing registry and tag"
 // +kubebuilder:printcolumn:name="Exposed",type="boolean",JSONPath=".spec.expose",priority=0,description="Specifies whether deployment is exposed externally via default Route"
@@ -161,104 +147,104 @@ const (
 // +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Reconciled')].message",priority=1,description="Failure message from reconcile condition"
 // +kubebuilder:printcolumn:name="DependenciesSatisfied",type="string",JSONPath=".status.conditions[?(@.type=='DependenciesSatisfied')].status",priority=1,description="Status of the application dependencies"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",priority=0,description="Age of the resource"
-type LibertyApplication struct {
+type OpenLibertyApplication struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   LibertyApplicationSpec   `json:"spec,omitempty"`
-	Status LibertyApplicationStatus `json:"status,omitempty"`
+	Spec   OpenLibertyApplicationSpec   `json:"spec,omitempty"`
+	Status OpenLibertyApplicationStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// LibertyApplicationList contains a list of LibertyApplication
-type LibertyApplicationList struct {
+// OpenLibertyApplicationList contains a list of OpenLibertyApplication
+type OpenLibertyApplicationList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []LibertyApplication `json:"items"`
+	Items           []OpenLibertyApplication `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&LibertyApplication{}, &LibertyApplicationList{})
+	SchemeBuilder.Register(&OpenLibertyApplication{}, &OpenLibertyApplicationList{})
 }
 
 // GetApplicationImage returns application image
-func (cr *LibertyApplication) GetApplicationImage() string {
+func (cr *OpenLibertyApplication) GetApplicationImage() string {
 	return cr.Spec.ApplicationImage
 }
 
 // GetPullPolicy returns image pull policy
-func (cr *LibertyApplication) GetPullPolicy() *corev1.PullPolicy {
+func (cr *OpenLibertyApplication) GetPullPolicy() *corev1.PullPolicy {
 	return cr.Spec.PullPolicy
 }
 
 // GetPullSecret returns secret name for docker registry credentials
-func (cr *LibertyApplication) GetPullSecret() *string {
+func (cr *OpenLibertyApplication) GetPullSecret() *string {
 	return cr.Spec.PullSecret
 }
 
 // GetServiceAccountName returns service account name
-func (cr *LibertyApplication) GetServiceAccountName() *string {
+func (cr *OpenLibertyApplication) GetServiceAccountName() *string {
 	return cr.Spec.ServiceAccountName
 }
 
 // GetReplicas returns number of replicas
-func (cr *LibertyApplication) GetReplicas() *int32 {
+func (cr *OpenLibertyApplication) GetReplicas() *int32 {
 	return cr.Spec.Replicas
 }
 
 // GetLivenessProbe returns liveness probe
-func (cr *LibertyApplication) GetLivenessProbe() *corev1.Probe {
+func (cr *OpenLibertyApplication) GetLivenessProbe() *corev1.Probe {
 	return cr.Spec.LivenessProbe
 }
 
 // GetReadinessProbe returns readiness probe
-func (cr *LibertyApplication) GetReadinessProbe() *corev1.Probe {
+func (cr *OpenLibertyApplication) GetReadinessProbe() *corev1.Probe {
 	return cr.Spec.ReadinessProbe
 }
 
 // GetVolumes returns volumes slice
-func (cr *LibertyApplication) GetVolumes() []corev1.Volume {
+func (cr *OpenLibertyApplication) GetVolumes() []corev1.Volume {
 	return cr.Spec.Volumes
 }
 
 // GetVolumeMounts returns volume mounts slice
-func (cr *LibertyApplication) GetVolumeMounts() []corev1.VolumeMount {
+func (cr *OpenLibertyApplication) GetVolumeMounts() []corev1.VolumeMount {
 	return cr.Spec.VolumeMounts
 }
 
 // GetResourceConstraints returns resource constraints
-func (cr *LibertyApplication) GetResourceConstraints() *corev1.ResourceRequirements {
+func (cr *OpenLibertyApplication) GetResourceConstraints() *corev1.ResourceRequirements {
 	return cr.Spec.ResourceConstraints
 }
 
 // GetExpose returns expose flag
-func (cr *LibertyApplication) GetExpose() *bool {
+func (cr *OpenLibertyApplication) GetExpose() *bool {
 	return cr.Spec.Expose
 }
 
 // GetEnv returns slice of environment variables
-func (cr *LibertyApplication) GetEnv() []corev1.EnvVar {
+func (cr *OpenLibertyApplication) GetEnv() []corev1.EnvVar {
 	return cr.Spec.Env
 }
 
 // GetEnvFrom returns slice of environment variables from source
-func (cr *LibertyApplication) GetEnvFrom() []corev1.EnvFromSource {
+func (cr *OpenLibertyApplication) GetEnvFrom() []corev1.EnvFromSource {
 	return cr.Spec.EnvFrom
 }
 
 // GetCreateKnativeService returns flag that toggles Knative service
-func (cr *LibertyApplication) GetCreateKnativeService() *bool {
+func (cr *OpenLibertyApplication) GetCreateKnativeService() *bool {
 	return cr.Spec.CreateKnativeService
 }
 
 // GetArchitecture returns slice of architectures
-func (cr *LibertyApplication) GetArchitecture() []string {
+func (cr *OpenLibertyApplication) GetArchitecture() []string {
 	return cr.Spec.Architecture
 }
 
 // GetAutoscaling returns autoscaling settings
-func (cr *LibertyApplication) GetAutoscaling() common.BaseApplicationAutoscaling {
+func (cr *OpenLibertyApplication) GetAutoscaling() common.BaseApplicationAutoscaling {
 	if cr.Spec.Autoscaling == nil {
 		return nil
 	}
@@ -266,7 +252,7 @@ func (cr *LibertyApplication) GetAutoscaling() common.BaseApplicationAutoscaling
 }
 
 // GetStorage returns storage settings
-func (cr *LibertyApplication) GetStorage() common.BaseApplicationStorage {
+func (cr *OpenLibertyApplication) GetStorage() common.BaseApplicationStorage {
 	if cr.Spec.Storage == nil {
 		return nil
 	}
@@ -274,50 +260,50 @@ func (cr *LibertyApplication) GetStorage() common.BaseApplicationStorage {
 }
 
 // GetService returns service settings
-func (cr *LibertyApplication) GetService() common.BaseApplicationService {
+func (cr *OpenLibertyApplication) GetService() common.BaseApplicationService {
 	return &cr.Spec.Service
 }
 
 // GetVersion returns application version
-func (cr *LibertyApplication) GetVersion() string {
+func (cr *OpenLibertyApplication) GetVersion() string {
 	return cr.Spec.Version
 }
 
 // GetAnnotations returns application annotation
-func (cr *LibertyApplication) GetAnnotations() map[string]string {
+func (cr *OpenLibertyApplication) GetAnnotations() map[string]string {
 	return cr.Annotations
 }
 
 // GetCreateAppDefinition returns a toggle for integration with kAppNav
-func (cr *LibertyApplication) GetCreateAppDefinition() *bool {
+func (cr *OpenLibertyApplication) GetCreateAppDefinition() *bool {
 	return cr.Spec.CreateAppDefinition
 }
 
 // GetMonitoring returns monitoring settings
-func (cr *LibertyApplication) GetMonitoring() common.BaseApplicationMonitoring {
+func (cr *OpenLibertyApplication) GetMonitoring() common.BaseApplicationMonitoring {
 	if cr.Spec.Monitoring == nil {
 		return nil
 	}
 	return cr.Spec.Monitoring
 }
 
-// GetStatus returns LibertyApplication status
-func (cr *LibertyApplication) GetStatus() common.BaseApplicationStatus {
+// GetStatus returns OpenLibertyApplication status
+func (cr *OpenLibertyApplication) GetStatus() common.BaseApplicationStatus {
 	return &cr.Status
 }
 
 // GetInitContainers returns list of init containers
-func (cr *LibertyApplication) GetInitContainers() []corev1.Container {
+func (cr *OpenLibertyApplication) GetInitContainers() []corev1.Container {
 	return cr.Spec.InitContainers
 }
 
 // GetGroupName returns group name to be used in labels and annotation
-func (cr *LibertyApplication) GetGroupName() string {
+func (cr *OpenLibertyApplication) GetGroupName() string {
 	return "openliberty.io"
 }
 
 // GetConsumedServices returns a map of all the service names to be consumed by the application
-func (s *LibertyApplicationStatus) GetConsumedServices() common.ConsumedServices {
+func (s *OpenLibertyApplicationStatus) GetConsumedServices() common.ConsumedServices {
 	if s.ConsumedServices == nil {
 		return nil
 	}
@@ -325,47 +311,47 @@ func (s *LibertyApplicationStatus) GetConsumedServices() common.ConsumedServices
 }
 
 // SetConsumedServices sets ConsumedServices
-func (s *LibertyApplicationStatus) SetConsumedServices(c common.ConsumedServices) {
+func (s *OpenLibertyApplicationStatus) SetConsumedServices(c common.ConsumedServices) {
 	s.ConsumedServices = c
 }
 
 // GetMinReplicas returns minimum replicas
-func (a *LibertyApplicationAutoScaling) GetMinReplicas() *int32 {
+func (a *OpenLibertyApplicationAutoScaling) GetMinReplicas() *int32 {
 	return a.MinReplicas
 }
 
 // GetMaxReplicas returns maximum replicas
-func (a *LibertyApplicationAutoScaling) GetMaxReplicas() int32 {
+func (a *OpenLibertyApplicationAutoScaling) GetMaxReplicas() int32 {
 	return a.MaxReplicas
 }
 
 // GetTargetCPUUtilizationPercentage returns target cpu usage
-func (a *LibertyApplicationAutoScaling) GetTargetCPUUtilizationPercentage() *int32 {
+func (a *OpenLibertyApplicationAutoScaling) GetTargetCPUUtilizationPercentage() *int32 {
 	return a.TargetCPUUtilizationPercentage
 }
 
 // GetSize returns pesistent volume size
-func (s *LibertyApplicationStorage) GetSize() string {
+func (s *OpenLibertyApplicationStorage) GetSize() string {
 	return s.Size
 }
 
 // GetMountPath returns mount path for persistent volume
-func (s *LibertyApplicationStorage) GetMountPath() string {
+func (s *OpenLibertyApplicationStorage) GetMountPath() string {
 	return s.MountPath
 }
 
 // GetVolumeClaimTemplate returns a template representing requested persitent volume
-func (s *LibertyApplicationStorage) GetVolumeClaimTemplate() *corev1.PersistentVolumeClaim {
+func (s *OpenLibertyApplicationStorage) GetVolumeClaimTemplate() *corev1.PersistentVolumeClaim {
 	return s.VolumeClaimTemplate
 }
 
 // GetAnnotations returns a set of annotations to be added to the service
-func (s *LibertyApplicationService) GetAnnotations() map[string]string {
+func (s *OpenLibertyApplicationService) GetAnnotations() map[string]string {
 	return s.Annotations
 }
 
 // GetPort returns service port
-func (s *LibertyApplicationService) GetPort() int32 {
+func (s *OpenLibertyApplicationService) GetPort() int32 {
 	if s != nil && s.Port != 0 {
 		return s.Port
 	}
@@ -373,12 +359,12 @@ func (s *LibertyApplicationService) GetPort() int32 {
 }
 
 // GetType returns service type
-func (s *LibertyApplicationService) GetType() *corev1.ServiceType {
+func (s *OpenLibertyApplicationService) GetType() *corev1.ServiceType {
 	return &s.Type
 }
 
 // GetProvides returns service provider configuration
-func (s *LibertyApplicationService) GetProvides() common.ServiceBindingProvides {
+func (s *OpenLibertyApplicationService) GetProvides() common.ServiceBindingProvides {
 	if s.Provides == nil {
 		return nil
 	}
@@ -439,7 +425,7 @@ func (p *ServiceBindingProvides) GetProtocol() string {
 }
 
 // GetConsumes returns a list of service consumers' configuration
-func (s *LibertyApplicationService) GetConsumes() []common.ServiceBindingConsumes {
+func (s *OpenLibertyApplicationService) GetConsumes() []common.ServiceBindingConsumes {
 	consumes := make([]common.ServiceBindingConsumes, len(s.Consumes))
 	for i := range s.Consumes {
 		consumes[i] = &s.Consumes[i]
@@ -448,17 +434,17 @@ func (s *LibertyApplicationService) GetConsumes() []common.ServiceBindingConsume
 }
 
 // GetLabels returns labels to be added on ServiceMonitor
-func (m *LibertyApplicationMonitoring) GetLabels() map[string]string {
+func (m *OpenLibertyApplicationMonitoring) GetLabels() map[string]string {
 	return m.Labels
 }
 
 // GetEndpoints returns endpoints to be added to ServiceMonitor
-func (m *LibertyApplicationMonitoring) GetEndpoints() []prometheusv1.Endpoint {
+func (m *OpenLibertyApplicationMonitoring) GetEndpoints() []prometheusv1.Endpoint {
 	return m.Endpoints
 }
 
 // GetLabels returns set of labels to be added to all resources
-func (cr *LibertyApplication) GetLabels() map[string]string {
+func (cr *OpenLibertyApplication) GetLabels() map[string]string {
 	labels := map[string]string{
 		"app.kubernetes.io/instance":   cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -539,12 +525,12 @@ func (c *StatusCondition) SetStatus(s corev1.ConditionStatus) {
 }
 
 // NewCondition returns new condition
-func (s *LibertyApplicationStatus) NewCondition() common.StatusCondition {
+func (s *OpenLibertyApplicationStatus) NewCondition() common.StatusCondition {
 	return &StatusCondition{}
 }
 
 // GetConditions returns slice of conditions
-func (s *LibertyApplicationStatus) GetConditions() []common.StatusCondition {
+func (s *OpenLibertyApplicationStatus) GetConditions() []common.StatusCondition {
 	var conditions = []common.StatusCondition{}
 	for i := range s.Conditions {
 		conditions[i] = &s.Conditions[i]
@@ -553,7 +539,7 @@ func (s *LibertyApplicationStatus) GetConditions() []common.StatusCondition {
 }
 
 // GetCondition ...
-func (s *LibertyApplicationStatus) GetCondition(t common.StatusConditionType) common.StatusCondition {
+func (s *OpenLibertyApplicationStatus) GetCondition(t common.StatusConditionType) common.StatusCondition {
 
 	for i := range s.Conditions {
 		if s.Conditions[i].GetType() == t {
@@ -564,7 +550,7 @@ func (s *LibertyApplicationStatus) GetCondition(t common.StatusConditionType) co
 }
 
 // SetCondition ...
-func (s *LibertyApplicationStatus) SetCondition(c common.StatusCondition) {
+func (s *OpenLibertyApplicationStatus) SetCondition(c common.StatusCondition) {
 
 	condition := &StatusCondition{}
 	found := false
@@ -587,12 +573,18 @@ func (s *LibertyApplicationStatus) SetCondition(c common.StatusCondition) {
 }
 
 // Initialize sets default values
-func (cr *LibertyApplication) Initialize() {
+func (cr *OpenLibertyApplication) Initialize() {
 	if cr.Spec.Service.Port == 0 {
 		cr.Spec.Service.Port = 9080
 	}
 
 	if cr.Spec.Service.Type == "" {
 		cr.Spec.Service.Type = corev1.ServiceTypeClusterIP
+	}
+
+	pp := corev1.PullIfNotPresent
+
+	if cr.Spec.PullPolicy == nil {
+		cr.Spec.PullPolicy = &pp
 	}
 }

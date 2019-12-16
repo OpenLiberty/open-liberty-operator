@@ -53,7 +53,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("openliberty-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("openliberty-controller", mgr, controller.Options{Reconciler: r, MaxConcurrentReconciles: 10})
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource OpenLiberty
-	err = c.Watch(&source.Kind{Type: &openlibertyv1beta1.LibertyApplication{}}, &handler.EnqueueRequestForObject{}, pred)
+	err = c.Watch(&source.Kind{Type: &openlibertyv1beta1.OpenLibertyApplication{}}, &handler.EnqueueRequestForObject{}, pred)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to secondary resource Pods and requeue the owner OpenLiberty
 	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &openlibertyv1beta1.LibertyApplication{},
+		OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
 	})
 	if err != nil {
 		return err
@@ -122,7 +122,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &openlibertyv1beta1.LibertyApplication{},
+		OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
 	}, predSubResource)
 	if err != nil {
 		return err
@@ -130,7 +130,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	err = c.Watch(&source.Kind{Type: &appsv1.StatefulSet{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &openlibertyv1beta1.LibertyApplication{},
+		OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
 	}, predSubResource)
 	if err != nil {
 		return err
@@ -138,7 +138,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &openlibertyv1beta1.LibertyApplication{},
+		OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
 	}, predSubResource)
 	if err != nil {
 		return err
@@ -146,7 +146,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	err = c.Watch(&source.Kind{Type: &autoscalingv1.HorizontalPodAutoscaler{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &openlibertyv1beta1.LibertyApplication{},
+		OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
 	}, predSubResource)
 	if err != nil {
 		return err
@@ -154,12 +154,12 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	err = c.Watch(&source.Kind{Type: &routev1.Route{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &openlibertyv1beta1.LibertyApplication{},
+		OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
 	}, predSubResource)
 
 	err = c.Watch(&source.Kind{Type: &servingv1alpha1.Service{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &openlibertyv1beta1.LibertyApplication{},
+		OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
 	}, predSubResource)
 
 	return nil
@@ -188,7 +188,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 	reqLogger.Info("Reconciling OpenLiberty")
 
 	// Fetch the OpenLiberty instance
-	instance := &openlibertyv1beta1.LibertyApplication{}
+	instance := &openlibertyv1beta1.OpenLibertyApplication{}
 	var ba common.BaseApplication
 	ba = instance
 	err := r.GetClient().Get(context.TODO(), request.NamespacedName, instance)
@@ -348,7 +348,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			autils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
 			autils.CustomizePersistence(statefulSet, instance)
 			lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance)
-      		if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
+			if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
 				m := make(map[string]string)
 				m["kappnav.subkind"] = "Liberty"
 				statefulSet.Annotations = autils.MergeMaps(statefulSet.GetAnnotations(), m)
@@ -382,7 +382,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			autils.CustomizeDeployment(deploy, instance)
 			autils.CustomizePodSpec(&deploy.Spec.Template, instance)
 			lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance)
-      		if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
+			if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
 				m := make(map[string]string)
 				m["kappnav.subkind"] = "Liberty"
 				deploy.Annotations = autils.MergeMaps(deploy.GetAnnotations(), m)
