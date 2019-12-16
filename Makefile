@@ -61,7 +61,9 @@ clean: ## Clean binary artifacts
 	rm -rf build/_output
 
 install-crd: ## Installs operator CRD in the crds directory
-	kubectl apply -f deploy/crds/openliberty.io_libertyapplications_crd.yaml
+	kubectl apply -f deploy/crds/openliberty.io_openlibertyapplications_crd.yaml
+	kubectl apply -f deploy/crds/openliberty.io_openlibertydumps_crd.yaml
+	kubectl apply -f deploy/crds/openliberty.io_openlibertytraces_crd.yaml
 
 
 install-operator: ## Installs operator in the ${OPERATOR_NAMESPACE}
