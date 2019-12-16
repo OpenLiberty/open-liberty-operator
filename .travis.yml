@@ -20,8 +20,8 @@ cache:
 stages:
   - name: build
   - name: unit test
-  - name: e2e test
-  - name: push
+  # - name: e2e test
+  # - name: push
 
 jobs:
  include:
@@ -33,14 +33,14 @@ jobs:
     stage: unit test
     script:
     - make unit-test
-  - name: Run end-to-end tests
-    stage: e2e test
-    script:
-    - make test-e2e
-  - name: Build docker image and push
-    stage: push
-    script:
-    - make build-image
-    - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-    - make push-image
-    if: branch = master AND fork = false AND type != pull_request AND env(DOCKER_USERNAME) IS NOT blank AND env(DOCKER_PASSWORD) IS NOT blank
+  # - name: Run end-to-end tests
+  #   stage: e2e test
+  #   script:
+  #   - make test-e2e
+  # - name: Build docker image and push
+  #   stage: push
+  #   script:
+  #   - make build-image
+  #   - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+  #   - make push-image
+  #   if: branch = master AND fork = false AND type != pull_request AND env(DOCKER_USERNAME) IS NOT blank AND env(DOCKER_PASSWORD) IS NOT blank
