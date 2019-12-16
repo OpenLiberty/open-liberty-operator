@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+readonly SERVICE_ACCOUNT="travis-tests"
+
 # login_cluster : Download oc cli and use it to log into our persistent cluster
 login_cluster(){
     # Install kubectl and oc
@@ -10,8 +12,8 @@ login_cluster(){
     # Start a cluster and login
     oc login $CLUSTER_URL --token=$CLUSTER_TOKEN
     # Set variables for rest of script to use
-    export DEFAULT_REGISTRY=$(oc get route docker-registry -o jsonpath="{ .spec.host }" -n default)
-    export BUILD_IMAGE=$DEFAULT_REGISTRY/openshift/application-operator-$TRAVIS_BUILD_NUMBER:daily
+    readonly DEFAULT_REGISTRY=$(oc get route docker-registry -o jsonpath="{ .spec.host }" -n default)
+    readonly BUILD_IMAGE=$DEFAULT_REGISTRY/openshift/application-operator-$TRAVIS_BUILD_NUMBER:daily
 }
 
 ## cleanup : Delete generated resources that are not bound to a test namespace.
@@ -24,20 +26,20 @@ main() {
     echo "****** Logging into remote cluster..."
     login_cluster
     echo "****** Logging into private registry..."
-    docker login -u unused -p $(oc sa get-token travis-tests -n default) $DEFAULT_REGISTRY
+    docker login -u unused -p $(oc sa get-token "${SERVICE_ACCOUNT}" -n default) $DEFAULT_REGISTRY
 
     if [[ $? -ne 0 ]]; then
-        echo "Failed to log into docker registry as travis-tests, exiting..."
+        echo "Failed to log into docker registry as ${SERVICE_ACCOUNT}, exiting..."
         exit 1
     fi
 
     echo "****** Building image"
-    operator-sdk build $BUILD_IMAGE
+    operator-sdk build "${BUILD_IMAGE}"
     echo "****** Pushing image into registry..."
-    docker push $BUILD_IMAGE
+    docker push "${BUILD_IMAGE}"
 
     if [[ $? -ne 0 ]]; then
-        echo "Failed to push ref to docker registry, exiting..."
+        echo "Failed to push ref: ${BUILD_IMAGE} to docker registry, exiting..."
         exit 1
     fi
 
