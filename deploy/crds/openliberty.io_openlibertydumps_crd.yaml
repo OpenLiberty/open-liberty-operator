@@ -14,11 +14,17 @@ spec:
     description: Indicates if dump operation has completed
     name: Completed
     type: string
+  - JSONPath: .status.dumpFile
+    description: Indicates filename of the server dump
+    name: Dump file
+    type: string
   group: openliberty.io
   names:
     kind: OpenLibertyDump
     listKind: OpenLibertyDumpList
     plural: openlibertydumps
+    shortNames:
+    - oldump
     singular: openlibertydump
   scope: Namespaced
   subresources:
@@ -75,6 +81,8 @@ spec:
                     type: string
                 type: object
               type: array
+            dumpFile:
+              type: string
           type: object
   version: v1beta1
   versions:

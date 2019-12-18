@@ -573,6 +573,12 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyDumpStatus(ref common.Refere
 							},
 						},
 					},
+					"dumpFile": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 				},
 			},
 		},
