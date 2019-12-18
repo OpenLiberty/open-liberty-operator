@@ -20,7 +20,7 @@ cache:
 stages:
   - name: build
   - name: unit test
-  # - name: e2e test
+  - name: e2e test
   # - name: push
 
 jobs:
@@ -33,10 +33,10 @@ jobs:
     stage: unit test
     script:
     - make unit-test
-  # - name: Run end-to-end tests
-  #   stage: e2e test
-  #   script:
-  #   - make test-e2e
+  - name: Run end-to-end tests
+    stage: e2e test
+    script:
+    - make test-e2e
   # - name: Build docker image and push
   #   stage: push
   #   script:
