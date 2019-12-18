@@ -13,20 +13,20 @@ login_cluster(){
     oc login $CLUSTER_URL --token=$CLUSTER_TOKEN
     # Set variables for rest of script to use
     readonly DEFAULT_REGISTRY=$(oc get route docker-registry -o jsonpath="{ .spec.host }" -n default)
-    readonly BUILD_IMAGE=$DEFAULT_REGISTRY/openshift/application-operator-$TRAVIS_BUILD_NUMBER:daily
+    readonly BUILD_IMAGE=$DEFAULT_REGISTRY/openshift/operator:${TRAVIS_BUILD_NUMBER}
 }
 
 ## cleanup : Delete generated resources that are not bound to a test namespace.
 cleanup() {
     # Remove image related resources after the test has finished
-    oc delete imagestream "open-liberty-operator:${TRAVIS_BUILD_NUMBER}" -n openshift
+    oc delete imagestream "operator:${TRAVIS_BUILD_NUMBER}" -n openshift
 }
 
 main() {
     echo "****** Logging into remote cluster..."
     login_cluster
     echo "****** Logging into private registry..."
-    docker login -u unused -p $(oc sa get-token "${SERVICE_ACCOUNT}" -n default) $DEFAULT_REGISTRY
+    docker login -u unused -p $(oc sa get-token travis-tests -n default) $DEFAULT_REGISTRY
 
     if [[ $? -ne 0 ]]; then
         echo "Failed to log into docker registry as ${SERVICE_ACCOUNT}, exiting..."
@@ -44,7 +44,7 @@ main() {
     fi
 
     echo "****** Starting e2e tests..."
-    operator-sdk test local github.com/OpenLiberty/open-liberty-operator/test/e2e --go-test-flags "-timeout 35m" --image $(oc registry info)/openshift/open-liberty-operator:$TRAVIS_BUILD_NUMBER --verbose
+    operator-sdk test local github.com/OpenLiberty/open-liberty-operator/test/e2e --go-test-flags "-timeout 35m" --image $(oc registry info)/openshift/operator:$TRAVIS_BUILD_NUMBER --verbose
     result=$?
     echo "****** Cleaning up tests..."
     cleanup
