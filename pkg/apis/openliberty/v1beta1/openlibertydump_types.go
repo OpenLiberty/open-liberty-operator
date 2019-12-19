@@ -11,6 +11,7 @@ import (
 type OpenLibertyDumpSpec struct {
 	PodName string `json:"podName"`
 	// +listType=set
+	// +kubebuilder:validation:Enum=thread;heap;system
 	Include []string `json:"include,omitempty"`
 }
 

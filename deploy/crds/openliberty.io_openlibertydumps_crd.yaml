@@ -49,6 +49,10 @@ spec:
           description: OpenLibertyDumpSpec defines the desired state of OpenLibertyDump
           properties:
             include:
+              enum:
+              - thread
+              - heap
+              - system
               items:
                 type: string
               type: array
