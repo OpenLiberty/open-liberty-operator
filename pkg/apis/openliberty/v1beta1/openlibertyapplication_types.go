@@ -44,7 +44,8 @@ type OpenLibertyApplicationSpec struct {
 	CreateAppDefinition  *bool                             `json:"createAppDefinition,omitempty"`
 	// +listType=map
 	// +listMapKey=name
-	InitContainers []corev1.Container `json:"initContainers,omitempty"`
+	InitContainers []corev1.Container                    `json:"initContainers,omitempty"`
+	Serviceability *OpenLibertyApplicationServiceability `json:"serviceability,omitempty"`
 }
 
 // OpenLibertyApplicationAutoScaling ...
@@ -86,6 +87,15 @@ type OpenLibertyApplicationMonitoring struct {
 	Labels map[string]string `json:"labels,omitempty"`
 	// +listType=atomic
 	Endpoints []prometheusv1.Endpoint `json:"endpoints,omitempty"`
+}
+
+// OpenLibertyApplicationServiceability ...
+// +k8s:openapi-gen=true
+type OpenLibertyApplicationServiceability struct {
+	// +kubebuilder:validation:Pattern=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+	Size string `json:"size,omitempty"`
+	// +kubebuilder:validation:Pattern=.+
+	VolumeClaimName string `json:"volumeClaimName,omitempty"`
 }
 
 // OpenLibertyApplicationStatus defines the observed state of OpenLibertyApplication
@@ -348,6 +358,21 @@ func (s *OpenLibertyApplicationStorage) GetVolumeClaimTemplate() *corev1.Persist
 // GetAnnotations returns a set of annotations to be added to the service
 func (s *OpenLibertyApplicationService) GetAnnotations() map[string]string {
 	return s.Annotations
+}
+
+// GetServiceability returns serviceability
+func (cr *OpenLibertyApplication) GetServiceability() *OpenLibertyApplicationServiceability {
+	return cr.Spec.Serviceability
+}
+
+// GetSize returns pesistent volume size for Serviceability
+func (s *OpenLibertyApplicationServiceability) GetSize() string {
+	return s.Size
+}
+
+// GetVolumeClaimName returns the name of custom PersistentVolumeClaim (PVC) for Serviceability. Must be in the same namespace as the OpenLibertyApplication.
+func (s *OpenLibertyApplicationServiceability) GetVolumeClaimName() string {
+	return s.VolumeClaimName
 }
 
 // GetPort returns service port
