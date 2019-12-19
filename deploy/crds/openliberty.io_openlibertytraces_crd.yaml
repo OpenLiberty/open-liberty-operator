@@ -29,6 +29,8 @@ spec:
     kind: OpenLibertyTrace
     listKind: OpenLibertyTraceList
     plural: openlibertytraces
+    shortNames:
+    - oltrace
     singular: openlibertytrace
   scope: Namespaced
   subresources:
