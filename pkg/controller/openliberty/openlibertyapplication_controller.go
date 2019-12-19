@@ -17,10 +17,10 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-
-	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var log = logf.Log.WithName("controller_openliberty")
+var log = logf.Log.WithName("controller_openlibertyapplication")
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -185,7 +185,7 @@ type ReconcileOpenLiberty struct {
 func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling OpenLiberty")
+	reqLogger.Info("Reconciling OpenLibertyApplication")
 
 	// Fetch the OpenLiberty instance
 	instance := &openlibertyv1beta1.OpenLibertyApplication{}
@@ -206,7 +206,15 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 	_, err = autils.Validate(instance)
 	// If there's any validation error, don't bother with requeuing
 	if err != nil {
-		reqLogger.Error(err, "Error validating OpenLiberty")
+		reqLogger.Error(err, "Error validating OpenLibertyApplication")
+		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		return reconcile.Result{}, nil
+	}
+
+	_, err = lutils.Validate(instance)
+	// If there's any validation error, don't bother with requeuing
+	if err != nil {
+		reqLogger.Error(err, "Error validating OpenLibertyApplication")
 		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		return reconcile.Result{}, nil
 	}
@@ -216,7 +224,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 	currentGen := instance.Generation
 	err = r.GetClient().Update(context.TODO(), instance)
 	if err != nil {
-		reqLogger.Error(err, "Error updating OpenLiberty")
+		reqLogger.Error(err, "Error updating OpenLibertyApplication")
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
@@ -321,6 +329,25 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
+	if instance.Spec.Serviceability != nil {
+		if instance.Spec.Serviceability.VolumeClaimName != "" {
+			pvcName := instance.Spec.Serviceability.VolumeClaimName
+			err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: pvcName, Namespace: instance.Namespace}, &corev1.PersistentVolumeClaim{})
+			if err != nil && errors.IsNotFound(err) {
+				reqLogger.Error(err, "Failed to find PersistentVolumeClaim "+pvcName+" in namespace "+instance.Namespace)
+				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			}
+		} else {
+			err = r.CreateOrUpdate(lutils.CreateServiceabilityPVC(instance), nil, func() error {
+				return nil
+			})
+			if err != nil {
+				reqLogger.Error(err, "Failed to create PersistentVolumeClaim for Serviceability")
+				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			}
+		}
+	}
+
 	if instance.Spec.Storage != nil {
 		// Delete Deployment if exists
 		deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
@@ -348,6 +375,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			autils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
 			autils.CustomizePersistence(statefulSet, instance)
 			lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance)
+			lutils.ConfigureServiceability(&statefulSet.Spec.Template, instance)
 			if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
 				m := make(map[string]string)
 				m["kappnav.subkind"] = "Liberty"
@@ -382,6 +410,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			autils.CustomizeDeployment(deploy, instance)
 			autils.CustomizePodSpec(&deploy.Spec.Template, instance)
 			lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance)
+			lutils.ConfigureServiceability(&deploy.Spec.Template, instance)
 			if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
 				m := make(map[string]string)
 				m["kappnav.subkind"] = "Liberty"

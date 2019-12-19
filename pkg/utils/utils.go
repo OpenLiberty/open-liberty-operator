@@ -3,10 +3,13 @@ package utils
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -14,9 +17,33 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
+// Utility methods specific to Open Liberty and it's configuration
+
 var log = logf.Log.WithName("openliberty_utils")
 
-// Utility methods specific to Liberty and it's configuration
+//Constant Values
+const serviceabilityMountPath = "/serviceability"
+
+// Validate if the OpenLibertyApplication is valid
+func Validate(olapp *openlibertyv1beta1.OpenLibertyApplication) (bool, error) {
+	// Serviceability validation
+	if olapp.GetServiceability() != nil {
+		if olapp.GetServiceability().GetVolumeClaimName() == "" && olapp.GetServiceability().GetSize() == "" {
+			return false, fmt.Errorf("Invalid input for Serviceability. Specify one of the following: spec.serviceability.size, spec.serviceability.volumeClaimName")
+		}
+		if olapp.GetServiceability().GetVolumeClaimName() == "" {
+			if _, err := resource.ParseQuantity(olapp.GetServiceability().GetSize()); err != nil {
+				return false, fmt.Errorf("validation failed: cannot parse '%v': %v", olapp.GetServiceability().GetSize(), err)
+			}
+		}
+	}
+
+	return true, nil
+}
+
+func requiredFieldMessage(fieldPaths ...string) string {
+	return "must set the field(s): " + strings.Join(fieldPaths, ",")
+}
 
 // ExecuteCommandInContainer Execute command inside a container in a pod through API
 func ExecuteCommandInContainer(config *rest.Config, podName, podNamespace, containerName string, command []string) (string, error) {
@@ -40,8 +67,6 @@ func ExecuteCommandInContainer(config *rest.Config, podName, podNamespace, conta
 		Stderr:    true,
 		TTY:       false,
 	}, scheme.ParameterCodec)
-
-	//log.Info("Request URL: " + req.URL().String())
 
 	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
 	if err != nil {
@@ -70,6 +95,15 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *openlibertyv1beta1.Ope
 		{Name: "WLP_LOGGING_CONSOLE_SOURCE", Value: "message,trace,accessLog,ffdc"},
 		{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: "json"},
 	}
+
+	if la.GetServiceability() != nil {
+		targetEnv = append(targetEnv,
+			corev1.EnvVar{Name: "IBM_HEAPDUMPDIR", Value: serviceabilityMountPath},
+			corev1.EnvVar{Name: "IBM_COREDIR", Value: serviceabilityMountPath},
+			corev1.EnvVar{Name: "IBM_JAVACOREDIR", Value: serviceabilityMountPath},
+		)
+	}
+
 	envList := pts.Spec.Containers[0].Env
 	for _, v := range targetEnv {
 		if _, found := findEnvVar(v.Name, envList); !found {
@@ -86,4 +120,72 @@ func findEnvVar(name string, envList []corev1.EnvVar) (*corev1.EnvVar, bool) {
 		}
 	}
 	return nil, false
+}
+
+// CreateServiceabilityPVC ...
+func CreateServiceabilityPVC(instance *openlibertyv1beta1.OpenLibertyApplication) *corev1.PersistentVolumeClaim {
+	return &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        instance.Name + "-serviceability",
+			Namespace:   instance.Namespace,
+			Labels:      instance.GetLabels(),
+			Annotations: instance.GetAnnotations(),
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: resource.MustParse(instance.GetServiceability().GetSize()),
+				},
+			},
+			AccessModes: []corev1.PersistentVolumeAccessMode{
+				corev1.ReadWriteMany,
+				corev1.ReadWriteOnce,
+			},
+		},
+	}
+}
+
+// ConfigureServiceability ...
+func ConfigureServiceability(pts *corev1.PodTemplateSpec, la *openlibertyv1beta1.OpenLibertyApplication) {
+	if la.GetServiceability() != nil {
+		name := "serviceability"
+
+		foundVolumeMount := false
+		for _, v := range pts.Spec.Containers[0].VolumeMounts {
+			if v.Name == name {
+				foundVolumeMount = true
+			}
+		}
+
+		if !foundVolumeMount {
+			vm := corev1.VolumeMount{
+				Name:      name,
+				MountPath: serviceabilityMountPath,
+			}
+			pts.Spec.Containers[0].VolumeMounts = append(pts.Spec.Containers[0].VolumeMounts, vm)
+		}
+
+		foundVolume := false
+		for _, v := range pts.Spec.Volumes {
+			if v.Name == name {
+				foundVolume = true
+			}
+		}
+
+		if !foundVolume {
+			claimName := la.Name + "-serviceability"
+			if la.Spec.Serviceability.VolumeClaimName != "" {
+				claimName = la.Spec.Serviceability.VolumeClaimName
+			}
+			vol := corev1.Volume{
+				Name: name,
+				VolumeSource: corev1.VolumeSource{
+					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+						ClaimName: claimName,
+					},
+				},
+			}
+			pts.Spec.Volumes = append(pts.Spec.Volumes, vol)
+		}
+	}
 }
