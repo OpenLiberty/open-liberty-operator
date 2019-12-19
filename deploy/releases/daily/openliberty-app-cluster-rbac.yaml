@@ -1,0 +1,99 @@
+--- 
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: open-liberty-operator-OPEN_LIBERTY_OPERATOR_NAMESPACE
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - services
+  - services/finalizers
+  - endpoints
+  - persistentvolumeclaims
+  - events
+  - configmaps
+  - secrets
+  - serviceaccounts
+  verbs:
+  - '*'
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - daemonsets
+  - replicasets
+  - statefulsets
+  verbs:
+  - '*'
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - '*'
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - get
+  - create
+  - '*'
+- apiGroups:
+  - apps
+  resourceNames:
+  - open-liberty-operator
+  resources:
+  - deployments/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+- apiGroups:
+  - apps
+  resources:
+  - replicasets
+  verbs:
+  - get
+- apiGroups:
+  - openliberty.io
+  resources:
+  - '*'
+  - openlibertytraces
+  - openlibertydumps
+  verbs:
+  - '*'
+- apiGroups:
+  - route.openshift.io
+  attributeRestrictions: null
+  resources:
+  - routes
+  verbs:
+  - '*'
+- apiGroups:
+  - serving.knative.dev
+  attributeRestrictions: null
+  resources:
+  - services
+  verbs:
+  - '*'
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: open-liberty-operator-OPEN_LIBERTY_OPERATOR_NAMESPACE
+subjects:
+- kind: ServiceAccount
+  name: open-liberty-operator
+  namespace: OPEN_LIBERTY_OPERATOR_NAMESPACE
+roleRef:
+  kind: Role
+  name: open-liberty-operator-OPEN_LIBERTY_OPERATOR_NAMESPACE
+  apiGroup: rbac.authorization.k8s.io

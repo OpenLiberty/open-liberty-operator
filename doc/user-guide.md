@@ -445,10 +445,6 @@ You can easily test a new version of your application using the Canary deploymen
 *  when a new application version is available, deploy it via the Open Liberty Operator but this time choose `expose: false`.
 *  edit the first application's `Route` resource to split the traffic between the two services using the desired percentage.  
 
-    Here is a screenshot of the split via the OKD UI:
-
-    ![Traffic Split](route.png)
-
     Here is the corresponding YAML, which you can edit using the OKD UI or simply using `oc get route <routeID>` and then `oc apply -f <routeYAML>`:
 
     ```yaml
