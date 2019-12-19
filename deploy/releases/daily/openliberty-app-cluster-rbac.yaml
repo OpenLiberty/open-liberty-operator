@@ -94,6 +94,6 @@ subjects:
   name: open-liberty-operator
   namespace: OPEN_LIBERTY_OPERATOR_NAMESPACE
 roleRef:
-  kind: Role
+  kind: ClusterRole
   name: open-liberty-operator-OPEN_LIBERTY_OPERATOR_NAMESPACE
   apiGroup: rbac.authorization.k8s.io
