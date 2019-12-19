@@ -575,6 +575,32 @@ To join an existing application definition, disable auto-creation and set the la
 
 _This feature is only available if you have kAppNav installed on your cluster. Auto creation of an application definition is not supported when Knative service is created_
 
+### Request server dump using Operator
+
+It is possible to request different types of server dumps using Open Liberty Operator and `OpenLibertyDump` resource kind for specific Pod. To use this feature the `OpenLibertyApplication` needs to have `serviceability` configured
+
+Example including heap and thread dump:
+
+```yaml
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyDump
+metadata:
+  name: example-dump
+  namespace: default
+spec:
+  podName: Specify_Pod_Name_Here
+  include: 
+    - thread
+    - heap
+```
+Dump file name will be added to OpenLibertyDump CR status and file will be stored in serviceability folder
+using format such as /serviceability/NAMESPACE/POD_NAME/TIMESTAMP.zip
+
+Once the dump has started the CR can not be re-used to take more dumps, for each server dump new CR needs to be created.
+
+Note:
+System dump might not work on certain Kubernetes versions, such as OpenShift 4.x 
+
 ### Troubleshooting
 
 See the [troubleshooting guide](troubleshooting.md) for information on how to investigate and resolve deployment problems.
