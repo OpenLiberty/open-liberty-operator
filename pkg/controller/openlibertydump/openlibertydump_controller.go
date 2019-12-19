@@ -165,7 +165,7 @@ func (r *ReconcileOpenLibertyDump) Reconcile(request reconcile.Request) (reconci
 	_, err = utils.ExecuteCommandInContainer(r.restConfig, pod.Name, pod.Namespace, "app", []string{"/bin/sh", "-c", dumpCmd})
 	if err != nil {
 		//handle error
-		log.Error(err, "Execute dump cmd failed ", dumpCmd)
+		log.Error(err, "Execute dump cmd failed ", "cmd", dumpCmd)
 		c = openlibertyv1beta1.OperationStatusCondition{
 			Type:    openlibertyv1beta1.OperationStatusConditionTypeCompleted,
 			Status:  corev1.ConditionFalse,
