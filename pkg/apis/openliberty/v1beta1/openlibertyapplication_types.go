@@ -149,6 +149,7 @@ type ServiceBindingConsumes struct {
 // OpenLibertyApplication is the Schema for the OpenLibertyApplications API
 // +k8s:openapi-gen=true
 // +kubebuilder:resource:path=openlibertyapplications,scope=Namespaced
+// +kubebuilder:resource:path=openlibertyapplications,shortName=olapp
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Image",type="string",JSONPath=".spec.applicationImage",priority=0,description="Absolute name of the deployed image containing registry and tag"
 // +kubebuilder:printcolumn:name="Exposed",type="boolean",JSONPath=".spec.expose",priority=0,description="Specifies whether deployment is exposed externally via default Route"

@@ -42,6 +42,8 @@ spec:
     kind: OpenLibertyApplication
     listKind: OpenLibertyApplicationList
     plural: openlibertyapplications
+    shortNames:
+    - olapp
     singular: openlibertyapplication
   scope: Namespaced
   subresources:
