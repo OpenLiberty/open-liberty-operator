@@ -66,22 +66,23 @@ golint: ## Run linter on operator code
 clean: ## Clean binary artifacts
 	rm -rf build/_output
 
-install-crd: ## Installs operator CRD in the crds directory
-	kubectl apply -f deploy/crds/openliberty.io_openlibertyapplications_crd.yaml
-	kubectl apply -f deploy/crds/openliberty.io_openlibertydumps_crd.yaml
-	kubectl apply -f deploy/crds/openliberty.io_openlibertytraces_crd.yaml
+install-crd: ## Installs operator CRD in the daily directory
+	kubectl apply -f deploy/releases/daily/openliberty-app-crd.yaml
 
+install-rbac: ## Installs RBAC objects required for the operator to in a cluster-wide manner
+	sed -i.bak -e "s/OPEN_LIBERTY_OPERATOR_NAMESPACE/${OPERATOR_NAMESPACE}/" deploy/releases/daily/openliberty-app-cluster-rbac.yaml
+	kubectl apply -f deploy/releases/daily/openliberty-app-cluster-rbac.yaml
 
-install-operator: ## Installs operator in the ${OPERATOR_NAMESPACE}
-ifneq "${OPERATOR_IMAGE}:${OPERATOR_IMAGE_TAG}" "openliberty/operator:0.0.1"
-	sed -i.bak -e 's!image: openliberty/operator:0.0.1!image: ${OPERATOR_IMAGE}:${OPERATOR_IMAGE_TAG}!' deploy/crds/operator.yaml
+install-operator: ## Installs operator in the ${OPERATOR_NAMESPACE} namespace and watches ${WATCH_NAMESPACE} namespace. ${WATCH_NAMESPACE} defaults to `default`. ${OPERATOR_NAMESPACE} defaults to ${WATCH_NAMESPACE}
+ifneq "${OPERATOR_IMAGE}:${OPERATOR_IMAGE_TAG}" "openliberty/operator:daily"
+	sed -i.bak -e 's!image: openliberty/operator:daily!image: ${OPERATOR_IMAGE}:${OPERATOR_IMAGE_TAG}!' deploy/releases/daily/openliberty-app-operator.yaml
 endif
-	kubectl apply -n ${OPERATOR_NAMESPACE} -f deploy/crds/operator.yaml
+	sed -i.bak -e "s/OPEN_LIBERTY_WATCH_NAMESPACE/${WATCH_NAMESPACE}/" deploy/releases/daily/openliberty-app-operator.yaml
+	kubectl apply -n ${OPERATOR_NAMESPACE} -f deploy/releases/daily/openliberty-app-operator.yaml
 
 install-all: install-crd install-rbac install-operator
 
 uninstall-all:
-	kubectl delete -n ${OPERATOR_NAMESPACE} -f deploy/crds/operator.yaml
-	kubectl delete -f deploy/crds/openliberty.io_openlibertyapplications_crd.yaml
-	kubectl delete -f deploy/crds/openliberty.io_openlibertydumps_crd.yaml
-	kubectl delete -f deploy/crds/opemliberty.io_openlibertytraces_crd.yaml
+	kubectl delete -n ${OPERATOR_NAMESPACE} -f deploy/releases/daily/openliberty-app-operator.yaml
+	kubectl delete -f deploy/releases/daily/openliberty-app-cluster-rbac.yaml
+	kubectl delete -f deploy/releases/daily/openliberty-app-crd.yaml
