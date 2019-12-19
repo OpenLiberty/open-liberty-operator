@@ -5,4 +5,6 @@ metadata:
   namespace: default
 spec:
   podName: Specify_Pod_Name_Here
-  include: "thread,heap"
+  include:
+    - heap
+    - thread
