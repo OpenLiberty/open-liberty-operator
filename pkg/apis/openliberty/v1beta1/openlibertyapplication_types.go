@@ -613,4 +613,16 @@ func (cr *OpenLibertyApplication) Initialize() {
 	if cr.Spec.PullPolicy == nil {
 		cr.Spec.PullPolicy = &pp
 	}
+
+	if cr.Spec.Service.Provides != nil && cr.Spec.Service.Provides.Protocol == "" {
+		cr.Spec.Service.Provides.Protocol = "http"
+	}
+
+	for i := range cr.Spec.Service.Consumes {
+		if cr.Spec.Service.Consumes[i].Category == common.ServiceBindingCategoryOpenAPI {
+			if cr.Spec.Service.Consumes[i].Namespace == "" {
+				cr.Spec.Service.Consumes[i].Namespace = cr.Namespace
+			}
+		}
+	}
 }
