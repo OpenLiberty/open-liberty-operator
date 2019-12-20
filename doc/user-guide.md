@@ -1,6 +1,6 @@
 # Open Liberty Operator
 
-The Open Liberty Operator can be used to deploy and manage applications running on Open Liberty into [OKD](https://www.okd.io/) or [OpenShift](https://www.openshift.com/) clusters. You can also perform Day-2 operations such as gathering traces and dumps using the operator.
+The Open Liberty Operator can be used to deploy and manage applications running on Open Liberty into [OKD](https://www.okd.io/) or [OpenShift](https://www.openshift.com/) clusters. You can also perform [Day-2 operations](#day-2-operations) such as gathering traces and dumps using the operator.
 
 ## Operator installation
 
@@ -19,7 +19,7 @@ Appropriate cluster roles and bindings are required to watch another namespace, 
 
 The architecture of the Open Liberty Operator follows the basic controller pattern:  the Operator container with the controller is deployed into a Pod and listens for incoming resources with `Kind: OpenLibertyApplication`. Creating an `OpenLibertyApplication` custom resource (CR) triggers the Open Liberty Operator to create, update or delete Kubernetes resources needed by the application to run on your cluster.
 
-In addition, Open Liberty Operator makes it easy to perform [Day-2 operations](#day-2-operations) on an instance of Open Liberty server running inside a Pod as part of an `OpenLibertyApplication`:
+In addition, Open Liberty Operator makes it easy to perform [Day-2 operations](#day-2-operations) on an Open Liberty server running inside a Pod as part of an `OpenLibertyApplication` instance:
 - Gather server traces using resource `Kind: OpenLibertyTrace`
 - Generate server dumps using resource `Kind: OpenLibertyDump`
 
@@ -95,7 +95,7 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `monitoring.labels` | Labels to set on [ServiceMonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitor). |
 | `monitoring.endpoints` | A YAML snippet representing an array of [Endpoint](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint) component from ServiceMonitor. |
 | `createAppDefinition`   | A boolean to toggle the automatic configuration of `OpenLibertyApplication`'s Kubernetes resources to allow creation of an application definition by [kAppNav](https://kappnav.io/). The default value is `true`. See [Application Navigator](#kubernetes-application-navigator-kappnav-support) for more information. |
-| `serviceability.size` | A convenient field to request the size of the persisted storage to use for serviceability. Can be overridden by the `serviceability.volumeClaimName` property. See [Serviceability](#storage-for-serviceability) for more information. |
+| `serviceability.size` | A convenient field to request the size of the persisted storage to use for serviceability. Can be overridden by the `serviceability.volumeClaimName` property. See [Storage for serviceability](#storage-for-serviceability) for more information. |
 | `serviceability.volumeClaimName` | The name of the [PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims) resource you created to be used for serviceability. Must be in the same namespace. |
 
 ### Basic usage
@@ -284,9 +284,9 @@ spec:
             storage: 1Gi
 ```
 
-#### Storage for Serviceability
+#### Storage for serviceability
 
-The operator makes it easy to use a single storage for serviceability related operations, such as gatherig server traces or dumps. See [Day-2 Operations](day\-2-operations). The single storage will be shared by all Pods of an `OpenLibertyApplication` instance. This way you don't need to mount a separate storage for each Pod. Your cluster must be configured to automatically bind the `PersistentVolumeClaim` (PVC) to a `PersistentVolume` or you must bind it manually.
+The operator makes it easy to use a single storage for serviceability related operations, such as gatherig server traces or dumps. See [Day-2 Operations](#day-2-operations). The single storage will be shared by all Pods of an `OpenLibertyApplication` instance. This way you don't need to mount a separate storage for each Pod. Your cluster must be configured to automatically bind the `PersistentVolumeClaim` (PVC) to a `PersistentVolume` or you must bind it manually.
 
 You can specify the size of the persisted storage to request using `serviceability.size` parameter. The operator will automatically create a `PersistentVolumeClaim` with the specified size and access modes `ReadWriteMany` and `ReadWriteOnce`, which will be mounted at `/serviceability` inside all Pods of an `OpenLibertyApplication` instance.
 

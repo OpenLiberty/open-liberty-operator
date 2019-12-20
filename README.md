@@ -17,7 +17,7 @@ Use the instructions for one of the [releases](deploy/releases) to directly inst
 
 The architecture of the Open Liberty Operator follows the basic controller pattern: the Operator container with the controller is deployed into a Pod and listens for incoming resources with `Kind: OpenLibertyApplication`.
 
-In addition, Open Liberty Operator makes it easy to perform Day-2 operations on an instance of Open Liberty server running inside a container on a Pod: 
+In addition, Open Liberty Operator makes it easy to perform [Day-2 operations](doc/user-guide.md#day-2-operations) on an instance of Open Liberty server running inside a Pod: 
 - Gather server traces using resource `Kind: OpenLibertyTrace`
 - Generate server dumps using resource `Kind: OpenLibertyDump`
 
