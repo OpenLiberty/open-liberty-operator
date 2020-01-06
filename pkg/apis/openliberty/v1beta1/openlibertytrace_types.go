@@ -30,8 +30,7 @@ type OpenLibertyTraceStatus struct {
 // OpenLibertyTrace is the schema for the openlibertytraces API
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:path=openlibertytraces,scope=Namespaced
-// +kubebuilder:resource:path=openlibertytraces,shortName=oltrace
+// +kubebuilder:resource:path=openlibertytraces,scope=Namespaced,shortName=oltrace;oltraces
 // +kubebuilder:printcolumn:name="PodName",type="string",JSONPath=".status.operatedResource.resourceName",priority=0,description="Name of the pod"
 // +kubebuilder:printcolumn:name="Tracing",type="string",JSONPath=".status.conditions[?(@.type=='Tracing')].status",priority=0,description="Status of the trace condition"
 // +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.type=='Tracing')].reason",priority=1,description="Reason for the failure of trace condition"

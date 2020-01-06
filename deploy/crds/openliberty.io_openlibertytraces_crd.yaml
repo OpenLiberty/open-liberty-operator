@@ -31,6 +31,7 @@ spec:
     plural: openlibertytraces
     shortNames:
     - oltrace
+    - oltraces
     singular: openlibertytrace
   scope: Namespaced
   subresources:

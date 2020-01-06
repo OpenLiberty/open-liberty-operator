@@ -44,6 +44,7 @@ spec:
     plural: openlibertyapplications
     shortNames:
     - olapp
+    - olapps
     singular: openlibertyapplication
   scope: Namespaced
   subresources:
