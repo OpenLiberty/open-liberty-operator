@@ -44,6 +44,7 @@ spec:
     plural: openlibertyapplications
     shortNames:
     - olapp
+    - olapps
     singular: openlibertyapplication
   scope: Namespaced
   subresources:
@@ -3138,19 +3139,19 @@ metadata:
 spec:
   additionalPrinterColumns:
   - JSONPath: .status.operatedResource.resourceName
-    description: Name of the pod
+    description: Name of the last operated pod
     name: PodName
     type: string
-  - JSONPath: .status.conditions[?(@.type=='Tracing')].status
+  - JSONPath: .status.conditions[?(@.type=='Enabled')].status
     description: Status of the trace condition
     name: Tracing
     type: string
-  - JSONPath: .status.conditions[?(@.type=='Tracing')].reason
+  - JSONPath: .status.conditions[?(@.type=='Enabled')].reason
     description: Reason for the failure of trace condition
     name: Reason
     priority: 1
     type: string
-  - JSONPath: .status.conditions[?(@.type=='Tracing')].message
+  - JSONPath: .status.conditions[?(@.type=='Enabled')].message
     description: Failure message from trace condition
     name: Message
     priority: 1
@@ -3162,6 +3163,7 @@ spec:
     plural: openlibertytraces
     shortNames:
     - oltrace
+    - oltraces
     singular: openlibertytrace
   scope: Namespaced
   subresources:
@@ -3253,9 +3255,29 @@ spec:
     description: Indicates if dump operation has started
     name: Started
     type: string
+  - JSONPath: .status.conditions[?(@.type=='Started')].reason
+    description: Reason for dump operation failing to start
+    name: Reason
+    priority: 1
+    type: string
+  - JSONPath: .status.conditions[?(@.type=='Started')].message
+    description: Message for dump operation failing to start
+    name: Message
+    priority: 1
+    type: string
   - JSONPath: .status.conditions[?(@.type=='Completed')].status
     description: Indicates if dump operation has completed
     name: Completed
+    type: string
+  - JSONPath: .status.conditions[?(@.type=='Completed')].reason
+    description: Reason for dump operation failing to complete
+    name: Reason
+    priority: 1
+    type: string
+  - JSONPath: .status.conditions[?(@.type=='Completed')].message
+    description: Message for dump operation failing to complete
+    name: Message
+    priority: 1
     type: string
   - JSONPath: .status.dumpFile
     description: Indicates filename of the server dump
@@ -3268,6 +3290,7 @@ spec:
     plural: openlibertydumps
     shortNames:
     - oldump
+    - oldumps
     singular: openlibertydump
   scope: Namespaced
   subresources:
@@ -3292,11 +3315,13 @@ spec:
           description: OpenLibertyDumpSpec defines the desired state of OpenLibertyDump
           properties:
             include:
-              enum:
+              items:
+                description: OpenLibertyDumpInclude defines the possible values for
+                  dump types
+                enum:
                 - thread
                 - heap
-                - system              
-              items:
+                - system
                 type: string
               type: array
             podName:

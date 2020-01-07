@@ -7,19 +7,19 @@ metadata:
 spec:
   additionalPrinterColumns:
   - JSONPath: .status.operatedResource.resourceName
-    description: Name of the pod
+    description: Name of the last operated pod
     name: PodName
     type: string
-  - JSONPath: .status.conditions[?(@.type=='Tracing')].status
+  - JSONPath: .status.conditions[?(@.type=='Enabled')].status
     description: Status of the trace condition
     name: Tracing
     type: string
-  - JSONPath: .status.conditions[?(@.type=='Tracing')].reason
+  - JSONPath: .status.conditions[?(@.type=='Enabled')].reason
     description: Reason for the failure of trace condition
     name: Reason
     priority: 1
     type: string
-  - JSONPath: .status.conditions[?(@.type=='Tracing')].message
+  - JSONPath: .status.conditions[?(@.type=='Enabled')].message
     description: Failure message from trace condition
     name: Message
     priority: 1
@@ -31,6 +31,7 @@ spec:
     plural: openlibertytraces
     shortNames:
     - oltrace
+    - oltraces
     singular: openlibertytrace
   scope: Namespaced
   subresources:

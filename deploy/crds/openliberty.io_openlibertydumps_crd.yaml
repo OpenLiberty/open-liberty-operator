@@ -10,9 +10,29 @@ spec:
     description: Indicates if dump operation has started
     name: Started
     type: string
+  - JSONPath: .status.conditions[?(@.type=='Started')].reason
+    description: Reason for dump operation failing to start
+    name: Reason
+    priority: 1
+    type: string
+  - JSONPath: .status.conditions[?(@.type=='Started')].message
+    description: Message for dump operation failing to start
+    name: Message
+    priority: 1
+    type: string
   - JSONPath: .status.conditions[?(@.type=='Completed')].status
     description: Indicates if dump operation has completed
     name: Completed
+    type: string
+  - JSONPath: .status.conditions[?(@.type=='Completed')].reason
+    description: Reason for dump operation failing to complete
+    name: Reason
+    priority: 1
+    type: string
+  - JSONPath: .status.conditions[?(@.type=='Completed')].message
+    description: Message for dump operation failing to complete
+    name: Message
+    priority: 1
     type: string
   - JSONPath: .status.dumpFile
     description: Indicates filename of the server dump
@@ -25,6 +45,7 @@ spec:
     plural: openlibertydumps
     shortNames:
     - oldump
+    - oldumps
     singular: openlibertydump
   scope: Namespaced
   subresources:

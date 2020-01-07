@@ -2,7 +2,6 @@ apiVersion: openliberty.io/v1beta1
 kind: OpenLibertyTrace
 metadata:
   name: example-trace
-  namespace: default
 spec:
   podName: Specify_Pod_Name_Here
   traceSpecification: "*=info:com.ibm.ws.webcontainer*=all"
