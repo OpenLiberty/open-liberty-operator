@@ -2,11 +2,12 @@ package openlibertydump
 
 import (
 	"context"
+	"github.com/OpenLiberty/open-liberty-operator/pkg/utils"
+	"os"
 	"time"
 
-	"github.com/OpenLiberty/open-liberty-operator/pkg/utils"
-
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
+	autils "github.com/appsody/appsody-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -14,9 +15,11 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -42,8 +45,38 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
+	watchNamespaces, err := autils.GetWatchNamespaces()
+	if err != nil {
+		log.Error(err, "Failed to get watch namespace")
+		os.Exit(1)
+	}
+
+	watchNamespacesMap := make(map[string]bool)
+	for _, ns := range watchNamespaces {
+		watchNamespacesMap[ns] = true
+	}
+	isClusterWide := len(watchNamespacesMap) == 1 && watchNamespacesMap[""]
+
+	log.V(1).Info("Adding a new controller", "watchNamespaces", watchNamespaces, "isClusterWide", isClusterWide)
+
+	pred := predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Ignore updates to CR status in which case metadata.Generation does not change
+			return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration() && (isClusterWide || watchNamespacesMap[e.MetaOld.GetNamespace()])
+		},
+		CreateFunc: func(e event.CreateEvent) bool {
+			return isClusterWide || watchNamespacesMap[e.Meta.GetNamespace()]
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return isClusterWide || watchNamespacesMap[e.Meta.GetNamespace()]
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return isClusterWide || watchNamespacesMap[e.Meta.GetNamespace()]
+		},
+	}
+
 	// Watch for changes to primary resource OpenLibertyDump
-	err = c.Watch(&source.Kind{Type: &openlibertyv1beta1.OpenLibertyDump{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &openlibertyv1beta1.OpenLibertyDump{}}, &handler.EnqueueRequestForObject{}, pred)
 	if err != nil {
 		return err
 	}
@@ -112,7 +145,8 @@ func (r *ReconcileOpenLibertyDump) Reconcile(request reconcile.Request) (reconci
 
 	time := time.Now()
 	dumpFolder := "/serviceability/" + pod.Namespace + "/" + pod.Name
-	dumpCmd := "mkdir -p " + dumpFolder + ";  server dump --archive=" + dumpFolder + "/" + time.Format("2006-01-02_15:04:05") + ".zip"
+	dumpFileName := dumpFolder + "/" + time.Format("2006-01-02_15:04:05") + ".zip"
+	dumpCmd := "mkdir -p " + dumpFolder + ";  server dump --archive=" + dumpFileName
 	if len(instance.Spec.Include) > 0 {
 		dumpCmd += " --include="
 		for i := range instance.Spec.Include {
@@ -131,7 +165,7 @@ func (r *ReconcileOpenLibertyDump) Reconcile(request reconcile.Request) (reconci
 	_, err = utils.ExecuteCommandInContainer(r.restConfig, pod.Name, pod.Namespace, "app", []string{"/bin/sh", "-c", dumpCmd})
 	if err != nil {
 		//handle error
-		log.Error(err, "Execute dump cmd failed ", dumpCmd)
+		log.Error(err, "Execute dump cmd failed ", "cmd", dumpCmd)
 		c = openlibertyv1beta1.OperationStatusCondition{
 			Type:    openlibertyv1beta1.OperationStatusConditionTypeCompleted,
 			Status:  corev1.ConditionFalse,
@@ -150,6 +184,7 @@ func (r *ReconcileOpenLibertyDump) Reconcile(request reconcile.Request) (reconci
 	}
 
 	instance.Status.Conditions = openlibertyv1beta1.SetOperationCondtion(instance.Status.Conditions, c)
+	instance.Status.DumpFile = dumpFileName
 	r.client.Status().Update(context.TODO(), instance)
 	return reconcile.Result{}, nil
 }

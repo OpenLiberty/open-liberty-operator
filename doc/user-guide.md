@@ -1,6 +1,6 @@
 # Open Liberty Operator
 
-The Open Liberty Operator can be used to deploy applications running on Open Liberty into [OKD](https://www.okd.io/) or [OpenShift](https://www.openshift.com/) clusters.
+The Open Liberty Operator can be used to deploy and manage applications running on Open Liberty into [OKD](https://www.okd.io/) or [OpenShift](https://www.openshift.com/) clusters. You can also perform [Day-2 operations](#day-2-operations) such as gathering traces and dumps using the operator.
 
 ## Operator installation
 
@@ -13,11 +13,19 @@ The Open Liberty Operator can be installed to:
 - watch multiple namespaces
 - watch all namespaces in the cluster
 
-Appropriate cluster roles and bindings are required to watch another namespace, watch multiple namespaces or watch all namespaces.
+Appropriate cluster roles and bindings are required to watch another namespace, watch multiple namespaces or watch all namespaces in the cluster.
 
 ## Overview
 
 The architecture of the Open Liberty Operator follows the basic controller pattern:  the Operator container with the controller is deployed into a Pod and listens for incoming resources with `Kind: OpenLibertyApplication`. Creating an `OpenLibertyApplication` custom resource (CR) triggers the Open Liberty Operator to create, update or delete Kubernetes resources needed by the application to run on your cluster.
+
+In addition, Open Liberty Operator makes it easy to perform [Day-2 operations](#day-2-operations) on an Open Liberty server running inside a Pod as part of an `OpenLibertyApplication` instance:
+- Gather server traces using resource `Kind: OpenLibertyTrace`
+- Generate server dumps using resource `Kind: OpenLibertyDump`
+
+## Configuration
+
+### Custom Resource Definition (CRD)
 
 Each instance of `OpenLibertyApplication` CR represents the application to be deployed on the cluster:
 
@@ -38,22 +46,18 @@ spec:
     mountPath: "/logs"
 ```
 
-## Configuration
-
-### Custom Resource Definition (CRD)
-
 The following table lists configurable parameters of the `OpenLibertyApplication` CRD. For complete OpenAPI v3 representation of these values please see [`OpenLibertyApplication` CRD](../deploy/crds/openliberty.io_openlibertyapplications_crd.yaml).
 
 Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Specifying other parameters is optional.
 
 | Parameter | Description |
 |---|---|
-| `stack` | The name of the Appsody Application Stack that produced this application image. |
-| `version` | The current version of the application. Label `app.kubernetes.io/version` will be added to all resources when the version is defined. |
-| `serviceAccountName` | The name of the OpenShift service account to be used during deployment. |
 | `applicationImage` | The absolute name of the image to be deployed, containing the registry and the tag. |
 | `pullPolicy` | The policy used when pulling the image.  One of: `Always`, `Never`, and `IfNotPresent`. |
 | `pullSecret` | If using a registry that requires authentication, the name of the secret containing credentials. |
+| `version` | The current version of the application. Label `app.kubernetes.io/version` will be added to all resources when the version is defined. |
+| `stack` | Optional. The name of the [Appsody application stack](https://github.com/appsody/stacks) that produced this application image. |
+| `serviceAccountName` | The name of the OpenShift service account to be used during deployment. |
 | `initContainers` | The list of [Init Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#container-v1-core) definitions. |
 | `architecture` | An array of architectures to be considered for deployment. Their position in the array indicates preference. |
 | `service.port` | The port exposed by the container. |
@@ -91,6 +95,8 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `monitoring.labels` | Labels to set on [ServiceMonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitor). |
 | `monitoring.endpoints` | A YAML snippet representing an array of [Endpoint](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint) component from ServiceMonitor. |
 | `createAppDefinition`   | A boolean to toggle the automatic configuration of `OpenLibertyApplication`'s Kubernetes resources to allow creation of an application definition by [kAppNav](https://kappnav.io/). The default value is `true`. See [Application Navigator](#kubernetes-application-navigator-kappnav-support) for more information. |
+| `serviceability.size` | A convenient field to request the size of the persisted storage to use for serviceability. Can be overridden by the `serviceability.volumeClaimName` property. See [Storage for serviceability](#storage-for-serviceability) for more information. |
+| `serviceability.volumeClaimName` | The name of the [PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims) resource you created to be used for serviceability. Must be in the same namespace. |
 
 ### Basic usage
 
@@ -105,7 +111,7 @@ spec:
   applicationImage: quay.io/my-repo/my-app:1.0
 ```
 
-The `applicationImage` value is required to be defined in `OpenLibertyApplication` CR. The `stack` should be the same value as the [Appsody application stack](https://github.com/appsody/stacks) you used to create your application.
+The `applicationImage` value must be defined in `OpenLibertyApplication` CR.
 
 ### Service account
 
@@ -188,9 +194,9 @@ The Open Liberty Operator sets a number of environment variables related to cons
 
 | Name                         | Value                        |
 |------------------------------|------------------------------|
-| WLP_LOGGING_CONSOLE_LOGLEVEL | info                         |
-| WLP_LOGGING_CONSOLE_SOURCE   | message,trace,accessLog,ffdc |
-| WLP_LOGGING_CONSOLE_FORMAT   | json                         |
+| `WLP_LOGGING_CONSOLE_LOGLEVEL` | info                         |
+| `WLP_LOGGING_CONSOLE_SOURCE`   | message,trace,accessLog,ffdc |
+| `WLP_LOGGING_CONSOLE_FORMAT`   | json                         |
 
 To override these default values with your own values, set them manually in your CR `env` list.
 
@@ -223,7 +229,7 @@ Run multiple instances of your application for high availability using one of th
 
 ### Persistence
 
-Open Liberty Operator is capable of creating a `StatefulSet` and `PersistentVolumeClaim` for each pod if storage is specified in the `OpenLibertyApplication` CR.
+Open Liberty Operator is capable of creating a `StatefulSet` and `PersistentVolumeClaim` for each pod if `storage` is specified in the `OpenLibertyApplication` CR.
 
 Users also can provide mount points for their application. There are 2 ways to enable storage.
 
@@ -277,6 +283,16 @@ spec:
           requests:
             storage: 1Gi
 ```
+
+#### Storage for serviceability
+
+The operator makes it easy to use a single storage for serviceability related operations, such as gatherig server traces or dumps. See [Day-2 Operations](#day-2-operations). The single storage will be shared by all Pods of an `OpenLibertyApplication` instance. This way you don't need to mount a separate storage for each Pod. Your cluster must be configured to automatically bind the `PersistentVolumeClaim` (PVC) to a `PersistentVolume` or you must bind it manually.
+
+You can specify the size of the persisted storage to request using `serviceability.size` parameter. The operator will automatically create a `PersistentVolumeClaim` with the specified size and access modes `ReadWriteMany` and `ReadWriteOnce`, which will be mounted at `/serviceability` inside all Pods of an `OpenLibertyApplication` instance.
+
+You can also create the `PersistentVolumeClaim` yourself and specify its name using `serviceability.volumeClaimName` parameter. You must create it in the same namespace as the `OpenLibertyApplication` instance.
+
+_Once a `PersistentVolumeClaim` is created by operator, its size can not be updated. It will not be deleted when serviceability is disabled or when the `OpenLibertyApplication` is deleted._
 
 ### Service binding
 
@@ -401,7 +417,6 @@ kind: OpenLibertyApplication
 metadata:
   name: my-liberty-app
 spec:
-  stack: java-microprofile
   applicationImage: quay.io/my-repo/my-app:1.0
   createKnativeService: true
 ```
@@ -432,47 +447,11 @@ spec:
   expose: true
 ```
 
-By setting this parameter, the operator creates an unsecured route based on your application service. Setting this parameter is the same as running `oc expose service <service-name>`.
+By setting this parameter, the operator creates an unsecured route based on your application service. Setting this parameter is same as running `oc expose service <service-name>`.
 
 To create a secured HTTPS route, see [secured routes](https://docs.openshift.com/container-platform/3.11/architecture/networking/routes.html#secured-routes) for more information.
 
 _This feature is only available if you are running on OKD or OpenShift._
-
-##### Canary deployment using `Route`
-
-You can easily test a new version of your application using the Canary deployment methodology by levering the traffic split capability built into OKD's `Route` resource.
-*  deploy the first version of the application using the instructions above with `expose: true`, which will create an OKD `Route`.
-*  when a new application version is available, deploy it via the Open Liberty Operator but this time choose `expose: false`.
-*  edit the first application's `Route` resource to split the traffic between the two services using the desired percentage.  
-
-    Here is a screenshot of the split via the OKD UI:
-
-    ![Traffic Split](route.png)
-
-    Here is the corresponding YAML, which you can edit using the OKD UI or simply using `oc get route <routeID>` and then `oc apply -f <routeYAML>`:
-
-    ```yaml
-    apiVersion: route.openshift.io/v1
-    kind: Route
-    metadata:
-      labels:
-        app: my-liberty-app-1
-      name: canary-route
-    spec:
-      alternateBackends:
-        - kind: Service
-          name: my-liberty-app-2
-          weight: 20
-      host: canary-route-testing.my-host.com
-      port:
-        targetPort: 9080-tcp
-      to:
-        kind: Service
-        name: my-liberty-app-1
-        weight: 80
-    ```      
-
-*  once you are satisfied with the results you can simply route 100% of the traffic by switching the `Route`'s `spec.to` object to point to `my-liberty-app-2` at a weight of 100 and remove the `spec.alternateBackends` object. This can similarly be done via the OKD UI.
 
 #### Knative deployment
 
@@ -493,83 +472,6 @@ When `expose` is **not** set to `true`, the Knative service is labeled with `ser
 
 To configure secure HTTPS connections for your deployment, see [Configuring HTTPS with TLS certificates](https://knative.dev/docs/serving/using-a-tls-cert/) for more information.
 
-### Operator Configuration
-
-When the operator starts, it creates two `ConfigMap` objects that contain default and constant values for individual stacks in `AppsodyApplication`.
-
-#### Stack defaults
-
-ConfigMap [`appsody-operator-defaults`](../deploy/stack_defaults.yaml) contains the default values for each stack. When users do not provide values inside their `OpenLibertyApplication` resource, the operator will look up default values inside
-this [stack defaults map](../deploy/stack_defaults.yaml).
-
-Input resource:
-
-```yaml
-apiVersion: appsody.dev/v1beta1
-kind: AppsodyApplication
-metadata:
-  name: my-appsody-app
-spec:
-  stack: java-microprofile
-  applicationImage: quay.io/my-repo/my-app:1.0
-```
-
-Since in the `AppsodyApplication` resource service `port` and `type` are not set, they will be looked up in the default `ConfigMap` and added to the resource. It will be set according to the `stack` field. If the `appsody-operator-defaults` doesn't have the `stack` with a particular name defined then the operator will use `generic` stack's default values.
-
-After defaults are applied:
-
-```yaml
-apiVersion: appsody.dev/v1beta1
-kind: AppsodyApplication
-metadata:
-  name: my-appsody-app
-spec:
-  stack: java-microprofile
-  applicationImage: quay.io/my-repo/my-app:1.0
-  ....
-  service:
-    port: 9080
-    type: ClusterIP  
-```
- 
-#### Stack Constants ConfigMap
-
-[`appsody-operator-constants`](../deploy/stack_constants.yaml) ConfigMap contains the constant values for each stack. These values will always be used over the ones that users provide. This can be used to limit user's ability to control certain fields such as `expose`. It also provides the ability to set environment variables that are always required.
-
-Input resource:
-
-```yaml
-apiVersion: appsody.dev/v1beta1
-kind: AppsodyApplication
-metadata:
-  name: my-appsody-app
-spec:
-  stack: java-microprofile
-  applicationImage: quay.io/my-repo/my-app:1.0
-  expose: true
-  env:
-  -  name: DB_URL
-     value: url
-```
-
-After constants are applied:
-
-```yaml
-apiVersion: appsody.dev/v1beta1
-kind: AppsodyApplication
-metadata:
-  name: my-appsody-app
-spec:
-  stack: java-microprofile
-  applicationImage: quay.io/my-repo/my-app:1.0
-  ....
-  expose: false
-  env:
-  -  name: VENDOR
-     value: COMPANY
-  -  name: DB_URL
-     value: url     
-```
 
 ### Kubernetes Application Navigator (kAppNav) support
 
@@ -579,6 +481,83 @@ To join an existing application definition, disable auto-creation and set the la
 
 _This feature is only available if you have kAppNav installed on your cluster. Auto creation of an application definition is not supported when Knative service is created_
 
-### Troubleshooting
+## Day-2 Operations
 
-See the [troubleshooting guide](troubleshooting.md) for information on how to investigate and resolve deployment problems.
+### Prerequisite 
+
+ - The corresponding `OpenLibertyApplication` must already have [storage for serviceability](#storage-for-serviceability) configured in order to use the day-2 operations
+ - The custom resource (CR) for a day-2 operation must be created in the same namespace as the `OpenLibertyApplication`
+
+### Request server dump
+
+You can request a snapshot of the server status including different types of server dumps, from an instance of Open Liberty server running inside a `Pod`, using Open Liberty Operator and `OpenLibertyDump` custom resource (CR). To use this feature the `OpenLibertyApplication` needs to have [storage for serviceability](#storage-for-serviceability) already configured. Also, the `OpenLibertyDump` CR must be created in the same namespace as the `Pod` to operate on.
+
+The configurable parameters are:
+
+| Parameter | Description |
+|---|---|
+| `podName` | The name of the Pod, which must be in the same namespace as the `OpenLibertyDump` CR. |
+| `include` | Optional. List of memory dump types to request: _thread,heap,system_  |
+
+Example including heap and thread dump:
+
+```yaml
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyDump
+metadata:
+  name: example-dump
+  namespace: default
+spec:
+  podName: Specify_Pod_Name_Here
+  include: 
+    - thread
+    - heap
+```
+
+Dump file name will be added to OpenLibertyDump CR status and file will be stored in serviceability folder
+using format such as /serviceability/NAMESPACE/POD_NAME/TIMESTAMP.zip
+
+Once the dump has started, the CR can not be re-used to take more dumps. A new CR needs to be created for each server dump.
+
+You can check the status of a dump operation using the `status` field inside the CR YAML. You can also run the command `oc get oldump -o wide` to see the status of all dump operations in the current namespace. 
+
+Note:
+_System dump might not work on certain Kubernetes versions, such as OpenShift 4.x_
+
+### Request server traces
+
+You can request server traces, from an instance of Open Liberty server running inside a `Pod`, using Open Liberty Operator and `OpenLibertyTrace` custom resource (CR). To use this feature the `OpenLibertyApplication` must already have [storage for serviceability](#storage-for-serviceability) configured. Also, the `OpenLibertyTrace` CR must be created in the same namespace as the `Pod` to operate on. 
+
+The configurable parameters are:
+
+| Parameter | Description |
+|---|---|
+| `podName` | The name of the Pod, which must be in the same namespace as the `OpenLibertyTrace` CR. |
+| `traceSpecification` | The trace string to be used to selectively enable trace. The default is *=info. |
+| `maxFileSize` | The maximum size (in MB) that a log file can reach before it is rolled. To disable this attribute, set the value to 0. By default, the value is 20. This setting does not apply to the `console.log` file. |
+| `maxFiles` | If an enforced maximum file size exists, this setting is used to determine how many of each of the logs files are kept. This setting also applies to the number of exception logs that summarize exceptions that occurred on any particular day.  |
+| `disable` | Set to _true_ to stop tracing. |
+
+Example:
+
+```yaml
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyTrace
+metadata:
+  name: example-trace
+  namespace: default
+spec:
+  podName: Specify_Pod_Name_Here
+  traceSpecification: "*=info:com.ibm.ws.webcontainer*=all"
+  maxFileSize: 20
+  maxFiles: 5
+```
+Generated trace files, along with _messages.log_ files, will be in the folder using format _/serviceability/NAMESPACE/POD_NAME/_
+
+Once the trace has started, it can be stopped by setting the `disable` parameter to `true`. Deleting the CR will also stop the tracing. Changing the `podName` will first stop the tracing on the old Pod before enabling traces on the new Pod.
+
+You can check the status of a trace operation using the `status` field inside the CR YAML. You can also run the command `oc get oltrace -o wide` to see the status of all trace operations in the current namespace. 
+
+Note:
+_The operator doesn't monitor the Pods. If the Pod is restarted or deleted after the trace is enabled, then the tracing wouldn't be automatically enabled when the Pod comes back up. In that case, the status of the trace operation may not correctly report whether the trace is enabled or not._
+

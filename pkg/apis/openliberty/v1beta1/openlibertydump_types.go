@@ -11,6 +11,7 @@ import (
 type OpenLibertyDumpSpec struct {
 	PodName string `json:"podName"`
 	// +listType=set
+	// +kubebuilder:validation:Enum=thread;heap;system
 	Include []string `json:"include,omitempty"`
 }
 
@@ -19,6 +20,7 @@ type OpenLibertyDumpSpec struct {
 type OpenLibertyDumpStatus struct {
 	// +listType=atomic
 	Conditions []OperationStatusCondition `json:"conditions,omitempty"`
+	DumpFile   string                     `json:"dumpFile,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -27,8 +29,10 @@ type OpenLibertyDumpStatus struct {
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=openlibertydumps,scope=Namespaced
+// +kubebuilder:resource:path=openlibertydumps,shortName=oldump
 // +kubebuilder:printcolumn:name="Started",type="string",JSONPath=".status.conditions[?(@.type=='Started')].status",priority=0,description="Indicates if dump operation has started"
 // +kubebuilder:printcolumn:name="Completed",type="string",JSONPath=".status.conditions[?(@.type=='Completed')].status",priority=0,description="Indicates if dump operation has completed"
+// +kubebuilder:printcolumn:name="Dump file",type="string",JSONPath=".status.dumpFile",priority=0,description="Indicates filename of the server dump"
 type OpenLibertyDump struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
