@@ -11,9 +11,21 @@ import (
 type OpenLibertyDumpSpec struct {
 	PodName string `json:"podName"`
 	// +listType=set
-	// +kubebuilder:validation:Enum=thread;heap;system
-	Include []string `json:"include,omitempty"`
+	Include []OpenLibertyDumpInclude `json:"include,omitempty"`
 }
+
+// OpenLibertyDumpInclude defines the possible values for dump types
+// +kubebuilder:validation:Enum=thread;heap;system
+type OpenLibertyDumpInclude string
+
+const (
+	//OpenLibertyDumpIncludeHeap heap dump
+	OpenLibertyDumpIncludeHeap OpenLibertyDumpInclude = "heap"
+	//OpenLibertyDumpIncludeThread thread dump
+	OpenLibertyDumpIncludeThread OpenLibertyDumpInclude = "thread"
+	//OpenLibertyDumpIncludeSystem system (core) dump
+	OpenLibertyDumpIncludeSystem OpenLibertyDumpInclude = "system"
+)
 
 // OpenLibertyDumpStatus defines the observed state of OpenLibertyDump
 // +k8s:openapi-gen=true

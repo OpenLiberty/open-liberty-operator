@@ -150,7 +150,7 @@ func (r *ReconcileOpenLibertyDump) Reconcile(request reconcile.Request) (reconci
 	if len(instance.Spec.Include) > 0 {
 		dumpCmd += " --include="
 		for i := range instance.Spec.Include {
-			dumpCmd += instance.Spec.Include[i] + ","
+			dumpCmd += string(instance.Spec.Include[i]) + ","
 		}
 	}
 

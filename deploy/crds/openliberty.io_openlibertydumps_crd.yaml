@@ -49,11 +49,13 @@ spec:
           description: OpenLibertyDumpSpec defines the desired state of OpenLibertyDump
           properties:
             include:
-              enum:
-              - thread
-              - heap
-              - system
               items:
+                description: OpenLibertyDumpInclude defines the possible values for
+                  dump types
+                enum:
+                - thread
+                - heap
+                - system
                 type: string
               type: array
             podName:

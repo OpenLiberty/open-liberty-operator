@@ -429,7 +429,7 @@ func (in *OpenLibertyDumpSpec) DeepCopyInto(out *OpenLibertyDumpSpec) {
 	*out = *in
 	if in.Include != nil {
 		in, out := &in.Include, &out.Include
-		*out = make([]string, len(*in))
+		*out = make([]OpenLibertyDumpInclude, len(*in))
 		copy(*out, *in)
 	}
 	return
