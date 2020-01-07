@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -34,7 +35,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileOpenLibertyDump{client: mgr.GetClient(), scheme: mgr.GetScheme(), restConfig: mgr.GetConfig()}
+	return &ReconcileOpenLibertyDump{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetEventRecorderFor("open-liberty-operator"), restConfig: mgr.GetConfig()}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -93,6 +94,7 @@ type ReconcileOpenLibertyDump struct {
 	// that reads objects from the cache and writes to the apiserver
 	client     client.Client
 	scheme     *runtime.Scheme
+	recorder   record.EventRecorder
 	restConfig *rest.Config
 }
 
@@ -131,7 +133,9 @@ func (r *ReconcileOpenLibertyDump) Reconcile(request reconcile.Request) (reconci
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.PodName, Namespace: request.Namespace}, pod)
 	if err != nil || pod.Status.Phase != corev1.PodRunning {
 		//handle error
-		log.Error(err, "Failed to find pod")
+		message := "Failed to find pod " + instance.Spec.PodName + " in namespace " + request.Namespace
+		log.Error(err, message)
+		r.recorder.Event(instance, "Warning", "ProcessingError", message)
 		c := openlibertyv1beta1.OperationStatusCondition{
 			Type:    openlibertyv1beta1.OperationStatusConditionTypeStarted,
 			Status:  corev1.ConditionFalse,
@@ -146,7 +150,7 @@ func (r *ReconcileOpenLibertyDump) Reconcile(request reconcile.Request) (reconci
 	time := time.Now()
 	dumpFolder := "/serviceability/" + pod.Namespace + "/" + pod.Name
 	dumpFileName := dumpFolder + "/" + time.Format("2006-01-02_15:04:05") + ".zip"
-	dumpCmd := "mkdir -p " + dumpFolder + ";  server dump --archive=" + dumpFileName
+	dumpCmd := "mkdir -p " + dumpFolder + " &&  server dump --archive=" + dumpFileName
 	if len(instance.Spec.Include) > 0 {
 		dumpCmd += " --include="
 		for i := range instance.Spec.Include {
@@ -166,6 +170,7 @@ func (r *ReconcileOpenLibertyDump) Reconcile(request reconcile.Request) (reconci
 	if err != nil {
 		//handle error
 		log.Error(err, "Execute dump cmd failed ", "cmd", dumpCmd)
+		r.recorder.Event(instance, "Warning", "ProcessingError", err.Error())
 		c = openlibertyv1beta1.OperationStatusCondition{
 			Type:    openlibertyv1beta1.OperationStatusConditionTypeCompleted,
 			Status:  corev1.ConditionFalse,
