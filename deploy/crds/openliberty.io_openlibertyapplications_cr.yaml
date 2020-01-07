@@ -2,7 +2,6 @@ apiVersion: openliberty.io/v1beta1
 kind: OpenLibertyApplication
 metadata:
   name: demo-app
-  namespace: default
 spec:
   replicas: 1
   applicationImage: openliberty/open-liberty:full-java8-openj9-ubi
