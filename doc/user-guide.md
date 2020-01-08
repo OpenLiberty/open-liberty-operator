@@ -286,9 +286,9 @@ spec:
 
 #### Storage for serviceability
 
-The operator makes it easy to use a single storage for serviceability related operations, such as gatherig server traces or dumps. See [Day-2 Operations](#day-2-operations). The single storage will be shared by all Pods of an `OpenLibertyApplication` instance. This way you don't need to mount a separate storage for each Pod. Your cluster must be configured to automatically bind the `PersistentVolumeClaim` (PVC) to a `PersistentVolume` or you must bind it manually.
+The operator makes it easy to use a single storage for serviceability related operations, such as gatherig server traces or dumps (see [Day-2 Operations](#day-2-operations)). The single storage will be shared by all Pods of an `OpenLibertyApplication` instance. This way you don't need to mount a separate storage for each Pod. Your cluster must be configured to automatically bind the `PersistentVolumeClaim` (PVC) to a `PersistentVolume` or you must bind it manually.
 
-You can specify the size of the persisted storage to request using `serviceability.size` parameter. The operator will automatically create a `PersistentVolumeClaim` with the specified size and access modes `ReadWriteMany` and `ReadWriteOnce`, which will be mounted at `/serviceability` inside all Pods of an `OpenLibertyApplication` instance.
+You can specify the size of the persisted storage to request using `serviceability.size` parameter. The operator will automatically create a `PersistentVolumeClaim` with the specified size and access modes `ReadWriteMany` and `ReadWriteOnce`. It will be mounted at `/serviceability` inside all Pods of the `OpenLibertyApplication` instance.
 
 You can also create the `PersistentVolumeClaim` yourself and specify its name using `serviceability.volumeClaimName` parameter. You must create it in the same namespace as the `OpenLibertyApplication` instance.
 
@@ -481,6 +481,10 @@ To join an existing application definition, disable auto-creation and set the la
 
 _This feature is only available if you have kAppNav installed on your cluster. Auto creation of an application definition is not supported when Knative service is created_
 
+### Troubleshooting
+
+See the [troubleshooting guide](troubleshooting.md) for information on how to investigate and resolve deployment problems.
+
 ## Day-2 Operations
 
 ### Prerequisite 
@@ -523,7 +527,6 @@ apiVersion: openliberty.io/v1beta1
 kind: OpenLibertyDump
 metadata:
   name: example-dump
-  namespace: default
 spec:
   podName: Specify_Pod_Name_Here
   include: 
@@ -562,7 +565,6 @@ apiVersion: openliberty.io/v1beta1
 kind: OpenLibertyTrace
 metadata:
   name: example-trace
-  namespace: default
 spec:
   podName: Specify_Pod_Name_Here
   traceSpecification: "*=info:com.ibm.ws.webcontainer*=all"
