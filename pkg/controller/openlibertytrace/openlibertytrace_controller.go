@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -38,7 +39,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileOpenLibertyTrace{client: mgr.GetClient(), scheme: mgr.GetScheme(), restConfig: mgr.GetConfig()}
+	return &ReconcileOpenLibertyTrace{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetEventRecorderFor("open-liberty-operator"), restConfig: mgr.GetConfig()}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -97,6 +98,7 @@ type ReconcileOpenLibertyTrace struct {
 	// that reads objects from the cache and writes to the apiserver
 	client     client.Client
 	scheme     *runtime.Scheme
+	recorder   record.EventRecorder
 	restConfig *rest.Config
 }
 
@@ -134,7 +136,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(request reconcile.Request) (reconc
 	podName := instance.Spec.PodName
 
 	prevPodName := instance.GetStatus().GetOperatedResource().GetOperatedResourceName()
-	prevTraceEnabled := instance.GetStatus().GetCondition(openlibertyv1beta1.OperationStatusConditionTypeTrace).Status
+	prevTraceEnabled := instance.GetStatus().GetCondition(openlibertyv1beta1.OperationStatusConditionTypeEnabled).Status
 	podChanged := prevPodName != podName
 
 	// Check if the OpenLibertyTrace instance is marked to be deleted, which is
@@ -174,57 +176,50 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(request reconcile.Request) (reconc
 	if err != nil && errors.IsNotFound(err) {
 		//Pod is not found. Return and don't requeue
 		reqLogger.Error(err, "Pod "+podName+" was not found in namespace "+podNamespace)
-		return r.UpdateStatus(openlibertyv1beta1.OperationStatusConditionTypeTrace, *instance, corev1.ConditionFalse, podName, podChanged)
+		return r.UpdateStatus(err, openlibertyv1beta1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
 	}
 
 	if instance.Spec.Disable != nil && *instance.Spec.Disable {
-		//Disable trace if trace was previously enabled on same pod
+		//Disable trace if trace was previously enabled on the same pod
 		if !podChanged && prevTraceEnabled == corev1.ConditionTrue {
 			_, err = utils.ExecuteCommandInContainer(r.restConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "rm -f " + traceConfigFile})
-			if err == nil {
-				reqLogger.Info("Disabled trace for pod " + podName + " in namespace " + podNamespace)
-				return r.UpdateStatus(openlibertyv1beta1.OperationStatusConditionTypeTrace, *instance, corev1.ConditionFalse, podName, podChanged)
+			if err != nil {
+				reqLogger.Error(err, "Encountered error while disabling trace for pod "+podName+" in namespace "+podNamespace)
+				return r.UpdateStatus(err, openlibertyv1beta1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionTrue, podName, podChanged)
 			}
-			reqLogger.Error(err, "Encountered error while disabling trace for pod "+podName+" in namespace "+podNamespace)
-		} else {
-			r.UpdateStatus(openlibertyv1beta1.OperationStatusConditionTypeTrace, *instance, corev1.ConditionFalse, podName, podChanged)
+			reqLogger.Info("Disabled trace for pod " + podName + " in namespace " + podNamespace)
 		}
-
+		r.UpdateStatus(nil, openlibertyv1beta1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
 	} else {
-
 		traceOutputDir := serviceabilityDir + "/" + podNamespace + "/" + podName
-		_, err = utils.ExecuteCommandInContainer(r.restConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "mkdir -p " + traceOutputDir})
-		if err != nil {
-			reqLogger.Error(err, "Couldn't create a log output directory under "+serviceabilityDir+" for pod "+podName+" in namespace "+podNamespace+". Ensure serviceability directory is mounted for persistence.")
-			//TODO: report reconcile failure here
-		} else {
-			traceConfig := "<server><logging traceSpecification=\"" + instance.Spec.TraceSpecification + "\" logDirectory=\"" + traceOutputDir + "\""
-			if instance.Spec.MaxFileSize != nil {
-				traceConfig += " maxFileSize=\"" + strconv.Itoa(int(*instance.Spec.MaxFileSize)) + "\""
-			}
-			if instance.Spec.MaxFiles != nil {
-				traceConfig += " maxFiles=\"" + strconv.Itoa(int(*instance.Spec.MaxFiles)) + "\""
-			}
-			traceConfig += "/></server>"
-
-			_, err = utils.ExecuteCommandInContainer(r.restConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "echo '" + traceConfig + "' > " + traceConfigFile})
-			if err == nil {
-				if podChanged || prevTraceEnabled == corev1.ConditionFalse {
-					reqLogger.Info("Enabled trace for pod " + podName + " in namespace " + podNamespace)
-				} else {
-					reqLogger.Info("Updated trace for pod " + podName + " in namespace " + podNamespace)
-				}
-				return r.UpdateStatus(openlibertyv1beta1.OperationStatusConditionTypeTrace, *instance, corev1.ConditionTrue, podName, podChanged)
-			}
-			reqLogger.Error(err, "Encountered error while setting up trace for pod "+podName+" in namespace "+podNamespace)
+		traceConfig := "<server><logging traceSpecification=\"" + instance.Spec.TraceSpecification + "\" logDirectory=\"" + traceOutputDir + "\""
+		if instance.Spec.MaxFileSize != nil {
+			traceConfig += " maxFileSize=\"" + strconv.Itoa(int(*instance.Spec.MaxFileSize)) + "\""
 		}
+		if instance.Spec.MaxFiles != nil {
+			traceConfig += " maxFiles=\"" + strconv.Itoa(int(*instance.Spec.MaxFiles)) + "\""
+		}
+		traceConfig += "/></server>"
+
+		_, err = utils.ExecuteCommandInContainer(r.restConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "mkdir -p " + traceOutputDir + " && echo '" + traceConfig + "' > " + traceConfigFile})
+		if err != nil {
+			reqLogger.Error(err, "Encountered error while setting up trace for pod "+podName+" in namespace "+podNamespace)
+			return r.UpdateStatus(err, openlibertyv1beta1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
+		}
+
+		if podChanged || prevTraceEnabled == corev1.ConditionFalse {
+			reqLogger.Info("Enabled trace for pod " + podName + " in namespace " + podNamespace)
+		} else {
+			reqLogger.Info("Updated trace for pod " + podName + " in namespace " + podNamespace)
+		}
+		r.UpdateStatus(nil, openlibertyv1beta1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionTrue, podName, podChanged)
 	}
 
-	return reconcile.Result{Requeue: false}, nil
+	return reconcile.Result{}, nil
 }
 
-// UpdateStatus ...
-func (r *ReconcileOpenLibertyTrace) UpdateStatus(conditionType openlibertyv1beta1.OperationStatusConditionType, instance openlibertyv1beta1.OpenLibertyTrace, traceStatus corev1.ConditionStatus, podName string, podChanged bool) (reconcile.Result, error) {
+// UpdateStatus updates the status
+func (r *ReconcileOpenLibertyTrace) UpdateStatus(issue error, conditionType openlibertyv1beta1.OperationStatusConditionType, instance openlibertyv1beta1.OpenLibertyTrace, newStatus corev1.ConditionStatus, podName string, podChanged bool) (reconcile.Result, error) {
 	s := instance.GetStatus()
 
 	s.SetOperatedResource(openlibertyv1beta1.OperatedResource{ResourceName: podName, ResourceType: "pod"})
@@ -233,16 +228,25 @@ func (r *ReconcileOpenLibertyTrace) UpdateStatus(conditionType openlibertyv1beta
 	// Keep the old `LastTransitionTime` when pod and status have not changed
 	nowTime := metav1.Now()
 	transitionTime := oldCondition.GetLastTransitionTime()
-	if podChanged || oldCondition.GetStatus() != traceStatus {
+	if podChanged || oldCondition.GetStatus() != newStatus {
 		transitionTime = &nowTime
 	}
 
 	statusCondition := s.NewCondition()
 	statusCondition.SetLastTransitionTime(transitionTime)
 	statusCondition.SetLastUpdateTime(nowTime)
-	statusCondition.SetReason("")
-	statusCondition.SetMessage("")
-	statusCondition.SetStatus(traceStatus)
+
+	if issue != nil {
+		statusCondition.SetReason("Error")
+		statusCondition.SetMessage(issue.Error())
+		r.recorder.Event(&instance, "Warning", "ProcessingError", issue.Error())
+	} else {
+		statusCondition.SetReason("")
+		statusCondition.SetMessage("")
+	}
+
+	statusCondition.SetStatus(newStatus)
+	statusCondition.SetType(conditionType)
 
 	s.SetCondition(statusCondition)
 
