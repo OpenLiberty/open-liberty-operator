@@ -487,6 +487,23 @@ _This feature is only available if you have kAppNav installed on your cluster. A
 
  - The corresponding `OpenLibertyApplication` must already have [storage for serviceability](#storage-for-serviceability) configured in order to use the day-2 operations
  - The custom resource (CR) for a day-2 operation must be created in the same namespace as the `OpenLibertyApplication`
+ 
+ 
+ ### Operation discovery
+ 
+To allow auto-discovery of supported day-2 operations from external tools the following annotation has been added to the `OpenLibertyApplication` CRD:
+
+```
+  annotations:
+    openliberty.io/day2operations: OpenLibertyTrace,OpenLibertyDump
+```
+
+Additionally, each day-2 operation CRD has the following annotation which illustrates the k8s `Kind`(s) the operation applies to:
+
+```
+  annotations:
+    day2operation.openliberty.io/targetKinds: Pod
+```
 
 ### Request server dump
 
