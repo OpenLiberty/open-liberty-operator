@@ -113,6 +113,14 @@ spec:
 
 The `applicationImage` value must be defined in `OpenLibertyApplication` CR.
 
+To get information on the deployed CR, use one of the following:
+
+```sh
+oc get olapp my-liberty-app
+oc get olapps my-liberty-app
+oc get openlibertyapplication my-liberty-app
+```
+
 ### Service account
 
 The operator can create a `ServiceAccount` resource when deploying an Open Liberty application. If `serviceAccountName` is not specified in a CR, the operator creates a service account with the same name as the CR (e.g. `my-liberty-app`).
