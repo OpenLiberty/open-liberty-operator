@@ -187,3 +187,20 @@ func WaitForKnativeDeployment(t *testing.T, f *framework.Framework, ns, n string
 	})
 	return err
 }
+
+// MakeOpenLibertyDump : Create a dump.
+func MakeOpenLibertyDump(t *testing.T, f *framework.Framework, n string, ns string, podName string) *openlibertyv1beta1.OpenLibertyDump {
+	return &openlibertyv1beta1.OpenLibertyDump{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "OpenLibertyDump",
+			APIVersion: "openliberty.io/v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      n,
+			Namespace: ns,
+		},
+		Spec: openlibertyv1beta1.OpenLibertyDumpSpec{
+			PodName: podName,
+		},
+	}
+}

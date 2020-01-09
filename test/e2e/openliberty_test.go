@@ -19,7 +19,6 @@ func TestOpenLibertyApplication(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to add CR scheme to framework: %v", err)
 	}
-
 	t.Run("OpenLibertyPullPolicyTest", OpenLibertyPullPolicyTest)
 	t.Run("OpenLibertyBasicTest", OpenLibertyBasicTest)
 	t.Run("OpenLibertyStorageTest", OpenLibertyBasicStorageTest)
@@ -28,4 +27,5 @@ func TestOpenLibertyApplication(t *testing.T) {
 	t.Run("OpenLibertyAutoScalingTest", OpenLibertyAutoScalingTest)
 	t.Run("OpenLibertyServiceMonitorTest", OpenLibertyServiceMonitorTest)
 	t.Run("OpenLibertyKnativeTest", OpenLibertyKnativeTest)
+	t.Run("OpenLibertyDumpsTest", OpenLibertyDumpsTest)
 }
