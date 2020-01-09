@@ -48,16 +48,37 @@ func MakeBasicOpenLibertyApplication(t *testing.T, f *framework.Framework, n str
 				TimeoutSeconds:      1,
 				PeriodSeconds:       5,
 				SuccessThreshold:    1,
-				FailureThreshold:    16,
+				FailureThreshold:    24,
 			},
 			LivenessProbe: &corev1.Probe{
 				Handler:             probe,
-				InitialDelaySeconds: 4,
+				InitialDelaySeconds: 8,
 				TimeoutSeconds:      1,
 				PeriodSeconds:       5,
 				SuccessThreshold:    1,
-				FailureThreshold:    6,
+				FailureThreshold:    12,
 			},
+		},
+	}
+}
+
+func MakeBasicOpenLibertyTrace(n, ns, pod string) *openlibertyv1beta1.OpenLibertyTrace {
+	maxFiles := int32(5)
+	maxFileSize := int32(20)
+	return &openlibertyv1beta1.OpenLibertyTrace{
+		TypeMeta: metav1.TypeMeta{
+			Kind: "OpenLibertyTrace",
+			APIVersion: "openliberty.io/v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: n,
+			Namespace: ns,
+		},
+		Spec: openlibertyv1beta1.OpenLibertyTraceSpec{
+			PodName: pod,
+			TraceSpecification: "*=info:com.ibm.was.webcontainer*=all",
+			MaxFiles: &maxFiles,
+			MaxFileSize: &maxFileSize,
 		},
 	}
 }
