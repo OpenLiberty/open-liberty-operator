@@ -13,7 +13,6 @@ import (
 	e2eutil "github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/types"
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -47,31 +46,32 @@ func OpenLibertyTraceTest(t *testing.T) {
 	}
 }
 
+// Verify OLTrace on set of replicas with basic config
 func openLibertyBasicTraceTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
 	namespace, err := ctx.GetNamespace()
 	if err != nil {
 		return fmt.Errorf("could not get namespace: %v", err)
 	}
 
-	// Set up OL app to get trace from
+	// set up OL app to get trace from
 	if err = createTargetApp(t, f, ctx); err != nil {
 		return err
 	}
 
-	var wg sync.WaitGroup
-
+	// get the pods that were created from above app
 	pods, err := getTargetPodList(f, ctx, targetApp)
 	if err != nil {
 		return err
 	}
 
-	// spawn len(pods) trace CRs
+	var wg sync.WaitGroup
+	// spawn a trace for each replica
 	for i, p := range pods.Items {
 		traceName := fmt.Sprintf("open-liberty-trace-%d", i)
 
 		// register goroutine with waitgroup and spawn trace
 		wg.Add(1)
-		go spawnTraceTest(&wg, f, ctx, traceName, p.GetName(), namespace)
+		go spawnTraceTest(&wg, t, f, ctx, traceName, p.GetName(), namespace)
 	}
 
 	t.Log("****** Waiting for traces...")
@@ -80,10 +80,10 @@ func openLibertyBasicTraceTest(t *testing.T, f *framework.Framework, ctx *framew
 	return nil
 }
 
+// createTargetApp generates the OLApp with indicated # of replicas & serviceability on
 func createTargetApp(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
 	ns, err := ctx.GetNamespace()
-	// this determines scope of test
-	// higher values REQUIRES higher probe retries
+	// higher values REQUIRE higher probe retries
 	// significantly slower at each increase
 	replicas := 3
 
@@ -116,6 +116,7 @@ func createTargetApp(t *testing.T, f *framework.Framework, ctx *framework.TestCt
 	return nil
 }
 
+// getTargetPodList returns the pods created for targetApplication as a podList
 func getTargetPodList(f *framework.Framework, ctx *framework.TestCtx, target string) (*corev1.PodList, error) {
 	key := map[string]string{"app.kubernetes.io/name": target}
 
@@ -133,23 +134,8 @@ func getTargetPodList(f *framework.Framework, ctx *framework.TestCtx, target str
 	return podList, nil
 }
 
-func checkTraceStatus(f *framework.Framework, ns string, trace *openlibertyv1beta1.OpenLibertyTrace) error {
-	tmp := &openlibertyv1beta1.OpenLibertyTrace{}
-	err := f.Client.Get(goctx.TODO(), types.NamespacedName{Name: trace.GetName(), Namespace: ns}, tmp)
-	if err != nil {
-		return err
-	}
 
-	for _, c := range trace.Status.Conditions {
-		if c.Status == corev1.ConditionFalse {
-			return fmt.Errorf("Bad Condition: %s", c.Message)
-		}
-	}
-
-	return nil
-}
-
-func spawnTraceTest(wg *sync.WaitGroup, f *framework.Framework, ctx *framework.TestCtx, traceName, targetPodName, ns string) error {
+func spawnTraceTest(wg *sync.WaitGroup, t *testing.T, f *framework.Framework, ctx *framework.TestCtx, traceName, targetPodName, ns string) error {
 	defer wg.Done()
 
 	options := &framework.CleanupOptions{
@@ -164,7 +150,7 @@ func spawnTraceTest(wg *sync.WaitGroup, f *framework.Framework, ctx *framework.T
 		return err
 	}
 
-	if err = checkTraceStatus(f, ns, olTrace); err != nil {
+	if err = util.WaitForStatusConditions(t, f, traceName, ns, retryInterval, timeout); err != nil {
 		return err
 	}
 

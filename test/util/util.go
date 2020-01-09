@@ -2,6 +2,7 @@ package util
 
 import (
 	goctx "context"
+	"fmt"
 	"io/ioutil"
 	"testing"
 	"time"
@@ -67,18 +68,18 @@ func MakeBasicOpenLibertyTrace(n, ns, pod string) *openlibertyv1beta1.OpenLibert
 	maxFileSize := int32(20)
 	return &openlibertyv1beta1.OpenLibertyTrace{
 		TypeMeta: metav1.TypeMeta{
-			Kind: "OpenLibertyTrace",
+			Kind:       "OpenLibertyTrace",
 			APIVersion: "openliberty.io/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: n,
+			Name:      n,
 			Namespace: ns,
 		},
 		Spec: openlibertyv1beta1.OpenLibertyTraceSpec{
-			PodName: pod,
+			PodName:            pod,
 			TraceSpecification: "*=info:com.ibm.was.webcontainer*=all",
-			MaxFiles: &maxFiles,
-			MaxFileSize: &maxFileSize,
+			MaxFiles:           &maxFiles,
+			MaxFileSize:        &maxFileSize,
 		},
 	}
 }
@@ -207,4 +208,54 @@ func WaitForKnativeDeployment(t *testing.T, f *framework.Framework, ns, n string
 		return true, nil
 	})
 	return err
+}
+
+// WaitForStatusConditions waits for dump/trace to be created and for non error conditions to appear
+func WaitForStatusConditions(t *testing.T, f *framework.Framework, n, ns string, retryInterval, timeout time.Duration) error {
+	oltrace := &openlibertyv1beta1.OpenLibertyTrace{}
+	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
+
+		err = f.Client.Get(goctx.TODO(), types.NamespacedName{Name: n, Namespace: ns}, oltrace)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				t.Logf("Waiting for trace %s...", n)
+				return false, nil
+			}
+			return true, err
+		}
+
+		ok, err := checkTraceStatus(f, ns, oltrace)
+		if err != nil {
+			return true, err
+		} else if !ok {
+			return false, nil
+		}
+
+
+		return true, nil
+	})
+	return err
+}
+
+// checkTraceStatus verifies there are no bad conditions in the trace post run
+func checkTraceStatus(f *framework.Framework, ns string, trace *openlibertyv1beta1.OpenLibertyTrace) (bool, error) {
+	tmp := &openlibertyv1beta1.OpenLibertyTrace{}
+	err := f.Client.Get(goctx.TODO(), types.NamespacedName{Name: trace.GetName(), Namespace: ns}, tmp)
+	if err != nil {
+		return false, err
+	}
+
+	// no conditions reported yet, not done
+	if len(tmp.Status.Conditions) == 0 {
+		return false, nil
+	}
+
+	// check for error conditions
+	for _, c := range trace.Status.Conditions {
+		if c.Status == corev1.ConditionFalse {
+			return true, fmt.Errorf("Bad Condition: %s", c.Message)
+		}
+	}
+
+	return true, nil
 }
