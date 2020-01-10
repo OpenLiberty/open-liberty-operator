@@ -217,21 +217,24 @@ func WaitForStatusConditions(t *testing.T, f *framework.Framework, n, ns string,
 
 		err = f.Client.Get(goctx.TODO(), types.NamespacedName{Name: n, Namespace: ns}, oltrace)
 		if err != nil {
+			// Not found, keep polling
 			if apierrors.IsNotFound(err) {
 				t.Logf("Waiting for trace %s...", n)
 				return false, nil
 			}
+			// Unexpected Error, exit
 			return true, err
 		}
 
 		ok, err := checkTraceStatus(f, ns, oltrace)
 		if err != nil {
+			// Bad Conditions found, exit
 			return true, err
 		} else if !ok {
+			// No Conditions found, keep polling
 			return false, nil
 		}
-
-
+		// Good State, exit
 		return true, nil
 	})
 	return err

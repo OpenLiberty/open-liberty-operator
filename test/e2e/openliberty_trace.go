@@ -16,10 +16,6 @@ import (
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var (
-	targetApp = "open-liberty-target"
-)
-
 func OpenLibertyTraceTest(t *testing.T) {
 	ctx, err := util.InitializeContext(t, cleanupTimeout, retryInterval)
 	if err != nil {
@@ -53,8 +49,9 @@ func openLibertyBasicTraceTest(t *testing.T, f *framework.Framework, ctx *framew
 		return fmt.Errorf("could not get namespace: %v", err)
 	}
 
+	targetApp := "open-liberty-target"
 	// set up OL app to get trace from
-	if err = createTargetApp(t, f, ctx); err != nil {
+	if err = createTargetApp(t, f, ctx, targetApp); err != nil {
 		return err
 	}
 
@@ -81,7 +78,7 @@ func openLibertyBasicTraceTest(t *testing.T, f *framework.Framework, ctx *framew
 }
 
 // createTargetApp generates the OLApp with indicated # of replicas & serviceability on
-func createTargetApp(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
+func createTargetApp(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, target string) error {
 	ns, err := ctx.GetNamespace()
 	// higher values REQUIRE higher probe retries
 	// significantly slower at each increase
@@ -90,15 +87,14 @@ func createTargetApp(t *testing.T, f *framework.Framework, ctx *framework.TestCt
 	if err != nil {
 		return err
 	}
-	// client resource creation options
+
 	options := &framework.CleanupOptions{
 		TestContext:   ctx,
 		Timeout:       time.Second,
 		RetryInterval: time.Second,
 	}
 
-	ol := util.MakeBasicOpenLibertyApplication(t, f, targetApp, ns, int32(replicas))
-	// set up serviceability, prereq to tracing
+	ol := util.MakeBasicOpenLibertyApplication(t, f, target, ns, int32(replicas))
 	ol.Spec.Serviceability = &openlibertyv1beta1.OpenLibertyApplicationServiceability{
 		Size: "1Gi",
 	}
@@ -108,7 +104,7 @@ func createTargetApp(t *testing.T, f *framework.Framework, ctx *framework.TestCt
 		return err
 	}
 
-	err = e2eutil.WaitForDeployment(t, f.KubeClient, ns, targetApp, replicas, retryInterval, timeout)
+	err = e2eutil.WaitForDeployment(t, f.KubeClient, ns, target, replicas, retryInterval, timeout)
 	if err != nil {
 		return err
 	}
@@ -134,7 +130,7 @@ func getTargetPodList(f *framework.Framework, ctx *framework.TestCtx, target str
 	return podList, nil
 }
 
-
+// spawnTraceTest creates a OLTrace CR belonging to wg, waits for good conditions
 func spawnTraceTest(wg *sync.WaitGroup, t *testing.T, f *framework.Framework, ctx *framework.TestCtx, traceName, targetPodName, ns string) error {
 	defer wg.Done()
 
