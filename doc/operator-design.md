@@ -1,6 +1,9 @@
 
 **Instructions:** Copy and paste the template below into your GitHub or GitHub Enterprise Epic
 
+Image
+![OpenShift Overview](images/openshift.png)
+
 --------------
 
 
