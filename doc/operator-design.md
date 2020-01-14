@@ -1,12 +1,3 @@
-
-**Instructions:** Copy and paste the template below into your GitHub or GitHub Enterprise Epic
-
-Image
-![OpenShift Overview](images/openshift.png)
-
---------------
-
-
 ## Key Concepts / Background
 - introduce here any background concepts, relevant existing frameworks, acronyms, etc.  
 
@@ -21,7 +12,21 @@ Image
 - include sample usage
 
 ## Main Feature design
-- include diagrams and overall design.  
+
+### Relationship with Appsody Operator
+Appsody Operator (upstream) --> Open Liberty Operator (downstream)
+
+![Operators](images/downstream_appsody.png)
+
+Appsody Operator Roadmap includes:
+*  OpenShift Certificate Manager integration
+*  Advanced service binding (resources)
+*  Improved rollout support
+
+Open Liberty Operator Roadmap includes everything from Appsody's Roadmap plus:
+*  OpenID Connect client configuration injection
+*  Transaction peer-recovery
+*  Specialized day 2 operations
 
 ### Platform exploitation
 - Does this feature have any optimization for specific platforms, such as OpenShift?
