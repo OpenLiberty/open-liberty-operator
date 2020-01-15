@@ -11,16 +11,15 @@
 ## User stories
 - As Champ (architect), I would like to curate a single deployment artifact with general QoS and Open Liberty specific configuration covering advanced security, transactional and operational domains.  
 
-- As Todd (admin) and Jane (developer), we would like be able to service our Open Liberty application containers with day 2 operations that are easy to trigger and consume.
+- As Todd (admin) and Jane (developer), we would like be able to service our Open Liberty application containers with day-2 operations that are easy to trigger and consume.
 
-- As Champ / Todd / Jane, we would like to utilize the Open Liberty Operator as a drop-in replacement for the Appsody Operator for the Open Liberty Application Stack.
+- As Champ / Todd / Jane, we would like to utilize the Open Liberty Operator as a drop-in replacement (mechanical migration) for the Appsody Operator for the Open Liberty Application Stack.
 
 ## As-is
-- what is the current behaviour / experience
+- The Appsody Operator has very useful generic QoS and the `app-deploy.yaml` from the Open Liberty Application Stack has Liberty specific values such as using the appropriate default ports and MicroProfile endpoints.  However, it does not cover advanced Liberty scenarios such as configuring Liberty's OpenID Connect client or have Liberty specific day-2 operation such as trigger a JVM dump.  
 
 ## To-be
-- what will be the behaviour / experience after the experience (how is it better)
-- include sample usage
+- A new Open Liberty Operator that builds upon everything that the Appsody Operator has and adds Liberty specific configuration and day-2 operations. 
 
 ## Main Feature design
 
@@ -39,23 +38,25 @@ Open Liberty Operator Roadmap includes everything from Appsody's Roadmap plus:
 *  Transaction peer-recovery
 *  Specialized day 2 operations
 
+
+### Inherited binding
+
+Seamless binding between apps deployed by the Appsody Operator and the Open Liberty Operator.
+
+![Bindig](images/service-binding.png)
+
+
+### Day 2 Operations
+
+![Operations](images/day2ops.png)
+
+### Fits with umbrella frameworks (Kabanero.io, ICP4Apps)
+
+![Operators](images/icp4apps.png)
+
+
 ### Platform exploitation
-- Does this feature have any optimization for specific platforms, such as OpenShift?
 
-### Security Considerations
-- what are the security aspects of this feature?  are you properly encrypting communication and data-at-rest? which security protocols are being used?
+![Overview](images/overview.png)
 
-### Limitations
-- Document any limitations that this feature has.
 
-### Monitoring
-- How does a user monitor this new capability to detect and diagnose problems?
-
-### Performance
-- have you done a performance analysis on the impact this feature has?
-
-### Functional Testing
-- what test scenarios are suitable to ensure the functionality is correct and does not regress?
-
-### Deprecation / Removal of functionality
-- Does this feature deprecate any previous functionality?   
