@@ -52,16 +52,18 @@ Seamless binding between apps deployed by the Appsody Operator and the Open Libe
 ![Operations](images/day2ops.png)
 
 
-
-### Drop-in replacement for Appsody Operator within umbrella frameworks (Kabanero.io, ICP4Apps)
-
-![Operators](images/icp4apps.png)
-
-
-
-
 ### Certified with Red Hat's OperatorHub
 
 ![Overview](images/overview.png)
 
 
+### Drop-in replacement for Appsody Operator within umbrella frameworks (Kabanero.io, ICP4Apps)
+
+Needed actions to fulfill the image below:
+- add new attribute to Open Liberty Application Stack's `stack.yaml` (e.g.  `operator = OpenLiberty`).
+- update Open Liberty Application Stack's `app-deploy.yaml` to use `Kind: OpenLibertyApplication`.
+- update Appsody's CLI to either install the Open Liberty Operator or at least avoid checking for the existance of the Appsody Operator when deploying such stack.
+- update the Kabanero Operator to install the Open Liberty Operator from the certified OperatorHub
+- no changes needed at the devOps side, as the pipeline is agnostic of the `Kind` inside the deployed `app-deploy.yaml`
+
+![Operators](images/icp4apps.png)
