@@ -1,6 +1,6 @@
 ## Key Concepts / Background
 - Open Liberty Operator had a `0.0.1` release in May 2019 where it wrapped around the Open Liberty Helm Chart
-  -  Was enough to get the Operator checklist and fit the requirements from a Red Hat Runtimes perspective
+  -  Was enough to get the Operator checkmark and fit the requirements from a Red Hat Runtimes perspective
   -  Lacked the ability to grow beyond the deployment phase.
 
 - The [Appsody Operator](https://github.com/appsody/appsody-operator) was re-written in version 0.2.1 to have a core library that works with a `BasicApplication` Go interface
