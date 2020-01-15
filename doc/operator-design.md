@@ -50,12 +50,12 @@ Seamless binding between apps deployed by the Appsody Operator and the Open Libe
 
 ![Operations](images/day2ops.png)
 
-### Fits with umbrella frameworks (Kabanero.io, ICP4Apps)
+### Drop-in replacement for Appsody Operator within umbrella frameworks (Kabanero.io, ICP4Apps)
 
 ![Operators](images/icp4apps.png)
 
 
-### Platform exploitation
+### Certified with Red Hat's OperatorHub
 
 ![Overview](images/overview.png)
 
