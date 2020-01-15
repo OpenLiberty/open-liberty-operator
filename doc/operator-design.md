@@ -10,7 +10,9 @@
 
 ## User stories
 - As Champ (architect), I would like to curate a single deployment artifact with general QoS and Open Liberty specific configuration covering advanced security, transactional and operational domains.  
+
 - As Todd (admin) and Jane (developer), we would like be able to service our Open Liberty application containers with day 2 operations that are easy to trigger and consume.
+
 - As Champ / Todd / Jane, we would like to utilize the Open Liberty Operator as a drop-in replacement for the Appsody Operator for the Open Liberty Application Stack.
 
 ## As-is
