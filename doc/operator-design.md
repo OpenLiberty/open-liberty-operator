@@ -3,13 +3,15 @@
   -  Was enough to get the Operator checklist and fit the requirements from a Red Hat Runtimes perspective
   -  Lacked the ability to grow beyond the deployment phase.
 
-- Appsody Operator was re-written in version 0.2.1 to have a core library that works with a `BasicApplication` Go interface
+- The [Appsody Operator](https://github.com/appsody/appsody-operator) was re-written in version 0.2.1 to have a core library that works with a `BasicApplication` Go interface
   -  This allowed us to have the `AppsodyApplication` instance which uses that library, as well as any other runtime specific instance, such as `OpenLibertyApplication`.
 
 - We took the Appsody Operator 0.3.0 release as the base library for the re-launch of the Open Liberty Operator, releasing version 0.3.0 to stay in-sync with its upstream library.  
 
 ## User stories
-- high level scenarios.  Use personas (Todd, Jane, Champ, etc)
+- As Champ (architect), I would like to curate a single deployment artifact with general QoS and Open Liberty specific configuration covering advanced security, transactional and operational domains.  
+- As Todd (admin) and Jane (developer), we would like be able to service our Open Liberty application containers with day 2 operations that are easy to trigger and consume.
+- As Champ / Todd / Jane, we would like to utilize the Open Liberty Operator as a drop-in replacement for the Appsody Operator for the Open Liberty Application Stack.
 
 ## As-is
 - what is the current behaviour / experience
