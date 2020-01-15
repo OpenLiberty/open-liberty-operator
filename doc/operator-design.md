@@ -46,13 +46,18 @@ Seamless binding between apps deployed by the Appsody Operator and the Open Libe
 ![Bindig](images/service-binding.png)
 
 
+
 ### Day 2 Operations
 
 ![Operations](images/day2ops.png)
 
+
+
 ### Drop-in replacement for Appsody Operator within umbrella frameworks (Kabanero.io, ICP4Apps)
 
 ![Operators](images/icp4apps.png)
+
+
 
 
 ### Certified with Red Hat's OperatorHub
