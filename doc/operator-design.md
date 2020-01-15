@@ -1,5 +1,9 @@
 ## Key Concepts / Background
-- introduce here any background concepts, relevant existing frameworks, acronyms, etc.  
+- Open Liberty Operator had a `0.0.1` release in May 2019 where it wrapped around the Open Liberty Helm Chart
+  -  Was enough to get the Operator checklist and fit the requirements from a Red Hat Runtimes perspective, but lacked the ability to grow beyond the deployment phase.
+- Appsody Operator was re-written in version 0.2.1 to have a core library that works with a `BasicApplication` Go interface
+  -  This allowed us to have the `AppsodyApplication` instance which uses that library, as well as any other runtime specific instance, such as `OpenLibertyApplication`.
+- We took the Appsody Operator 0.3.0 release as the base library for the re-launch of the Open Liberty Operator, releasing version 0.3.0 to stay in-sync with its upstream library.  
 
 ## User stories
 - high level scenarios.  Use personas (Todd, Jane, Champ, etc)
