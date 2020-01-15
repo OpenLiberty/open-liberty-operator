@@ -63,6 +63,7 @@ Needed actions to fulfill the image below:
 - add new attribute to Open Liberty Application Stack's `stack.yaml` (e.g.  `operator = OpenLiberty`)
 - update Open Liberty Application Stack's `app-deploy.yaml` to use `Kind: OpenLibertyApplication`
 - update Appsody's CLI to either install the Open Liberty Operator or at least avoid checking for the existance of the Appsody Operator when deploying such stack
+- ensure that when updating annotations / labels from `app-deploy.yaml` the Appsody's CLI does not remove extra fields from the `OpenLibertyApplication` CR.
 - update the Kabanero Operator to install the Open Liberty Operator from the certified OperatorHub
 - no changes needed at the devOps side, as the pipeline is agnostic of the `Kind` inside the deployed `app-deploy.yaml`
 
