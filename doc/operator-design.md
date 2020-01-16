@@ -9,9 +9,9 @@
 - We took the Appsody Operator 0.3.0 release as the base library for the re-launch of the Open Liberty Operator, releasing version 0.3.0 to stay in-sync with its upstream library.  
 
 ## User stories
-- As Champ (architect), I would like to curate a single deployment artifact with general QoS and Open Liberty specific configuration covering advanced security, transactional and operational domains.  
+- As Champ (architect) and Todd (admin), we would like to curate a single deployment artifact with general QoS and Open Liberty specific configuration covering advanced security, transactional and operational domains.  
 
-- As Todd (admin) and Jane (developer), we would like be able to service our Open Liberty application containers with day-2 operations that are easy to trigger and consume.
+- As Todd and Jane (developer), we would like be able to service our Open Liberty application containers with day-2 operations that are easy to trigger and consume.
 
 - As Champ / Todd / Jane, we would like to utilize the Open Liberty Operator as a drop-in replacement (mechanical migration) for the Appsody Operator for the Open Liberty Application Stack.
 
