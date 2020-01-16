@@ -15,6 +15,8 @@
 
 - As Champ / Todd / Jane, we would like to utilize the Open Liberty Operator as a drop-in replacement (mechanical migration) for the Appsody Operator for the Open Liberty Application Stack.
 
+- As a Red Hat Runtimes user, I would like to have an official Operator to deploy my Open Liberty workloads with enterprise QoS and day-2 operations.
+
 ## As-is
 - The Appsody Operator has very useful generic QoS and the `app-deploy.yaml` from the Open Liberty Application Stack has Liberty specific values such as using the appropriate default ports and MicroProfile endpoints.  However, it does not cover advanced Liberty scenarios such as configuring Liberty's OpenID Connect client or have Liberty specific day-2 operation such as trigger a JVM dump.  
 
@@ -54,17 +56,20 @@ Seamless binding between apps deployed by the Appsody Operator and the Open Libe
 
 ### Certified with Red Hat's OperatorHub
 
+- Consistent with other Red Hat Runtimes Operators
+- Easy to subscribe from umbrella Operators (e.g. Kabanero Operator)
+
 ![Overview](images/overview.png)
 
 
-### Drop-in replacement for Appsody Operator within umbrella frameworks (Kabanero.io, ICP4Apps)
+### Drop-in replacement for Appsody Operator in an Application Stack context from ICP4Apps
 
 Needed actions to fulfill the image below:
 - add new attribute to Open Liberty Application Stack's `stack.yaml` (e.g.  `operator = OpenLiberty`)
 - update Open Liberty Application Stack's `app-deploy.yaml` to use `Kind: OpenLibertyApplication`
 - update Appsody's CLI to either install the Open Liberty Operator or at least avoid checking for the existance of the Appsody Operator when deploying such stack
 - ensure that when updating annotations / labels from `app-deploy.yaml` the Appsody's CLI does not remove extra fields from the `OpenLibertyApplication` CR.
-- update the Kabanero Operator to install the Open Liberty Operator from the certified OperatorHub
+- update the Kabanero Operator to subscribe / install the Open Liberty Operator from the certified OperatorHub
 - no changes needed at the devOps side, as the pipeline is agnostic of the `Kind` inside the deployed `app-deploy.yaml`
 
 ![Operators](images/icp4apps.png)
