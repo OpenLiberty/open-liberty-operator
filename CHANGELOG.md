@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- Changed default labels for Liberty Logging to disable tracing to container
+  logs and turn messages.log off ([#94](https://github.com/OpenLiberty/open-liberty-operator/issues/94))
+
 ## [0.3.0]
 
 ### Changed
