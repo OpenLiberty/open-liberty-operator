@@ -16,9 +16,7 @@ A good bug report is one that makes it easy for everyone to understand what you 
 
 ## Contributor License Agreement
 
-If you are contributing code changes via a pull request for anything except trivial changes, you must signoff on the [Individual Contributor License Agreement](cla/open-liberty-cla-individual.pdf) If you are doing this as part of your job you may also wish to get your employer to sign a CCLA [Corporate Contributor License Agreement](cla/open-liberty-cla-corporate.pdf). Instructions how to sign and submit these agreements are located at the top of each document. Trivial changes such as Typos, redundant spaces, minor formatting and spelling errors will be labeled as "CLA trivial", and don't require a signed CLA for consideration.
-
-After we obtain the signed CLA, you are welcome to open a pull request, and the team will be notified for review. If the reviewer is satisfied with the results, and agrees to the change the PR will be merged, otherwise the PR will be closed with an explaination and suggestion for followup.
+In order for us to merge any of your changes into Appsody Application Operator, you need to sign the Contributor License Agreement. When you open up a Pull Request for the first time, a bot will comment with a link to the CLA. You can review or sign the CLA now here https://cla-assistant.io/OpenLiberty/open-liberty-operator. You must verify your country has laws recognizing the use of legally binding e-Signatures, otherwise you must follow the hardcopy instructions [here](cla/open-liberty-cla-individual.pdf).
 
 ## Coding Standards
 
