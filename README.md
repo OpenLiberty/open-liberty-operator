@@ -24,3 +24,11 @@ In addition, Open Liberty Operator makes it easy to perform [Day-2 operations](d
 ## Documentation
 
 For information on how to use the Open Liberty Operator, see the [documentation](doc/).
+
+## License
+
+Usage is provided under the [EPL 1.0 license](https://opensource.org/licenses/EPL-1.0). See [LICENSE](LICENSE) for the full details.
+
+## Contributing 
+
+We welcome all contributions to the Open Liberty Operator project. Please see our [Contributing guidelines](CONTRIBUTING.md)].
