@@ -31,4 +31,4 @@ Usage is provided under the [EPL 1.0 license](https://opensource.org/licenses/EP
 
 ## Contributing 
 
-We welcome all contributions to the Open Liberty Operator project. Please see our [Contributing guidelines](CONTRIBUTING.md)].
+We welcome all contributions to the Open Liberty Operator project. Please see our [Contributing guidelines](CONTRIBUTING.md).
