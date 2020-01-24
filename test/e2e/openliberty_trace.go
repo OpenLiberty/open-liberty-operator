@@ -121,8 +121,11 @@ func deletionTraceTest(t *testing.T, f *framework.Framework, ctx *framework.Test
 		return err
 	}
 
+	// add for debugging
+	time.Sleep(2000)
+
 	// check for trace file in pod
-	ok, err := util.TraceIsEnabled(t, f, olTrace.Spec.PodName, ns)
+	ok, err := util.TraceIsEnabled(t, f, targetPodName, ns)
 	if err != nil {
 		return err
 	} else if !ok {
@@ -175,7 +178,7 @@ func editTraceTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx,
 		return err
 	}
 
-	ok, err := util.TraceIsEnabled(t, f, olTrace.Spec.PodName, ns)
+	ok, err := util.TraceIsEnabled(t, f, targetPodName, ns)
 	if err != nil {
 		return err
 	} else if !ok {
@@ -291,7 +294,7 @@ func spawnBasicTraceTest(wg *sync.WaitGroup, t *testing.T, f *framework.Framewor
 	}
 
 	// check for trace file in pod
-	ok, err := util.TraceIsEnabled(t, f, olTrace.Spec.PodName, ns)
+	ok, err := util.TraceIsEnabled(t, f, targetPodName, ns)
 	if err != nil {
 		return err
 	} else if !ok {

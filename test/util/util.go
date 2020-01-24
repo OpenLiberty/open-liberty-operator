@@ -41,7 +41,7 @@ func MakeBasicOpenLibertyApplication(t *testing.T, f *framework.Framework, n str
 			Namespace: ns,
 		},
 		Spec: openlibertyv1beta1.OpenLibertyApplicationSpec{
-			ApplicationImage: "openliberty/open-liberty:microProfile3-ubi-min",
+			ApplicationImage: "openliberty/open-liberty:full-java8-openj9-ubi",
 			Replicas:         &replicas,
 			Expose:           &expose,
 			ReadinessProbe: &corev1.Probe{
@@ -240,6 +240,7 @@ func WaitForStatusConditions(t *testing.T, f *framework.Framework, n, ns string,
 		}
 
 
+		t.Log(oltrace.Status.Conditions)
 		// Good State, exit
 		return true, nil
 	})
@@ -261,11 +262,13 @@ func TraceIsEnabled(t *testing.T, f *framework.Framework, podName, ns string) (b
 		return false, err
 	}
 
-	if string(out) == "" {
+	if len(out) == 0 {
+		t.Log("no output returned")
 		return false, nil
 	}
 
 	t.Log("add_trace.xml found!")
+	t.Logf("output: %s", out)
 	return true, nil
 }
 

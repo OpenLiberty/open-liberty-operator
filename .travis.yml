@@ -18,29 +18,21 @@ cache:
     - vendor
 
 stages:
-  - name: build
-  - name: unit test
+  # - name: build
+  # - name: unit test
   - name: e2e test
-  - name: push
 
 jobs:
  include:
-  - name: Build docker image
-    stage: build
-    script:
-    - make build-image
-  - name: Run unit tests
-    stage: unit test
-    script:
-    - make unit-test
+  # - name: Build docker image
+  #   stage: build
+  #   script:
+  #   - make build-image
+  # - name: Run unit tests
+  #   stage: unit test
+  #   script:
+  #   - make unit-test
   - name: Run end-to-end tests
     stage: e2e test
     script:
     - make test-e2e
-  - name: Push image
-    stage: push
-    script:
-    - make build-image
-    - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-    - make push-image
-    if: branch = master AND fork = false AND type != pull_request AND env(DOCKER_USERNAME) IS NOT blank AND env(DOCKER_PASSWORD) IS NOT blank
