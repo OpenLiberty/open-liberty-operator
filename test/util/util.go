@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
+	"os/exec"
 )
 
 // MakeBasicOpenLibertyApplication : Create a simple Liberty App with provided number of replicas.
@@ -154,6 +155,7 @@ func ResetConfigMap(t *testing.T, f *framework.Framework, configMap *corev1.Conf
 // FailureCleanup : Log current state of the namespace and exit with fatal
 func FailureCleanup(t *testing.T, f *framework.Framework, ns string, failure error) {
 	t.Log("***** FAILURE")
+	t.Logf("*** ERROR: %s", failure.Error())
 	options := &dynclient.ListOptions{
 		Namespace: ns,
 	}
@@ -165,7 +167,8 @@ func FailureCleanup(t *testing.T, f *framework.Framework, ns string, failure err
 
 	t.Logf("***** Logging pods in namespace: %s", ns)
 	for _, p := range podlist.Items {
-		t.Log("--------------------")
+		t.Logf("Pod: %s", p.GetName())
+		t.Log("--------------------------------------------------------------")
 		t.Log(p)
 	}
 
@@ -177,11 +180,12 @@ func FailureCleanup(t *testing.T, f *framework.Framework, ns string, failure err
 
 	t.Logf("***** Logging Open Liberty Applications in namespace: %s", ns)
 	for _, application := range crlist.Items {
-		t.Log("-------------------")
+		t.Log("-------------------------------------------------------------")
 		t.Log(application)
 	}
 
-	t.Fatal(failure)
+	t.Log("****** See above for namespace logs")
+	t.Fatal("---------------------------------------------------------------")
 }
 
 // WaitForKnativeDeployment : Poll for ksvc creation when createKnativeService is set to true
@@ -234,10 +238,35 @@ func WaitForStatusConditions(t *testing.T, f *framework.Framework, n, ns string,
 			// No Conditions found, keep polling
 			return false, nil
 		}
+
+
 		// Good State, exit
 		return true, nil
 	})
 	return err
+}
+
+func TraceIsEnabled(t *testing.T, f *framework.Framework, podName, ns string) (bool, error) {
+	const traceConfigFile = "/config/configDropins/overrides/add_trace.xml"
+
+	out, err := exec.Command("kubectl", "exec", "-it", podName, "--", "ls", traceConfigFile).Output()
+	if err != err {
+		if exiterr, ok := err.(*exec.ExitError); ok {
+			t.Log("failed to execute ls command, see below")
+			t.Log(exiterr.Error())
+			return false, nil
+		}
+		t.Log("unknown error occurred, see below")
+		t.Log(err.Error())
+		return false, err
+	}
+
+	if string(out) == "" {
+		return false, nil
+	}
+
+	t.Log("add_trace.xml found!")
+	return true, nil
 }
 
 // checkTraceStatus verifies there are no bad conditions in the trace post run
