@@ -20,7 +20,4 @@ In order for us to merge any of your changes into Open Liberty Operator, you nee
 
 ## Coding Standards
 
-Please ensure you follow the coding standards used throughout the existing code base. Some basic rules include:
-
-- all files must have a Copyright including EPL license in the header.
-- all PRs must have a passing build.
+Please ensure you follow the coding standards used throughout the existing code base. A basic rule is that all PRs must have a passing build.
