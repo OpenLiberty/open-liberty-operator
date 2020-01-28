@@ -233,6 +233,8 @@ func WaitForStatusConditions(t *testing.T, f *framework.Framework, n, ns string,
 		ok, err := checkTraceStatus(f, ns, oltrace)
 		if err != nil {
 			// Bad Conditions found, exit
+			t.Log("****** Status Conditions:")
+			t.Log(oltrace.Status.Conditions)
 			return true, err
 		} else if !ok {
 			// No Conditions found, keep polling
@@ -240,6 +242,7 @@ func WaitForStatusConditions(t *testing.T, f *framework.Framework, n, ns string,
 		}
 
 
+		t.Log("****** Status Conditions:")
 		t.Log(oltrace.Status.Conditions)
 		// Good State, exit
 		return true, nil
@@ -247,10 +250,11 @@ func WaitForStatusConditions(t *testing.T, f *framework.Framework, n, ns string,
 	return err
 }
 
+// TraceIsEnabled check for add_trace.xml in the targetted pod of a OL trace
 func TraceIsEnabled(t *testing.T, f *framework.Framework, podName, ns string) (bool, error) {
 	const traceConfigFile = "/config/configDropins/overrides/add_trace.xml"
 
-	out, err := exec.Command("kubectl", "exec", "-it", podName, "--", "ls", traceConfigFile).Output()
+	out, err := exec.Command("kubectl", "exec", "-n", ns, "-it", podName, "--", "ls", traceConfigFile).Output()
 	if err != err {
 		if exiterr, ok := err.(*exec.ExitError); ok {
 			t.Log("failed to execute ls command, see below")
@@ -268,7 +272,6 @@ func TraceIsEnabled(t *testing.T, f *framework.Framework, podName, ns string) (b
 	}
 
 	t.Log("add_trace.xml found!")
-	t.Logf("output: %s", out)
 	return true, nil
 }
 

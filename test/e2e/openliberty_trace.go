@@ -91,6 +91,7 @@ func concurrentTraceTest(t *testing.T, f *framework.Framework, ctx *framework.Te
 	return nil
 }
 
+// deletionTraceTest verify that it correctly deletes generated files when CR is deleted
 func deletionTraceTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, pods *corev1.PodList) error {
 	if len(pods.Items) < 1 {
 		return errors.New("pod list not long enough for deletionTraceTest")
@@ -121,9 +122,6 @@ func deletionTraceTest(t *testing.T, f *framework.Framework, ctx *framework.Test
 		return err
 	}
 
-	// add for debugging
-	time.Sleep(2000)
-
 	// check for trace file in pod
 	ok, err := util.TraceIsEnabled(t, f, targetPodName, ns)
 	if err != nil {
@@ -148,6 +146,7 @@ func deletionTraceTest(t *testing.T, f *framework.Framework, ctx *framework.Test
 	return nil
 }
 
+// editTraceTest verify that it correctly deletes and then creates generated files
 func editTraceTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, pods *corev1.PodList) error {
 	if len(pods.Items) < 2 {
 		return errors.New("pod list not long enough for editTraceTest")
