@@ -46,7 +46,6 @@ func TestCustomizeLibertyEnv(t *testing.T) {
 		{Name: "WLP_LOGGING_CONSOLE_LOGLEVEL", Value: "info"},
 		{Name: "WLP_LOGGING_CONSOLE_SOURCE", Value: "message,accessLog,ffdc,audit"},
 		{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: "json"},
-		{Name: "WLP_LOGGING_MESSAGE_FORMAT", Value: "json"},
 	}
 	// Always call CustomizePodSpec to populate Containers & simulate real behaviour
 	openliberty := createOpenLibertyApp(name, namespace, spec)
@@ -67,7 +66,6 @@ func TestCustomizeLibertyEnv(t *testing.T) {
 		{Name: "WLP_LOGGING_CONSOLE_LOGLEVEL", Value: "error"},
 		{Name: "WLP_LOGGING_CONSOLE_SOURCE", Value: "trace,accessLog,ffdc"},
 		{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: "basic"},
-		{Name: "WLP_LOGGING_MESSAGE_FORMAT", Value: "basic"},
 	}
 
 	spec = openlibertyv1beta1.OpenLibertyApplicationSpec{

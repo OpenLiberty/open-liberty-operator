@@ -94,7 +94,6 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *openlibertyv1beta1.Ope
 		{Name: "WLP_LOGGING_CONSOLE_LOGLEVEL", Value: "info"},
 		{Name: "WLP_LOGGING_CONSOLE_SOURCE", Value: "message,accessLog,ffdc,audit"},
 		{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: "json"},
-		{Name: "WLP_LOGGING_MESSAGE_FORMAT", Value: "json"},
 	}
 
 	if la.GetServiceability() != nil {
