@@ -17,7 +17,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
-// Utility methods specific to Open Liberty and it's configuration
+// Utility methods specific to Open Liberty and its configuration
 
 var log = logf.Log.WithName("openliberty_utils")
 
@@ -122,7 +122,7 @@ func findEnvVar(name string, envList []corev1.EnvVar) (*corev1.EnvVar, bool) {
 	return nil, false
 }
 
-// CreateServiceabilityPVC ...
+// CreateServiceabilityPVC creates PersistentVolumeClaim for Serviceability
 func CreateServiceabilityPVC(instance *openlibertyv1beta1.OpenLibertyApplication) *corev1.PersistentVolumeClaim {
 	return &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -145,7 +145,7 @@ func CreateServiceabilityPVC(instance *openlibertyv1beta1.OpenLibertyApplication
 	}
 }
 
-// ConfigureServiceability ...
+// ConfigureServiceability setups the shared-storage for serviceability
 func ConfigureServiceability(pts *corev1.PodTemplateSpec, la *openlibertyv1beta1.OpenLibertyApplication) {
 	if la.GetServiceability() != nil {
 		name := "serviceability"
