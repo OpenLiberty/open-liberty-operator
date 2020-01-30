@@ -4,9 +4,9 @@ Anyone can contribute to the Open Liberty Operator project and we welcome your c
 
 There are multiple ways to contribute: report bugs, fix bugs, contribute code, improve upon documentation, etc. You must follow these guidelines:
 
-- [Raising issues](##-Raising-issues)
-- [Contributor License Agreement](##-Contributor-License-Agreement)
-- [Coding Standards](##-Coding-Standards)
+- [Raising issues](#raising-issues)
+- [Contributor License Agreement](#contributor-license-agreement)
+- [Coding Standards](#coding-standards)
 
 ## Raising issues
 
