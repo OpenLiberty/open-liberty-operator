@@ -3,7 +3,7 @@
 # Observability with Open Liberty
 
 
-The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in the OpenShift cluster.
+The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in the OpenShift cluster. This document has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2.
 
 ## How to deploy Kibana dashboards to monitor Open Liberty logging events  
 
@@ -15,7 +15,7 @@ Retrieve available Kibana dashboards tuned for Open Liberty logging events [here
 
 For information regarding how to import Kibana dashboards see the official documentation [here](https://www.elastic.co/guide/en/kibana/5.6/loading-a-saved-dashboard.html).
 
-For effective management of logs emitted from applications, deploy your own Elasticsearch, FluentD and Kibana (EFK) stack. For more information see the following [guide](https://kabanero.io/guides/app-logging/). 
+For effective management of logs emitted from applications, deploy your own Elasticsearch, FluentD and Kibana (EFK) stack. For more information see the following [guide](https://kabanero.io/guides/app-logging-ocp-4-2/). 
 
 Command-line JSON parsers, like JSON Query tool (jq), can be used to create human-readable views of JSON-formatted logs. In the following example, the logs are piped through grep to ensure that the message field is there before jq parses the line:
 
@@ -31,16 +31,16 @@ A MicroProfile Metrics enabled Open Liberty runtime is capable of tracking and o
 
 ### MicroProfile Metrics 1.x and 2.x
 
-The following steps outline how to manually create and modify a `server.xml` to add the `mpMetrics-2.0` feature and `monitor-1.0` feature that will be built as part of your Open Liberty image.  If you intend to configure with MicroProfile Metrics 1.1 you can use the `mpMetrics-1.1` feature in place of `mpMetrics-2.0`.
+The following steps outline how to manually create and modify a `server.xml` to add the `mpMetrics-2.2` feature and `monitor-1.0` feature that will be built as part of your Open Liberty image.  If you intend to configure with MicroProfile Metrics 1.1 you can use the `mpMetrics-1.1` feature in place of `mpMetrics-2.2`.
 
-1. Create an XML file named `server_mpMetrics.xml` with the following contents and place it in the same directory as your Dockerfile:
+1. Create an XML file named `server_mpMetrics_2.2.xml` with the following contents and place it in the same directory as your Dockerfile:
 
 
 ```XML
-<?xml version=“1.0” encoding=“UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <server>
    <featureManager>
-       <feature>mpMetrics-2.0</feature>
+       <feature>mpMetrics-2.2</feature>
        <feature>monitor-1.0</feature>
    </featureManager>
    <quickStartSecurity userName="admin" userPassword="adminPwd"/>
@@ -51,22 +51,22 @@ The following steps outline how to manually create and modify a `server.xml` to 
 The above `server.xml` configuration secures access to the server with basic authentication using the `<quickStartSecurity>` element. The `<quickStartSecurity>` is used in the above example for simplicity. When configuring your server you may wish to use a [basic registry](https://www.ibm.com/support/knowledgecenter/en/SSEQTP_liberty/com.ibm.websphere.wlp.doc/ae/twlp_sec_basic_registry.html) or an [LDAP registry](https://www.ibm.com/support/knowledgecenter/en/SSEQTP_liberty/com.ibm.websphere.wlp.doc/ae/twlp_sec_ldap.html) for securing authenticated access to your server. When using Prometheus to scrape data from the `/metrics` endpoint only the _Service Monitor_ approach can be configured to negotiate authentication with the Open Liberty server. 
 
 
-2.    In your DockerFile, add the following line to copy the `server_mpMetrics_2.0.xml` file into the `configDropins/overrides` directory:
+2.    In your DockerFile, add the following line to copy the `server_mpMetrics_2.2.xml` file into the `configDropins/overrides` directory:
 
 
 ```DockerFile
-COPY --chown=1001:0 server_mpMetrics_2.0.xml /config/configDropins/overrides/
+COPY --chown=1001:0 server_mpMetrics_2.2.xml /config/configDropins/overrides/
 ```
 
 ### Enabling Prometheus to scrape data 
 
 
-You will need to deploy Prometheus using the Prometheus Operator which will then utilize Service Monitors to monitor and scrape logs from target services. Details regarding how to deploy and configure Prometheus are [here](https://kabanero.io/guides/app-monitoring/#option-a-deploy-prometheus-prometheus-operator).
+You will need to deploy Prometheus using the Prometheus Operator which will then utilize Service Monitors to monitor and scrape logs from target services. Details regarding how to deploy and configure Prometheus are [here](https://kabanero.io/guides/app-monitoring-ocp4.2/#deploy-prometheus-prometheus-operator).
 
 ### Visualizing your data with Grafana
 
 
-There are IBM provided Grafana dashboards that leverage metrics from the JVM as well as from the Open Liberty runtime.  Details regarding how to deploy and configure Grafana are covered [here](https://kabanero.io/guides/app-monitoring#deploy-grafana).
+There are IBM provided Grafana dashboards that leverage metrics from the JVM as well as from the Open Liberty runtime.  Details regarding how to deploy and configure Grafana are covered [here](https://kabanero.io/guides/app-monitoring-ocp4.2/#deploy-grafana).
 
 
 You can find the access point of Grafana by running the following:
@@ -95,32 +95,33 @@ Readiness check allows third party services to know if the service is ready to p
 Liveness check allows third party services to determine if the service is running. This means that if this procedure fails the service can be discarded (terminated, shutdown). It reports an individual service's status at the endpoints and indicates the overall status as UP if all the services are UP. A service orchestrator can then use these health check statuses to make decisions.
 
 
-### MicroProfile Health 2.0
+### MicroProfile Health 2.x
 
- The following steps outline how to manually create and modify a server.xml to add the mpHealth-2.0 feature that will be built as part of your Open Liberty image.
-
-
-Configure mpHealth-2.0 feature in server.xml:
+ The following steps outline how to manually create and modify a server.xml to add the mpHealth-2.x feature that will be built as part of your Open Liberty image.
 
 
-1.    Create an XML file named `server_mpHealth_2.0.xml`, with the following contents and place it in the same directory as your DockerFile:
+Configure mpHealth-2.x feature in server.xml:
+
+
+1.    Create an XML file named `server_mpHealth_2.1.xml`, with the following contents and place it in the same directory as your DockerFile:
 
 
 ```XML
-<?xml version=“1.0” encoding=“UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <server>
    <featureManager>
-       <feature>mpHealth-2.0</feature>
+       <feature>mpHealth-2.1</feature>
    </featureManager>
+   <quickStartSecurity userName="admin" userPassword="adminPwd"/>
 </server>
 ```
 
 
-2.    In your DockerFile, add the following line to copy the `server_mpHealth_2.0.xml` file into the `configDropins/overrides` directory:
+2.    In your DockerFile, add the following line to copy the `server_mpHealth_2.1.xml` file into the `configDropins/overrides` directory:
 
 
 ```DockerFile
-COPY --chown=1001:0 server_mpHealth_2.0.xml /config/configDropins/overrides/
+COPY --chown=1001:0 server_mpHealth_2.1.xml /config/configDropins/overrides/
 ```
 
 
@@ -131,7 +132,7 @@ Kubernetes provides liveness and readiness probes that are used to check the hea
   
 Configure the readiness and liveness probe's fields to point to the MicroProfile Health REST endpoints.
 
-### For mpHealth-2.0
+### For mpHealth-2.x
 
 
 Modify the readiness and liveness probe's fields to point to the MicroProfile Health REST endpoints, in the OpenLibertyApplication Custom Resource (CR):
@@ -146,15 +147,18 @@ spec:
     httpGet:
       path: /health/ready
       port: 9443
-    initialDelaySeconds: 5
-      periodSeconds: 2
-      timeoutSeconds: 1
-    livenessProbe:
-      failureThreshold: 12
-      httpGet:
-        path: /health/live
-        port: 9443
-    initialDelaySeconds: 5
+      scheme: HTTPS
+    initialDelaySeconds: 30
     periodSeconds: 2
+    timeoutSeconds: 10
+  livenessProbe:
+    failureThreshold: 12
+    httpGet:
+      path: /health/live
+      port: 9443
+      scheme: HTTPS
+    initialDelaySeconds: 30
+    periodSeconds: 2
+    timeoutSeconds: 10
 ...
 ```
