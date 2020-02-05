@@ -33,7 +33,7 @@ A MicroProfile Metrics enabled Open Liberty runtime is capable of tracking and o
 
 The following steps outline how to manually create and modify a `server.xml` to add the `mpMetrics-2.2` feature and `monitor-1.0` feature that will be built as part of your Open Liberty image.  If you intend to configure with MicroProfile Metrics 1.1 you can use the `mpMetrics-1.1` feature in place of `mpMetrics-2.2`.
 
-1. Create an XML file named `server_mpMetrics_2.2.xml` with the following contents and place it in the same directory as your Dockerfile:
+1. Create an XML file named `server_mpMetrics.xml` with the following contents and place it in the same directory as your Dockerfile:
 
 
 ```XML
@@ -51,11 +51,11 @@ The following steps outline how to manually create and modify a `server.xml` to 
 The above `server.xml` configuration secures access to the server with basic authentication using the `<quickStartSecurity>` element. The `<quickStartSecurity>` is used in the above example for simplicity. When configuring your server you may wish to use a [basic registry](https://www.ibm.com/support/knowledgecenter/en/SSEQTP_liberty/com.ibm.websphere.wlp.doc/ae/twlp_sec_basic_registry.html) or an [LDAP registry](https://www.ibm.com/support/knowledgecenter/en/SSEQTP_liberty/com.ibm.websphere.wlp.doc/ae/twlp_sec_ldap.html) for securing authenticated access to your server. When using Prometheus to scrape data from the `/metrics` endpoint only the _Service Monitor_ approach can be configured to negotiate authentication with the Open Liberty server. 
 
 
-2.    In your DockerFile, add the following line to copy the `server_mpMetrics_2.2.xml` file into the `configDropins/overrides` directory:
+2.    In your DockerFile, add the following line to copy the `server_mpMetrics.xml` file into the `configDropins/overrides` directory:
 
 
 ```DockerFile
-COPY --chown=1001:0 server_mpMetrics_2.2.xml /config/configDropins/overrides/
+COPY --chown=1001:0 server_mpMetrics.xml /config/configDropins/overrides/
 ```
 
 ### Enabling Prometheus to scrape data 
@@ -103,7 +103,7 @@ Liveness check allows third party services to determine if the service is runnin
 Configure mpHealth-2.x feature in server.xml:
 
 
-1.    Create an XML file named `server_mpHealth_2.1.xml`, with the following contents and place it in the same directory as your DockerFile:
+1.    Create an XML file named `server_mpHealth.xml`, with the following contents and place it in the same directory as your DockerFile:
 
 
 ```XML
@@ -117,11 +117,11 @@ Configure mpHealth-2.x feature in server.xml:
 ```
 
 
-2.    In your DockerFile, add the following line to copy the `server_mpHealth_2.1.xml` file into the `configDropins/overrides` directory:
+2.    In your DockerFile, add the following line to copy the `server_mpHealth.xml` file into the `configDropins/overrides` directory:
 
 
 ```DockerFile
-COPY --chown=1001:0 server_mpHealth_2.1.xml /config/configDropins/overrides/
+COPY --chown=1001:0 server_mpHealth.xml /config/configDropins/overrides/
 ```
 
 
