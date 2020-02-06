@@ -26,7 +26,7 @@ main() {
     echo "****** Logging into remote cluster..."
     login_cluster
     echo "****** Logging into private registry..."
-    docker login -u unused -p $(oc sa get-token travis-tests -n default) $DEFAULT_REGISTRY
+    echo $(oc sa get-token travis-tests -n default) | docker login -u unused --password-stdin $DEFAULT_REGISTRY
 
     if [[ $? -ne 0 ]]; then
         echo "Failed to log into docker registry as ${SERVICE_ACCOUNT}, exiting..."
