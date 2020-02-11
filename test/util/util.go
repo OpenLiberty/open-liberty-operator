@@ -2,6 +2,7 @@ package util
 
 import (
 	goctx "context"
+	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"testing"
@@ -49,16 +50,38 @@ func MakeBasicOpenLibertyApplication(t *testing.T, f *framework.Framework, n str
 				TimeoutSeconds:      1,
 				PeriodSeconds:       5,
 				SuccessThreshold:    1,
-				FailureThreshold:    16,
+				FailureThreshold:    24,
 			},
 			LivenessProbe: &corev1.Probe{
 				Handler:             probe,
-				InitialDelaySeconds: 4,
+				InitialDelaySeconds: 8,
 				TimeoutSeconds:      1,
 				PeriodSeconds:       5,
 				SuccessThreshold:    1,
-				FailureThreshold:    6,
+				FailureThreshold:    12,
 			},
+		},
+	}
+}
+
+// Make BasicOpenLibertyTrace
+func MakeBasicOpenLibertyTrace(n, ns, pod string) *openlibertyv1beta1.OpenLibertyTrace {
+	maxFiles := int32(5)
+	maxFileSize := int32(20)
+	return &openlibertyv1beta1.OpenLibertyTrace{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "OpenLibertyTrace",
+			APIVersion: "openliberty.io/v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      n,
+			Namespace: ns,
+		},
+		Spec: openlibertyv1beta1.OpenLibertyTraceSpec{
+			PodName:            pod,
+			TraceSpecification: "*=info:com.ibm.was.webcontainer*=all",
+			MaxFiles:           &maxFiles,
+			MaxFileSize:        &maxFileSize,
 		},
 	}
 }
@@ -133,6 +156,7 @@ func ResetConfigMap(t *testing.T, f *framework.Framework, configMap *corev1.Conf
 // FailureCleanup : Log current state of the namespace and exit with fatal
 func FailureCleanup(t *testing.T, f *framework.Framework, ns string, failure error) {
 	t.Log("***** FAILURE")
+	t.Logf("*** ERROR: %s", failure.Error())
 	options := &dynclient.ListOptions{
 		Namespace: ns,
 	}
@@ -144,7 +168,8 @@ func FailureCleanup(t *testing.T, f *framework.Framework, ns string, failure err
 
 	t.Logf("***** Logging pods in namespace: %s", ns)
 	for _, p := range podlist.Items {
-		t.Log("--------------------")
+		t.Logf("Pod: %s", p.GetName())
+		t.Log("--------------------------------------------------------------")
 		t.Log(p)
 	}
 
@@ -156,11 +181,12 @@ func FailureCleanup(t *testing.T, f *framework.Framework, ns string, failure err
 
 	t.Logf("***** Logging Open Liberty Applications in namespace: %s", ns)
 	for _, application := range crlist.Items {
-		t.Log("-------------------")
+		t.Log("-------------------------------------------------------------")
 		t.Log(application)
 	}
 
-	t.Fatal(failure)
+	t.Log("****** See above for namespace logs")
+	t.Fatal("---------------------------------------------------------------")
 }
 
 // WaitForKnativeDeployment : Poll for ksvc creation when createKnativeService is set to true
@@ -223,11 +249,89 @@ func CommandError(t *testing.T, err error, out []byte) error {
 		t.Log(err.Error())
 		return err
 	}
+	t.Logf("%s", out)
+	return nil
+}
+
+// WaitForStatusConditions waits for dump/trace to be created and for non error conditions to appear
+func WaitForStatusConditions(t *testing.T, f *framework.Framework, n, ns string, retryInterval, timeout time.Duration) error {
+	oltrace := &openlibertyv1beta1.OpenLibertyTrace{}
+	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
+
+		err = f.Client.Get(goctx.TODO(), types.NamespacedName{Name: n, Namespace: ns}, oltrace)
+		if err != nil {
+			// Not found, keep polling
+			if apierrors.IsNotFound(err) {
+				t.Logf("Waiting for trace %s...", n)
+				return false, nil
+			}
+			// Unexpected Error, exit
+			return true, err
+		}
+
+		ok, err := checkTraceStatus(f, ns, oltrace)
+		if err != nil {
+			// Bad Conditions found, exit
+			t.Log("****** Status Conditions:")
+			t.Log(oltrace.Status.Conditions)
+			return true, err
+		} else if !ok {
+			// No Conditions found, keep polling
+			return false, nil
+		}
+
+		t.Log("****** Status Conditions:")
+		t.Log(oltrace.Status.Conditions)
+		// Good State, exit
+		return true, nil
+	})
+	return err
+}
+
+// TraceIsEnabled check for add_trace.xml in the targetted pod of a OL trace
+func TraceIsEnabled(t *testing.T, f *framework.Framework, podName, ns string) (bool, error) {
+	const traceConfigFile = "/config/configDropins/overrides/add_trace.xml"
+
+	out, err := exec.Command("kubectl", "exec", "-n", ns, "-it", podName, "--", "ls", traceConfigFile).Output()
+	if err != err {
+		if exiterr, ok := err.(*exec.ExitError); ok {
+			t.Log("failed to execute ls command, see below")
+			t.Log(exiterr.Error())
+			return false, nil
+		}
+		t.Log("unknown error occurred, see below")
+		t.Log(err.Error())
+		return false, err
+	}
 
 	if len(out) == 0 {
 		t.Log("no output returned")
+		return false, nil
 	}
 
-	t.Logf("%s", out)
-	return nil
+	t.Log("add_trace.xml found!")
+	return true, nil
+}
+
+// checkTraceStatus verifies there are no bad conditions in the trace post run
+func checkTraceStatus(f *framework.Framework, ns string, trace *openlibertyv1beta1.OpenLibertyTrace) (bool, error) {
+	tmp := &openlibertyv1beta1.OpenLibertyTrace{}
+	err := f.Client.Get(goctx.TODO(), types.NamespacedName{Name: trace.GetName(), Namespace: ns}, tmp)
+	if err != nil {
+		return false, err
+	}
+
+	// no conditions reported yet, not done
+	if len(tmp.Status.Conditions) == 0 {
+		return false, nil
+	}
+
+	// check for error conditions
+	for _, c := range trace.Status.Conditions {
+		if c.Status == corev1.ConditionFalse {
+			return true, fmt.Errorf("Bad Condition: %s", c.Message)
+		}
+	}
+
+	return true, nil
 }

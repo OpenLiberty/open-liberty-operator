@@ -200,10 +200,10 @@ Use `envFrom` to define all data in a `ConfigMap` or a `Secret` as environment v
 
 The Open Liberty Operator sets a number of environment variables related to console logging by default. The following table shows the variables and their corresponding values.
 
-| Name                         | Value                        |
-|------------------------------|------------------------------|
+| Name                           | Value                        |
+|--------------------------------|------------------------------|
 | `WLP_LOGGING_CONSOLE_LOGLEVEL` | info                         |
-| `WLP_LOGGING_CONSOLE_SOURCE`   | message,trace,accessLog,ffdc |
+| `WLP_LOGGING_CONSOLE_SOURCE`   | message,accessLog,ffdc,audit |
 | `WLP_LOGGING_CONSOLE_FORMAT`   | json                         |
 
 To override these default values with your own values, set them manually in your CR `env` list.
