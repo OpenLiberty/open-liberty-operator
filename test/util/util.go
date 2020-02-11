@@ -3,6 +3,7 @@ package util
 import (
 	goctx "context"
 	"io/ioutil"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -39,7 +40,7 @@ func MakeBasicOpenLibertyApplication(t *testing.T, f *framework.Framework, n str
 			Namespace: ns,
 		},
 		Spec: openlibertyv1beta1.OpenLibertyApplicationSpec{
-			ApplicationImage: "openliberty/open-liberty:microProfile3-ubi-min",
+			ApplicationImage: "openliberty/open-liberty:full-java8-openj9-ubi",
 			Replicas:         &replicas,
 			Expose:           &expose,
 			ReadinessProbe: &corev1.Probe{
@@ -190,6 +191,10 @@ func WaitForKnativeDeployment(t *testing.T, f *framework.Framework, ns, n string
 
 // MakeOpenLibertyDump : Create a dump.
 func MakeOpenLibertyDump(t *testing.T, f *framework.Framework, n string, ns string, podName string) *openlibertyv1beta1.OpenLibertyDump {
+	dumps := make([]openlibertyv1beta1.OpenLibertyDumpInclude, 2)
+	dumps[0] = "heap"
+	dumps[1] = "thread"
+
 	return &openlibertyv1beta1.OpenLibertyDump{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "OpenLibertyDump",
@@ -201,6 +206,28 @@ func MakeOpenLibertyDump(t *testing.T, f *framework.Framework, n string, ns stri
 		},
 		Spec: openlibertyv1beta1.OpenLibertyDumpSpec{
 			PodName: podName,
+			Include: dumps,
 		},
 	}
+}
+
+// CommandError : Reports back an error if a command fails to execute
+func CommandError(t *testing.T, err error, out []byte) error {
+	if err != nil {
+		if exiterr, ok := err.(*exec.ExitError); ok {
+			t.Log("failed to execute ls command, see below")
+			t.Log(exiterr.Error())
+			return exiterr
+		}
+		t.Log("unknown error occurred, see below")
+		t.Log(err.Error())
+		return err
+	}
+
+	if len(out) == 0 {
+		t.Log("no output returned")
+	}
+
+	t.Logf("%s", out)
+	return nil
 }
