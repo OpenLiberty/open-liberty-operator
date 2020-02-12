@@ -162,3 +162,19 @@ spec:
     timeoutSeconds: 10
 ...
 ```
+
+## Enable storage for serviceability
+
+Using the operator, you can enable the serviceability definition in your OpenLibertyApplication Custom Resource to create a PersistentVolumeClaim so that the logs from your application go to a single storage. Your cluster must be configured to automatically bind the PersistentVolumeClaim to a PersistentVolume or you must bind it manually. 
+
+The `serviceability.size` definition in the following example will automatically create a PersistentVolumeClaim with the specified size and is shared between all pods of the OpenLibertyApplication instance. For more information on the serviceability definition provided by the operator, please see the following [user guide](https://github.com/OpenLiberty/open-liberty-operator/blob/master/doc/user-guide.md#storage-for-serviceability).
+
+Add the `serviceability.size` definition in your OpenLibertyApplication Custom Resource; the PersistentVolumeClaim should be created with the name `<application_name>-serviceability`:
+
+```YAML
+spec:
+  image:
+  ...
+  serviceability:
+    size: 1Gi
+```
