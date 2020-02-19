@@ -2,6 +2,8 @@
 
 The Open Liberty Operator can be used to deploy and manage applications running on Open Liberty into [OKD](https://www.okd.io/) or [OpenShift](https://www.openshift.com/) clusters. You can also perform [Day-2 operations](#day-2-operations) such as gathering traces and dumps using the operator.
 
+This documentation refers to the current master branch.  For documentation and samples of older releases, please check out the [main releases](https://github.com/OpenLiberty/open-liberty-operator/releases) page and navigate the corresponding tag.
+
 ## Operator installation
 
 Use the instructions for one of the [releases](../deploy/releases) to install the operator into a Kubernetes cluster.
