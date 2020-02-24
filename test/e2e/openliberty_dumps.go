@@ -147,11 +147,11 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 	for i := 0; i < len(dump.Status.Conditions); i++ {
 		if dump.Status.Conditions[i].Type == "Started" {
 			if dump.Status.Conditions[i].Status != "True" {
-				t.Fatal("The Started State's Status is not True")
+				t.Fatalf("The Started State's Status is not True, it is: %s", dump.Status.Conditions[i].Status)
 			}
 		} else if dump.Status.Conditions[i].Type == "Completed" {
 			if dump.Status.Conditions[i].Status != "True" {
-				t.Fatal("The Completed State's Status is not True")
+				t.Fatalf("The Completed State's Status is not True, it is: %s", dump.Status.Conditions[i].Status)
 			}
 		}
 		// Wait for file to be generated
