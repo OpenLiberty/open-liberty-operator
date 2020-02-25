@@ -121,6 +121,20 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 	}
 
 	podName := pods.Items[0].GetName()
+
+	//Check the pod is running
+	for a := 0; a < 10; a++ {
+		time.Sleep(time.Second * 2)
+		if pods.Items[0].Status.Phase == "Running" {
+			break
+		} else {
+			t.Logf("The pod phase is: %s and the message is: %s", pods.Items[0].Status.Phase, pods.Items[0].Status.Message)
+		}
+	}
+	if pods.Items[0].Status.Phase != "Running" {
+		t.Fatalf("The pod phase is not running it is: %s and the message is: %s", pods.Items[0].Status.Phase, pods.Items[0].Status.Message)
+	}
+
 	dump := util.MakeOpenLibertyDump(t, f, "test-dump", ns, podName)
 
 	// use TestCtx's create helper to create the object and add a cleanup function for the new object
@@ -149,14 +163,12 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 			if dump.Status.Conditions[i].Status != "True" {
 				t.Fatalf("The Started State's Status is not True, it is: %s", dump.Status.Conditions[i])
 			}
-			t.Logf("%s", dump.Status.Conditions)
 		} else if dump.Status.Conditions[i].Type == "Completed" {
 			if dump.Status.Conditions[i].Status != "True" {
 				t.Fatalf("The Completed State's Status is not True, it is: %s", dump.Status.Conditions[i])
 			}
-			t.Logf("%s", dump.Status.Conditions)
 		}
-		t.Logf("%s", dump.Status.Conditions)
+		t.Logf("The dumps status condition: %s", dump.Status.Conditions)
 		// Wait for file to be generated
 		for j := 0; j < 10; j++ {
 			time.Sleep(time.Second * 2)
