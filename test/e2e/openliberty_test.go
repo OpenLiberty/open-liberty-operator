@@ -31,6 +31,7 @@ func TestOpenLibertyApplication(t *testing.T) {
 		t.Fatalf("Failed to add Trace scheme to framework: %v", err)
 	}
 
+	t.Run("OpenLibertyDumpsTest", OpenLibertyDumpsTest)
 	t.Run("OpenLibertyPullPolicyTest", OpenLibertyPullPolicyTest)
 	t.Run("OpenLibertyBasicTest", OpenLibertyBasicTest)
 	t.Run("OpenLibertyStorageTest", OpenLibertyBasicStorageTest)
@@ -39,5 +40,5 @@ func TestOpenLibertyApplication(t *testing.T) {
 	t.Run("OpenLibertyAutoScalingTest", OpenLibertyAutoScalingTest)
 	t.Run("OpenLibertyServiceMonitorTest", OpenLibertyServiceMonitorTest)
 	t.Run("OpenLibertyKnativeTest", OpenLibertyKnativeTest)
-	t.Run("OpenLibertyDumpsTest", OpenLibertyDumpsTest)
+	t.Run("OpenLibertyTraceTest", OpenLibertyTraceTest)
 }

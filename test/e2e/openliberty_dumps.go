@@ -149,11 +149,14 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 			if dump.Status.Conditions[i].Status != "True" {
 				t.Fatalf("The Started State's Status is not True, it is: %s", dump.Status.Conditions[i])
 			}
+			t.Logf("%s", dump.Status.Conditions)
 		} else if dump.Status.Conditions[i].Type == "Completed" {
 			if dump.Status.Conditions[i].Status != "True" {
 				t.Fatalf("The Completed State's Status is not True, it is: %s", dump.Status.Conditions[i])
 			}
+			t.Logf("%s", dump.Status.Conditions)
 		}
+		t.Logf("%s", dump.Status.Conditions)
 		// Wait for file to be generated
 		for j := 0; j < 10; j++ {
 			time.Sleep(time.Second * 2)
@@ -210,7 +213,6 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 	if err != nil {
 		t.Fatal("unzip command failed")
 	}
-	t.Logf("%s", out)
 
 	// Check if heap file is created
 	cmdHeap := "unzip -l " + zipFile + " | grep heapdump"

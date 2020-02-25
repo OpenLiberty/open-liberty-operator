@@ -39,4 +39,4 @@ jobs:
   - name: Run end-to-end tests
     stage: e2e test
     script:
-    - travis_wait 30 make test-e2e
+    - make test-e2e

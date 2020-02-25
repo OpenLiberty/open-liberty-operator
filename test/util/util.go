@@ -249,7 +249,6 @@ func CommandError(t *testing.T, err error, out []byte) error {
 		t.Log(err.Error())
 		return err
 	}
-	t.Logf("%s", out)
 	return nil
 }
 
