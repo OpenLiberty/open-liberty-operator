@@ -126,6 +126,7 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 	for a := 0; a < 10; a++ {
 		time.Sleep(time.Second * 2)
 		if pods.Items[0].Status.Phase == "Running" {
+			t.Logf("The pod is running: %s", pods.Items[0].Status.Message)
 			break
 		} else {
 			t.Logf("The pod phase is: %s and the message is: %s", pods.Items[0].Status.Phase, pods.Items[0].Status.Message)
