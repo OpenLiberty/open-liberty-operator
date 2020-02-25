@@ -140,7 +140,7 @@ Modify the readiness and liveness probe's fields to point to the MicroProfile He
 
 ```YAML
 spec:
-  image:
+  applicationImage:
   ...
   readinessProbe:
     failureThreshold: 12
@@ -173,7 +173,7 @@ Add the `serviceability.size` definition in your OpenLibertyApplication Custom R
 
 ```YAML
 spec:
-  image:
+  applicationImage:
   ...
   serviceability:
     size: 1Gi
