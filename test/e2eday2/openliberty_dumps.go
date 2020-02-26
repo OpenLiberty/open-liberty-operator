@@ -145,7 +145,7 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 		}
 		time.Sleep(time.Second * 2)
 		counter++
-		if counter == 300 {
+		if counter == 100 {
 			break
 		}
 	}
