@@ -61,6 +61,7 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `stack` | Optional. The name of the [Appsody application stack](https://github.com/appsody/stacks) that produced this application image. |
 | `serviceAccountName` | The name of the OpenShift service account to be used during deployment. |
 | `initContainers` | The list of [Init Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#container-v1-core) definitions. |
+| `extraContainers` | Additional containers to be added to the server pods |
 | `architecture` | An array of architectures to be considered for deployment. Their position in the array indicates preference. |
 | `service.port` | The port exposed by the container. |
 | `service.type` | The Kubernetes [Service Type](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types). |

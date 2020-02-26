@@ -44,8 +44,9 @@ type OpenLibertyApplicationSpec struct {
 	CreateAppDefinition  *bool                             `json:"createAppDefinition,omitempty"`
 	// +listType=map
 	// +listMapKey=name
-	InitContainers []corev1.Container                    `json:"initContainers,omitempty"`
-	Serviceability *OpenLibertyApplicationServiceability `json:"serviceability,omitempty"`
+	InitContainers  []corev1.Container                    `json:"initContainers,omitempty"`
+	ExtraContainers []corev1.Container                    `json:"extraContainers,omitempty"`
+	Serviceability  *OpenLibertyApplicationServiceability `json:"serviceability,omitempty"`
 }
 
 // OpenLibertyApplicationAutoScaling ...
@@ -305,6 +306,11 @@ func (cr *OpenLibertyApplication) GetStatus() common.BaseApplicationStatus {
 // GetInitContainers returns list of init containers
 func (cr *OpenLibertyApplication) GetInitContainers() []corev1.Container {
 	return cr.Spec.InitContainers
+}
+
+// GetExtraContainers returns list of init containers
+func (cr *OpenLibertyApplication) GetExtraContainers() []corev1.Container {
+	return cr.Spec.ExtraContainers
 }
 
 // GetGroupName returns group name to be used in labels and annotation
