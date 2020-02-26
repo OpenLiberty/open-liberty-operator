@@ -1,4 +1,4 @@
-package e2eday2
+package e2e
 
 import (
 	goctx "context"

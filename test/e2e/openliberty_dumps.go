@@ -1,4 +1,4 @@
-package e2eday2
+package e2e
 
 import (
 	goctx "context"
@@ -16,14 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
-)
-
-var (
-	retryInterval        = time.Second * 5
-	operatorTimeout      = time.Minute * 4
-	timeout              = time.Minute * 4
-	cleanupRetryInterval = time.Second * 1
-	cleanupTimeout       = time.Second * 5
 )
 
 // OpenLibertyDumpsTest ... Check dumps
@@ -156,11 +148,11 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 	for i := 0; i < len(dump.Status.Conditions); i++ {
 		if dump.Status.Conditions[i].Type == "Started" {
 			if dump.Status.Conditions[i].Status != "True" {
-				t.Fatalf("The Started State's Status is not True, it is: %s", dump.Status.Conditions[i])
+				t.Fatalf("The Started State's Status is not True it is: %s, and the message is: %s", dump.Status.Conditions[i].Status, dump.Status.Conditions[i].Message)
 			}
 		} else if dump.Status.Conditions[i].Type == "Completed" {
 			if dump.Status.Conditions[i].Status != "True" {
-				t.Fatalf("The Completed State's Status is not True, it is: %s", dump.Status.Conditions[i])
+				t.Fatalf("The Completed State's Status is not True it is: %s, and the message is: %s", dump.Status.Conditions[i].Status, dump.Status.Conditions[i].Message)
 			}
 		}
 		t.Logf("The dumps status condition: %s", dump.Status.Conditions)

@@ -15,10 +15,20 @@ func TestOpenLibertyApplication(t *testing.T) {
 			Kind: "OpenLibertyApplication",
 		},
 	}
+	openLibertyTraceList := &openlibertyv1beta1.OpenLibertyTraceList{
+		TypeMeta: metav1.TypeMeta{
+			Kind: "OpenLibertyTrace",
+		},
+	}
 
 	err := framework.AddToFrameworkScheme(apis.AddToScheme, openLibertyApplicationList)
 	if err != nil {
 		t.Fatalf("Failed to add CR scheme to framework: %v", err)
+	}
+
+	err = framework.AddToFrameworkScheme(apis.AddToScheme, openLibertyTraceList)
+	if err != nil {
+		t.Fatalf("Failed to add Trace scheme to framework: %v", err)
 	}
 
 	t.Run("OpenLibertyPullPolicyTest", OpenLibertyPullPolicyTest)
@@ -29,4 +39,6 @@ func TestOpenLibertyApplication(t *testing.T) {
 	t.Run("OpenLibertyAutoScalingTest", OpenLibertyAutoScalingTest)
 	t.Run("OpenLibertyServiceMonitorTest", OpenLibertyServiceMonitorTest)
 	t.Run("OpenLibertyKnativeTest", OpenLibertyKnativeTest)
+	t.Run("OpenLibertyTraceTest", OpenLibertyTraceTest)
+	t.Run("OpenLibertyDumpsTest", OpenLibertyDumpsTest)
 }
