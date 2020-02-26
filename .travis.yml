@@ -25,6 +25,7 @@ stages:
   - name: build
   - name: unit test
   - name: e2e test
+  - name: e2e day2 test
 
 jobs:
  include:
@@ -39,4 +40,8 @@ jobs:
   - name: Run end-to-end tests
     stage: e2e test
     script:
-    - travis_wait 20 make test-e2e
+    - make test-e2e
+  - name: Run end-to-end tests
+    stage: e2e day2 test
+    script:
+    - make test-e2e-day2

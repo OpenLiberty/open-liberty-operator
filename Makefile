@@ -32,9 +32,18 @@ unit-test: ## Run unit tests
 test-e2e: setup ## Run end-to-end tests
 	./scripts/e2e.sh
 
+test-e2e-day2: setup ## Run end-to-end tests
+	sed 's/e2e/e2eday2/' ./scripts/e2e.sh >> ./scripts/e2eday2.sh
+	chmod u+x ./scripts/e2eday2.sh
+	./scripts/e2eday2.sh
+
 test-e2e-locally: setup
 	kubectl apply -f scripts/servicemonitor.crd.yaml
 	operator-sdk test local github.com/OpenLiberty/open-liberty-operator/test/e2e --verbose --debug --up-local --namespace ${WATCH_NAMESPACE}
+
+test-e2e-day2-locally: setup
+	kubectl apply -f scripts/servicemonitor.crd.yaml
+	operator-sdk test local github.com/OpenLiberty/open-liberty-operator/test/e2eday2 --verbose --debug --up-local --namespace ${WATCH_NAMESPACE}
 
 generate: setup ## Invoke `k8s` and `openapi` generators
 	operator-sdk generate k8s
