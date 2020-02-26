@@ -47,7 +47,7 @@ func OpenLibertyTraceTest(t *testing.T) {
 	}
 
 	// get the pods that were created from above app
-	pods, err := getTargetPodList(f, ctx, targetApp)
+	pods, err := getTargetPodList(f, ctx, targetApp, namespace)
 	if err != nil {
 		util.FailureCleanup(t, f, namespace, err)
 	}
@@ -256,11 +256,12 @@ func createTargetApp(t *testing.T, f *framework.Framework, ctx *framework.TestCt
 }
 
 // getTargetPodList returns the pods created for targetApplication as a podList
-func getTargetPodList(f *framework.Framework, ctx *framework.TestCtx, target string) (*corev1.PodList, error) {
+func getTargetPodList(f *framework.Framework, ctx *framework.TestCtx, target string, ns string) (*corev1.PodList, error) {
 	key := map[string]string{"app.kubernetes.io/name": target}
 
 	options := &dynclient.ListOptions{
 		LabelSelector: labels.Set(key).AsSelector(),
+		Namespace:     ns,
 	}
 
 	podList := &corev1.PodList{}

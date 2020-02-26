@@ -66,7 +66,7 @@ func OpenLibertyDumpsTest(t *testing.T) {
 	}
 
 	// Get the pods for the above app
-	podList, err := getPods(f, ctx, app)
+	podList, err := getPods(f, ctx, app, namespace)
 	if err != nil {
 		util.FailureCleanup(t, f, namespace, err)
 	}
@@ -105,11 +105,12 @@ func createApp(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, tar
 	return nil
 }
 
-func getPods(f *framework.Framework, ctx *framework.TestCtx, target string) (*corev1.PodList, error) {
+func getPods(f *framework.Framework, ctx *framework.TestCtx, target string, ns string) (*corev1.PodList, error) {
 	key := map[string]string{"app.kubernetes.io/name": target}
 
 	options := &dynclient.ListOptions{
 		LabelSelector: labels.Set(key).AsSelector(),
+		Namespace:     ns,
 	}
 
 	podList := &corev1.PodList{}
