@@ -37,11 +37,11 @@ jobs:
     stage: unit test
     script:
     - make unit-test
+  - name: Run end-to-end day-2 tests
+    stage: e2e day2 test
+    script:
+    - make test-e2e-day2
   - name: Run end-to-end tests
     stage: e2e test
     script:
     - make test-e2e
-  - name: Run end-to-end tests
-    stage: e2e day2 test
-    script:
-    - make test-e2e-day2

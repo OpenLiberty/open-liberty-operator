@@ -21,12 +21,12 @@ func TestOpenLibertyApplication(t *testing.T) {
 		t.Fatalf("Failed to add CR scheme to framework: %v", err)
 	}
 
-	// t.Run("OpenLibertyPullPolicyTest", OpenLibertyPullPolicyTest)
-	// t.Run("OpenLibertyBasicTest", OpenLibertyBasicTest)
-	// t.Run("OpenLibertyStorageTest", OpenLibertyBasicStorageTest)
-	// t.Run("OpenLibertyPersistenceTest", OpenLibertyPersistenceTest)
-	// t.Run("OpenLibertyProbeTest", OpenLibertyProbeTest)
+	t.Run("OpenLibertyPullPolicyTest", OpenLibertyPullPolicyTest)
+	t.Run("OpenLibertyBasicTest", OpenLibertyBasicTest)
+	t.Run("OpenLibertyStorageTest", OpenLibertyBasicStorageTest)
+	t.Run("OpenLibertyPersistenceTest", OpenLibertyPersistenceTest)
+	t.Run("OpenLibertyProbeTest", OpenLibertyProbeTest)
 	t.Run("OpenLibertyAutoScalingTest", OpenLibertyAutoScalingTest)
-	// t.Run("OpenLibertyServiceMonitorTest", OpenLibertyServiceMonitorTest)
-	// t.Run("OpenLibertyKnativeTest", OpenLibertyKnativeTest)
+	t.Run("OpenLibertyServiceMonitorTest", OpenLibertyServiceMonitorTest)
+	t.Run("OpenLibertyKnativeTest", OpenLibertyKnativeTest)
 }

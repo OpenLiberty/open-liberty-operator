@@ -1,4 +1,4 @@
-package e2e
+package e2eday2
 
 import (
 	goctx "context"
@@ -129,20 +129,6 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 	}
 
 	podName := pods.Items[0].GetName()
-
-	//Check the pod is running
-	for a := 0; a < 10; a++ {
-		time.Sleep(time.Second * 2)
-		if pods.Items[0].Status.Phase == "Running" {
-			break
-		} else {
-			t.Logf("The pod phase is: %s and the message is: %s", pods.Items[0].Status.Phase, pods.Items[0].Status.Message)
-		}
-	}
-	if pods.Items[0].Status.Phase != "Running" {
-		t.Fatalf("The pod phase is not running it is: %s and the message is: %s", pods.Items[0].Status.Phase, pods.Items[0].Status.Message)
-	}
-
 	dump := util.MakeOpenLibertyDump(t, f, "test-dump", ns, podName)
 
 	// use TestCtx's create helper to create the object and add a cleanup function for the new object
@@ -159,7 +145,7 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 		}
 		time.Sleep(time.Second * 2)
 		counter++
-		if len(dump.Status.Conditions) > 1 || counter == 300 {
+		if counter == 300 {
 			break
 		}
 	}

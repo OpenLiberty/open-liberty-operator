@@ -1,4 +1,4 @@
-package e2e
+package e2eday2
 
 import (
 	goctx "context"
@@ -18,6 +18,7 @@ import (
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// OpenLibertyTraceTest ...
 func OpenLibertyTraceTest(t *testing.T) {
 	ctx, err := util.InitializeContext(t, cleanupTimeout, retryInterval)
 	if err != nil {
