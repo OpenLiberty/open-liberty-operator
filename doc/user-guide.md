@@ -58,7 +58,6 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `pullPolicy` | The policy used when pulling the image.  One of: `Always`, `Never`, and `IfNotPresent`. |
 | `pullSecret` | If using a registry that requires authentication, the name of the secret containing credentials. |
 | `version` | The current version of the application. Label `app.kubernetes.io/version` will be added to all resources when the version is defined. |
-| `stack` | Optional. The name of the [Appsody application stack](https://github.com/appsody/stacks) that produced this application image. |
 | `serviceAccountName` | The name of the OpenShift service account to be used during deployment. |
 | `initContainers` | The list of [Init Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#container-v1-core) definitions. |
 | `architecture` | An array of architectures to be considered for deployment. Their position in the array indicates preference. |
@@ -129,7 +128,7 @@ Open Liberty Operator is based on the generic [Application Stacks
 Operator](https://github.com/application-stacks/operator). To see more
 information on the usage of common functionality, see Application Stacks
 documentation below. Note that, in the samples from the links below, the instances of `Kind:
-RuntimeComponent` must be replaced with `Kind: AppsodyApplication`.
+RuntimeComponent` must be replaced with `Kind: OpenLibertyApplication`.
 
 - [Image Streams](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Image-streams)
 - [Service Account](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Service-account)
