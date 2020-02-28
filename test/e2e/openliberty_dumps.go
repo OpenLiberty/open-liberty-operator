@@ -130,6 +130,7 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 		util.FailureCleanup(t, f, ns, err)
 	}
 
+	// Wait for the dump to be created
 	counter := 0
 	for {
 		err = f.Client.Get(goctx.TODO(), types.NamespacedName{Name: "test-dump", Namespace: ns}, dump)
@@ -138,6 +139,12 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 		}
 		time.Sleep(time.Second * 2)
 		counter++
+
+		for i := 0; i < len(dump.Status.Conditions); i++ {
+			if dump.Status.Conditions[i].Type == "Completed" && dump.Status.Conditions[i].Status == "True" {
+				break
+			}
+		}
 		if counter == 100 {
 			break
 		}
@@ -155,18 +162,19 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 				t.Fatalf("The Completed State's Status is not True it is: %s, and the message is: %s", dump.Status.Conditions[i].Status, dump.Status.Conditions[i].Message)
 			}
 		}
-		t.Logf("The dumps status condition: %s", dump.Status.Conditions)
-		// Wait for file to be generated
-		for j := 0; j < 10; j++ {
-			time.Sleep(time.Second * 2)
-			if dump.Status.DumpFile != "" {
-				break
-			}
+	}
+
+	t.Logf("The dumps status condition: %s", dump.Status.Conditions)
+	// Wait for file to be generated
+	for j := 0; j < 10; j++ {
+		time.Sleep(time.Second * 2)
+		if dump.Status.DumpFile != "" {
+			break
 		}
-		if dump.Status.DumpFile == "" {
-			t.Log(dump.Status)
-			t.Fatal("Dump file not created")
-		}
+	}
+	if dump.Status.DumpFile == "" {
+		t.Log(dump.Status)
+		t.Fatal("Dump file not created")
 	}
 
 	dir := "serviceability/" + ns
@@ -233,7 +241,7 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 	if err != nil {
 		t.Fatal("Thread file is not found")
 	}
-	if heap != nil {
+	if thread != nil {
 		t.Logf("Thread file is found: %s", string(thread))
 	} else {
 		t.Fatal("Thread file not found")

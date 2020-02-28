@@ -241,7 +241,6 @@ func MakeOpenLibertyDump(t *testing.T, f *framework.Framework, n string, ns stri
 func CommandError(t *testing.T, err error, out []byte) error {
 	if err != nil {
 		if exiterr, ok := err.(*exec.ExitError); ok {
-			t.Log("failed to execute ls command, see below")
 			t.Log(exiterr.Error())
 			return exiterr
 		}
