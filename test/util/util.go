@@ -4,6 +4,7 @@ import (
 	goctx "context"
 	"fmt"
 	"io/ioutil"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -19,7 +20,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
-	"os/exec"
 )
 
 // MakeBasicOpenLibertyApplication : Create a simple Liberty App with provided number of replicas.
@@ -64,6 +64,7 @@ func MakeBasicOpenLibertyApplication(t *testing.T, f *framework.Framework, n str
 	}
 }
 
+// Make BasicOpenLibertyTrace
 func MakeBasicOpenLibertyTrace(n, ns, pod string) *openlibertyv1beta1.OpenLibertyTrace {
 	maxFiles := int32(5)
 	maxFileSize := int32(20)
@@ -214,6 +215,42 @@ func WaitForKnativeDeployment(t *testing.T, f *framework.Framework, ns, n string
 	return err
 }
 
+// MakeOpenLibertyDump : Create a dump.
+func MakeOpenLibertyDump(t *testing.T, f *framework.Framework, n string, ns string, podName string) *openlibertyv1beta1.OpenLibertyDump {
+	dumps := make([]openlibertyv1beta1.OpenLibertyDumpInclude, 2)
+	dumps[0] = "heap"
+	dumps[1] = "thread"
+
+	return &openlibertyv1beta1.OpenLibertyDump{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "OpenLibertyDump",
+			APIVersion: "openliberty.io/v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      n,
+			Namespace: ns,
+		},
+		Spec: openlibertyv1beta1.OpenLibertyDumpSpec{
+			PodName: podName,
+			Include: dumps,
+		},
+	}
+}
+
+// CommandError : Reports back an error if a command fails to execute
+func CommandError(t *testing.T, err error, out []byte) error {
+	if err != nil {
+		if exiterr, ok := err.(*exec.ExitError); ok {
+			t.Log(exiterr.Error())
+			return exiterr
+		}
+		t.Log("unknown error occurred, see below")
+		t.Log(err.Error())
+		return err
+	}
+	return nil
+}
+
 // WaitForStatusConditions waits for dump/trace to be created and for non error conditions to appear
 func WaitForStatusConditions(t *testing.T, f *framework.Framework, n, ns string, retryInterval, timeout time.Duration) error {
 	oltrace := &openlibertyv1beta1.OpenLibertyTrace{}
@@ -240,7 +277,6 @@ func WaitForStatusConditions(t *testing.T, f *framework.Framework, n, ns string,
 			// No Conditions found, keep polling
 			return false, nil
 		}
-
 
 		t.Log("****** Status Conditions:")
 		t.Log(oltrace.Status.Conditions)
