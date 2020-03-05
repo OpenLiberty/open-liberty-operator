@@ -1,14 +1,4 @@
 {
-  "__inputs": [
-     {
-       "name": "DS_PROMETHEUS",
-       "label": "Prometheus",
-       "description": "",
-       "type": "datasource",
-       "pluginId": "prometheus",
-       "pluginName": "Prometheus"
-     }
-   ],
   "__requires": [
      {
        "type": "grafana",
@@ -51,8 +41,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 1,
-  "iteration": 1569353980677,
+  "id": 2,
+  "iteration": 1569354180705,
   "links": [],
   "panels": [
     {
@@ -70,7 +60,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -87,7 +77,6 @@
             "max": true,
             "min": true,
             "show": true,
-            "sortDesc": true,
             "total": false,
             "values": true
           },
@@ -108,7 +97,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "base_cpu_availableProcessors{pod=~`[[pod]]`}",
+              "expr": "base:cpu_available_processors{pod=~`[[pod]]`}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "pod: {{pod}}, instance: {{instance}}",
@@ -161,7 +150,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -199,8 +188,9 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "base_cpu_processCpuLoad_percent{pod=~`[[pod]]`}",
+              "expr": "base:cpu_process_cpu_load_percent{pod=~`[[pod]]`}",
               "format": "time_series",
+              "instant": false,
               "intervalFactor": 2,
               "legendFormat": "pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
@@ -253,7 +243,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -290,7 +280,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "base_cpu_systemLoadAverage{pod=~`[[pod]]`}",
+              "expr": "base:cpu_system_load_average{pod=~`[[pod]]`}",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
@@ -356,7 +346,7 @@
       "panels": [
         {
           "columns": [],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fontSize": "100%",
           "gridPos": {
             "h": 6,
@@ -364,15 +354,15 @@
             "x": 0,
             "y": 2
           },
-          "id": 26,
+          "id": 54,
           "links": [],
           "options": {},
           "pageSize": null,
           "scroll": true,
           "showHeader": true,
           "sort": {
-            "col": 0,
-            "desc": true
+            "col": null,
+            "desc": false
           },
           "styles": [
             {
@@ -430,7 +420,7 @@
           ],
           "targets": [
             {
-              "expr": "base_memory_maxHeap_bytes{pod=~`[[pod]]`}",
+              "expr": "base:memory_max_heap_bytes{pod=~`[[pod]]`}",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -446,7 +436,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -455,7 +445,7 @@
             "x": 0,
             "y": 8
           },
-          "id": 53,
+          "id": 26,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -485,10 +475,9 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "base_memory_usedHeap_bytes{pod=~`[[pod]]`} / base_memory_maxHeap_bytes{pod=~`[[pod]]`}",
+              "expr": "(base:memory_used_heap_bytes{pod=~`[[pod]]`}/base:memory_max_heap_bytes{pod=~`[[pod]]`})",
               "format": "time_series",
               "instant": false,
-              "interval": "",
               "intervalFactor": 2,
               "legendFormat": "pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
@@ -553,7 +542,7 @@
       "panels": [
         {
           "columns": [],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fontSize": "100%",
           "gridPos": {
             "h": 7,
@@ -568,8 +557,8 @@
           "scroll": true,
           "showHeader": true,
           "sort": {
-            "col": null,
-            "desc": false
+            "col": 10,
+            "desc": true
           },
           "styles": [
             {
@@ -577,6 +566,21 @@
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "pattern": "Time",
               "type": "date"
+            },
+            {
+              "alias": "name",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "pattern": "__name__",
+              "thresholds": [],
+              "type": "string",
+              "unit": "short"
             },
             {
               "alias": "",
@@ -588,7 +592,7 @@
               ],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
-              "pattern": "/chart|heritage|job|kubernetes_name|kubernetes_namespace|release|name/",
+              "pattern": "/chart|heritage|job|kubernetes_name|kubernetes_namespace|release/",
               "thresholds": [],
               "type": "hidden",
               "unit": "short"
@@ -625,7 +629,7 @@
           ],
           "targets": [
             {
-              "expr": "vendor_servlet_request_total{pod=~`[[pod]]`}",
+              "expr": "{__name__=~\"vendor:servlet.*_request_total\",pod=~`[[pod]]`}",
               "format": "table",
               "instant": true,
               "intervalFactor": 2,
@@ -642,7 +646,7 @@
           "bars": true,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 0,
           "fillGradient": 0,
           "gridPos": {
@@ -679,8 +683,9 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "vendor_servlet_request_total{servlet=`[[servlet]]`, pod=~`[[pod]]`}",
+              "expr": "vendor:servlet_[[servlet]]_request_total{pod=~`[[pod]]`}",
               "format": "time_series",
+              "instant": false,
               "intervalFactor": 2,
               "legendFormat": "pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
@@ -732,7 +737,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -770,10 +775,9 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(vendor_servlet_responseTime_total_seconds{servlet=`[[servlet]]`,pod=~`[[pod]]`}[[dur]])/rate(vendor_servlet_request_total{servlet=`[[servlet]]`,pod=~`[[pod]]`}[[dur]])",
+              "expr": "rate(vendor:servlet_[[servlet]]_response_time_total_seconds{pod=~`[[pod]]`}[[dur]])/rate(vendor:servlet_[[servlet]]_request_total{pod=~`[[pod]]`}[[dur]])",
               "format": "time_series",
               "instant": false,
-              "interval": "",
               "intervalFactor": 2,
               "legendFormat": "pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
@@ -840,7 +844,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -879,11 +883,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "vendor_connectionpool_freeConnections{pod=~`[[pod]]`}",
+              "expr": "{__name__=~\"vendor:connectionpool_.*_free_connections\",pod=~`[[pod]]`}",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "datasource: {{datasource}} pod: {{pod}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -933,7 +937,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -972,11 +976,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "vendor_connectionpool_connectionHandles{pod=~`[[pod]]`}",
+              "expr": "{__name__=~\"vendor:connectionpool_.*_connection_handles\",pod=~`[[pod]]`}",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "datasource: {{datasource}} pod: {{pod}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -1026,7 +1030,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -1065,11 +1069,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "vendor_connectionpool_create_total{pod=~`[[pod]]`}",
+              "expr": "{__name__=~\"vendor:connectionpool_.*_create_total\",pod=~`[[pod]]`}",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "datasource: {{datasource}} pod: {{pod}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -1119,7 +1123,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -1158,11 +1162,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "vendor_connectionpool_destroy_total{pod=~`[[pod]]`}",
+              "expr": "{__name__=~\"vendor:connectionpool_.*_destroy_total\",pod=~`[[pod]]`}",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "datasource: {{datasource}} pod: {{pod}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -1212,7 +1216,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -1251,11 +1255,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "vendor_connectionpool_managedConnections{pod=~`[[pod]]`}",
+              "expr": "{__name__=~\"vendor:connectionpool_.*_managed_connections\",pod=~`[[pod]]`}",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "datasource: {{datasource}} pod: {{pod}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -1320,7 +1324,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -1360,12 +1364,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "vendor_session_activeSessions{pod=~`[[pod]]`}",
+              "expr": "{__name__=~\"vendor:session_.*_active_sessions\",pod=~`[[pod]]`}",
               "format": "time_series",
               "instant": false,
-              "interval": "",
               "intervalFactor": 2,
-              "legendFormat": "appname: {{appname}} pod: {{pod}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -1415,7 +1418,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -1456,11 +1459,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "vendor_session_liveSessions{pod=~`[[pod]]`}",
+              "expr": "{__name__=~\"vendor:session_.*_live_sessions\",pod=~`[[pod]]`}",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "appname: {{appname}} pod: {{pod}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -1525,7 +1528,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -1563,11 +1566,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "vendor_threadpool_activeThreads{pod=~`[[pod]]`}",
+              "expr": "{__name__=~\"vendor:threadpool_.*_active_threads\",pod=~`[[pod]]`}",
               "format": "time_series",
-              "hide": false,
+              "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "pool: {{pool}} pod: {{pod}}, instance: {{instance}}",
+              "legendFormat": "name: {{__name__}} pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
@@ -1618,7 +1621,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -1657,11 +1660,12 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "vendor_threadpool_size{pod=~`[[pod]]`}",
+              "expr": "{__name__=~\"vendor:threadpool_.*_size\",pod=~`[[pod]]`}",
+              "format": "time_series",
               "instant": false,
               "intervalFactor": 2,
-              "legendFormat": "pool: {{pool}} pod: {{pod}}, instance: {{instance}}",
-              "refId": "B"
+              "legendFormat": "name: {{__name__}} pod: {{pod}}, instance: {{instance}}",
+              "refId": "A"
             }
           ],
           "thresholds": [],
@@ -1725,7 +1729,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -1762,10 +1766,9 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(base_gc_time_seconds{pod=~`[[pod]]`,name=\"global\"}[[dur]]) / rate(base_gc_total{pod=~`[[pod]]`,name=\"global\"}[[dur]])",
+              "expr": "rate(base:gc_global_time_seconds{pod=~`[[pod]]`}[[dur]]) / rate(base:gc_global_count{pod=~`[[pod]]`}[[dur]])",
               "format": "time_series",
               "instant": false,
-              "interval": "",
               "intervalFactor": 2,
               "legendFormat": "pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
@@ -1817,7 +1820,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -1854,9 +1857,8 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(base_gc_time_seconds{pod=~`[[pod]]`,name=\"scavenge\"}[[dur]]) / rate(base_gc_total{pod=~`[[pod]]`,name=\"scavenge\"}[[dur]])",
+              "expr": "rate(base:gc_scavenge_time_seconds{pod=~`[[pod]]`}[[dur]]) / rate(base:gc_scavenge_count{pod=~`[[pod]]`}[[dur]])",
               "format": "time_series",
-              "instant": false,
               "intervalFactor": 2,
               "legendFormat": "pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
@@ -1920,7 +1922,7 @@
       "panels": [
         {
           "columns": [],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fontSize": "100%",
           "gridPos": {
             "h": 12,
@@ -1992,7 +1994,7 @@
           ],
           "targets": [
             {
-              "expr": "base_jvm_uptime_seconds {pod=~`[[pod]]`}",
+              "expr": "base:jvm_uptime_seconds{pod=~`[[pod]]`}",
               "format": "table",
               "instant": true,
               "intervalFactor": 2,
@@ -2019,17 +2021,17 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "${DS_PROMETHEUS}",
-        "definition": "base_cpu_processCpuLoad_percent",
+        "datasource": "Prometheus",
+        "definition": "base:cpu_available_processors",
         "hide": 0,
         "includeAll": true,
         "label": "pod",
         "multi": true,
         "name": "pod",
         "options": [],
-        "query": "base_cpu_processCpuLoad_percent",
+        "query": "base:cpu_available_processors",
         "refresh": 1,
-        "regex": "/base_cpu_processCpuLoad_percent{.*pod=\"(.*)\",service=.*/",
+        "regex": "/base:cpu_available_processors{.*pod=\"(.*)\",service=.*/",
         "skipUrlSync": false,
         "sort": 1,
         "tagValuesQuery": "",
@@ -2041,17 +2043,17 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "${DS_PROMETHEUS}",
-        "definition": "",
+        "datasource": "Prometheus",
+        "definition": "{__name__=~\"vendor:servlet.*_response_time_total_seconds\",pod=~`[[pod]]`}",
         "hide": 0,
         "includeAll": false,
         "label": null,
         "multi": false,
         "name": "servlet",
         "options": [],
-        "query": "vendor_servlet_responseTime_total_seconds",
+        "query": "{__name__=~\"vendor:servlet.*_response_time_total_seconds\",pod=~`[[pod]]`}",
         "refresh": 1,
-        "regex": "/.*servlet=\"(.*)\"}.*/",
+        "regex": "/vendor:servlet_(.*)_response_time_total_seconds.*/",
         "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
@@ -2145,7 +2147,7 @@
     ]
   },
   "timezone": "",
-  "title": "Liberty-Metrics-M2-G5-20190521",
-  "uid": "websphere-liberty-m2",
+  "title": "Liberty-Metrics-G5-20190521",
+  "uid": "websphere-liberty",
   "version": 2
 }
