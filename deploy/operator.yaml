@@ -15,7 +15,9 @@ spec:
       serviceAccountName: open-liberty-operator
       containers:
         - name: open-liberty-operator
-          image: openliberty/operator:0.0.1
+          image: openliberty/operator:daily
+          command:
+          - open-liberty-operator
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
@@ -28,20 +30,3 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "open-liberty-operator"
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: beta.kubernetes.io/arch
-                operator: In
-                values:
-                - amd64
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 3
-            preference:
-              matchExpressions:
-              - key: beta.kubernetes.io/arch
-                operator: In
-                values:
-                - amd64

@@ -1,0 +1,5 @@
+channels:
+- currentCSV: open-liberty-operator.0.3.0
+  name: beta
+defaultChannel: beta
+packageName: open-liberty

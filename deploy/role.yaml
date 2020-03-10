@@ -9,38 +9,16 @@ rules:
   resources:
   - pods
   - services
+  - services/finalizers
   - endpoints
   - persistentvolumeclaims
   - events
   - configmaps
   - secrets
   - serviceaccounts
+  - pods/exec
   verbs:
   - '*'
-- apiGroups:
-  - "extensions"
-  resources:
-  - ingresses
-  verbs:
-  - '*'
-- apiGroups:
-  - "autoscaling"
-  resources:
-  - horizontalpodautoscalers
-  verbs:
-  - '*'
-- apiGroups:
-  - "batch"
-  resources:
-  - jobs
-  verbs:
-  - '*' 
-- apiGroups:
-  - ""
-  resources:
-  - namespaces
-  verbs:
-  - get
 - apiGroups:
   - apps
   resources:
@@ -51,12 +29,19 @@ rules:
   verbs:
   - '*'
 - apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - '*'
+- apiGroups:
   - monitoring.coreos.com
   resources:
   - servicemonitors
   verbs:
   - get
   - create
+  - '*'
 - apiGroups:
   - apps
   resourceNames:
@@ -66,15 +51,36 @@ rules:
   verbs:
   - update
 - apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+- apiGroups:
+  - apps
+  resources:
+  - replicasets
+  verbs:
+  - get
+- apiGroups:
   - openliberty.io
   resources:
   - '*'
+  - openlibertytraces
+  - openlibertydumps
   verbs:
   - '*'
 - apiGroups:
-  - rbac.authorization.k8s.io
+  - route.openshift.io
+  attributeRestrictions: null
   resources:
-  - roles
-  - rolebindings
+  - routes
+  verbs:
+  - '*'
+- apiGroups:
+  - serving.knative.dev
+  attributeRestrictions: null
+  resources:
+  - services
   verbs:
   - '*'
