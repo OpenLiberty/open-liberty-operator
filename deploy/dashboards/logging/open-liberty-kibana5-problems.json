@@ -97,7 +97,7 @@
         "ibm_className",
         "ibm_probeID",
         "ibm_exceptionName",
-        "kubernetes.pod",
+        "kubernetes.pod_name",
         "ibm_sequence"
       ],
       "sort": [
@@ -121,7 +121,7 @@
         "ibm_className",
         "ibm_probeID",
         "ibm_exceptionName",
-        "kubernetes.pod",
+        "kubernetes.pod_name",
         "ibm_sequence"
       ],
       "sort": [
@@ -145,7 +145,7 @@
         "loglevel",
         "module",
         "message",
-        "kubernetes.pod",
+        "kubernetes.pod_name",
         "ibm_sequence"
       ],
       "sort": [
@@ -169,7 +169,7 @@
         "loglevel",
         "module",
         "message",
-        "kubernetes.pod",
+        "kubernetes.pod_name",
         "ibm_sequence"
       ],
       "sort": [
@@ -193,7 +193,7 @@
         "loglevel",
         "module",
         "message",
-        "kubernetes.pod",
+        "kubernetes.pod_name",
         "ibm_sequence"
       ],
       "sort": [
@@ -217,7 +217,7 @@
         "loglevel",
         "module",
         "message",
-        "kubernetes.pod",
+        "kubernetes.pod_name",
         "ibm_sequence"
       ],
       "sort": [
