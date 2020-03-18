@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/appsody/appsody-operator/pkg/common"
+	"github.com/application-stacks/runtime-component-operator/pkg/common"
 
 	lutils "github.com/OpenLiberty/open-liberty-operator/pkg/utils"
-	autils "github.com/appsody/appsody-operator/pkg/utils"
+	oputils "github.com/application-stacks/runtime-component-operator/pkg/utils"
 
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 	prometheusv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
@@ -46,7 +46,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	reconciler := &ReconcileOpenLiberty{ReconcilerBase: autils.NewReconcilerBase(mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor(("open-liberty-operator")))}
+	reconciler := &ReconcileOpenLiberty{ReconcilerBase: oputils.NewReconcilerBase(mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor(("open-liberty-operator")))}
 	return reconciler
 }
 
@@ -58,7 +58,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	watchNamespaces, err := autils.GetWatchNamespaces()
+	watchNamespaces, err := oputils.GetWatchNamespaces()
 	if err != nil {
 		log.Error(err, "Failed to get watch namespace")
 		os.Exit(1)
@@ -172,7 +172,7 @@ var _ reconcile.Reconciler = &ReconcileOpenLiberty{}
 type ReconcileOpenLiberty struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	autils.ReconcilerBase
+	oputils.ReconcilerBase
 }
 
 // Reconcile reads that state of the cluster for a OpenLiberty object and makes changes based on the state read
@@ -189,7 +189,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 
 	// Fetch the OpenLiberty instance
 	instance := &openlibertyv1beta1.OpenLibertyApplication{}
-	var ba common.BaseApplication
+	var ba common.BaseComponent
 	ba = instance
 	err := r.GetClient().Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
@@ -203,7 +203,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	_, err = autils.Validate(instance)
+	_, err = oputils.Validate(instance)
 	// If there's any validation error, don't bother with requeuing
 	if err != nil {
 		reqLogger.Error(err, "Error validating OpenLibertyApplication")
@@ -250,7 +250,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 	if instance.Spec.ServiceAccountName == nil || *instance.Spec.ServiceAccountName == "" {
 		serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
 		err = r.CreateOrUpdate(serviceAccount, instance, func() error {
-			autils.CustomizeServiceAccount(serviceAccount, instance)
+			oputils.CustomizeServiceAccount(serviceAccount, instance)
 			return nil
 		})
 		if err != nil {
@@ -269,7 +269,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 	if instance.Spec.CreateKnativeService != nil && *instance.Spec.CreateKnativeService {
 		ksvc := &servingv1alpha1.Service{ObjectMeta: defaultMeta}
 		err = r.CreateOrUpdate(ksvc, instance, func() error {
-			autils.CustomizeKnativeService(ksvc, instance)
+			oputils.CustomizeKnativeService(ksvc, instance)
 			return nil
 		})
 
@@ -313,7 +313,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 
 	svc := &corev1.Service{ObjectMeta: defaultMeta}
 	err = r.CreateOrUpdate(svc, instance, func() error {
-		autils.CustomizeService(svc, ba)
+		oputils.CustomizeService(svc, ba)
 		svc.Annotations = instance.Spec.Service.Annotations
 		if instance.Spec.Monitoring != nil {
 			svc.Labels["app."+ba.GetGroupName()+"/monitor"] = "true"
@@ -359,7 +359,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		}
 		svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: instance.Name + "-headless", Namespace: instance.Namespace}}
 		err = r.CreateOrUpdate(svc, instance, func() error {
-			autils.CustomizeService(svc, instance)
+			oputils.CustomizeService(svc, instance)
 			svc.Spec.ClusterIP = corev1.ClusterIPNone
 			svc.Spec.Type = corev1.ServiceTypeClusterIP
 			return nil
@@ -371,15 +371,15 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 
 		statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
 		err = r.CreateOrUpdate(statefulSet, instance, func() error {
-			autils.CustomizeStatefulSet(statefulSet, instance)
-			autils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
-			autils.CustomizePersistence(statefulSet, instance)
+			oputils.CustomizeStatefulSet(statefulSet, instance)
+			oputils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
+			oputils.CustomizePersistence(statefulSet, instance)
 			lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance)
 			lutils.ConfigureServiceability(&statefulSet.Spec.Template, instance)
 			if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
 				m := make(map[string]string)
 				m["kappnav.subkind"] = "Liberty"
-				statefulSet.Annotations = autils.MergeMaps(statefulSet.GetAnnotations(), m)
+				statefulSet.Annotations = oputils.MergeMaps(statefulSet.GetAnnotations(), m)
 			}
 			return nil
 		})
@@ -407,14 +407,14 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		}
 		deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
 		err = r.CreateOrUpdate(deploy, instance, func() error {
-			autils.CustomizeDeployment(deploy, instance)
-			autils.CustomizePodSpec(&deploy.Spec.Template, instance)
+			oputils.CustomizeDeployment(deploy, instance)
+			oputils.CustomizePodSpec(&deploy.Spec.Template, instance)
 			lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance)
 			lutils.ConfigureServiceability(&deploy.Spec.Template, instance)
 			if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
 				m := make(map[string]string)
 				m["kappnav.subkind"] = "Liberty"
-				deploy.Annotations = autils.MergeMaps(deploy.GetAnnotations(), m)
+				deploy.Annotations = oputils.MergeMaps(deploy.GetAnnotations(), m)
 			}
 			return nil
 		})
@@ -428,7 +428,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 	if instance.Spec.Autoscaling != nil {
 		hpa := &autoscalingv1.HorizontalPodAutoscaler{ObjectMeta: defaultMeta}
 		err = r.CreateOrUpdate(hpa, instance, func() error {
-			autils.CustomizeHPA(hpa, instance)
+			oputils.CustomizeHPA(hpa, instance)
 			return nil
 		})
 
@@ -451,8 +451,9 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 	} else if ok {
 		if instance.Spec.Expose != nil && *instance.Spec.Expose {
 			route := &routev1.Route{ObjectMeta: defaultMeta}
+			key, cert, caCert, destCACert, err := r.GetRouteTLSValues(ba)
 			err = r.CreateOrUpdate(route, instance, func() error {
-				autils.CustomizeRoute(route, instance)
+				oputils.CustomizeRoute(route, instance, key, cert, caCert, destCACert)
 				return nil
 			})
 			if err != nil {
@@ -478,7 +479,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		if instance.Spec.Monitoring != nil && (instance.Spec.CreateKnativeService == nil || !*instance.Spec.CreateKnativeService) {
 			sm := &prometheusv1.ServiceMonitor{ObjectMeta: defaultMeta}
 			err = r.CreateOrUpdate(sm, instance, func() error {
-				autils.CustomizeServiceMonitor(sm, instance)
+				oputils.CustomizeServiceMonitor(sm, instance)
 				return nil
 			})
 			if err != nil {

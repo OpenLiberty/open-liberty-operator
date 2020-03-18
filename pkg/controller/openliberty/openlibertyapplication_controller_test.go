@@ -10,7 +10,7 @@ import (
 	"strconv"
 
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
-	autils "github.com/appsody/appsody-operator/pkg/utils"
+	oputils "github.com/application-stacks/runtime-component-operator/pkg/utils"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	routev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -80,7 +80,7 @@ func TestOpenLibertyController(t *testing.T) {
 	// Create a fake client to mock API calls.
 	cl := fakeclient.NewFakeClient(objs...)
 
-	rb := autils.NewReconcilerBase(cl, s, &rest.Config{}, record.NewFakeRecorder(10))
+	rb := oputils.NewReconcilerBase(cl, s, &rest.Config{}, record.NewFakeRecorder(10))
 
 	// Create a ReconcileAppsodyApplication object
 	r := &ReconcileOpenLiberty{ReconcilerBase: rb}
@@ -116,7 +116,7 @@ func TestOpenLibertyController(t *testing.T) {
 }
 
 // Test methods
-func testBasicReconcile(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
+func testBasicReconcile(t *testing.T, r *ReconcileOpenLiberty, rb oputils.ReconcilerBase) error {
 	// Mock request to simulate Reconcile being called on an event for a watched resource
 	// then ensure reconcile is successful and does not return an empty result
 	req := createReconcileRequest(name, namespace)
@@ -135,7 +135,7 @@ func testBasicReconcile(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconci
 	return nil
 }
 
-func testStorage(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
+func testStorage(t *testing.T, r *ReconcileOpenLiberty, rb oputils.ReconcilerBase) error {
 	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	req := createReconcileRequest(name, namespace)
@@ -176,7 +176,7 @@ func testStorage(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase
 	return nil
 }
 
-func testKnativeService(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
+func testKnativeService(t *testing.T, r *ReconcileOpenLiberty, rb oputils.ReconcilerBase) error {
 	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	req := createReconcileRequest(name, namespace)
@@ -223,7 +223,7 @@ func testKnativeService(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconci
 	return nil
 }
 
-func testExposeRoute(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
+func testExposeRoute(t *testing.T, r *ReconcileOpenLiberty, rb oputils.ReconcilerBase) error {
 	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	req := createReconcileRequest(name, namespace)
@@ -252,7 +252,7 @@ func testExposeRoute(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconciler
 	return nil
 }
 
-func testAutoscaling(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
+func testAutoscaling(t *testing.T, r *ReconcileOpenLiberty, rb oputils.ReconcilerBase) error {
 	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	req := createReconcileRequest(name, namespace)
@@ -285,7 +285,7 @@ func testAutoscaling(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconciler
 	return nil
 }
 
-func testServiceAccount(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
+func testServiceAccount(t *testing.T, r *ReconcileOpenLiberty, rb oputils.ReconcilerBase) error {
 	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	req := createReconcileRequest(name, namespace)
@@ -315,7 +315,7 @@ func testServiceAccount(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconci
 }
 
 // most of this functionality is handled by autils, only verifying liberty logic
-func testServiceMonitoring(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
+func testServiceMonitoring(t *testing.T, r *ReconcileOpenLiberty, rb oputils.ReconcilerBase) error {
 	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	req := createReconcileRequest(name, namespace)

@@ -1,8 +1,9 @@
 package v1beta1
 
 import (
-	"github.com/appsody/appsody-operator/pkg/common"
+	"github.com/application-stacks/runtime-component-operator/pkg/common"
 	prometheusv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -42,10 +43,15 @@ type OpenLibertyApplicationSpec struct {
 	CreateKnativeService *bool                             `json:"createKnativeService,omitempty"`
 	Monitoring           *OpenLibertyApplicationMonitoring `json:"monitoring,omitempty"`
 	CreateAppDefinition  *bool                             `json:"createAppDefinition,omitempty"`
+	ApplicationName      string                            `json:"applicationName,omitempty"`
 	// +listType=map
 	// +listMapKey=name
-	InitContainers []corev1.Container                    `json:"initContainers,omitempty"`
-	Serviceability *OpenLibertyApplicationServiceability `json:"serviceability,omitempty"`
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
+	// +listType=map
+	// +listMapKey=name
+	SidecarContainers []corev1.Container                    `json:"sidecarContainers,omitempty"`
+	Serviceability    *OpenLibertyApplicationServiceability `json:"serviceability,omitempty"`
+	Route             *OpenLibertyApplicationRoute          `json:"route,omitempty"`
 }
 
 // OpenLibertyApplicationAutoScaling ...
@@ -65,12 +71,16 @@ type OpenLibertyApplicationService struct {
 
 	// +kubebuilder:validation:Maximum=65536
 	// +kubebuilder:validation:Minimum=1
-	Port int32 `json:"port,omitempty"`
+	Port       int32  `json:"port,omitempty"`
+	PortName   string `json:"portName,omitempty"`
+	TargetPort *int32 `json:"targetPort,omitempty"`
 
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// +listType=atomic
-	Consumes []ServiceBindingConsumes `json:"consumes,omitempty"`
-	Provides *ServiceBindingProvides  `json:"provides,omitempty"`
+	Consumes             []ServiceBindingConsumes `json:"consumes,omitempty"`
+	Provides             *ServiceBindingProvides  `json:"provides,omitempty"`
+	Certificate          *Certificate             `json:"certificate"`
+	CertificateSecretRef *string                  `json:"certificateSecretRef"`
 }
 
 // OpenLibertyApplicationStorage ...
@@ -105,18 +115,41 @@ type OpenLibertyApplicationStatus struct {
 	// +listMapKey=type
 	Conditions       []StatusCondition       `json:"conditions,omitempty"`
 	ConsumedServices common.ConsumedServices `json:"consumedServices,omitempty"`
+	ImageReference   string                  `json:"imageReference,omitempty"`
+}
+
+// +k8s:openapi-gen=true
+type OpenLibertyApplicationRoute struct {
+	Annotations                   map[string]string                          `json:"annotations,omitempty"`
+	Termination                   *routev1.TLSTerminationType                `json:"termination,omitempty"`
+	InsecureEdgeTerminationPolicy *routev1.InsecureEdgeTerminationPolicyType `json:"insecureEdgeTerminationPolicy,omitempty"`
+	Certificate                   *Certificate                               `json:"certificate,omitempty"`
+	CertificateSecretRef          *string                                    `json:"certificateSecretRef,omitempty"`
+	Host                          string                                     `json:"host,omitempty"`
+	Path                          string                                     `json:"path,omitempty"`
 }
 
 // StatusCondition ...
 // +k8s:openapi-gen=true
 type StatusCondition struct {
-	LastTransitionTime *metav1.Time               `json:"lastTransitionTime,omitempty"`
-	LastUpdateTime     metav1.Time                `json:"lastUpdateTime,omitempty"`
-	Reason             string                     `json:"reason,omitempty"`
-	Message            string                     `json:"message,omitempty"`
-	Status             corev1.ConditionStatus     `json:"status,omitempty"`
-	Type               common.StatusConditionType `json:"type,omitempty"`
+	LastTransitionTime *metav1.Time           `json:"lastTransitionTime,omitempty"`
+	LastUpdateTime     metav1.Time            `json:"lastUpdateTime,omitempty"`
+	Reason             string                 `json:"reason,omitempty"`
+	Message            string                 `json:"message,omitempty"`
+	Status             corev1.ConditionStatus `json:"status,omitempty"`
+	Type               StatusConditionType    `json:"type,omitempty"`
 }
+
+// StatusConditionType ...
+type StatusConditionType string
+
+const (
+	// StatusConditionTypeReconciled ...
+	StatusConditionTypeReconciled StatusConditionType = "Reconciled"
+
+	// StatusConditionTypeDependenciesSatisfied ...
+	StatusConditionTypeDependenciesSatisfied StatusConditionType = "DependenciesSatisfied"
+)
 
 // ServiceBindingAuth allows a service to provide authentication information
 type ServiceBindingAuth struct {
@@ -254,7 +287,7 @@ func (cr *OpenLibertyApplication) GetArchitecture() []string {
 }
 
 // GetAutoscaling returns autoscaling settings
-func (cr *OpenLibertyApplication) GetAutoscaling() common.BaseApplicationAutoscaling {
+func (cr *OpenLibertyApplication) GetAutoscaling() common.BaseComponentAutoscaling {
 	if cr.Spec.Autoscaling == nil {
 		return nil
 	}
@@ -262,7 +295,7 @@ func (cr *OpenLibertyApplication) GetAutoscaling() common.BaseApplicationAutosca
 }
 
 // GetStorage returns storage settings
-func (cr *OpenLibertyApplication) GetStorage() common.BaseApplicationStorage {
+func (cr *OpenLibertyApplication) GetStorage() common.BaseComponentStorage {
 	if cr.Spec.Storage == nil {
 		return nil
 	}
@@ -270,7 +303,7 @@ func (cr *OpenLibertyApplication) GetStorage() common.BaseApplicationStorage {
 }
 
 // GetService returns service settings
-func (cr *OpenLibertyApplication) GetService() common.BaseApplicationService {
+func (cr *OpenLibertyApplication) GetService() common.BaseComponentService {
 	return &cr.Spec.Service
 }
 
@@ -289,8 +322,13 @@ func (cr *OpenLibertyApplication) GetCreateAppDefinition() *bool {
 	return cr.Spec.CreateAppDefinition
 }
 
+// GetApplicationName return Application name to be used for integration with kAppNav
+func (cr *OpenLibertyApplication) GetApplicationName() string {
+	return cr.Spec.ApplicationName
+}
+
 // GetMonitoring returns monitoring settings
-func (cr *OpenLibertyApplication) GetMonitoring() common.BaseApplicationMonitoring {
+func (cr *OpenLibertyApplication) GetMonitoring() common.BaseComponentMonitoring {
 	if cr.Spec.Monitoring == nil {
 		return nil
 	}
@@ -298,13 +336,18 @@ func (cr *OpenLibertyApplication) GetMonitoring() common.BaseApplicationMonitori
 }
 
 // GetStatus returns OpenLibertyApplication status
-func (cr *OpenLibertyApplication) GetStatus() common.BaseApplicationStatus {
+func (cr *OpenLibertyApplication) GetStatus() common.BaseComponentStatus {
 	return &cr.Status
 }
 
 // GetInitContainers returns list of init containers
 func (cr *OpenLibertyApplication) GetInitContainers() []corev1.Container {
 	return cr.Spec.InitContainers
+}
+
+// GetSidecarContainers returns list of sidecar containers
+func (cr *OpenLibertyApplication) GetSidecarContainers() []corev1.Container {
+	return cr.Spec.SidecarContainers
 }
 
 // GetGroupName returns group name to be used in labels and annotation
@@ -323,6 +366,11 @@ func (s *OpenLibertyApplicationStatus) GetConsumedServices() common.ConsumedServ
 // SetConsumedServices sets ConsumedServices
 func (s *OpenLibertyApplicationStatus) SetConsumedServices(c common.ConsumedServices) {
 	s.ConsumedServices = c
+}
+
+// SetImageReference sets Docker image reference on the status portion of the CR
+func (s *OpenLibertyApplicationStatus) SetImageReference(imageReference string) {
+	s.ImageReference = imageReference
 }
 
 // GetMinReplicas returns minimum replicas
@@ -365,6 +413,15 @@ func (cr *OpenLibertyApplication) GetServiceability() *OpenLibertyApplicationSer
 	return cr.Spec.Serviceability
 }
 
+// GetRoute returns route
+func (cr *OpenLibertyApplication) GetRoute() common.BaseComponentRoute {
+	if cr.Spec.Route == nil {
+		return nil
+	}
+
+	return cr.Spec.Route
+}
+
 // GetSize returns pesistent volume size for Serviceability
 func (s *OpenLibertyApplicationServiceability) GetSize() string {
 	return s.Size
@@ -383,6 +440,19 @@ func (s *OpenLibertyApplicationService) GetPort() int32 {
 	return 9080
 }
 
+// GetPortName return the port name
+func (s *OpenLibertyApplicationService) GetPortName() string {
+	return s.PortName
+}
+
+// GetTargetPort return the internal target container port
+func (s *OpenLibertyApplicationService) GetTargetPort() *int32 {
+	if s.TargetPort == nil {
+		return nil
+	}
+	return s.TargetPort
+}
+
 // GetType returns service type
 func (s *OpenLibertyApplicationService) GetType() *corev1.ServiceType {
 	return &s.Type
@@ -394,6 +464,22 @@ func (s *OpenLibertyApplicationService) GetProvides() common.ServiceBindingProvi
 		return nil
 	}
 	return s.Provides
+}
+
+// GetCertificate returns services certificate configuration
+func (s *OpenLibertyApplicationService) GetCertificate() common.Certificate {
+	if s.Certificate == nil {
+		return nil
+	}
+	return s.Certificate
+}
+
+// GetCertificateSecretRef ...
+func (s *OpenLibertyApplicationService) GetCertificateSecretRef() *string {
+	if s.CertificateSecretRef == nil {
+		return nil
+	}
+	return s.CertificateSecretRef
 }
 
 // GetName returns service name of a service consumer configuration
@@ -474,6 +560,7 @@ func (cr *OpenLibertyApplication) GetLabels() map[string]string {
 		"app.kubernetes.io/instance":   cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
 		"app.kubernetes.io/managed-by": "open-liberty-operator",
+		"app.kubernetes.io/component":  "backend",
 	}
 
 	if cr.Spec.Version != "" {
@@ -491,12 +578,12 @@ func (cr *OpenLibertyApplication) GetLabels() map[string]string {
 
 // GetType returns status condition type
 func (c *StatusCondition) GetType() common.StatusConditionType {
-	return c.Type
+	return convertToCommonStatusConditionType(c.Type)
 }
 
 // SetType returns status condition type
 func (c *StatusCondition) SetType(ct common.StatusConditionType) {
-	c.Type = ct
+	c.Type = convertFromCommonStatusConditionType(ct)
 }
 
 // GetLastTransitionTime return time of last status change
@@ -563,9 +650,13 @@ func (s *OpenLibertyApplicationStatus) GetConditions() []common.StatusCondition 
 	return conditions
 }
 
+// GetImageReference returns Docker image reference to be deployed by the CR
+func (s *OpenLibertyApplicationStatus) GetImageReference() string {
+	return s.ImageReference
+}
+
 // GetCondition ...
 func (s *OpenLibertyApplicationStatus) GetCondition(t common.StatusConditionType) common.StatusCondition {
-
 	for i := range s.Conditions {
 		if s.Conditions[i].GetType() == t {
 			return &s.Conditions[i]
@@ -597,6 +688,47 @@ func (s *OpenLibertyApplicationStatus) SetCondition(c common.StatusCondition) {
 	}
 }
 
+// GetAnnotations returns route annotations
+func (r *OpenLibertyApplicationRoute) GetAnnotations() map[string]string {
+	return r.Annotations
+}
+
+// GetCertificate returns certficate spec for route
+func (r *OpenLibertyApplicationRoute) GetCertificate() common.Certificate {
+	if r.Certificate == nil {
+		return nil
+	}
+	return r.Certificate
+}
+
+// GetTermination returns terminatation of the route's TLS
+func (r *OpenLibertyApplicationRoute) GetTermination() *routev1.TLSTerminationType {
+	return r.Termination
+}
+
+// GetInsecureEdgeTerminationPolicy returns terminatation of the route's TLS
+func (r *OpenLibertyApplicationRoute) GetInsecureEdgeTerminationPolicy() *routev1.InsecureEdgeTerminationPolicyType {
+	return r.InsecureEdgeTerminationPolicy
+}
+
+// GetHost returns hostname to be used by the route
+func (r *OpenLibertyApplicationRoute) GetHost() string {
+	return r.Host
+}
+
+// GetPath returns path to use for the route
+func (r *OpenLibertyApplicationRoute) GetPath() string {
+	return r.Path
+}
+
+// GetCertificateSecretRef returns the secret ref for route certificate
+func (r *OpenLibertyApplicationRoute) GetCertificateSecretRef() *string {
+	if r.CertificateSecretRef == nil {
+		return nil
+	}
+	return r.CertificateSecretRef
+}
+
 // Initialize sets default values
 func (cr *OpenLibertyApplication) Initialize() {
 	if cr.Spec.Service.Port == 0 {
@@ -617,11 +749,45 @@ func (cr *OpenLibertyApplication) Initialize() {
 		cr.Spec.Service.Provides.Protocol = "http"
 	}
 
+	if cr.Spec.ApplicationName == "" {
+		if cr.Labels != nil && cr.Labels["app.kubernetes.io/part-of"] != "" {
+			cr.Spec.ApplicationName = cr.Labels["app.kubernetes.io/part-of"]
+		} else {
+			cr.Spec.ApplicationName = cr.Name
+		}
+	}
+
+	if cr.Labels != nil {
+		cr.Labels["app.kubernetes.io/part-of"] = cr.Spec.ApplicationName
+	}
+
 	for i := range cr.Spec.Service.Consumes {
 		if cr.Spec.Service.Consumes[i].Category == common.ServiceBindingCategoryOpenAPI {
 			if cr.Spec.Service.Consumes[i].Namespace == "" {
 				cr.Spec.Service.Consumes[i].Namespace = cr.Namespace
 			}
 		}
+	}
+}
+
+func convertToCommonStatusConditionType(c StatusConditionType) common.StatusConditionType {
+	switch c {
+	case StatusConditionTypeReconciled:
+		return common.StatusConditionTypeReconciled
+	case StatusConditionTypeDependenciesSatisfied:
+		return common.StatusConditionTypeDependenciesSatisfied
+	default:
+		panic(c)
+	}
+}
+
+func convertFromCommonStatusConditionType(c common.StatusConditionType) StatusConditionType {
+	switch c {
+	case common.StatusConditionTypeReconciled:
+		return StatusConditionTypeReconciled
+	case common.StatusConditionTypeDependenciesSatisfied:
+		return StatusConditionTypeDependenciesSatisfied
+	default:
+		panic(c)
 	}
 }

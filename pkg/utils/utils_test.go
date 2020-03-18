@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
-	autils "github.com/appsody/appsody-operator/pkg/utils"
+	oputils "github.com/application-stacks/runtime-component-operator/pkg/utils"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -49,7 +49,7 @@ func TestCustomizeLibertyEnv(t *testing.T) {
 	}
 	// Always call CustomizePodSpec to populate Containers & simulate real behaviour
 	openliberty := createOpenLibertyApp(name, namespace, spec)
-	autils.CustomizePodSpec(pts, openliberty)
+	oputils.CustomizePodSpec(pts, openliberty)
 	CustomizeLibertyEnv(pts, openliberty)
 
 	testEnv := []Test{
@@ -74,7 +74,7 @@ func TestCustomizeLibertyEnv(t *testing.T) {
 	pts = &corev1.PodTemplateSpec{}
 
 	openliberty = createOpenLibertyApp(name, namespace, spec)
-	autils.CustomizePodSpec(pts, openliberty)
+	oputils.CustomizePodSpec(pts, openliberty)
 	CustomizeLibertyEnv(pts, openliberty)
 
 	testEnv = []Test{

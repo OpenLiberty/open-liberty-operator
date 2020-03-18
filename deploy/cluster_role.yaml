@@ -75,6 +75,7 @@ rules:
   attributeRestrictions: null
   resources:
   - routes
+  - routes/custom-host
   verbs:
   - '*'
 - apiGroups:
@@ -82,5 +83,11 @@ rules:
   attributeRestrictions: null
   resources:
   - services
+  verbs:
+  - '*'
+- apiGroups:
+  - app.k8s.io
+  resources:
+  - applications
   verbs:
   - '*'
