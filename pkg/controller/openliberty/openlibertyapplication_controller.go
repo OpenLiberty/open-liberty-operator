@@ -12,6 +12,7 @@ import (
 
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 	prometheusv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	certmngrv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
@@ -183,6 +184,14 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			})
 	}
 
+	ok, _ = reconciler.IsGroupVersionSupported(certmngrv1alpha2.SchemeGroupVersion.String())
+	if ok {
+		c.Watch(&source.Kind{Type: &certmngrv1alpha2.Certificate{}}, &handler.EnqueueRequestForOwner{
+			IsController: true,
+			OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
+		}, predSubResource)
+	}
+
 	ok, _ = reconciler.IsGroupVersionSupported(routev1.SchemeGroupVersion.String())
 	if ok {
 		err = c.Watch(&source.Kind{Type: &routev1.Route{}}, &handler.EnqueueRequestForOwner{
@@ -291,23 +300,9 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		return result, err
 	}
 
-	if instance.Spec.ServiceAccountName == nil || *instance.Spec.ServiceAccountName == "" {
-		serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
-		err = r.CreateOrUpdate(serviceAccount, instance, func() error {
-			oputils.CustomizeServiceAccount(serviceAccount, instance)
-			return nil
-		})
-		if err != nil {
-			reqLogger.Error(err, "Failed to reconcile ServiceAccount")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-	} else {
-		serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
-		err = r.DeleteResource(serviceAccount)
-		if err != nil {
-			reqLogger.Error(err, "Failed to delete ServiceAccount")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
+	result, err = r.ReconcileCertificate(instance)
+	if err != nil || result != (reconcile.Result{}) {
+		return result, nil
 	}
 
 	imageReferenceOld := instance.Status.ImageReference
@@ -336,6 +331,25 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		err = r.UpdateStatus(instance)
 		if err != nil {
 			reqLogger.Error(err, "Error updating OpenLiberty status")
+			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		}
+	}
+
+	if instance.Spec.ServiceAccountName == nil || *instance.Spec.ServiceAccountName == "" {
+		serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
+		err = r.CreateOrUpdate(serviceAccount, instance, func() error {
+			oputils.CustomizeServiceAccount(serviceAccount, instance)
+			return nil
+		})
+		if err != nil {
+			reqLogger.Error(err, "Failed to reconcile ServiceAccount")
+			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		}
+	} else {
+		serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
+		err = r.DeleteResource(serviceAccount)
+		if err != nil {
+			reqLogger.Error(err, "Failed to delete ServiceAccount")
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
 	}

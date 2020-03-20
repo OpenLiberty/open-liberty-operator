@@ -12,6 +12,7 @@ import (
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 	oputils "github.com/application-stacks/runtime-component-operator/pkg/utils"
 	prometheusv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	certmngrv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
@@ -77,6 +78,10 @@ func TestOpenLibertyController(t *testing.T) {
 		t.Fatalf("Unable to add route scheme: (%v)", err)
 	}
 
+	if err := certmngrv1alpha2.AddToScheme(s); err != nil {
+		t.Fatalf("Unable to add cert-manager scheme: (%v)", err)
+	}
+
 	if err := prometheusv1.AddToScheme(s); err != nil {
 		t.Fatalf("Unable to add prometheus scheme: (%v)", err)
 	}
@@ -86,6 +91,7 @@ func TestOpenLibertyController(t *testing.T) {
 	}
 
 	s.AddKnownTypes(openlibertyv1beta1.SchemeGroupVersion, openliberty)
+	s.AddKnownTypes(certmngrv1alpha2.SchemeGroupVersion, &certmngrv1alpha2.Certificate{})
 	s.AddKnownTypes(prometheusv1.SchemeGroupVersion, &prometheusv1.ServiceMonitor{})
 
 	// Create a fake client to mock API calls.
@@ -400,6 +406,13 @@ func createFakeDiscoveryClient() discovery.DiscoveryInterface {
 				{Name: "services", Namespaced: true, Kind: "Service", SingularName: "service"},
 			},
 		},
+		{
+			GroupVersion: certmngrv1alpha2.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "certificates", Namespaced: true, Kind: "Certificate", SingularName: "certificate"},
+			},
+		},
+
 		{
 			GroupVersion: prometheusv1.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
