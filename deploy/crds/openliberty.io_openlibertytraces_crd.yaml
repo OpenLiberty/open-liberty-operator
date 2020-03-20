@@ -1,6 +1,8 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
+  annotations:
+    day2operation.openliberty.io/targetKinds: Pod
   name: openlibertytraces.openliberty.io
 spec:
   additionalPrinterColumns:
@@ -103,7 +105,6 @@ spec:
                   type: string
               type: object
           type: object
-      type: object
   version: v1beta1
   versions:
   - name: v1beta1

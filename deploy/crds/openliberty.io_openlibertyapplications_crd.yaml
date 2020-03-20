@@ -1,6 +1,8 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
+  annotations:
+    openliberty.io/day2operations: OpenLibertyTrace,OpenLibertyDump
   name: openlibertyapplications.openliberty.io
 spec:
   additionalPrinterColumns:
@@ -4747,7 +4749,6 @@ spec:
             imageReference:
               type: string
           type: object
-      type: object
   version: v1beta1
   versions:
   - name: v1beta1

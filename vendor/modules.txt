@@ -21,6 +21,8 @@ github.com/application-stacks/runtime-component-operator/pkg/common
 github.com/application-stacks/runtime-component-operator/pkg/utils
 # github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
+# github.com/blang/semver v3.5.1+incompatible
+github.com/blang/semver
 # github.com/cespare/xxhash/v2 v2.1.0
 github.com/cespare/xxhash/v2
 # github.com/coreos/prometheus-operator v0.34.0
@@ -137,7 +139,15 @@ github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.1
 github.com/modern-go/reflect2
 # github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible => github.com/openshift/api v0.0.0-20190924102528-32369d4db2ad
+github.com/openshift/api/image/docker10
+github.com/openshift/api/image/dockerpre012
+github.com/openshift/api/image/v1
 github.com/openshift/api/route/v1
+# github.com/openshift/library-go v0.0.0-20200214084717-e77ad9dd8ebd
+github.com/openshift/library-go/pkg/image/imageutil
+github.com/openshift/library-go/pkg/image/internal/digest
+github.com/openshift/library-go/pkg/image/internal/reference
+github.com/openshift/library-go/pkg/image/reference
 # github.com/operator-framework/operator-sdk v0.15.2
 github.com/operator-framework/operator-sdk/internal/scaffold
 github.com/operator-framework/operator-sdk/internal/scaffold/input

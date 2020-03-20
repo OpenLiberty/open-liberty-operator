@@ -11,7 +11,9 @@ import (
 
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 	oputils "github.com/application-stacks/runtime-component-operator/pkg/utils"
+	prometheusv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
+	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -34,8 +36,8 @@ import (
 var (
 	name                       = "app"
 	namespace                  = "openliberty"
-	appImage                   = "my-image"
-	ksvcAppImage               = "ksvc-image"
+	appImage                   = "navidsh/demo-day:latest"
+	ksvcAppImage               = "openliberty/open-liberty:latest"
 	defaultMeta                = metav1.ObjectMeta{Name: name, Namespace: namespace}
 	replicas             int32 = 3
 	autoscaling                = &openlibertyv1beta1.OpenLibertyApplicationAutoScaling{MaxReplicas: 3}
@@ -75,20 +77,31 @@ func TestOpenLibertyController(t *testing.T) {
 		t.Fatalf("Unable to add route scheme: (%v)", err)
 	}
 
+	if err := prometheusv1.AddToScheme(s); err != nil {
+		t.Fatalf("Unable to add prometheus scheme: (%v)", err)
+	}
+
+	if err := imagev1.AddToScheme(s); err != nil {
+		t.Fatalf("Unable to add imagev1 scheme: (%v)", err)
+	}
+
 	s.AddKnownTypes(openlibertyv1beta1.SchemeGroupVersion, openliberty)
+	s.AddKnownTypes(prometheusv1.SchemeGroupVersion, &prometheusv1.ServiceMonitor{})
 
 	// Create a fake client to mock API calls.
 	cl := fakeclient.NewFakeClient(objs...)
 
 	rb := oputils.NewReconcilerBase(cl, s, &rest.Config{}, record.NewFakeRecorder(10))
 
-	// Create a ReconcileAppsodyApplication object
+	// Create a ReconcileOpenLiberty object
 	r := &ReconcileOpenLiberty{ReconcilerBase: rb}
 	r.SetDiscoveryClient(createFakeDiscoveryClient())
 
 	if err := testBasicReconcile(t, r, rb); err != nil {
 		t.Fatalf("%v", err)
 	}
+
+	t.Log(r.IsOpenShift())
 
 	if err := testStorage(t, r, rb); err != nil {
 		t.Fatalf("%v", err)
@@ -314,7 +327,7 @@ func testServiceAccount(t *testing.T, r *ReconcileOpenLiberty, rb oputils.Reconc
 	return nil
 }
 
-// most of this functionality is handled by autils, only verifying liberty logic
+// most of this functionality is handled by oputils, only verifying liberty logic
 func testServiceMonitoring(t *testing.T, r *ReconcileOpenLiberty, rb oputils.ReconcilerBase) error {
 	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
@@ -385,6 +398,18 @@ func createFakeDiscoveryClient() discovery.DiscoveryInterface {
 			GroupVersion: servingv1alpha1.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
 				{Name: "services", Namespaced: true, Kind: "Service", SingularName: "service"},
+			},
+		},
+		{
+			GroupVersion: prometheusv1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "servicemonitors", Namespaced: true, Kind: "ServiceMonitor", SingularName: "servicemonitor"},
+			},
+		},
+		{
+			GroupVersion: imagev1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "imagestreams", Namespaced: true, Kind: "ImageStream", SingularName: "imagestream"},
 			},
 		},
 	}

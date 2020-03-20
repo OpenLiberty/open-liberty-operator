@@ -10,7 +10,9 @@ require (
 	github.com/jetstack/cert-manager v0.12.0
 	github.com/knative/serving v0.7.1-0.20190701162519-7ca25646a186
 	github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible
+	github.com/openshift/library-go v0.0.0-20200214084717-e77ad9dd8ebd
 	github.com/operator-framework/operator-sdk v0.15.2
+	github.com/pkg/errors v0.8.1
 	github.com/spf13/pflag v1.0.5
 	k8s.io/api v0.17.2
 	k8s.io/apimachinery v0.17.2
