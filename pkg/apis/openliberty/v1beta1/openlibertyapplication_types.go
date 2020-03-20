@@ -79,8 +79,8 @@ type OpenLibertyApplicationService struct {
 	// +listType=atomic
 	Consumes             []ServiceBindingConsumes `json:"consumes,omitempty"`
 	Provides             *ServiceBindingProvides  `json:"provides,omitempty"`
-	Certificate          *Certificate             `json:"certificate"`
-	CertificateSecretRef *string                  `json:"certificateSecretRef"`
+	Certificate          *Certificate             `json:"certificate,omitempty"`
+	CertificateSecretRef *string                  `json:"certificateSecretRef,omitempty"`
 }
 
 // OpenLibertyApplicationStorage ...

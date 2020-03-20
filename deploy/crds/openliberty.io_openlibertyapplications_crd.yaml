@@ -2239,9 +2239,6 @@ spec:
                   description: Service Type string describes ingress methods for a
                     service
                   type: string
-              required:
-              - certificate
-              - certificateSecretRef
               type: object
             serviceAccountName:
               type: string

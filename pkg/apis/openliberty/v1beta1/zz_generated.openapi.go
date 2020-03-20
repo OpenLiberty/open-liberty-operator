@@ -250,7 +250,6 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationService(ref commo
 						},
 					},
 				},
-				Required: []string{"certificate", "certificateSecretRef"},
 			},
 		},
 		Dependencies: []string{
