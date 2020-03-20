@@ -22,21 +22,20 @@ cache:
     - vendor
 
 stages:
-  - name: build
-  - name: unit test
-  - name: e2e test
+  - name: test
 
 jobs:
  include:
   - name: Build docker image
-    stage: build
+    stage: test
     script:
     - make build-image
   - name: Run unit tests
-    stage: unit test
+    stage: test
     script:
     - make unit-test
   - name: Run end-to-end tests
-    stage: e2e test
+    stage: test
     script:
     - make test-e2e
+    if: fork = false

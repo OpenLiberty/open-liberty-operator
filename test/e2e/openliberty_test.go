@@ -40,5 +40,5 @@ func TestOpenLibertyApplication(t *testing.T) {
 	t.Run("OpenLibertyServiceMonitorTest", OpenLibertyServiceMonitorTest)
 	t.Run("OpenLibertyKnativeTest", OpenLibertyKnativeTest)
 	t.Run("OpenLibertyTraceTest", OpenLibertyTraceTest)
-	t.Run("OpenLibertyDumpsTest", OpenLibertyDumpsTest)
+	// t.Run("OpenLibertyDumpsTest", OpenLibertyDumpsTest)
 }
