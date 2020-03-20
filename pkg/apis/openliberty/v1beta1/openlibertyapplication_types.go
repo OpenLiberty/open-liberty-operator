@@ -761,11 +761,23 @@ func (cr *OpenLibertyApplication) Initialize() {
 		cr.Labels["app.kubernetes.io/part-of"] = cr.Spec.ApplicationName
 	}
 
-	for i := range cr.Spec.Service.Consumes {
-		if cr.Spec.Service.Consumes[i].Category == common.ServiceBindingCategoryOpenAPI {
-			if cr.Spec.Service.Consumes[i].Namespace == "" {
-				cr.Spec.Service.Consumes[i].Namespace = cr.Namespace
-			}
+	if cr.Spec.Service.Certificate != nil {
+		if cr.Spec.Service.Certificate.IssuerRef.Name == "" {
+			cr.Spec.Service.Certificate.IssuerRef.Name = common.Config[common.OpConfigPropDefaultIssuer]
+		}
+
+		if cr.Spec.Service.Certificate.IssuerRef.Kind == "" && common.Config[common.OpConfigPropUseClusterIssuer] != "false" {
+			cr.Spec.Service.Certificate.IssuerRef.Kind = "ClusterIssuer"
+		}
+	}
+
+	if cr.Spec.Route != nil && cr.Spec.Route.Certificate != nil {
+		if cr.Spec.Route.Certificate.IssuerRef.Name == "" {
+			cr.Spec.Route.Certificate.IssuerRef.Name = common.Config[common.OpConfigPropDefaultIssuer]
+		}
+
+		if cr.Spec.Route.Certificate.IssuerRef.Kind == "" && common.Config[common.OpConfigPropUseClusterIssuer] != "false" {
+			cr.Spec.Route.Certificate.IssuerRef.Kind = "ClusterIssuer"
 		}
 	}
 }

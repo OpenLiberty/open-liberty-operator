@@ -29,6 +29,7 @@ import (
 	"k8s.io/client-go/rest"
 	coretesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/record"
+	applicationsv1beta1 "sigs.k8s.io/application/pkg/apis/app/v1beta1"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -80,6 +81,10 @@ func TestOpenLibertyController(t *testing.T) {
 
 	if err := certmngrv1alpha2.AddToScheme(s); err != nil {
 		t.Fatalf("Unable to add cert-manager scheme: (%v)", err)
+	}
+
+	if err := applicationsv1beta1.AddToScheme(s); err != nil {
+		t.Fatalf("Unable to add applications scheme: (%v)", err)
 	}
 
 	if err := prometheusv1.AddToScheme(s); err != nil {
@@ -423,6 +428,12 @@ func createFakeDiscoveryClient() discovery.DiscoveryInterface {
 			GroupVersion: imagev1.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
 				{Name: "imagestreams", Namespaced: true, Kind: "ImageStream", SingularName: "imagestream"},
+			},
+		},
+		{
+			GroupVersion: applicationsv1beta1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "applications", Namespaced: true, Kind: "Application", SingularName: "application"},
 			},
 		},
 	}

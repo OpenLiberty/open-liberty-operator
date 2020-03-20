@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	applicationsv1beta1 "sigs.k8s.io/application/pkg/apis/app/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -303,6 +304,17 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 	result, err = r.ReconcileCertificate(instance)
 	if err != nil || result != (reconcile.Result{}) {
 		return result, nil
+	}
+
+	if r.IsApplicationSupported() {
+		// Get labels from Applicatoin CRs selector and merge with instance labels
+		existingAppLabels, err := r.GetSelectorLabelsFromApplications(instance)
+		if err != nil {
+			r.ManageError(stderrors.Wrapf(err, "unable to get %q Application CR selector's labels ", instance.Spec.ApplicationName), common.StatusConditionTypeReconciled, instance)
+		}
+		instance.Labels = oputils.MergeMaps(existingAppLabels, instance.Labels)
+	} else {
+		reqLogger.V(1).Info(fmt.Sprintf("%s is not supported on the cluster", applicationsv1beta1.SchemeGroupVersion.String()))
 	}
 
 	imageReferenceOld := instance.Status.ImageReference
