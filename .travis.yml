@@ -17,10 +17,6 @@ go_import_path: github.com/OpenLiberty/open-liberty-operator
 services:
   - docker
 
-cache:
-  directories:
-    - vendor
-
 stages:
   - name: test
 
