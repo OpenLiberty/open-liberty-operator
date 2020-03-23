@@ -84,3 +84,15 @@ rules:
   - services
   verbs:
   - '*'
+- apiGroups:
+  - image.openshift.io
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  verbs:
+  - '*'
