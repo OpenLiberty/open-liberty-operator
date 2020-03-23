@@ -3,6 +3,7 @@ package controller
 import (
 	prometheusv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
+	certmngrv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 	routev1 "github.com/openshift/api/route/v1"
 	imagev1 "github.com/openshift/api/image/v1"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -25,9 +26,14 @@ func AddToManager(m manager.Manager) error {
 		return err
 	}
 
+	if err := certmngrv1alpha2.AddToScheme(m.GetScheme()); err != nil {
+		return err
+	}
+
 	if err := imagev1.AddToScheme(m.GetScheme()); err != nil {
 		return err
 	}
+
 
 	for _, f := range AddToManagerFuncs {
 		if err := f(m); err != nil {
