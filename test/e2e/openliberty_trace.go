@@ -239,7 +239,7 @@ func createTargetApp(t *testing.T, f *framework.Framework, ctx *framework.TestCt
 
 	ol := util.MakeBasicOpenLibertyApplication(t, f, target, ns, int32(replicas))
 	ol.Spec.Serviceability = &openlibertyv1beta1.OpenLibertyApplicationServiceability{
-		Size: "1Gi",
+		Size: "1Mi",
 	}
 
 	err = f.Client.Create(goctx.TODO(), ol, options)

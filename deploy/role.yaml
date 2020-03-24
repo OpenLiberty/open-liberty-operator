@@ -51,23 +51,12 @@ rules:
   verbs:
   - update
 - apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - get
-- apiGroups:
-  - apps
-  resources:
-  - replicasets
-  verbs:
-  - get
-- apiGroups:
   - openliberty.io
   resources:
   - '*'
   - openlibertytraces
   - openlibertydumps
+  - pods/exec
   verbs:
   - '*'
 - apiGroups:

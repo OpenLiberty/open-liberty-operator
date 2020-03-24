@@ -6,6 +6,7 @@ import (
 	certmngrv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 	routev1 "github.com/openshift/api/route/v1"
 	imagev1 "github.com/openshift/api/image/v1"
+	applicationsv1beta1 "sigs.k8s.io/application/pkg/apis/app/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -31,6 +32,10 @@ func AddToManager(m manager.Manager) error {
 	}
 
 	if err := imagev1.AddToScheme(m.GetScheme()); err != nil {
+		return err
+	}
+
+	if err := applicationsv1beta1.AddToScheme(m.GetScheme()); err != nil {
 		return err
 	}
 
