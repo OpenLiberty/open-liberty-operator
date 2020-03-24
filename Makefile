@@ -42,6 +42,8 @@ generate: setup ## Invoke `k8s` and `openapi` generators
 
 	# Remove `x-kubernetes-int-or-string: true` from CRD. Causing issues on cluster with older k8s
 	sed -i '' '/x\-kubernetes\-int\-or\-string\: true/d' deploy/crds/openliberty.io_openlibertyapplications_crd.yaml
+	sed -i '' '/x\-kubernetes\-int\-or\-string\: true/d' deploy/crds/openliberty.io_openlibertytraces_crd.yaml
+	sed -i '' '/x\-kubernetes\-int\-or\-string\: true/d' deploy/crds/openliberty.io_openlibertydumps_crd.yaml
 
 	kubectl annotate -f deploy/crds/openliberty.io_openlibertyapplications_crd.yaml --local=true openliberty.io/day2operations='OpenLibertyTrace,OpenLibertyDump' --overwrite -o yaml | sed '/namespace: ""/d' | awk '/type: object/ {max=NR} {a[NR]=$$0} END{for (i=1;i<=NR;i++) {if (i!=max) print a[i]}}' > deploy/crds/openliberty.io_openlibertyapplications_crd.yaml.tmp
 	kubectl annotate -f deploy/crds/openliberty.io_openlibertytraces_crd.yaml --local=true day2operation.openliberty.io/targetKinds='Pod' --overwrite -o yaml | sed '/namespace: ""/d' | awk '/type: object/ {max=NR} {a[NR]=$$0} END{for (i=1;i<=NR;i++) {if (i!=max) print a[i]}}' > deploy/crds/openliberty.io_openlibertytraces_crd.yaml.tmp
