@@ -1,6 +1,8 @@
 package v1beta1
 
 import (
+	"time"
+
 	"github.com/application-stacks/runtime-component-operator/pkg/common"
 	prometheusv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	routev1 "github.com/openshift/api/route/v1"
@@ -69,16 +71,19 @@ type OpenLibertyApplicationAutoScaling struct {
 type OpenLibertyApplicationService struct {
 	Type corev1.ServiceType `json:"type,omitempty"`
 
-	// +kubebuilder:validation:Maximum=65536
+	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:validation:Minimum=1
 	Port       int32  `json:"port,omitempty"`
 	PortName   string `json:"portName,omitempty"`
+	// +kubebuilder:validation:Maximum=65535
+	// +kubebuilder:validation:Minimum=1
 	TargetPort *int32 `json:"targetPort,omitempty"`
 
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// +listType=atomic
 	Consumes             []ServiceBindingConsumes `json:"consumes,omitempty"`
 	Provides             *ServiceBindingProvides  `json:"provides,omitempty"`
+	// +k8s:openapi-gen=true
 	Certificate          *Certificate             `json:"certificate,omitempty"`
 	CertificateSecretRef *string                  `json:"certificateSecretRef,omitempty"`
 }
@@ -93,6 +98,7 @@ type OpenLibertyApplicationStorage struct {
 }
 
 // OpenLibertyApplicationMonitoring ...
+// +k8s:openapi-gen=true
 type OpenLibertyApplicationMonitoring struct {
 	Labels map[string]string `json:"labels,omitempty"`
 	// +listType=atomic
@@ -561,6 +567,7 @@ func (cr *OpenLibertyApplication) GetLabels() map[string]string {
 		"app.kubernetes.io/name":       cr.Name,
 		"app.kubernetes.io/managed-by": "open-liberty-operator",
 		"app.kubernetes.io/component":  "backend",
+		"app.kubernetes.io/part-of": cr.Spec.ApplicationName,
 	}
 
 	if cr.Spec.Version != "" {
@@ -667,7 +674,6 @@ func (s *OpenLibertyApplicationStatus) GetCondition(t common.StatusConditionType
 
 // SetCondition ...
 func (s *OpenLibertyApplicationStatus) SetCondition(c common.StatusCondition) {
-
 	condition := &StatusCondition{}
 	found := false
 	for i := range s.Conditions {
@@ -677,8 +683,11 @@ func (s *OpenLibertyApplicationStatus) SetCondition(c common.StatusCondition) {
 		}
 	}
 
-	condition.SetLastTransitionTime(c.GetLastTransitionTime())
-	condition.SetLastUpdateTime(c.GetLastUpdateTime())
+	if condition.GetStatus() != c.GetStatus() {
+		condition.SetLastTransitionTime(&metav1.Time{Time: time.Now()})
+	}
+
+	condition.SetLastUpdateTime(metav1.Time{Time: time.Now()})
 	condition.SetReason(c.GetReason())
 	condition.SetMessage(c.GetMessage())
 	condition.SetStatus(c.GetStatus())

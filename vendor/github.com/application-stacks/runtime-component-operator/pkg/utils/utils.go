@@ -168,10 +168,14 @@ func CustomizeService(svc *corev1.Service, ba common.BaseComponent) {
 	svc.Spec.Selector = map[string]string{
 		"app.kubernetes.io/instance": obj.GetName(),
 	}
+
+	if ba.GetService().GetTargetPort() != nil {
+		svc.Spec.Ports[0].TargetPort = intstr.FromInt(int(*ba.GetService().GetTargetPort()))
+	}
 }
 
-// CustomizeServieBindingSecret ...
-func CustomizeServieBindingSecret(secret *corev1.Secret, auth map[string]string, ba common.BaseComponent) {
+// CustomizeServiceBindingSecret ...
+func CustomizeServiceBindingSecret(secret *corev1.Secret, auth map[string]string, ba common.BaseComponent) {
 	obj := ba.(metav1.Object)
 	secret.Labels = ba.GetLabels()
 	secret.Annotations = MergeMaps(secret.Annotations, ba.GetAnnotations())
@@ -222,12 +226,18 @@ func CustomizePodSpec(pts *corev1.PodTemplateSpec, ba common.BaseComponent) {
 	if len(appContainer.Ports) == 0 {
 		appContainer.Ports = append(appContainer.Ports, corev1.ContainerPort{})
 	}
-	appContainer.Ports[0].ContainerPort = ba.GetService().GetPort()
+
+	if ba.GetService().GetTargetPort() != nil {
+		appContainer.Ports[0].ContainerPort = *ba.GetService().GetTargetPort()
+	} else {
+		appContainer.Ports[0].ContainerPort = ba.GetService().GetPort()
+	}
+
 	appContainer.Image = ba.GetStatus().GetImageReference()
 	if ba.GetService().GetPortName() != "" {
 		appContainer.Ports[0].Name = ba.GetService().GetPortName()
 	} else {
-		appContainer.Ports[0].Name = strconv.Itoa(int(ba.GetService().GetPort())) + "-tcp"
+		appContainer.Ports[0].Name = strconv.Itoa(int(appContainer.Ports[0].ContainerPort)) + "-tcp"
 	}
 	if ba.GetResourceConstraints() != nil {
 		appContainer.Resources = *ba.GetResourceConstraints()
@@ -293,7 +303,10 @@ func CustomizeConsumedServices(podSpec *corev1.PodSpec, ba common.BaseComponent)
 	if ba.GetStatus().GetConsumedServices() != nil {
 		appContainer := GetAppContainer(podSpec.Containers)
 		for _, svc := range ba.GetStatus().GetConsumedServices()[common.ServiceBindingCategoryOpenAPI] {
-			c, _ := findConsumes(svc, ba)
+			c, err := findConsumes(svc, ba)
+			if err != nil {
+				continue
+			}
 			if c.GetMountPath() != "" {
 				actualMountPath := strings.Join([]string{c.GetMountPath(), c.GetNamespace(), c.GetName()}, "/")
 				volMount := corev1.VolumeMount{Name: svc, MountPath: actualMountPath, ReadOnly: true}
@@ -310,7 +323,12 @@ func CustomizeConsumedServices(podSpec *corev1.PodSpec, ba common.BaseComponent)
 				podSpec.Volumes = append(podSpec.Volumes, vol)
 			} else {
 				// The characters allowed in names are: digits (0-9), lower case letters (a-z), -, and ..
-				keyPrefix := normalizeEnvVariableName(c.GetNamespace() + "_" + c.GetName() + "_")
+				var keyPrefix string
+				if c.GetNamespace() == "" {
+					keyPrefix = normalizeEnvVariableName(c.GetName() + "_")
+				} else {
+					keyPrefix = normalizeEnvVariableName(c.GetNamespace() + "_" + c.GetName() + "_")
+				}
 				keys := []string{"username", "password", "url", "hostname", "protocol", "port", "context"}
 				trueVal := true
 				for _, k := range keys {
@@ -464,7 +482,16 @@ func CustomizeKnativeService(ksvc *servingv1alpha1.Service, ba common.BaseCompon
 	ksvc.Spec.Template.ObjectMeta.Labels = ba.GetLabels()
 	ksvc.Spec.Template.ObjectMeta.Annotations = MergeMaps(ksvc.Spec.Template.ObjectMeta.Annotations, ba.GetAnnotations())
 
-	ksvc.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort = ba.GetService().GetPort()
+	if ba.GetService().GetTargetPort() != nil {
+		ksvc.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort = *ba.GetService().GetTargetPort()
+	} else {
+		ksvc.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort = ba.GetService().GetPort()
+	}
+
+	if ba.GetService().GetPortName() != "" {
+		ksvc.Spec.Template.Spec.Containers[0].Ports[0].Name = ba.GetService().GetPortName()
+	}
+
 	ksvc.Spec.Template.Spec.Containers[0].Image = ba.GetStatus().GetImageReference()
 	// Knative sets its own resource constraints
 	//ksvc.Spec.Template.Spec.Containers[0].Resources = *cr.Spec.ResourceConstraints
@@ -648,6 +675,7 @@ func GetWatchNamespaces() ([]string, error) {
 
 // MergeMaps returns a map containing the union of al the key-value pairs from the input maps. The order of the maps passed into the
 // func, defines the importance. e.g. if (keyA, value1) is in map1, and (keyA, value2) is in map2, mergeMaps(map1, map2) would contain (keyA, value2).
+// If the input map is nil, it is treated as empty map.
 func MergeMaps(maps ...map[string]string) map[string]string {
 	dest := make(map[string]string)
 
@@ -761,6 +789,24 @@ func GetConnectToAnnotation(ba common.BaseComponent) map[string]string {
 		anno["app.openshift.io/connects-to"] = strings.Join(connectTo, ",")
 	}
 	return anno
+}
+
+// GetOpenShiftAnnotations returns OpenShift specific annotations
+func GetOpenShiftAnnotations(ba common.BaseComponent) map[string]string {
+	// Conversion table between the pseudo Open Container Initiative <-> OpenShift annotations
+	conversionMap := map[string]string{
+		"image.opencontainers.org/source":   "app.openshift.io/vcs-uri",
+		"image.opencontainers.org/revision": "app.openshift.io/vcs-ref",
+	}
+
+	annos := map[string]string{}
+	for from, to := range conversionMap {
+		if annoVal, ok := ba.GetAnnotations()[from]; ok {
+			annos[to] = annoVal
+		}
+	}
+
+	return MergeMaps(annos, GetConnectToAnnotation(ba))
 }
 
 // IsClusterWide returns true if watchNamespaces is set to [""]
