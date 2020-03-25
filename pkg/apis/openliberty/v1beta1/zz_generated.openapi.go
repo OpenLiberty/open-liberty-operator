@@ -13,6 +13,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 	return map[string]common.OpenAPIDefinition{
 		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplication":               schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplication(ref),
 		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAutoScaling":    schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationAutoScaling(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationMonitoring":     schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationMonitoring(ref),
 		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationRoute":          schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationRoute(ref),
 		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationService":        schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationService(ref),
 		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationServiceability": schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationServiceability(ref),
@@ -105,6 +106,52 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationAutoScaling(ref c
 				},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationMonitoring(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "OpenLibertyApplicationMonitoring ...",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"labels": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"endpoints": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1.Endpoint"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1.Endpoint"},
 	}
 }
 

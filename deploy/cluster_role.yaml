@@ -54,7 +54,6 @@ rules:
   - '*'
   - openlibertytraces
   - openlibertydumps
-  - pods/exec
   verbs:
   - '*'
 - apiGroups:
