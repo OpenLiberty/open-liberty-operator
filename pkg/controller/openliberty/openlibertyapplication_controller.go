@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/appsody/appsody-operator/pkg/common"
 
@@ -32,6 +33,9 @@ import (
 )
 
 var log = logf.Log.WithName("controller_openlibertyapplication")
+
+//Constant Values
+const ssoSecretNameSuffix = "-olapp-sso"
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -96,18 +100,19 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// TODO(user): Modify this to be the types you create that are owned by the primary resource
 	// Watch for changes to secondary resource Pods and requeue the owner OpenLiberty
-	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
-	})
-	if err != nil {
-		return err
-	}
+	// err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
+	// 	IsController: true,
+	// 	OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
+	// })
+	// if err != nil {
+	// 	return err
+	// }
 
 	predSubResource := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// Ignore updates to CR status in which case metadata.Generation does not change
-			return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration() && (isClusterWide || watchNamespacesMap[e.MetaOld.GetNamespace()])
+			e.ObjectOld.DeepCopyObject()
+			return (isClusterWide || watchNamespacesMap[e.MetaOld.GetNamespace()])
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
 			return false
@@ -120,13 +125,13 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		},
 	}
 
-	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
-	}, predSubResource)
-	if err != nil {
-		return err
-	}
+	// err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
+	// 	IsController: true,
+	// 	OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
+	// }, predSubResource)
+	// if err != nil {
+	// 	return err
+	// }
 
 	err = c.Watch(&source.Kind{Type: &appsv1.StatefulSet{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
@@ -148,6 +153,26 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		IsController: true,
 		OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
 	}, predSubResource)
+	if err != nil {
+		return err
+	}
+
+	// Setup watch for SSO secret
+	err = c.Watch(
+		&source.Kind{Type: &corev1.Secret{}},
+		&handler.EnqueueRequestsFromMapFunc{
+			ToRequests: handler.ToRequestsFunc(func(a handler.MapObject) []reconcile.Request {
+				if !strings.HasSuffix(a.Meta.GetName(), ssoSecretNameSuffix) {
+					return nil
+				}
+				return []reconcile.Request{
+					{NamespacedName: types.NamespacedName{
+						Name:      strings.NewReplacer(ssoSecretNameSuffix, "").Replace(a.Meta.GetName()),
+						Namespace: a.Meta.GetNamespace(),
+					}},
+				}
+			}),
+		})
 	if err != nil {
 		return err
 	}
@@ -375,6 +400,16 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			autils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
 			autils.CustomizePersistence(statefulSet, instance)
 			lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance)
+			if instance.GetSSO() != nil {
+				secretName := instance.GetName() + ssoSecretNameSuffix
+				ssoSecret := &corev1.Secret{}
+				err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: instance.GetNamespace()}, ssoSecret)
+				if err != nil {
+					reqLogger.Error(nil, "Secret for Single sign-on (SSO) was not found. Create a secret named '"+secretName+"' in namespace '"+instance.GetNamespace()+"' with the credentials for the login providers you selected in application image.")
+					return err
+				}
+				lutils.CustomizeSSOEnv(&statefulSet.Spec.Template, instance, ssoSecret)
+			}
 			lutils.ConfigureServiceability(&statefulSet.Spec.Template, instance)
 			if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
 				m := make(map[string]string)
@@ -410,6 +445,18 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			autils.CustomizeDeployment(deploy, instance)
 			autils.CustomizePodSpec(&deploy.Spec.Template, instance)
 			lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance)
+			//*&deploy.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{}
+			if instance.GetSSO() != nil {
+				secretName := instance.GetName() + ssoSecretNameSuffix
+				ssoSecret := &corev1.Secret{}
+				err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: instance.GetNamespace()}, ssoSecret)
+				if err != nil {
+					reqLogger.Error(nil, "Secret for Single sign-on (SSO) was not found. Create a secret named '"+secretName+"' in namespace '"+instance.GetNamespace()+"' with the credentials for the login providers you selected in application image.")
+					return err
+				}
+				lutils.CustomizeSSOEnv(&deploy.Spec.Template, instance, ssoSecret)
+			}
+
 			lutils.ConfigureServiceability(&deploy.Spec.Template, instance)
 			if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
 				m := make(map[string]string)

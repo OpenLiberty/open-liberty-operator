@@ -46,6 +46,7 @@ type OpenLibertyApplicationSpec struct {
 	// +listMapKey=name
 	InitContainers []corev1.Container                    `json:"initContainers,omitempty"`
 	Serviceability *OpenLibertyApplicationServiceability `json:"serviceability,omitempty"`
+	SSO            *OpenLibertyApplicationSSO            `json:"sso,omitempty"`
 }
 
 // OpenLibertyApplicationAutoScaling ...
@@ -174,6 +175,65 @@ type OpenLibertyApplicationList struct {
 	Items           []OpenLibertyApplication `json:"items"`
 }
 
+// OpenLibertyApplicationSSO represents Single sign-on (SSO) configuration for an OpenLibertyApplication
+// +k8s:openapi-gen=true
+type OpenLibertyApplicationSSO struct {
+	// +listType=map
+	// +listMapKey=oidcLoginID
+	OIDC []OidcClient `json:"oidc,omitempty"`
+
+	// +listType=map
+	// +listMapKey=oauth2LoginID
+	OAuth2 []OAuth2Client `json:"oauth2,omitempty"`
+
+	Github *GithubLogin `json:"github,omitempty"`
+
+	// Common parameters for all SSO providers
+	RedirectToRPHostAndPort string `json:"redirectToRPHostAndPort,omitempty"`
+	MapToUserRegistry       *bool  `json:"mapToUserRegistry,omitempty"`
+}
+
+// OidcClient represents configuration for an OpenID Connect (OIDC) client
+// +k8s:openapi-gen=true
+type OidcClient struct {
+	OidcLoginID                 string `json:"oidcLoginID,omitempty"`
+	DiscoveryEndpoint           string `json:"discoveryEndpoint"`
+	GroupNameAttribute          string `json:"groupNameAttribute,omitempty"`
+	UserNameAttribute           string `json:"userNameAttribute,omitempty"`
+	DisplayName                 string `json:"displayName,omitempty"`
+	UserInfoEndpointEnabled     *bool  `json:"userInfoEndpointEnabled,omitempty"`
+	RealmNameAttribute          string `json:"realmNameAttribute,omitempty"`
+	Scope                       string `json:"scope,omitempty"`
+	TokenEndpointAuthMethod     string `json:"tokenEndpointAuthMethod,omitempty"`
+	HostNameVerificationEnabled *bool  `json:"hostNameVerificationEnabled,omitempty"`
+}
+
+// OAuth2Client represents configuration for an OAuth2 client
+// +k8s:openapi-gen=true
+type OAuth2Client struct {
+	OAuth2LoginID           string `json:"oauth2LoginID,omitempty"`
+	TokenEndpoint           string `json:"tokenEndpoint"`
+	AuthorizationEndpoint   string `json:"authorizationEndpoint"`
+	GroupNameAttribute      string `json:"groupNameAttribute,omitempty"`
+	UserNameAttribute       string `json:"userNameAttribute,omitempty"`
+	DisplayName             string `json:"displayName,omitempty"`
+	RealmNameAttribute      string `json:"realmNameAttribute,omitempty"`
+	RealmName               string `json:"realmName,omitempty"`
+	Scope                   string `json:"scope,omitempty"`
+	TokenEndpointAuthMethod string `json:"tokenEndpointAuthMethod,omitempty"`
+	AccessTokenHeaderName   string `json:"accessTokenHeaderName,omitempty"`
+	AccessTokenRequired     *bool  `json:"accessTokenRequired,omitempty"`
+	AccessTokenSupported    *bool  `json:"accessTokenSupported,omitempty"`
+	UserApiType             string `json:"userApiType,omitempty"`
+	UserApi                 string `json:"userApi,omitempty"`
+}
+
+// GithubLogin represents configuration for social login using GitHub.
+// +k8s:openapi-gen=true
+type GithubLogin struct {
+	Hostname string `json:"hostname,omitempty"`
+}
+
 func init() {
 	SchemeBuilder.Register(&OpenLibertyApplication{}, &OpenLibertyApplicationList{})
 }
@@ -295,6 +355,11 @@ func (cr *OpenLibertyApplication) GetMonitoring() common.BaseApplicationMonitori
 		return nil
 	}
 	return cr.Spec.Monitoring
+}
+
+// GetSSO returns Single sign-on (SSO) for Open Liberty Application
+func (cr *OpenLibertyApplication) GetSSO() *OpenLibertyApplicationSSO {
+	return cr.Spec.SSO
 }
 
 // GetStatus returns OpenLibertyApplication status
@@ -466,6 +531,167 @@ func (m *OpenLibertyApplicationMonitoring) GetLabels() map[string]string {
 // GetEndpoints returns endpoints to be added to ServiceMonitor
 func (m *OpenLibertyApplicationMonitoring) GetEndpoints() []prometheusv1.Endpoint {
 	return m.Endpoints
+}
+
+// GetGitHubLogin returns GitHub login configuration
+func (s *OpenLibertyApplicationSSO) GetGitHubLogin() *GithubLogin {
+	return s.Github
+}
+
+// GetHostname returns GitHub host name
+func (g *GithubLogin) GetHostname() string {
+	return g.Hostname
+}
+
+// GetRedirectToRPHostAndPort returns callback host and port number.
+func (s *OpenLibertyApplicationSSO) GetRedirectToRPHostAndPort() string {
+	return s.RedirectToRPHostAndPort
+}
+
+// GetMapToUserRegistry specifies whether to map userIdentifier to registry user.
+func (s *OpenLibertyApplicationSSO) GetMapToUserRegistry() *bool {
+	return s.MapToUserRegistry
+}
+
+// GetOAuth2Clients returns OAuth2 clients
+func (s *OpenLibertyApplicationSSO) GetOAuth2Clients() []OAuth2Client {
+	return s.OAuth2
+}
+
+// GetOIDCClients returns OIDC clients
+func (s *OpenLibertyApplicationSSO) GetOIDCClients() []OidcClient {
+	return s.OIDC
+}
+
+// GetOidcLoginID returns ID of oidcLogin (specified in  Liberty's server.xml). Default value is "oidc"
+func (o *OidcClient) GetOidcLoginID() string {
+	if o.OidcLoginID == "" {
+		return "oidc"
+	}
+	return o.OidcLoginID
+}
+
+// GetDiscoveryEndpoint returns discoveryEndpoint
+func (o *OidcClient) GetDiscoveryEndpoint() string {
+	return o.DiscoveryEndpoint
+}
+
+// GetGroupNameAttribute returns groupNameAttribute
+func (o *OidcClient) GetGroupNameAttribute() string {
+	return o.GroupNameAttribute
+}
+
+// GetUserNameAttribute returns userNameAttribute
+func (o *OidcClient) GetUserNameAttribute() string {
+	return o.UserNameAttribute
+}
+
+// GetDisplayName returns displayName
+func (o *OidcClient) GetDisplayName() string {
+	return o.DisplayName
+}
+
+// GetUserInfoEndpointEnabled returns userInfoEndpointEnabled
+func (o *OidcClient) GetUserInfoEndpointEnabled() *bool {
+	return o.UserInfoEndpointEnabled
+}
+
+// GetRealmNameAttribute returns realmNameAttribute
+func (o *OidcClient) GetRealmNameAttribute() string {
+	return o.RealmNameAttribute
+}
+
+// GetScope returns scope
+func (o *OidcClient) GetScope() string {
+	return o.Scope
+}
+
+// GetTokenEndpointAuthMethod returns tokenEndpointAuthMethod
+func (o *OidcClient) GetTokenEndpointAuthMethod() string {
+	return o.TokenEndpointAuthMethod
+}
+
+// GetHostNameVerificationEnabled returns hostNameVerificationEnabled
+func (o *OidcClient) GetHostNameVerificationEnabled() *bool {
+	return o.HostNameVerificationEnabled
+}
+
+// GetOAuth2LoginID returns ID of oauth2Login (specified in Liberty's server.xml). Default value is "oauth2"
+func (o *OAuth2Client) GetOAuth2LoginID() string {
+	if o.OAuth2LoginID == "" {
+		return "oauth2"
+	}
+	return o.OAuth2LoginID
+}
+
+// GetTokenEndpoint returns tokenEndpoint
+func (o *OAuth2Client) GetTokenEndpoint() string {
+	return o.TokenEndpoint
+}
+
+// GetAuthorizationEndpoint returns authorizationEndpoint
+func (o *OAuth2Client) GetAuthorizationEndpoint() string {
+	return o.AuthorizationEndpoint
+}
+
+// GetGroupNameAttribute returns groupNameAttribute
+func (o *OAuth2Client) GetGroupNameAttribute() string {
+	return o.GroupNameAttribute
+}
+
+// GetUserNameAttribute returns userNameAttribute
+func (o *OAuth2Client) GetUserNameAttribute() string {
+	return o.UserNameAttribute
+}
+
+// GetDisplayName returns displayName
+func (o *OAuth2Client) GetDisplayName() string {
+	return o.DisplayName
+}
+
+// GetRealmNameAttribute returns realmNameAttribute
+func (o *OAuth2Client) GetRealmNameAttribute() string {
+	return o.RealmNameAttribute
+}
+
+// GetRealmName returns realmName
+func (o *OAuth2Client) GetRealmName() string {
+	return o.RealmName
+}
+
+// GetScope returns scope
+func (o *OAuth2Client) GetScope() string {
+	return o.Scope
+}
+
+// GetTokenEndpointAuthMethod returns tokenEndpointAuthMethod
+func (o *OAuth2Client) GetTokenEndpointAuthMethod() string {
+	return o.TokenEndpointAuthMethod
+}
+
+// GetAccessTokenHeaderName returns accessTokenHeaderName
+func (o *OAuth2Client) GetAccessTokenHeaderName() string {
+	return o.AccessTokenHeaderName
+}
+
+// GetAccessTokenRequired returns accessTokenRequired
+func (o *OAuth2Client) GetAccessTokenRequired() *bool {
+	return o.AccessTokenRequired
+}
+
+// GetAccessTokenSupported returns accessTokenSupported
+func (o *OAuth2Client) GetAccessTokenSupported() *bool {
+	return o.AccessTokenSupported
+}
+
+// GetUserApiType returns userApiType
+func (o *OAuth2Client) GetUserApiType() string {
+	return o.UserApiType
+}
+
+// GetUserApi returns userApi
+func (o *OAuth2Client) GetUserApi() string {
+	return o.UserApi
 }
 
 // GetLabels returns set of labels to be added to all resources
