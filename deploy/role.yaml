@@ -56,7 +56,6 @@ rules:
   - '*'
   - openlibertytraces
   - openlibertydumps
-  - pods/exec
   verbs:
   - '*'
 - apiGroups:
@@ -64,6 +63,7 @@ rules:
   attributeRestrictions: null
   resources:
   - routes
+  - routes/custom-host
   verbs:
   - '*'
 - apiGroups:
