@@ -610,6 +610,10 @@ func (cr *OpenLibertyApplication) Initialize() {
 		}
 	}
 
+	if cr.Spec.ResourceConstraints == nil {
+		cr.Spec.ResourceConstraints = &corev1.ResourceRequirements{}
+	}
+
 	if cr.Labels != nil {
 		cr.Labels["app.kubernetes.io/part-of"] = cr.Spec.ApplicationName
 	}
