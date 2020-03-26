@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/appsody/appsody-operator/pkg/common"
+	"github.com/pkg/errors"
 
 	lutils "github.com/OpenLiberty/open-liberty-operator/pkg/utils"
 	autils "github.com/appsody/appsody-operator/pkg/utils"
@@ -18,7 +19,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -216,7 +217,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 	ba = instance
 	err := r.GetClient().Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if kerrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
@@ -356,7 +357,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		if instance.Spec.Serviceability.VolumeClaimName != "" {
 			pvcName := instance.Spec.Serviceability.VolumeClaimName
 			err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: pvcName, Namespace: instance.Namespace}, &corev1.PersistentVolumeClaim{})
-			if err != nil && errors.IsNotFound(err) {
+			if err != nil && kerrors.IsNotFound(err) {
 				reqLogger.Error(err, "Failed to find PersistentVolumeClaim "+pvcName+" in namespace "+instance.Namespace)
 				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 			}
@@ -398,13 +399,12 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			autils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
 			autils.CustomizePersistence(statefulSet, instance)
 			lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance)
-			if instance.GetSSO() != nil {
+			if instance.Spec.SSO != nil {
 				secretName := instance.GetName() + ssoSecretNameSuffix
 				ssoSecret := &corev1.Secret{}
 				err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: instance.GetNamespace()}, ssoSecret)
 				if err != nil {
-					reqLogger.Error(nil, "Secret for Single sign-on (SSO) was not found. Create a secret named '"+secretName+"' in namespace '"+instance.GetNamespace()+"' with the credentials for the login providers you selected in application image.")
-					return err
+					return errors.Wrapf(err, "Secret for Single sign-on (SSO) was not found. Create a secret named %q in namespace %q with the credentials for the login providers you selected in application image.", secretName, instance.GetNamespace())
 				}
 				lutils.CustomizeEnvSSO(&statefulSet.Spec.Template, instance, ssoSecret)
 			}
@@ -443,13 +443,12 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			autils.CustomizeDeployment(deploy, instance)
 			autils.CustomizePodSpec(&deploy.Spec.Template, instance)
 			lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance)
-			if instance.GetSSO() != nil {
+			if instance.Spec.SSO != nil {
 				secretName := instance.GetName() + ssoSecretNameSuffix
 				ssoSecret := &corev1.Secret{}
 				err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: instance.GetNamespace()}, ssoSecret)
 				if err != nil {
-					reqLogger.Error(nil, "Secret for Single sign-on (SSO) was not found. Create a secret named '"+secretName+"' in namespace '"+instance.GetNamespace()+"' with the credentials for the login providers you selected in application image.")
-					return err
+					return errors.Wrapf(err, "Secret for Single sign-on (SSO) was not found. Create a secret named %q in namespace %q with the credentials for the login providers you selected in application image.", secretName, instance.GetNamespace())
 				}
 				lutils.CustomizeEnvSSO(&deploy.Spec.Template, instance, ssoSecret)
 			}
