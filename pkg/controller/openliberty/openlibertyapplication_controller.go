@@ -486,7 +486,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 	svc := &corev1.Service{ObjectMeta: defaultMeta}
 	err = r.CreateOrUpdate(svc, instance, func() error {
 		oputils.CustomizeService(svc, ba)
-		svc.Annotations = instance.Spec.Service.Annotations
+		svc.Annotations = oputils.MergeMaps(svc.Annotations, instance.Spec.Service.Annotations)
 		monitoringEnabledLabelName := getMonitoringEnabledLabelName(ba)
 		if instance.Spec.Monitoring != nil {
 			svc.Labels[monitoringEnabledLabelName] = "true"
