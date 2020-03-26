@@ -110,8 +110,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	predSubResource := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			// Ignore updates to CR status in which case metadata.Generation does not change
-			e.ObjectOld.DeepCopyObject()
 			return (isClusterWide || watchNamespacesMap[e.MetaOld.GetNamespace()])
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
@@ -125,13 +123,13 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		},
 	}
 
-	// err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
-	// 	IsController: true,
-	// 	OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
-	// }, predSubResource)
-	// if err != nil {
-	// 	return err
-	// }
+	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
+	}, predSubResource)
+	if err != nil {
+		return err
+	}
 
 	err = c.Watch(&source.Kind{Type: &appsv1.StatefulSet{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
@@ -408,7 +406,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 					reqLogger.Error(nil, "Secret for Single sign-on (SSO) was not found. Create a secret named '"+secretName+"' in namespace '"+instance.GetNamespace()+"' with the credentials for the login providers you selected in application image.")
 					return err
 				}
-				lutils.CustomizeSSOEnv(&statefulSet.Spec.Template, instance, ssoSecret)
+				lutils.CustomizeEnvSSO(&statefulSet.Spec.Template, instance, ssoSecret)
 			}
 			lutils.ConfigureServiceability(&statefulSet.Spec.Template, instance)
 			if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
@@ -445,7 +443,6 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			autils.CustomizeDeployment(deploy, instance)
 			autils.CustomizePodSpec(&deploy.Spec.Template, instance)
 			lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance)
-			//*&deploy.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{}
 			if instance.GetSSO() != nil {
 				secretName := instance.GetName() + ssoSecretNameSuffix
 				ssoSecret := &corev1.Secret{}
@@ -454,7 +451,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 					reqLogger.Error(nil, "Secret for Single sign-on (SSO) was not found. Create a secret named '"+secretName+"' in namespace '"+instance.GetNamespace()+"' with the credentials for the login providers you selected in application image.")
 					return err
 				}
-				lutils.CustomizeSSOEnv(&deploy.Spec.Template, instance, ssoSecret)
+				lutils.CustomizeEnvSSO(&deploy.Spec.Template, instance, ssoSecret)
 			}
 
 			lutils.ConfigureServiceability(&deploy.Spec.Template, instance)

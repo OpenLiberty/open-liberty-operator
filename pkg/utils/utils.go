@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -208,19 +209,24 @@ func getValue(v interface{}) string {
 	}
 }
 
-func getSsoEnv(envSuffix string, value interface{}, loginID string) *corev1.EnvVar {
+func getSsoEnv(loginID string, envSuffix string, value interface{}) *corev1.EnvVar {
 	return &corev1.EnvVar{
 		Name:  ssoEnvPrefix + loginID + envSuffix,
 		Value: getValue(value),
 	}
 }
 
-// CustomizeSSOEnv Process the configuration for SSO login providers
-func CustomizeSSOEnv(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.OpenLibertyApplication, ssoSecret *corev1.Secret) {
+// CustomizeEnvSSO Process the configuration for SSO login providers
+func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.OpenLibertyApplication, ssoSecret *corev1.Secret) {
+
+	var secretKeys []string
+	for k := range ssoSecret.Data {
+		secretKeys = append(secretKeys, k)
+	}
+	sort.Strings(secretKeys)
 
 	ssoEnv := []corev1.EnvVar{}
-
-	for k := range ssoSecret.Data {
+	for _, k := range secretKeys {
 		ssoEnv = append(ssoEnv, corev1.EnvVar{
 			Name: ssoEnvPrefix + normalizeEnvVariableName(k),
 			ValueFrom: &corev1.EnvVarSource{
@@ -236,92 +242,92 @@ func CustomizeSSOEnv(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 
 	sso := instance.GetSSO()
 	if sso.GetMapToUserRegistry() != nil {
-		ssoEnv = append(ssoEnv, *getSsoEnv("MAPTOUSERREGISTRY", *sso.GetMapToUserRegistry(), ""))
+		ssoEnv = append(ssoEnv, *getSsoEnv("", "MAPTOUSERREGISTRY", *sso.GetMapToUserRegistry()))
 	}
 
 	if sso.GetRedirectToRPHostAndPort() != "" {
-		ssoEnv = append(ssoEnv, *getSsoEnv("REDIRECTTORPHOSTANDPORT", sso.GetRedirectToRPHostAndPort(), ""))
+		ssoEnv = append(ssoEnv, *getSsoEnv("", "REDIRECTTORPHOSTANDPORT", sso.GetRedirectToRPHostAndPort()))
 	}
 
 	if sso.GetGitHubLogin() != nil && sso.GetGitHubLogin().GetHostname() != "" {
-		ssoEnv = append(ssoEnv, *getSsoEnv("GITHUB_HOSTNAME", sso.GetGitHubLogin().GetHostname(), ""))
+		ssoEnv = append(ssoEnv, *getSsoEnv("", "GITHUB_HOSTNAME", sso.GetGitHubLogin().GetHostname()))
 	}
 
 	for _, oidcClient := range sso.GetOIDCClients() {
 		oidcLoginID := strings.ToUpper(oidcClient.GetOidcLoginID())
 
 		if oidcClient.GetDiscoveryEndpoint() != "" {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_DISCOVERYENDPOINT", oidcClient.GetDiscoveryEndpoint(), oidcLoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oidcLoginID, "_DISCOVERYENDPOINT", oidcClient.GetDiscoveryEndpoint()))
 		}
 		if oidcClient.GetGroupNameAttribute() != "" {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_GROUPNAMEATTRIBUTE", oidcClient.GetGroupNameAttribute(), oidcLoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oidcLoginID, "_GROUPNAMEATTRIBUTE", oidcClient.GetGroupNameAttribute()))
 		}
 		if oidcClient.GetUserNameAttribute() != "" {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_USERNAMEATTRIBUTE", oidcClient.GetUserNameAttribute(), oidcLoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oidcLoginID, "_USERNAMEATTRIBUTE", oidcClient.GetUserNameAttribute()))
 		}
 		if oidcClient.GetDisplayName() != "" {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_DISPLAYNAME", oidcClient.GetDisplayName(), oidcLoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oidcLoginID, "_DISPLAYNAME", oidcClient.GetDisplayName()))
 		}
 		if oidcClient.GetUserInfoEndpointEnabled() != nil {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_USERINFOENDPOINTENABLED", *oidcClient.GetUserInfoEndpointEnabled(), oidcLoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oidcLoginID, "_USERINFOENDPOINTENABLED", *oidcClient.GetUserInfoEndpointEnabled()))
 		}
 		if oidcClient.GetRealmNameAttribute() != "" {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_REALMNAMEATTRIBUTE", oidcClient.GetRealmNameAttribute(), oidcLoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oidcLoginID, "_REALMNAMEATTRIBUTE", oidcClient.GetRealmNameAttribute()))
 		}
 		if oidcClient.GetScope() != "" {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_SCOPE", oidcClient.GetScope(), oidcLoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oidcLoginID, "_SCOPE", oidcClient.GetScope()))
 		}
 		if oidcClient.GetTokenEndpointAuthMethod() != "" {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_TOKENENDPOINTAUTHMETHOD", oidcClient.GetTokenEndpointAuthMethod(), oidcLoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oidcLoginID, "_TOKENENDPOINTAUTHMETHOD", oidcClient.GetTokenEndpointAuthMethod()))
 		}
 		if oidcClient.GetHostNameVerificationEnabled() != nil {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_HOSTNAMEVERIFICATIONENABLED", *oidcClient.GetHostNameVerificationEnabled(), oidcLoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oidcLoginID, "_HOSTNAMEVERIFICATIONENABLED", *oidcClient.GetHostNameVerificationEnabled()))
 		}
 	}
 
 	for _, oauth2Client := range sso.GetOAuth2Clients() {
 		oauth2LoginID := strings.ToUpper(oauth2Client.GetOAuth2LoginID())
 		if oauth2Client.GetTokenEndpoint() != "" {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_TOKENENDPOINT", oauth2Client.GetTokenEndpoint(), oauth2LoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oauth2LoginID, "_TOKENENDPOINT", oauth2Client.GetTokenEndpoint()))
 		}
 		if oauth2Client.GetAuthorizationEndpoint() != "" {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_AUTHORIZATIONENDPOINT", oauth2Client.GetAuthorizationEndpoint(), oauth2LoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oauth2LoginID, "_AUTHORIZATIONENDPOINT", oauth2Client.GetAuthorizationEndpoint()))
 		}
 		if oauth2Client.GetGroupNameAttribute() != "" {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_GROUPNAMEATTRIBUTE", oauth2Client.GetGroupNameAttribute(), oauth2LoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oauth2LoginID, "_GROUPNAMEATTRIBUTE", oauth2Client.GetGroupNameAttribute()))
 		}
 		if oauth2Client.GetUserNameAttribute() != "" {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_USERNAMEATTRIBUTE", oauth2Client.GetUserNameAttribute(), oauth2LoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oauth2LoginID, "_USERNAMEATTRIBUTE", oauth2Client.GetUserNameAttribute()))
 		}
 		if oauth2Client.GetDisplayName() != "" {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_DISPLAYNAME", oauth2Client.GetDisplayName(), oauth2LoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oauth2LoginID, "_DISPLAYNAME", oauth2Client.GetDisplayName()))
 		}
 		if oauth2Client.GetRealmNameAttribute() != "" {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_REALMNAMEATTRIBUTE", oauth2Client.GetRealmNameAttribute(), oauth2LoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oauth2LoginID, "_REALMNAMEATTRIBUTE", oauth2Client.GetRealmNameAttribute()))
 		}
 		if oauth2Client.GetRealmName() != "" {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_REALMNAME", oauth2Client.GetRealmName(), oauth2LoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oauth2LoginID, "_REALMNAME", oauth2Client.GetRealmName()))
 		}
 		if oauth2Client.GetScope() != "" {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_SCOPE", oauth2Client.GetScope(), oauth2LoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oauth2LoginID, "_SCOPE", oauth2Client.GetScope()))
 		}
 		if oauth2Client.GetTokenEndpointAuthMethod() != "" {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_TOKENENDPOINTAUTHMETHOD", oauth2Client.GetTokenEndpointAuthMethod(), oauth2LoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oauth2LoginID, "_TOKENENDPOINTAUTHMETHOD", oauth2Client.GetTokenEndpointAuthMethod()))
 		}
 		if oauth2Client.GetAccessTokenHeaderName() != "" {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_ACCESSTOKENHEADERNAME", oauth2Client.GetAccessTokenHeaderName(), oauth2LoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oauth2LoginID, "_ACCESSTOKENHEADERNAME", oauth2Client.GetAccessTokenHeaderName()))
 		}
 		if oauth2Client.GetAccessTokenRequired() != nil {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_ACCESSTOKENREQUIRED", *oauth2Client.GetAccessTokenRequired(), oauth2LoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oauth2LoginID, "_ACCESSTOKENREQUIRED", *oauth2Client.GetAccessTokenRequired()))
 		}
 		if oauth2Client.GetAccessTokenSupported() != nil {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_ACCESSTOKENSUPPORTED", *oauth2Client.GetAccessTokenSupported(), oauth2LoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oauth2LoginID, "_ACCESSTOKENSUPPORTED", *oauth2Client.GetAccessTokenSupported()))
 		}
 		if oauth2Client.GetUserApiType() != "" {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_USERAPITYPE", oauth2Client.GetUserApiType(), oauth2LoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oauth2LoginID, "_USERAPITYPE", oauth2Client.GetUserApiType()))
 		}
 		if oauth2Client.GetUserApi() != "" {
-			ssoEnv = append(ssoEnv, *getSsoEnv("_USERAPI", oauth2Client.GetUserApi(), oauth2LoginID))
+			ssoEnv = append(ssoEnv, *getSsoEnv(oauth2LoginID, "_USERAPI", oauth2Client.GetUserApi()))
 		}
 	}
 
