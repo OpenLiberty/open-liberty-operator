@@ -25,13 +25,12 @@ type OpenLibertyApplicationSpec struct {
 	// +listType=map
 	// +listMapKey=name
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
-	// +listType=map
-	// +listMapKey=name
+	// +listType=atomic
 	VolumeMounts        []corev1.VolumeMount          `json:"volumeMounts,omitempty"`
 	ResourceConstraints *corev1.ResourceRequirements  `json:"resourceConstraints,omitempty"`
 	ReadinessProbe      *corev1.Probe                 `json:"readinessProbe,omitempty"`
 	LivenessProbe       *corev1.Probe                 `json:"livenessProbe,omitempty"`
-	Service             OpenLibertyApplicationService `json:"service,omitempty"`
+	Service             *OpenLibertyApplicationService `json:"service,omitempty"`
 	Expose              *bool                         `json:"expose,omitempty"`
 	// +listType=atomic
 	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
@@ -69,15 +68,16 @@ type OpenLibertyApplicationAutoScaling struct {
 // OpenLibertyApplicationService ...
 // +k8s:openapi-gen=true
 type OpenLibertyApplicationService struct {
-	Type corev1.ServiceType `json:"type,omitempty"`
+	Type *corev1.ServiceType `json:"type,omitempty"`
 
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:validation:Minimum=1
 	Port       int32  `json:"port,omitempty"`
-	PortName   string `json:"portName,omitempty"`
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:validation:Minimum=1
 	TargetPort *int32 `json:"targetPort,omitempty"`
+
+	PortName   string `json:"portName,omitempty"`
 
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// +listType=atomic
@@ -86,6 +86,24 @@ type OpenLibertyApplicationService struct {
 	// +k8s:openapi-gen=true
 	Certificate          *Certificate             `json:"certificate,omitempty"`
 	CertificateSecretRef *string                  `json:"certificateSecretRef,omitempty"`
+}
+
+// ServiceBindingProvides represents information about
+// +k8s:openapi-gen=true
+type ServiceBindingProvides struct {
+	Category common.ServiceBindingCategory `json:"category"`
+	Context  string                        `json:"context,omitempty"`
+	Protocol string                        `json:"protocol,omitempty"`
+	Auth     *ServiceBindingAuth           `json:"auth,omitempty"`
+}
+
+// ServiceBindingConsumes represents a service to be consumed
+// +k8s:openapi-gen=true
+type ServiceBindingConsumes struct {
+	Name      string                        `json:"name"`
+	Namespace string                        `json:"namespace,omitempty"`
+	Category  common.ServiceBindingCategory `json:"category"`
+	MountPath string                        `json:"mountPath,omitempty"`
 }
 
 // OpenLibertyApplicationStorage ...
@@ -114,16 +132,6 @@ type OpenLibertyApplicationServiceability struct {
 	VolumeClaimName string `json:"volumeClaimName,omitempty"`
 }
 
-// OpenLibertyApplicationStatus defines the observed state of OpenLibertyApplication
-// +k8s:openapi-gen=true
-type OpenLibertyApplicationStatus struct {
-	// +listType=map
-	// +listMapKey=type
-	Conditions       []StatusCondition       `json:"conditions,omitempty"`
-	ConsumedServices common.ConsumedServices `json:"consumedServices,omitempty"`
-	ImageReference   string                  `json:"imageReference,omitempty"`
-}
-
 // +k8s:openapi-gen=true
 type OpenLibertyApplicationRoute struct {
 	Annotations                   map[string]string                          `json:"annotations,omitempty"`
@@ -133,6 +141,24 @@ type OpenLibertyApplicationRoute struct {
 	CertificateSecretRef          *string                                    `json:"certificateSecretRef,omitempty"`
 	Host                          string                                     `json:"host,omitempty"`
 	Path                          string                                     `json:"path,omitempty"`
+}
+
+// ServiceBindingAuth allows a service to provide authentication information
+type ServiceBindingAuth struct {
+	// The secret that contains the username for authenticating
+	Username corev1.SecretKeySelector `json:"username,omitempty"`
+	// The secret that contains the password for authenticating
+	Password corev1.SecretKeySelector `json:"password,omitempty"`
+}
+
+// OpenLibertyApplicationStatus defines the observed state of OpenLibertyApplication
+// +k8s:openapi-gen=true
+type OpenLibertyApplicationStatus struct {
+	// +listType=map
+	// +listMapKey=type
+	Conditions       []StatusCondition       `json:"conditions,omitempty"`
+	ConsumedServices common.ConsumedServices `json:"consumedServices,omitempty"`
+	ImageReference   string                  `json:"imageReference,omitempty"`
 }
 
 // StatusCondition ...
@@ -156,32 +182,6 @@ const (
 	// StatusConditionTypeDependenciesSatisfied ...
 	StatusConditionTypeDependenciesSatisfied StatusConditionType = "DependenciesSatisfied"
 )
-
-// ServiceBindingAuth allows a service to provide authentication information
-type ServiceBindingAuth struct {
-	// The secret that contains the username for authenticating
-	Username corev1.SecretKeySelector `json:"username,omitempty"`
-	// The secret that contains the password for authenticating
-	Password corev1.SecretKeySelector `json:"password,omitempty"`
-}
-
-// ServiceBindingProvides represents information about
-// +k8s:openapi-gen=true
-type ServiceBindingProvides struct {
-	Category common.ServiceBindingCategory `json:"category"`
-	Context  string                        `json:"context,omitempty"`
-	Protocol string                        `json:"protocol,omitempty"`
-	Auth     *ServiceBindingAuth           `json:"auth,omitempty"`
-}
-
-// ServiceBindingConsumes represents a service to be consumed
-// +k8s:openapi-gen=true
-type ServiceBindingConsumes struct {
-	Name      string                        `json:"name"`
-	Namespace string                        `json:"namespace,omitempty"`
-	Category  common.ServiceBindingCategory `json:"category"`
-	MountPath string                        `json:"mountPath,omitempty"`
-}
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -310,7 +310,10 @@ func (cr *OpenLibertyApplication) GetStorage() common.BaseComponentStorage {
 
 // GetService returns service settings
 func (cr *OpenLibertyApplication) GetService() common.BaseComponentService {
-	return &cr.Spec.Service
+	if cr.Spec.Service == nil {
+		return nil
+	}
+	return cr.Spec.Service
 }
 
 // GetVersion returns application version
@@ -318,17 +321,12 @@ func (cr *OpenLibertyApplication) GetVersion() string {
 	return cr.Spec.Version
 }
 
-// GetAnnotations returns application annotation
-func (cr *OpenLibertyApplication) GetAnnotations() map[string]string {
-	return cr.Annotations
-}
-
 // GetCreateAppDefinition returns a toggle for integration with kAppNav
 func (cr *OpenLibertyApplication) GetCreateAppDefinition() *bool {
 	return cr.Spec.CreateAppDefinition
 }
 
-// GetApplicationName return Application name to be used for integration with kAppNav
+// GetApplicationName returns Application name to be used for integration with kAppNav
 func (cr *OpenLibertyApplication) GetApplicationName() string {
 	return cr.Spec.ApplicationName
 }
@@ -361,6 +359,14 @@ func (cr *OpenLibertyApplication) GetGroupName() string {
 	return "openliberty.io"
 }
 
+// GetRoute returns route
+func (cr *OpenLibertyApplication) GetRoute() common.BaseComponentRoute {
+	if cr.Spec.Route == nil {
+		return nil
+	}
+	return cr.Spec.Route
+}
+
 // GetConsumedServices returns a map of all the service names to be consumed by the application
 func (s *OpenLibertyApplicationStatus) GetConsumedServices() common.ConsumedServices {
 	if s.ConsumedServices == nil {
@@ -372,6 +378,11 @@ func (s *OpenLibertyApplicationStatus) GetConsumedServices() common.ConsumedServ
 // SetConsumedServices sets ConsumedServices
 func (s *OpenLibertyApplicationStatus) SetConsumedServices(c common.ConsumedServices) {
 	s.ConsumedServices = c
+}
+
+// GetImageReference returns Docker image reference to be deployed by the CR
+func (s *OpenLibertyApplicationStatus) GetImageReference() string {
+	return s.ImageReference
 }
 
 // SetImageReference sets Docker image reference on the status portion of the CR
@@ -419,14 +430,6 @@ func (cr *OpenLibertyApplication) GetServiceability() *OpenLibertyApplicationSer
 	return cr.Spec.Serviceability
 }
 
-// GetRoute returns route
-func (cr *OpenLibertyApplication) GetRoute() common.BaseComponentRoute {
-	if cr.Spec.Route == nil {
-		return nil
-	}
-
-	return cr.Spec.Route
-}
 
 // GetSize returns pesistent volume size for Serviceability
 func (s *OpenLibertyApplicationServiceability) GetSize() string {
@@ -446,11 +449,6 @@ func (s *OpenLibertyApplicationService) GetPort() int32 {
 	return 9080
 }
 
-// GetPortName return the port name
-func (s *OpenLibertyApplicationService) GetPortName() string {
-	return s.PortName
-}
-
 // GetTargetPort return the internal target container port
 func (s *OpenLibertyApplicationService) GetTargetPort() *int32 {
 	if s.TargetPort == nil {
@@ -459,9 +457,14 @@ func (s *OpenLibertyApplicationService) GetTargetPort() *int32 {
 	return s.TargetPort
 }
 
+// GetPortName returns name of service port
+func (s *OpenLibertyApplicationService) GetPortName() string {
+	return s.PortName
+}
+
 // GetType returns service type
 func (s *OpenLibertyApplicationService) GetType() *corev1.ServiceType {
-	return &s.Type
+	return s.Type
 }
 
 // GetProvides returns service provider configuration
@@ -480,42 +483,9 @@ func (s *OpenLibertyApplicationService) GetCertificate() common.Certificate {
 	return s.Certificate
 }
 
-// GetCertificateSecretRef ...
+// GetCertificateSecretRef returns a secret reference with a certificate
 func (s *OpenLibertyApplicationService) GetCertificateSecretRef() *string {
-	if s.CertificateSecretRef == nil {
-		return nil
-	}
 	return s.CertificateSecretRef
-}
-
-// GetName returns service name of a service consumer configuration
-func (c *ServiceBindingConsumes) GetName() string {
-	return c.Name
-}
-
-// GetNamespace returns namespace of a service consumer configuration
-func (c *ServiceBindingConsumes) GetNamespace() string {
-	return c.Namespace
-}
-
-// GetCategory returns category of a service consumer configuration
-func (c *ServiceBindingConsumes) GetCategory() common.ServiceBindingCategory {
-	return common.ServiceBindingCategoryOpenAPI
-}
-
-// GetMountPath returns mount path of a service consumer configuration
-func (c *ServiceBindingConsumes) GetMountPath() string {
-	return c.MountPath
-}
-
-// GetUsername returns username of a service binding auth object
-func (a *ServiceBindingAuth) GetUsername() corev1.SecretKeySelector {
-	return a.Username
-}
-
-// GetPassword returns password of a service binding auth object
-func (a *ServiceBindingAuth) GetPassword() corev1.SecretKeySelector {
-	return a.Password
 }
 
 // GetCategory returns category of a service provider configuration
@@ -550,6 +520,36 @@ func (s *OpenLibertyApplicationService) GetConsumes() []common.ServiceBindingCon
 	return consumes
 }
 
+// GetName returns service name of a service consumer configuration
+func (c *ServiceBindingConsumes) GetName() string {
+	return c.Name
+}
+
+// GetNamespace returns namespace of a service consumer configuration
+func (c *ServiceBindingConsumes) GetNamespace() string {
+	return c.Namespace
+}
+
+// GetCategory returns category of a service consumer configuration
+func (c *ServiceBindingConsumes) GetCategory() common.ServiceBindingCategory {
+	return common.ServiceBindingCategoryOpenAPI
+}
+
+// GetMountPath returns mount path of a service consumer configuration
+func (c *ServiceBindingConsumes) GetMountPath() string {
+	return c.MountPath
+}
+
+// GetUsername returns username of a service binding auth object
+func (a *ServiceBindingAuth) GetUsername() corev1.SecretKeySelector {
+	return a.Username
+}
+
+// GetPassword returns password of a service binding auth object
+func (a *ServiceBindingAuth) GetPassword() corev1.SecretKeySelector {
+	return a.Password
+}
+
 // GetLabels returns labels to be added on ServiceMonitor
 func (m *OpenLibertyApplicationMonitoring) GetLabels() map[string]string {
 	return m.Labels
@@ -558,6 +558,97 @@ func (m *OpenLibertyApplicationMonitoring) GetLabels() map[string]string {
 // GetEndpoints returns endpoints to be added to ServiceMonitor
 func (m *OpenLibertyApplicationMonitoring) GetEndpoints() []prometheusv1.Endpoint {
 	return m.Endpoints
+}
+
+// GetAnnotations returns route annotations
+func (r *OpenLibertyApplicationRoute) GetAnnotations() map[string]string {
+	return r.Annotations
+}
+
+// GetCertificate returns certficate spec for route
+func (r *OpenLibertyApplicationRoute) GetCertificate() common.Certificate {
+	if r.Certificate == nil {
+		return nil
+	}
+	return r.Certificate
+}
+
+// GetCertificateSecretRef returns the secret ref for route certificate
+func (r *OpenLibertyApplicationRoute) GetCertificateSecretRef() *string {
+	return r.CertificateSecretRef
+}
+
+// GetTermination returns terminatation of the route's TLS
+func (r *OpenLibertyApplicationRoute) GetTermination() *routev1.TLSTerminationType {
+	return r.Termination
+}
+
+// GetInsecureEdgeTerminationPolicy returns terminatation of the route's TLS
+func (r *OpenLibertyApplicationRoute) GetInsecureEdgeTerminationPolicy() *routev1.InsecureEdgeTerminationPolicyType {
+	return r.InsecureEdgeTerminationPolicy
+}
+
+// GetHost returns hostname to be used by the route
+func (r *OpenLibertyApplicationRoute) GetHost() string {
+	return r.Host
+}
+
+// GetPath returns path to use for the route
+func (r *OpenLibertyApplicationRoute) GetPath() string {
+	return r.Path
+}
+
+// Initialize sets default values
+func (cr *OpenLibertyApplication) Initialize() {
+	if cr.Spec.PullPolicy == nil {
+		pp := corev1.PullIfNotPresent
+		cr.Spec.PullPolicy = &pp
+	}
+
+	if cr.Spec.ApplicationName == "" {
+		if cr.Labels != nil && cr.Labels["app.kubernetes.io/part-of"] != "" {
+			cr.Spec.ApplicationName = cr.Labels["app.kubernetes.io/part-of"]
+		} else {
+			cr.Spec.ApplicationName = cr.Name
+		}
+	}
+
+	if cr.Labels != nil {
+		cr.Labels["app.kubernetes.io/part-of"] = cr.Spec.ApplicationName
+	}
+
+	if cr.Spec.Service.Type == nil {
+		st := corev1.ServiceTypeClusterIP
+		cr.Spec.Service.Type = &st
+	}
+
+	if cr.Spec.Service.Port == 0 {
+		cr.Spec.Service.Port = 9080
+	}
+
+	if cr.Spec.Service.Provides != nil && cr.Spec.Service.Provides.Protocol == "" {
+		cr.Spec.Service.Provides.Protocol = "http"
+	}
+
+	if cr.Spec.Service.Certificate != nil {
+		if cr.Spec.Service.Certificate.IssuerRef.Name == "" {
+			cr.Spec.Service.Certificate.IssuerRef.Name = common.Config[common.OpConfigPropDefaultIssuer]
+		}
+
+		if cr.Spec.Service.Certificate.IssuerRef.Kind == "" && common.Config[common.OpConfigPropUseClusterIssuer] != "false" {
+			cr.Spec.Service.Certificate.IssuerRef.Kind = "ClusterIssuer"
+		}
+	}
+
+	if cr.Spec.Route != nil && cr.Spec.Route.Certificate != nil {
+		if cr.Spec.Route.Certificate.IssuerRef.Name == "" {
+			cr.Spec.Route.Certificate.IssuerRef.Name = common.Config[common.OpConfigPropDefaultIssuer]
+		}
+
+		if cr.Spec.Route.Certificate.IssuerRef.Kind == "" && common.Config[common.OpConfigPropUseClusterIssuer] != "false" {
+			cr.Spec.Route.Certificate.IssuerRef.Kind = "ClusterIssuer"
+		}
+	}
 }
 
 // GetLabels returns set of labels to be added to all resources
@@ -580,7 +671,16 @@ func (cr *OpenLibertyApplication) GetLabels() map[string]string {
 		}
 	}
 
+	if cr.Spec.Service != nil && cr.Spec.Service.Provides != nil {
+		labels["service.app.stacks/bindable"] = "true"
+	}
+
 	return labels
+}
+
+// GetAnnotations returns set of annotations to be added to all resources
+func (cr *OpenLibertyApplication) GetAnnotations() map[string]string {
+	return cr.Annotations
 }
 
 // GetType returns status condition type
@@ -650,16 +750,11 @@ func (s *OpenLibertyApplicationStatus) NewCondition() common.StatusCondition {
 
 // GetConditions returns slice of conditions
 func (s *OpenLibertyApplicationStatus) GetConditions() []common.StatusCondition {
-	var conditions = []common.StatusCondition{}
+	var conditions = make([]common.StatusCondition, len(s.Conditions))
 	for i := range s.Conditions {
 		conditions[i] = &s.Conditions[i]
 	}
 	return conditions
-}
-
-// GetImageReference returns Docker image reference to be deployed by the CR
-func (s *OpenLibertyApplicationStatus) GetImageReference() string {
-	return s.ImageReference
 }
 
 // GetCondition ...
@@ -694,100 +789,6 @@ func (s *OpenLibertyApplicationStatus) SetCondition(c common.StatusCondition) {
 	condition.SetType(c.GetType())
 	if !found {
 		s.Conditions = append(s.Conditions, *condition)
-	}
-}
-
-// GetAnnotations returns route annotations
-func (r *OpenLibertyApplicationRoute) GetAnnotations() map[string]string {
-	return r.Annotations
-}
-
-// GetCertificate returns certficate spec for route
-func (r *OpenLibertyApplicationRoute) GetCertificate() common.Certificate {
-	if r.Certificate == nil {
-		return nil
-	}
-	return r.Certificate
-}
-
-// GetTermination returns terminatation of the route's TLS
-func (r *OpenLibertyApplicationRoute) GetTermination() *routev1.TLSTerminationType {
-	return r.Termination
-}
-
-// GetInsecureEdgeTerminationPolicy returns terminatation of the route's TLS
-func (r *OpenLibertyApplicationRoute) GetInsecureEdgeTerminationPolicy() *routev1.InsecureEdgeTerminationPolicyType {
-	return r.InsecureEdgeTerminationPolicy
-}
-
-// GetHost returns hostname to be used by the route
-func (r *OpenLibertyApplicationRoute) GetHost() string {
-	return r.Host
-}
-
-// GetPath returns path to use for the route
-func (r *OpenLibertyApplicationRoute) GetPath() string {
-	return r.Path
-}
-
-// GetCertificateSecretRef returns the secret ref for route certificate
-func (r *OpenLibertyApplicationRoute) GetCertificateSecretRef() *string {
-	if r.CertificateSecretRef == nil {
-		return nil
-	}
-	return r.CertificateSecretRef
-}
-
-// Initialize sets default values
-func (cr *OpenLibertyApplication) Initialize() {
-	if cr.Spec.Service.Port == 0 {
-		cr.Spec.Service.Port = 9080
-	}
-
-	if cr.Spec.Service.Type == "" {
-		cr.Spec.Service.Type = corev1.ServiceTypeClusterIP
-	}
-
-	pp := corev1.PullIfNotPresent
-
-	if cr.Spec.PullPolicy == nil {
-		cr.Spec.PullPolicy = &pp
-	}
-
-	if cr.Spec.Service.Provides != nil && cr.Spec.Service.Provides.Protocol == "" {
-		cr.Spec.Service.Provides.Protocol = "http"
-	}
-
-	if cr.Spec.ApplicationName == "" {
-		if cr.Labels != nil && cr.Labels["app.kubernetes.io/part-of"] != "" {
-			cr.Spec.ApplicationName = cr.Labels["app.kubernetes.io/part-of"]
-		} else {
-			cr.Spec.ApplicationName = cr.Name
-		}
-	}
-
-	if cr.Labels != nil {
-		cr.Labels["app.kubernetes.io/part-of"] = cr.Spec.ApplicationName
-	}
-
-	if cr.Spec.Service.Certificate != nil {
-		if cr.Spec.Service.Certificate.IssuerRef.Name == "" {
-			cr.Spec.Service.Certificate.IssuerRef.Name = common.Config[common.OpConfigPropDefaultIssuer]
-		}
-
-		if cr.Spec.Service.Certificate.IssuerRef.Kind == "" && common.Config[common.OpConfigPropUseClusterIssuer] != "false" {
-			cr.Spec.Service.Certificate.IssuerRef.Kind = "ClusterIssuer"
-		}
-	}
-
-	if cr.Spec.Route != nil && cr.Spec.Route.Certificate != nil {
-		if cr.Spec.Route.Certificate.IssuerRef.Name == "" {
-			cr.Spec.Route.Certificate.IssuerRef.Name = common.Config[common.OpConfigPropDefaultIssuer]
-		}
-
-		if cr.Spec.Route.Certificate.IssuerRef.Kind == "" && common.Config[common.OpConfigPropUseClusterIssuer] != "false" {
-			cr.Spec.Route.Certificate.IssuerRef.Kind = "ClusterIssuer"
-		}
 	}
 }
 

@@ -237,16 +237,16 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationService(ref commo
 							Format: "int32",
 						},
 					},
-					"portName": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
 					"targetPort": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"integer"},
 							Format: "int32",
+						},
+					},
+					"portName": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
 						},
 					},
 					"annotations": {
@@ -392,8 +392,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSpec(ref common.R
 					"volumeMounts": {
 						VendorExtensible: spec.VendorExtensible{
 							Extensions: spec.Extensions{
-								"x-kubernetes-list-map-keys": "name",
-								"x-kubernetes-list-type":     "map",
+								"x-kubernetes-list-type": "atomic",
 							},
 						},
 						SchemaProps: spec.SchemaProps{
