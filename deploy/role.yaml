@@ -51,18 +51,6 @@ rules:
   verbs:
   - update
 - apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - get
-- apiGroups:
-  - apps
-  resources:
-  - replicasets
-  verbs:
-  - get
-- apiGroups:
   - openliberty.io
   resources:
   - '*'
@@ -75,6 +63,7 @@ rules:
   attributeRestrictions: null
   resources:
   - routes
+  - routes/custom-host
   verbs:
   - '*'
 - apiGroups:
@@ -82,5 +71,23 @@ rules:
   attributeRestrictions: null
   resources:
   - services
+  verbs:
+  - '*'
+- apiGroups:
+  - image.openshift.io
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  verbs:
+  - '*'
+- apiGroups:
+  - app.k8s.io
+  resources:
+  - applications
   verbs:
   - '*'

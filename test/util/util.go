@@ -41,7 +41,7 @@ func MakeBasicOpenLibertyApplication(t *testing.T, f *framework.Framework, n str
 			Namespace: ns,
 		},
 		Spec: openlibertyv1beta1.OpenLibertyApplicationSpec{
-			ApplicationImage: "openliberty/open-liberty:full-java8-openj9-ubi",
+			ApplicationImage: "openliberty/open-liberty:kernel-java8-openj9-ubi",
 			Replicas:         &replicas,
 			Expose:           &expose,
 			ReadinessProbe: &corev1.Probe{
