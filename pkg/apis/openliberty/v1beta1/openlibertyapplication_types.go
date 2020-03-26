@@ -179,11 +179,11 @@ type OpenLibertyApplicationList struct {
 // +k8s:openapi-gen=true
 type OpenLibertyApplicationSSO struct {
 	// +listType=map
-	// +listMapKey=oidcLoginID
+	// +listMapKey=id
 	OIDC []OidcClient `json:"oidc,omitempty"`
 
 	// +listType=map
-	// +listMapKey=oauth2LoginID
+	// +listMapKey=id
 	OAuth2 []OAuth2Client `json:"oauth2,omitempty"`
 
 	Github *GithubLogin `json:"github,omitempty"`
@@ -196,7 +196,7 @@ type OpenLibertyApplicationSSO struct {
 // OidcClient represents configuration for an OpenID Connect (OIDC) client
 // +k8s:openapi-gen=true
 type OidcClient struct {
-	OidcLoginID                 string `json:"oidcLoginID,omitempty"`
+	ID                          string `json:"id,omitempty"`
 	DiscoveryEndpoint           string `json:"discoveryEndpoint"`
 	GroupNameAttribute          string `json:"groupNameAttribute,omitempty"`
 	UserNameAttribute           string `json:"userNameAttribute,omitempty"`
@@ -211,7 +211,7 @@ type OidcClient struct {
 // OAuth2Client represents configuration for an OAuth2 client
 // +k8s:openapi-gen=true
 type OAuth2Client struct {
-	OAuth2LoginID           string `json:"oauth2LoginID,omitempty"`
+	ID                      string `json:"id,omitempty"`
 	TokenEndpoint           string `json:"tokenEndpoint"`
 	AuthorizationEndpoint   string `json:"authorizationEndpoint"`
 	GroupNameAttribute      string `json:"groupNameAttribute,omitempty"`
@@ -563,12 +563,12 @@ func (s *OpenLibertyApplicationSSO) GetOIDCClients() []OidcClient {
 	return s.OIDC
 }
 
-// GetOidcLoginID returns ID of oidcLogin (specified in  Liberty's server.xml). Default value is "oidc"
-func (o *OidcClient) GetOidcLoginID() string {
-	if o.OidcLoginID == "" {
+// GetID returns ID of oidcLogin (specified in  Liberty's server.xml). Default value is "oidc"
+func (o *OidcClient) GetID() string {
+	if o.ID == "" {
 		return "oidc"
 	}
-	return o.OidcLoginID
+	return o.ID
 }
 
 // GetDiscoveryEndpoint returns discoveryEndpoint
@@ -616,12 +616,12 @@ func (o *OidcClient) GetHostNameVerificationEnabled() *bool {
 	return o.HostNameVerificationEnabled
 }
 
-// GetOAuth2LoginID returns ID of oauth2Login (specified in Liberty's server.xml). Default value is "oauth2"
-func (o *OAuth2Client) GetOAuth2LoginID() string {
-	if o.OAuth2LoginID == "" {
+// GetID returns ID of oauth2Login (specified in Liberty's server.xml). Default value is "oauth2"
+func (o *OAuth2Client) GetID() string {
+	if o.ID == "" {
 		return "oauth2"
 	}
-	return o.OAuth2LoginID
+	return o.ID
 }
 
 // GetTokenEndpoint returns tokenEndpoint
