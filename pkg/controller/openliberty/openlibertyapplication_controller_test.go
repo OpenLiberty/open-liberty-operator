@@ -45,7 +45,7 @@ var (
 	autoscaling                = &openlibertyv1beta1.OpenLibertyApplicationAutoScaling{MaxReplicas: 3}
 	pullPolicy                 = corev1.PullAlways
 	serviceType                = corev1.ServiceTypeClusterIP
-	service                    = &openlibertyv1beta1.OpenLibertyApplicationService{Type: serviceType, Port: 9080}
+	service                    = &openlibertyv1beta1.OpenLibertyApplicationService{Type: &serviceType, Port: 9080}
 	expose                     = true
 	serviceAccountName         = "service-account"
 	volumeCT                   = &corev1.PersistentVolumeClaim{TypeMeta: metav1.TypeMeta{Kind: "StatefulSet"}}
@@ -358,7 +358,7 @@ func testServiceMonitoring(t *testing.T, r *ReconcileOpenLiberty, rb oputils.Rec
 	}
 
 	monitorTests := []Test{
-		{"Monitor label assigned", "true", svc.Labels["app."+openliberty.GetGroupName()+"/monitor"]},
+		{"Monitor label assigned", "true", svc.Labels["monitor."+openliberty.GetGroupName()+"/enabled"]},
 	}
 	if err = verifyTests(monitorTests); err != nil {
 		return err

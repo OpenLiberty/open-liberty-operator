@@ -451,9 +451,6 @@ func (s *OpenLibertyApplicationService) GetPort() int32 {
 
 // GetTargetPort return the internal target container port
 func (s *OpenLibertyApplicationService) GetTargetPort() *int32 {
-	if s.TargetPort == nil {
-		return nil
-	}
 	return s.TargetPort
 }
 
@@ -615,6 +612,11 @@ func (cr *OpenLibertyApplication) Initialize() {
 
 	if cr.Labels != nil {
 		cr.Labels["app.kubernetes.io/part-of"] = cr.Spec.ApplicationName
+	}
+
+	// This is to handle when there is no service in the CR
+	if cr.Spec.Service == nil {
+		cr.Spec.Service = &OpenLibertyApplicationService{}
 	}
 
 	if cr.Spec.Service.Type == nil {

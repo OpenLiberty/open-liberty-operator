@@ -39,7 +39,9 @@ func TestCustomizeLibertyEnv(t *testing.T) {
 	os.Setenv("WATCH_NAMESPACE", namespace)
 
 	// Test default values no config
-	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
+	clusterType := corev1.ServiceTypeClusterIP
+	svc := &openlibertyv1beta1.OpenLibertyApplicationService{Port: 8080, Type: &clusterType}
+	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{Service: svc}
 	pts := &corev1.PodTemplateSpec{}
 
 	targetEnv := []corev1.EnvVar{
@@ -61,7 +63,6 @@ func TestCustomizeLibertyEnv(t *testing.T) {
 	}
 
 	// test with env variables set by user
-
 	targetEnv = []corev1.EnvVar{
 		{Name: "WLP_LOGGING_CONSOLE_LOGLEVEL", Value: "error"},
 		{Name: "WLP_LOGGING_CONSOLE_SOURCE", Value: "trace,accessLog,ffdc"},
@@ -70,6 +71,7 @@ func TestCustomizeLibertyEnv(t *testing.T) {
 
 	spec = openlibertyv1beta1.OpenLibertyApplicationSpec{
 		Env: targetEnv,
+		Service: svc,
 	}
 	pts = &corev1.PodTemplateSpec{}
 
