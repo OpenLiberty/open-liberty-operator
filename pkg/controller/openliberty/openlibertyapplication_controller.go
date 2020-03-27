@@ -362,6 +362,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, nil
 	}
 
+	joiningExistingApplication := false
 	if r.IsApplicationSupported() {
 		// Get labels from Applicatoin CRs selector and merge with instance labels
 		existingAppLabels, err := r.GetSelectorLabelsFromApplications(instance)
@@ -369,6 +370,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			r.ManageError(errors.Wrapf(err, "unable to get %q Application CR selector's labels ", instance.Spec.ApplicationName), common.StatusConditionTypeReconciled, instance)
 		}
 		instance.Labels = oputils.MergeMaps(existingAppLabels, instance.Labels)
+		joiningExistingApplication = true
 	} else {
 		reqLogger.V(1).Info(fmt.Sprintf("%s is not supported on the cluster", applicationsv1beta1.SchemeGroupVersion.String()))
 	}
@@ -582,9 +584,8 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 				lutils.CustomizeEnvSSO(&statefulSet.Spec.Template, instance, ssoSecret)
 			}
 			lutils.ConfigureServiceability(&statefulSet.Spec.Template, instance)
-			if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
-				m := make(map[string]string)
-				m["kappnav.subkind"] = "Liberty"
+			if joiningExistingApplication || instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
+				m := map[string]string{"kappnav.subkind": "Liberty"}
 				statefulSet.Annotations = oputils.MergeMaps(statefulSet.GetAnnotations(), m)
 			}
 			return nil
@@ -627,9 +628,8 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			}
 
 			lutils.ConfigureServiceability(&deploy.Spec.Template, instance)
-			if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
-				m := make(map[string]string)
-				m["kappnav.subkind"] = "Liberty"
+			if joiningExistingApplication || instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
+				m := map[string]string{"kappnav.subkind": "Liberty"}
 				deploy.Annotations = oputils.MergeMaps(deploy.GetAnnotations(), m)
 			}
 			return nil
