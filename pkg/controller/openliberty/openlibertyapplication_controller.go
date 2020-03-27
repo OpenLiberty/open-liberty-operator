@@ -6,16 +6,20 @@ import (
 	"os"
 	"strings"
 
-	"github.com/appsody/appsody-operator/pkg/common"
-	"github.com/pkg/errors"
+	"github.com/application-stacks/runtime-component-operator/pkg/common"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 
 	lutils "github.com/OpenLiberty/open-liberty-operator/pkg/utils"
-	autils "github.com/appsody/appsody-operator/pkg/utils"
+	oputils "github.com/application-stacks/runtime-component-operator/pkg/utils"
 
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 	prometheusv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	certmngrv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
+	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
+	"github.com/openshift/library-go/pkg/image/imageutil"
+	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -23,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	applicationsv1beta1 "sigs.k8s.io/application/pkg/apis/app/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -38,6 +43,9 @@ var log = logf.Log.WithName("controller_openlibertyapplication")
 //Constant Values
 const ssoSecretNameSuffix = "-olapp-sso"
 
+// Holds a list of namespaces the operator will be watching
+var watchNamespaces []string
+
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
 * business logic.  Delete these comments after modifying this file.*
@@ -46,24 +54,70 @@ const ssoSecretNameSuffix = "-olapp-sso"
 // Add creates a new OpenLiberty Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
+	setup(mgr)
 	return add(mgr, newReconciler(mgr))
 }
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	reconciler := &ReconcileOpenLiberty{ReconcilerBase: autils.NewReconcilerBase(mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor(("open-liberty-operator")))}
+	reconciler := &ReconcileOpenLiberty{ReconcilerBase: oputils.NewReconcilerBase(mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor(("open-liberty-operator")))}
+
+	watchNamespaces, err := oputils.GetWatchNamespaces()
+	if err != nil {
+		log.Error(err, "Failed to get watch namespace")
+		os.Exit(1)
+	}
+	log.Info("newReconciler", "watchNamespaces", watchNamespaces)
+
+	ns, err := k8sutil.GetOperatorNamespace()
+	// When running the operator locally, `ns` will be empty string
+	if ns == "" {
+		// If the operator is running locally, use the first namespace in the `watchNamespaces`
+		// `watchNamespaces` must have at least one item
+		ns = watchNamespaces[0]
+	}
+
+	configMap := &corev1.ConfigMap{}
+	configMap.Namespace = ns
+	configMap.Name = "open-liberty-operator"
+	configMap.Data = common.DefaultOpConfig()
+	err = reconciler.GetClient().Create(context.TODO(), configMap)
+	if err != nil && !kerrors.IsAlreadyExists(err) {
+		log.Error(err, "Failed to create config map for the operator")
+		os.Exit(1)
+	}
+
 	return reconciler
+}
+
+func setup(mgr manager.Manager) {
+	mgr.GetFieldIndexer().IndexField(&openlibertyv1beta1.OpenLibertyApplication{}, indexFieldImageStreamName, func(obj runtime.Object) []string {
+		instance := obj.(*openlibertyv1beta1.OpenLibertyApplication)
+		image, err := imageutil.ParseDockerImageReference(instance.Spec.ApplicationImage)
+		if err == nil {
+			imageNamespace := image.Namespace
+			if imageNamespace == "" {
+				imageNamespace = instance.Namespace
+			}
+			fullName := fmt.Sprintf("%s/%s", imageNamespace, image.Name)
+			return []string{fullName}
+		}
+		return nil
+	})
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
+
+	reconciler := r.(*ReconcileOpenLiberty)
+
 	c, err := controller.New("openliberty-controller", mgr, controller.Options{Reconciler: r, MaxConcurrentReconciles: 10})
 	if err != nil {
 		return err
 	}
 
-	watchNamespaces, err := autils.GetWatchNamespaces()
+	watchNamespaces, err := oputils.GetWatchNamespaces()
 	if err != nil {
 		log.Error(err, "Failed to get watch namespace")
 		os.Exit(1)
@@ -73,7 +127,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	for _, ns := range watchNamespaces {
 		watchNamespacesMap[ns] = true
 	}
-	isClusterWide := len(watchNamespacesMap) == 1 && watchNamespacesMap[""]
+	isClusterWide := oputils.IsClusterWide(watchNamespaces)
 
 	log.V(1).Info("Adding a new controller", "watchNamespaces", watchNamespaces, "isClusterWide", isClusterWide)
 
@@ -99,18 +153,9 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
-	// Watch for changes to secondary resource Pods and requeue the owner OpenLiberty
-	// err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
-	// 	IsController: true,
-	// 	OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
-	// })
-	// if err != nil {
-	// 	return err
-	// }
-
 	predSubResource := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Ignore updates to CR status in which case metadata.Generation does not change
 			return (isClusterWide || watchNamespacesMap[e.MetaOld.GetNamespace()])
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
@@ -176,15 +221,65 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	err = c.Watch(&source.Kind{Type: &routev1.Route{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
+	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForOwner{
+		OwnerType: &openlibertyv1beta1.OpenLibertyApplication{},
 	}, predSubResource)
+	if err != nil {
+		return err
+	}
 
-	err = c.Watch(&source.Kind{Type: &servingv1alpha1.Service{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
-	}, predSubResource)
+	err = c.Watch(
+		&source.Kind{Type: &corev1.Secret{}},
+		&oputils.EnqueueRequestsForServiceBinding{
+			Client:          mgr.GetClient(),
+			GroupName:       "openliberty.io",
+			WatchNamespaces: watchNamespaces,
+		})
+	if err != nil {
+		return err
+	}
+
+	ok, _ := reconciler.IsGroupVersionSupported(imagev1.SchemeGroupVersion.String())
+	if ok {
+		c.Watch(
+			&source.Kind{Type: &imagev1.ImageStream{}},
+			&EnqueueRequestsForImageStream{
+				Client:          mgr.GetClient(),
+				WatchNamespaces: watchNamespaces,
+			})
+	}
+
+	ok, _ = reconciler.IsGroupVersionSupported(routev1.SchemeGroupVersion.String())
+	if ok {
+		err = c.Watch(&source.Kind{Type: &routev1.Route{}}, &handler.EnqueueRequestForOwner{
+			IsController: true,
+			OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
+		}, predSubResource)
+	}
+
+	ok, _ = reconciler.IsGroupVersionSupported(servingv1alpha1.SchemeGroupVersion.String())
+	if ok {
+		err = c.Watch(&source.Kind{Type: &servingv1alpha1.Service{}}, &handler.EnqueueRequestForOwner{
+			IsController: true,
+			OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
+		}, predSubResource)
+	}
+
+	ok, _ = reconciler.IsGroupVersionSupported(certmngrv1alpha2.SchemeGroupVersion.String())
+	if ok {
+		c.Watch(&source.Kind{Type: &certmngrv1alpha2.Certificate{}}, &handler.EnqueueRequestForOwner{
+			IsController: true,
+			OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
+		}, predSubResource)
+	}
+
+	ok, _ = reconciler.IsGroupVersionSupported(prometheusv1.SchemeGroupVersion.String())
+	if ok {
+		c.Watch(&source.Kind{Type: &prometheusv1.ServiceMonitor{}}, &handler.EnqueueRequestForOwner{
+			IsController: true,
+			OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
+		}, predSubResource)
+	}
 
 	return nil
 }
@@ -196,7 +291,7 @@ var _ reconcile.Reconciler = &ReconcileOpenLiberty{}
 type ReconcileOpenLiberty struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	autils.ReconcilerBase
+	oputils.ReconcilerBase
 }
 
 // Reconcile reads that state of the cluster for a OpenLiberty object and makes changes based on the state read
@@ -207,15 +302,37 @@ type ReconcileOpenLiberty struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling OpenLibertyApplication")
 
+	ns, err := k8sutil.GetOperatorNamespace()
+	// When running the operator locally, `ns` will be empty string
+	if ns == "" {
+		// Since this method can be called directly from unit test, populate `watchNamespaces`.
+		if watchNamespaces == nil {
+			watchNamespaces, err = oputils.GetWatchNamespaces()
+			if err != nil {
+				reqLogger.Error(err, "Error getting watch namespace")
+				return reconcile.Result{}, err
+			}
+		}
+		// If the operator is running locally, use the first namespace in the `watchNamespaces`
+		// `watchNamespaces` must have at least one item
+		ns = watchNamespaces[0]
+	}
+
+	configMap, err := r.GetOpConfigMap("open-liberty-operator", ns)
+	if err != nil {
+		log.Info("Failed to find runtime-component-operator config map")
+	} else {
+		common.Config.LoadFromConfigMap(configMap)
+	}
+
 	// Fetch the OpenLiberty instance
 	instance := &openlibertyv1beta1.OpenLibertyApplication{}
-	var ba common.BaseApplication
+	var ba common.BaseComponent
 	ba = instance
-	err := r.GetClient().Get(context.TODO(), request.NamespacedName, instance)
+	err = r.GetClient().Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if kerrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -227,7 +344,9 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	_, err = autils.Validate(instance)
+	instance.Initialize()
+
+	_, err = oputils.Validate(instance)
 	// If there's any validation error, don't bother with requeuing
 	if err != nil {
 		reqLogger.Error(err, "Error validating OpenLibertyApplication")
@@ -243,7 +362,22 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, nil
 	}
 
-	instance.Initialize()
+	if r.IsApplicationSupported() {
+		// Get labels from Applicatoin CRs selector and merge with instance labels
+		existingAppLabels, err := r.GetSelectorLabelsFromApplications(instance)
+		if err != nil {
+			r.ManageError(errors.Wrapf(err, "unable to get %q Application CR selector's labels ", instance.Spec.ApplicationName), common.StatusConditionTypeReconciled, instance)
+		}
+		instance.Labels = oputils.MergeMaps(existingAppLabels, instance.Labels)
+	} else {
+		reqLogger.V(1).Info(fmt.Sprintf("%s is not supported on the cluster", applicationsv1beta1.SchemeGroupVersion.String()))
+	}
+
+	if r.IsOpenShift() {
+		// The order of items passed to the MergeMaps matters here! Annotations from GetOpenShiftAnnotations have higher importance. Otherwise,
+		// it is not possible to override converted annotations.
+		instance.Annotations = oputils.MergeMaps(instance.Annotations, oputils.GetOpenShiftAnnotations(instance))
+	}
 
 	currentGen := instance.Generation
 	err = r.GetClient().Update(context.TODO(), instance)
@@ -261,6 +395,36 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		Namespace: instance.Namespace,
 	}
 
+	imageReferenceOld := instance.Status.ImageReference
+	instance.Status.ImageReference = instance.Spec.ApplicationImage
+	if r.IsOpenShift() {
+		image, err := imageutil.ParseDockerImageReference(instance.Spec.ApplicationImage)
+		if err == nil {
+			imageStream := &imagev1.ImageStream{}
+			imageNamespace := image.Namespace
+			if imageNamespace == "" {
+				imageNamespace = instance.Namespace
+			}
+			err = r.GetClient().Get(context.Background(), types.NamespacedName{Name: image.Name, Namespace: imageNamespace}, imageStream)
+			if err == nil {
+				image := imageutil.LatestTaggedImage(imageStream, image.Tag)
+				if image != nil {
+					instance.Status.ImageReference = image.DockerImageReference
+				}
+			} else if err != nil && !kerrors.IsNotFound(err) {
+				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			}
+		}
+	}
+	if imageReferenceOld != instance.Status.ImageReference {
+		reqLogger.Info("Updating status.imageReference", "status.imageReference", instance.Status.ImageReference)
+		err = r.UpdateStatus(instance)
+		if err != nil {
+			reqLogger.Error(err, "Error updating OpenLiberty status")
+			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		}
+	}
+
 	result, err := r.ReconcileProvides(instance)
 	if err != nil || result != (reconcile.Result{}) {
 		return result, err
@@ -270,11 +434,15 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 	if err != nil || result != (reconcile.Result{}) {
 		return result, err
 	}
+	result, err = r.ReconcileCertificate(instance)
+	if err != nil || result != (reconcile.Result{}) {
+		return result, nil
+	}
 
 	if instance.Spec.ServiceAccountName == nil || *instance.Spec.ServiceAccountName == "" {
 		serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
 		err = r.CreateOrUpdate(serviceAccount, instance, func() error {
-			autils.CustomizeServiceAccount(serviceAccount, instance)
+			oputils.CustomizeServiceAccount(serviceAccount, instance)
 			return nil
 		})
 		if err != nil {
@@ -290,18 +458,14 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		}
 	}
 
+	isKnativeSupported, err := r.IsGroupVersionSupported(servingv1alpha1.SchemeGroupVersion.String())
+	if err != nil {
+		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	} else if !isKnativeSupported {
+		reqLogger.V(1).Info(fmt.Sprintf("%s is not supported on the cluster", servingv1alpha1.SchemeGroupVersion.String()))
+	}
+
 	if instance.Spec.CreateKnativeService != nil && *instance.Spec.CreateKnativeService {
-		ksvc := &servingv1alpha1.Service{ObjectMeta: defaultMeta}
-		err = r.CreateOrUpdate(ksvc, instance, func() error {
-			autils.CustomizeKnativeService(ksvc, instance)
-			return nil
-		})
-
-		if err != nil {
-			reqLogger.Error(err, "Failed to reconcile Knative Service")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-
 		// Clean up non-Knative resources
 		resources := []runtime.Object{
 			&corev1.Service{ObjectMeta: defaultMeta},
@@ -317,33 +481,42 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
 
-		return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
+		if isKnativeSupported {
+			ksvc := &servingv1alpha1.Service{ObjectMeta: defaultMeta}
+			err = r.CreateOrUpdate(ksvc, instance, func() error {
+				oputils.CustomizeKnativeService(ksvc, instance)
+				return nil
+			})
+
+			if err != nil {
+				reqLogger.Error(err, "Failed to reconcile Knative Service")
+				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			}
+			return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
+		} else {
+			return r.ManageError(errors.New("failed to reconcile Knative service as operator could not find Knative CRDs"), common.StatusConditionTypeReconciled, instance)
+		}
 	}
 
-	// Check if Knative is supported and delete Knative service if supported
-	if ok, err := r.IsGroupVersionSupported(servingv1alpha1.SchemeGroupVersion.String()); err != nil {
-		reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", servingv1alpha1.SchemeGroupVersion.String()))
-		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-	} else if ok {
+	if isKnativeSupported {
 		ksvc := &servingv1alpha1.Service{ObjectMeta: defaultMeta}
 		err = r.DeleteResource(ksvc)
 		if err != nil {
 			reqLogger.Error(err, "Failed to delete Knative Service")
 			r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
-	} else {
-		reqLogger.V(1).Info(fmt.Sprintf("%s is not supported. Skip deleting the resource", servingv1alpha1.SchemeGroupVersion.String()))
 	}
 
 	svc := &corev1.Service{ObjectMeta: defaultMeta}
 	err = r.CreateOrUpdate(svc, instance, func() error {
-		autils.CustomizeService(svc, ba)
-		svc.Annotations = instance.Spec.Service.Annotations
+		oputils.CustomizeService(svc, ba)
+		svc.Annotations = oputils.MergeMaps(svc.Annotations, instance.Spec.Service.Annotations)
+		monitoringEnabledLabelName := getMonitoringEnabledLabelName(ba)
 		if instance.Spec.Monitoring != nil {
-			svc.Labels["app."+ba.GetGroupName()+"/monitor"] = "true"
+			svc.Labels[monitoringEnabledLabelName] = "true"
 		} else {
-			if _, ok := svc.Labels["app."+ba.GetGroupName()+"/monitor"]; ok {
-				delete(svc.Labels, "app."+ba.GetGroupName()+"/monitor")
+			if _, ok := svc.Labels[monitoringEnabledLabelName]; ok {
+				delete(svc.Labels, monitoringEnabledLabelName)
 			}
 		}
 		return nil
@@ -383,7 +556,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		}
 		svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: instance.Name + "-headless", Namespace: instance.Namespace}}
 		err = r.CreateOrUpdate(svc, instance, func() error {
-			autils.CustomizeService(svc, instance)
+			oputils.CustomizeService(svc, instance)
 			svc.Spec.ClusterIP = corev1.ClusterIPNone
 			svc.Spec.Type = corev1.ServiceTypeClusterIP
 			return nil
@@ -395,9 +568,9 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 
 		statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
 		err = r.CreateOrUpdate(statefulSet, instance, func() error {
-			autils.CustomizeStatefulSet(statefulSet, instance)
-			autils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
-			autils.CustomizePersistence(statefulSet, instance)
+			oputils.CustomizeStatefulSet(statefulSet, instance)
+			oputils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
+			oputils.CustomizePersistence(statefulSet, instance)
 			lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance)
 			if instance.Spec.SSO != nil {
 				secretName := instance.GetName() + ssoSecretNameSuffix
@@ -412,7 +585,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
 				m := make(map[string]string)
 				m["kappnav.subkind"] = "Liberty"
-				statefulSet.Annotations = autils.MergeMaps(statefulSet.GetAnnotations(), m)
+				statefulSet.Annotations = oputils.MergeMaps(statefulSet.GetAnnotations(), m)
 			}
 			return nil
 		})
@@ -440,8 +613,8 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		}
 		deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
 		err = r.CreateOrUpdate(deploy, instance, func() error {
-			autils.CustomizeDeployment(deploy, instance)
-			autils.CustomizePodSpec(&deploy.Spec.Template, instance)
+			oputils.CustomizeDeployment(deploy, instance)
+			oputils.CustomizePodSpec(&deploy.Spec.Template, instance)
 			lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance)
 			if instance.Spec.SSO != nil {
 				secretName := instance.GetName() + ssoSecretNameSuffix
@@ -457,7 +630,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
 				m := make(map[string]string)
 				m["kappnav.subkind"] = "Liberty"
-				deploy.Annotations = autils.MergeMaps(deploy.GetAnnotations(), m)
+				deploy.Annotations = oputils.MergeMaps(deploy.GetAnnotations(), m)
 			}
 			return nil
 		})
@@ -471,7 +644,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 	if instance.Spec.Autoscaling != nil {
 		hpa := &autoscalingv1.HorizontalPodAutoscaler{ObjectMeta: defaultMeta}
 		err = r.CreateOrUpdate(hpa, instance, func() error {
-			autils.CustomizeHPA(hpa, instance)
+			oputils.CustomizeHPA(hpa, instance)
 			return nil
 		})
 
@@ -495,7 +668,12 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		if instance.Spec.Expose != nil && *instance.Spec.Expose {
 			route := &routev1.Route{ObjectMeta: defaultMeta}
 			err = r.CreateOrUpdate(route, instance, func() error {
-				autils.CustomizeRoute(route, instance)
+				key, cert, caCert, destCACert, err := r.GetRouteTLSValues(ba)
+				if err != nil {
+					return err
+				}
+
+				oputils.CustomizeRoute(route, instance, key, cert, caCert, destCACert)
 				return nil
 			})
 			if err != nil {
@@ -521,7 +699,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		if instance.Spec.Monitoring != nil && (instance.Spec.CreateKnativeService == nil || !*instance.Spec.CreateKnativeService) {
 			sm := &prometheusv1.ServiceMonitor{ObjectMeta: defaultMeta}
 			err = r.CreateOrUpdate(sm, instance, func() error {
-				autils.CustomizeServiceMonitor(sm, instance)
+				oputils.CustomizeServiceMonitor(sm, instance)
 				return nil
 			})
 			if err != nil {
@@ -542,4 +720,8 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 	}
 
 	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
+}
+
+func getMonitoringEnabledLabelName(ba common.BaseComponent) string {
+	return "monitor." + ba.GetGroupName() + "/enabled"
 }

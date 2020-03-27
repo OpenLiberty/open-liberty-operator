@@ -2,12 +2,13 @@ package openlibertydump
 
 import (
 	"context"
-	"github.com/OpenLiberty/open-liberty-operator/pkg/utils"
 	"os"
 	"time"
 
+	"github.com/OpenLiberty/open-liberty-operator/pkg/utils"
+	oputils "github.com/application-stacks/runtime-component-operator/pkg/utils"
+
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
-	autils "github.com/appsody/appsody-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,7 +47,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	watchNamespaces, err := autils.GetWatchNamespaces()
+	watchNamespaces, err := oputils.GetWatchNamespaces()
 	if err != nil {
 		log.Error(err, "Failed to get watch namespace")
 		os.Exit(1)

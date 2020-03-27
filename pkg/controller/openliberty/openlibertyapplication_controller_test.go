@@ -10,8 +10,11 @@ import (
 	"strconv"
 
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
-	autils "github.com/appsody/appsody-operator/pkg/utils"
+	oputils "github.com/application-stacks/runtime-component-operator/pkg/utils"
+	prometheusv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	certmngrv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
+	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -26,6 +29,7 @@ import (
 	"k8s.io/client-go/rest"
 	coretesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/record"
+	applicationsv1beta1 "sigs.k8s.io/application/pkg/apis/app/v1beta1"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -34,14 +38,14 @@ import (
 var (
 	name                       = "app"
 	namespace                  = "openliberty"
-	appImage                   = "my-image"
-	ksvcAppImage               = "ksvc-image"
+	appImage                   = "navidsh/demo-day:latest"
+	ksvcAppImage               = "openliberty/open-liberty:latest"
 	defaultMeta                = metav1.ObjectMeta{Name: name, Namespace: namespace}
 	replicas             int32 = 3
 	autoscaling                = &openlibertyv1beta1.OpenLibertyApplicationAutoScaling{MaxReplicas: 3}
 	pullPolicy                 = corev1.PullAlways
 	serviceType                = corev1.ServiceTypeClusterIP
-	service                    = &openlibertyv1beta1.OpenLibertyApplicationService{Type: serviceType, Port: 9080}
+	service                    = &openlibertyv1beta1.OpenLibertyApplicationService{Type: &serviceType, Port: 9080}
 	expose                     = true
 	serviceAccountName         = "service-account"
 	volumeCT                   = &corev1.PersistentVolumeClaim{TypeMeta: metav1.TypeMeta{Kind: "StatefulSet"}}
@@ -75,20 +79,40 @@ func TestOpenLibertyController(t *testing.T) {
 		t.Fatalf("Unable to add route scheme: (%v)", err)
 	}
 
+	if err := certmngrv1alpha2.AddToScheme(s); err != nil {
+		t.Fatalf("Unable to add cert-manager scheme: (%v)", err)
+	}
+
+	if err := applicationsv1beta1.AddToScheme(s); err != nil {
+		t.Fatalf("Unable to add applications scheme: (%v)", err)
+	}
+
+	if err := prometheusv1.AddToScheme(s); err != nil {
+		t.Fatalf("Unable to add prometheus scheme: (%v)", err)
+	}
+
+	if err := imagev1.AddToScheme(s); err != nil {
+		t.Fatalf("Unable to add imagev1 scheme: (%v)", err)
+	}
+
 	s.AddKnownTypes(openlibertyv1beta1.SchemeGroupVersion, openliberty)
+	s.AddKnownTypes(certmngrv1alpha2.SchemeGroupVersion, &certmngrv1alpha2.Certificate{})
+	s.AddKnownTypes(prometheusv1.SchemeGroupVersion, &prometheusv1.ServiceMonitor{})
 
 	// Create a fake client to mock API calls.
 	cl := fakeclient.NewFakeClient(objs...)
 
-	rb := autils.NewReconcilerBase(cl, s, &rest.Config{}, record.NewFakeRecorder(10))
+	rb := oputils.NewReconcilerBase(cl, s, &rest.Config{}, record.NewFakeRecorder(10))
 
-	// Create a ReconcileAppsodyApplication object
+	// Create a ReconcileOpenLiberty object
 	r := &ReconcileOpenLiberty{ReconcilerBase: rb}
 	r.SetDiscoveryClient(createFakeDiscoveryClient())
 
 	if err := testBasicReconcile(t, r, rb); err != nil {
 		t.Fatalf("%v", err)
 	}
+
+	t.Log(r.IsOpenShift())
 
 	if err := testStorage(t, r, rb); err != nil {
 		t.Fatalf("%v", err)
@@ -116,7 +140,7 @@ func TestOpenLibertyController(t *testing.T) {
 }
 
 // Test methods
-func testBasicReconcile(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
+func testBasicReconcile(t *testing.T, r *ReconcileOpenLiberty, rb oputils.ReconcilerBase) error {
 	// Mock request to simulate Reconcile being called on an event for a watched resource
 	// then ensure reconcile is successful and does not return an empty result
 	req := createReconcileRequest(name, namespace)
@@ -135,7 +159,7 @@ func testBasicReconcile(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconci
 	return nil
 }
 
-func testStorage(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
+func testStorage(t *testing.T, r *ReconcileOpenLiberty, rb oputils.ReconcilerBase) error {
 	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	req := createReconcileRequest(name, namespace)
@@ -176,7 +200,7 @@ func testStorage(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase
 	return nil
 }
 
-func testKnativeService(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
+func testKnativeService(t *testing.T, r *ReconcileOpenLiberty, rb oputils.ReconcilerBase) error {
 	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	req := createReconcileRequest(name, namespace)
@@ -223,7 +247,7 @@ func testKnativeService(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconci
 	return nil
 }
 
-func testExposeRoute(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
+func testExposeRoute(t *testing.T, r *ReconcileOpenLiberty, rb oputils.ReconcilerBase) error {
 	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	req := createReconcileRequest(name, namespace)
@@ -252,7 +276,7 @@ func testExposeRoute(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconciler
 	return nil
 }
 
-func testAutoscaling(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
+func testAutoscaling(t *testing.T, r *ReconcileOpenLiberty, rb oputils.ReconcilerBase) error {
 	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	req := createReconcileRequest(name, namespace)
@@ -285,7 +309,7 @@ func testAutoscaling(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconciler
 	return nil
 }
 
-func testServiceAccount(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
+func testServiceAccount(t *testing.T, r *ReconcileOpenLiberty, rb oputils.ReconcilerBase) error {
 	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	req := createReconcileRequest(name, namespace)
@@ -314,8 +338,8 @@ func testServiceAccount(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reconci
 	return nil
 }
 
-// most of this functionality is handled by autils, only verifying liberty logic
-func testServiceMonitoring(t *testing.T, r *ReconcileOpenLiberty, rb autils.ReconcilerBase) error {
+// most of this functionality is handled by oputils, only verifying liberty logic
+func testServiceMonitoring(t *testing.T, r *ReconcileOpenLiberty, rb oputils.ReconcilerBase) error {
 	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	req := createReconcileRequest(name, namespace)
@@ -334,7 +358,7 @@ func testServiceMonitoring(t *testing.T, r *ReconcileOpenLiberty, rb autils.Reco
 	}
 
 	monitorTests := []Test{
-		{"Monitor label assigned", "true", svc.Labels["app."+openliberty.GetGroupName()+"/monitor"]},
+		{"Monitor label assigned", "true", svc.Labels["monitor."+openliberty.GetGroupName()+"/enabled"]},
 	}
 	if err = verifyTests(monitorTests); err != nil {
 		return err
@@ -385,6 +409,31 @@ func createFakeDiscoveryClient() discovery.DiscoveryInterface {
 			GroupVersion: servingv1alpha1.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
 				{Name: "services", Namespaced: true, Kind: "Service", SingularName: "service"},
+			},
+		},
+		{
+			GroupVersion: certmngrv1alpha2.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "certificates", Namespaced: true, Kind: "Certificate", SingularName: "certificate"},
+			},
+		},
+
+		{
+			GroupVersion: prometheusv1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "servicemonitors", Namespaced: true, Kind: "ServiceMonitor", SingularName: "servicemonitor"},
+			},
+		},
+		{
+			GroupVersion: imagev1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "imagestreams", Namespaced: true, Kind: "ImageStream", SingularName: "imagestream"},
+			},
+		},
+		{
+			GroupVersion: applicationsv1beta1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "applications", Namespaced: true, Kind: "Application", SingularName: "application"},
 			},
 		},
 	}
