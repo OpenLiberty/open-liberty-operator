@@ -3263,6 +3263,92 @@ spec:
                 - name
                 type: object
               type: array
+            sso:
+              description: OpenLibertyApplicationSSO represents Single sign-on (SSO)
+                configuration for an OpenLibertyApplication
+              properties:
+                github:
+                  description: GithubLogin represents configuration for social login
+                    using GitHub.
+                  properties:
+                    hostname:
+                      type: string
+                  type: object
+                mapToUserRegistry:
+                  type: boolean
+                oauth2:
+                  items:
+                    description: OAuth2Client represents configuration for an OAuth2
+                      client
+                    properties:
+                      accessTokenHeaderName:
+                        type: string
+                      accessTokenRequired:
+                        type: boolean
+                      accessTokenSupported:
+                        type: boolean
+                      authorizationEndpoint:
+                        type: string
+                      displayName:
+                        type: string
+                      groupNameAttribute:
+                        type: string
+                      id:
+                        type: string
+                      realmName:
+                        type: string
+                      realmNameAttribute:
+                        type: string
+                      scope:
+                        type: string
+                      tokenEndpoint:
+                        type: string
+                      tokenEndpointAuthMethod:
+                        type: string
+                      userApi:
+                        type: string
+                      userApiType:
+                        type: string
+                      userNameAttribute:
+                        type: string
+                    required:
+                    - authorizationEndpoint
+                    - tokenEndpoint
+                    type: object
+                  type: array
+                oidc:
+                  items:
+                    description: OidcClient represents configuration for an OpenID
+                      Connect (OIDC) client
+                    properties:
+                      discoveryEndpoint:
+                        type: string
+                      displayName:
+                        type: string
+                      groupNameAttribute:
+                        type: string
+                      hostNameVerificationEnabled:
+                        type: boolean
+                      id:
+                        type: string
+                      realmNameAttribute:
+                        type: string
+                      scope:
+                        type: string
+                      tokenEndpointAuthMethod:
+                        type: string
+                      userInfoEndpointEnabled:
+                        type: boolean
+                      userNameAttribute:
+                        type: string
+                    required:
+                    - discoveryEndpoint
+                    type: object
+                  type: array
+                redirectToRPHostAndPort:
+                  description: Common parameters for all SSO providers
+                  type: string
+              type: object
             storage:
               description: OpenLibertyApplicationStorage ...
               properties:
