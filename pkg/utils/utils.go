@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
-	oputils "github.com/application-stacks/runtime-component-operator/pkg/utils"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -194,6 +193,10 @@ func ConfigureServiceability(pts *corev1.PodTemplateSpec, la *openlibertyv1beta1
 	}
 }
 
+func normalizeEnvVariableName(name string) string {
+	return strings.NewReplacer("-", "_", ".", "_").Replace(strings.ToUpper(name))
+}
+
 // getValue returns value for string
 func getValue(v interface{}) string {
 	switch v.(type) {
@@ -226,7 +229,7 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 	ssoEnv := []corev1.EnvVar{}
 	for _, k := range secretKeys {
 		ssoEnv = append(ssoEnv, corev1.EnvVar{
-			Name: ssoEnvVarPrefix + oputils.normalizeEnvVariableName(k),
+			Name: ssoEnvVarPrefix + normalizeEnvVariableName(k),
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
