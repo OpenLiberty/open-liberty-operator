@@ -16,6 +16,7 @@ rules:
   - configmaps
   - secrets
   - serviceaccounts
+  - namespaces
   - pods/exec
   verbs:
   - '*'
@@ -57,6 +58,12 @@ rules:
   verbs:
   - '*'
 - apiGroups:
+  - image.openshift.io
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- apiGroups:
   - route.openshift.io
   resources:
   - routes
@@ -70,20 +77,14 @@ rules:
   verbs:
   - '*'
 - apiGroups:
-  - app.k8s.io
-  resources:
-  - applications
-  verbs:
-  - '*'
-- apiGroups:
-  - image.openshift.io
-  resources:
-  - '*'
-  verbs:
-  - '*'
-- apiGroups:
   - cert-manager.io
   resources:
   - certificates
+  verbs:
+  - '*'
+- apiGroups:
+  - app.k8s.io
+  resources:
+  - applications
   verbs:
   - '*'
