@@ -304,8 +304,8 @@ func (in *OpenLibertyApplicationSSO) DeepCopyInto(out *OpenLibertyApplicationSSO
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.OAuth2 != nil {
-		in, out := &in.OAuth2, &out.OAuth2
+	if in.Oauth2 != nil {
+		in, out := &in.Oauth2, &out.Oauth2
 		*out = make([]OAuth2Client, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])

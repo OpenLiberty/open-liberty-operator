@@ -288,7 +288,7 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 		}
 	}
 
-	for _, oauth2Client := range sso.OAuth2 {
+	for _, oauth2Client := range sso.Oauth2 {
 		id := strings.ToUpper(oauth2Client.ID)
 		if id == "" {
 			id = "OAUTH2"

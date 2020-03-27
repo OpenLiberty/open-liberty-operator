@@ -26,12 +26,12 @@ type OpenLibertyApplicationSpec struct {
 	// +listMapKey=name
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
 	// +listType=atomic
-	VolumeMounts        []corev1.VolumeMount          `json:"volumeMounts,omitempty"`
-	ResourceConstraints *corev1.ResourceRequirements  `json:"resourceConstraints,omitempty"`
-	ReadinessProbe      *corev1.Probe                 `json:"readinessProbe,omitempty"`
-	LivenessProbe       *corev1.Probe                 `json:"livenessProbe,omitempty"`
+	VolumeMounts        []corev1.VolumeMount           `json:"volumeMounts,omitempty"`
+	ResourceConstraints *corev1.ResourceRequirements   `json:"resourceConstraints,omitempty"`
+	ReadinessProbe      *corev1.Probe                  `json:"readinessProbe,omitempty"`
+	LivenessProbe       *corev1.Probe                  `json:"livenessProbe,omitempty"`
 	Service             *OpenLibertyApplicationService `json:"service,omitempty"`
-	Expose              *bool                         `json:"expose,omitempty"`
+	Expose              *bool                          `json:"expose,omitempty"`
 	// +listType=atomic
 	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
 	// +listType=map
@@ -53,7 +53,7 @@ type OpenLibertyApplicationSpec struct {
 	SidecarContainers []corev1.Container                    `json:"sidecarContainers,omitempty"`
 	Serviceability    *OpenLibertyApplicationServiceability `json:"serviceability,omitempty"`
 	Route             *OpenLibertyApplicationRoute          `json:"route,omitempty"`
-	SSO            *OpenLibertyApplicationSSO            `json:"sso,omitempty"`
+	SSO               *OpenLibertyApplicationSSO            `json:"sso,omitempty"`
 }
 
 // OpenLibertyApplicationAutoScaling ...
@@ -73,20 +73,20 @@ type OpenLibertyApplicationService struct {
 
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:validation:Minimum=1
-	Port       int32  `json:"port,omitempty"`
+	Port int32 `json:"port,omitempty"`
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:validation:Minimum=1
 	TargetPort *int32 `json:"targetPort,omitempty"`
 
-	PortName   string `json:"portName,omitempty"`
+	PortName string `json:"portName,omitempty"`
 
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// +listType=atomic
-	Consumes             []ServiceBindingConsumes `json:"consumes,omitempty"`
-	Provides             *ServiceBindingProvides  `json:"provides,omitempty"`
+	Consumes []ServiceBindingConsumes `json:"consumes,omitempty"`
+	Provides *ServiceBindingProvides  `json:"provides,omitempty"`
 	// +k8s:openapi-gen=true
-	Certificate          *Certificate             `json:"certificate,omitempty"`
-	CertificateSecretRef *string                  `json:"certificateSecretRef,omitempty"`
+	Certificate          *Certificate `json:"certificate,omitempty"`
+	CertificateSecretRef *string      `json:"certificateSecretRef,omitempty"`
 }
 
 // ServiceBindingProvides represents information about
@@ -217,13 +217,11 @@ type OpenLibertyApplicationList struct {
 // OpenLibertyApplicationSSO represents Single sign-on (SSO) configuration for an OpenLibertyApplication
 // +k8s:openapi-gen=true
 type OpenLibertyApplicationSSO struct {
-	// +listType=map
-	// +listMapKey=id
+	// +listType=atomic
 	OIDC []OidcClient `json:"oidc,omitempty"`
 
-	// +listType=map
-	// +listMapKey=id
-	OAuth2 []OAuth2Client `json:"oauth2,omitempty"`
+	// +listType=atomic
+	Oauth2 []OAuth2Client `json:"oauth2,omitempty"`
 
 	Github *GithubLogin `json:"github,omitempty"`
 
@@ -490,7 +488,6 @@ func (cr *OpenLibertyApplication) GetServiceability() *OpenLibertyApplicationSer
 	return cr.Spec.Serviceability
 }
 
-
 // GetSize returns pesistent volume size for Serviceability
 func (s *OpenLibertyApplicationServiceability) GetSize() string {
 	return s.Size
@@ -724,7 +721,7 @@ func (cr *OpenLibertyApplication) GetLabels() map[string]string {
 		"app.kubernetes.io/name":       cr.Name,
 		"app.kubernetes.io/managed-by": "open-liberty-operator",
 		"app.kubernetes.io/component":  "backend",
-		"app.kubernetes.io/part-of": cr.Spec.ApplicationName,
+		"app.kubernetes.io/part-of":    cr.Spec.ApplicationName,
 	}
 
 	if cr.Spec.Version != "" {

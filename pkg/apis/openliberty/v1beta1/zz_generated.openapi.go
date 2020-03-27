@@ -429,8 +429,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSSO(ref common.Re
 					"oidc": {
 						VendorExtensible: spec.VendorExtensible{
 							Extensions: spec.Extensions{
-								"x-kubernetes-list-map-keys": "id",
-								"x-kubernetes-list-type":     "map",
+								"x-kubernetes-list-type": "atomic",
 							},
 						},
 						SchemaProps: spec.SchemaProps{
@@ -447,8 +446,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSSO(ref common.Re
 					"oauth2": {
 						VendorExtensible: spec.VendorExtensible{
 							Extensions: spec.Extensions{
-								"x-kubernetes-list-map-keys": "id",
-								"x-kubernetes-list-type":     "map",
+								"x-kubernetes-list-type": "atomic",
 							},
 						},
 						SchemaProps: spec.SchemaProps{
