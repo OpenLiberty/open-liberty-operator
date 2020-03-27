@@ -26,12 +26,12 @@ type OpenLibertyApplicationSpec struct {
 	// +listMapKey=name
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
 	// +listType=atomic
-	VolumeMounts        []corev1.VolumeMount          `json:"volumeMounts,omitempty"`
-	ResourceConstraints *corev1.ResourceRequirements  `json:"resourceConstraints,omitempty"`
-	ReadinessProbe      *corev1.Probe                 `json:"readinessProbe,omitempty"`
-	LivenessProbe       *corev1.Probe                 `json:"livenessProbe,omitempty"`
+	VolumeMounts        []corev1.VolumeMount           `json:"volumeMounts,omitempty"`
+	ResourceConstraints *corev1.ResourceRequirements   `json:"resourceConstraints,omitempty"`
+	ReadinessProbe      *corev1.Probe                  `json:"readinessProbe,omitempty"`
+	LivenessProbe       *corev1.Probe                  `json:"livenessProbe,omitempty"`
 	Service             *OpenLibertyApplicationService `json:"service,omitempty"`
-	Expose              *bool                         `json:"expose,omitempty"`
+	Expose              *bool                          `json:"expose,omitempty"`
 	// +listType=atomic
 	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
 	// +listType=map
@@ -53,6 +53,7 @@ type OpenLibertyApplicationSpec struct {
 	SidecarContainers []corev1.Container                    `json:"sidecarContainers,omitempty"`
 	Serviceability    *OpenLibertyApplicationServiceability `json:"serviceability,omitempty"`
 	Route             *OpenLibertyApplicationRoute          `json:"route,omitempty"`
+	SSO               *OpenLibertyApplicationSSO            `json:"sso,omitempty"`
 }
 
 // OpenLibertyApplicationAutoScaling ...
@@ -72,20 +73,20 @@ type OpenLibertyApplicationService struct {
 
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:validation:Minimum=1
-	Port       int32  `json:"port,omitempty"`
+	Port int32 `json:"port,omitempty"`
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:validation:Minimum=1
 	TargetPort *int32 `json:"targetPort,omitempty"`
 
-	PortName   string `json:"portName,omitempty"`
+	PortName string `json:"portName,omitempty"`
 
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// +listType=atomic
-	Consumes             []ServiceBindingConsumes `json:"consumes,omitempty"`
-	Provides             *ServiceBindingProvides  `json:"provides,omitempty"`
+	Consumes []ServiceBindingConsumes `json:"consumes,omitempty"`
+	Provides *ServiceBindingProvides  `json:"provides,omitempty"`
 	// +k8s:openapi-gen=true
-	Certificate          *Certificate             `json:"certificate,omitempty"`
-	CertificateSecretRef *string                  `json:"certificateSecretRef,omitempty"`
+	Certificate          *Certificate `json:"certificate,omitempty"`
+	CertificateSecretRef *string      `json:"certificateSecretRef,omitempty"`
 }
 
 // ServiceBindingProvides represents information about
@@ -211,6 +212,63 @@ type OpenLibertyApplicationList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []OpenLibertyApplication `json:"items"`
+}
+
+// OpenLibertyApplicationSSO represents Single sign-on (SSO) configuration for an OpenLibertyApplication
+// +k8s:openapi-gen=true
+type OpenLibertyApplicationSSO struct {
+	// +listType=atomic
+	OIDC []OidcClient `json:"oidc,omitempty"`
+
+	// +listType=atomic
+	Oauth2 []OAuth2Client `json:"oauth2,omitempty"`
+
+	Github *GithubLogin `json:"github,omitempty"`
+
+	// Common parameters for all SSO providers
+	RedirectToRPHostAndPort string `json:"redirectToRPHostAndPort,omitempty"`
+	MapToUserRegistry       *bool  `json:"mapToUserRegistry,omitempty"`
+}
+
+// OidcClient represents configuration for an OpenID Connect (OIDC) client
+// +k8s:openapi-gen=true
+type OidcClient struct {
+	ID                          string `json:"id,omitempty"`
+	DiscoveryEndpoint           string `json:"discoveryEndpoint"`
+	GroupNameAttribute          string `json:"groupNameAttribute,omitempty"`
+	UserNameAttribute           string `json:"userNameAttribute,omitempty"`
+	DisplayName                 string `json:"displayName,omitempty"`
+	UserInfoEndpointEnabled     *bool  `json:"userInfoEndpointEnabled,omitempty"`
+	RealmNameAttribute          string `json:"realmNameAttribute,omitempty"`
+	Scope                       string `json:"scope,omitempty"`
+	TokenEndpointAuthMethod     string `json:"tokenEndpointAuthMethod,omitempty"`
+	HostNameVerificationEnabled *bool  `json:"hostNameVerificationEnabled,omitempty"`
+}
+
+// OAuth2Client represents configuration for an OAuth2 client
+// +k8s:openapi-gen=true
+type OAuth2Client struct {
+	ID                      string `json:"id,omitempty"`
+	TokenEndpoint           string `json:"tokenEndpoint"`
+	AuthorizationEndpoint   string `json:"authorizationEndpoint"`
+	GroupNameAttribute      string `json:"groupNameAttribute,omitempty"`
+	UserNameAttribute       string `json:"userNameAttribute,omitempty"`
+	DisplayName             string `json:"displayName,omitempty"`
+	RealmNameAttribute      string `json:"realmNameAttribute,omitempty"`
+	RealmName               string `json:"realmName,omitempty"`
+	Scope                   string `json:"scope,omitempty"`
+	TokenEndpointAuthMethod string `json:"tokenEndpointAuthMethod,omitempty"`
+	AccessTokenHeaderName   string `json:"accessTokenHeaderName,omitempty"`
+	AccessTokenRequired     *bool  `json:"accessTokenRequired,omitempty"`
+	AccessTokenSupported    *bool  `json:"accessTokenSupported,omitempty"`
+	UserApiType             string `json:"userApiType,omitempty"`
+	UserApi                 string `json:"userApi,omitempty"`
+}
+
+// GithubLogin represents configuration for social login using GitHub.
+// +k8s:openapi-gen=true
+type GithubLogin struct {
+	Hostname string `json:"hostname,omitempty"`
 }
 
 func init() {
@@ -429,7 +487,6 @@ func (s *OpenLibertyApplicationService) GetAnnotations() map[string]string {
 func (cr *OpenLibertyApplication) GetServiceability() *OpenLibertyApplicationServiceability {
 	return cr.Spec.Serviceability
 }
-
 
 // GetSize returns pesistent volume size for Serviceability
 func (s *OpenLibertyApplicationServiceability) GetSize() string {
@@ -664,7 +721,7 @@ func (cr *OpenLibertyApplication) GetLabels() map[string]string {
 		"app.kubernetes.io/name":       cr.Name,
 		"app.kubernetes.io/managed-by": "open-liberty-operator",
 		"app.kubernetes.io/component":  "backend",
-		"app.kubernetes.io/part-of": cr.Spec.ApplicationName,
+		"app.kubernetes.io/part-of":    cr.Spec.ApplicationName,
 	}
 
 	if cr.Spec.Version != "" {

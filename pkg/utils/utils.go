@@ -3,6 +3,8 @@ package utils
 import (
 	"bytes"
 	"fmt"
+	"sort"
+	"strconv"
 	"strings"
 
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
@@ -23,6 +25,7 @@ var log = logf.Log.WithName("openliberty_utils")
 
 //Constant Values
 const serviceabilityMountPath = "/serviceability"
+const ssoEnvVarPrefix = "SEC_SSO_"
 
 // Validate if the OpenLibertyApplication is valid
 func Validate(olapp *openlibertyv1beta1.OpenLibertyApplication) (bool, error) {
@@ -186,6 +189,158 @@ func ConfigureServiceability(pts *corev1.PodTemplateSpec, la *openlibertyv1beta1
 				},
 			}
 			pts.Spec.Volumes = append(pts.Spec.Volumes, vol)
+		}
+	}
+}
+
+func normalizeEnvVariableName(name string) string {
+	return strings.NewReplacer("-", "_", ".", "_").Replace(strings.ToUpper(name))
+}
+
+// getValue returns value for string
+func getValue(v interface{}) string {
+	switch v.(type) {
+	case string:
+		return v.(string)
+	case bool:
+		return strconv.FormatBool(v.(bool))
+	default:
+		return ""
+	}
+}
+
+// createEnvVarSSO creates an environment variable for SSO
+func createEnvVarSSO(loginID string, envSuffix string, value interface{}) *corev1.EnvVar {
+	return &corev1.EnvVar{
+		Name:  ssoEnvVarPrefix + loginID + envSuffix,
+		Value: getValue(value),
+	}
+}
+
+// CustomizeEnvSSO Process the configuration for SSO login providers
+func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.OpenLibertyApplication, ssoSecret *corev1.Secret) {
+
+	var secretKeys []string
+	for k := range ssoSecret.Data {
+		secretKeys = append(secretKeys, k)
+	}
+	sort.Strings(secretKeys)
+
+	ssoEnv := []corev1.EnvVar{}
+	for _, k := range secretKeys {
+		ssoEnv = append(ssoEnv, corev1.EnvVar{
+			Name: ssoEnvVarPrefix + normalizeEnvVariableName(k),
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: ssoSecret.GetName(),
+					},
+					Key: k,
+				},
+			},
+		})
+	}
+
+	sso := instance.Spec.SSO
+	if sso.MapToUserRegistry != nil {
+		ssoEnv = append(ssoEnv, *createEnvVarSSO("", "MAPTOUSERREGISTRY", *sso.MapToUserRegistry))
+	}
+
+	if sso.RedirectToRPHostAndPort != "" {
+		ssoEnv = append(ssoEnv, *createEnvVarSSO("", "REDIRECTTORPHOSTANDPORT", sso.RedirectToRPHostAndPort))
+	}
+
+	if sso.Github != nil && sso.Github.Hostname != "" {
+		ssoEnv = append(ssoEnv, *createEnvVarSSO("", "GITHUB_HOSTNAME", sso.Github.Hostname))
+	}
+
+	for _, oidcClient := range sso.OIDC {
+		id := strings.ToUpper(oidcClient.ID)
+		if id == "" {
+			id = "OIDC"
+		}
+		if oidcClient.DiscoveryEndpoint != "" {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_DISCOVERYENDPOINT", oidcClient.DiscoveryEndpoint))
+		}
+		if oidcClient.GroupNameAttribute != "" {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_GROUPNAMEATTRIBUTE", oidcClient.GroupNameAttribute))
+		}
+		if oidcClient.UserNameAttribute != "" {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_USERNAMEATTRIBUTE", oidcClient.UserNameAttribute))
+		}
+		if oidcClient.DisplayName != "" {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_DISPLAYNAME", oidcClient.DisplayName))
+		}
+		if oidcClient.UserInfoEndpointEnabled != nil {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_USERINFOENDPOINTENABLED", *oidcClient.UserInfoEndpointEnabled))
+		}
+		if oidcClient.RealmNameAttribute != "" {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_REALMNAMEATTRIBUTE", oidcClient.RealmNameAttribute))
+		}
+		if oidcClient.Scope != "" {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_SCOPE", oidcClient.Scope))
+		}
+		if oidcClient.TokenEndpointAuthMethod != "" {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_TOKENENDPOINTAUTHMETHOD", oidcClient.TokenEndpointAuthMethod))
+		}
+		if oidcClient.HostNameVerificationEnabled != nil {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_HOSTNAMEVERIFICATIONENABLED", *oidcClient.HostNameVerificationEnabled))
+		}
+	}
+
+	for _, oauth2Client := range sso.Oauth2 {
+		id := strings.ToUpper(oauth2Client.ID)
+		if id == "" {
+			id = "OAUTH2"
+		}
+		if oauth2Client.TokenEndpoint != "" {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_TOKENENDPOINT", oauth2Client.TokenEndpoint))
+		}
+		if oauth2Client.AuthorizationEndpoint != "" {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_AUTHORIZATIONENDPOINT", oauth2Client.AuthorizationEndpoint))
+		}
+		if oauth2Client.GroupNameAttribute != "" {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_GROUPNAMEATTRIBUTE", oauth2Client.GroupNameAttribute))
+		}
+		if oauth2Client.UserNameAttribute != "" {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_USERNAMEATTRIBUTE", oauth2Client.UserNameAttribute))
+		}
+		if oauth2Client.DisplayName != "" {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_DISPLAYNAME", oauth2Client.DisplayName))
+		}
+		if oauth2Client.RealmNameAttribute != "" {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_REALMNAMEATTRIBUTE", oauth2Client.RealmNameAttribute))
+		}
+		if oauth2Client.RealmName != "" {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_REALMNAME", oauth2Client.RealmName))
+		}
+		if oauth2Client.Scope != "" {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_SCOPE", oauth2Client.Scope))
+		}
+		if oauth2Client.TokenEndpointAuthMethod != "" {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_TOKENENDPOINTAUTHMETHOD", oauth2Client.TokenEndpointAuthMethod))
+		}
+		if oauth2Client.AccessTokenHeaderName != "" {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_ACCESSTOKENHEADERNAME", oauth2Client.AccessTokenHeaderName))
+		}
+		if oauth2Client.AccessTokenRequired != nil {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_ACCESSTOKENREQUIRED", *oauth2Client.AccessTokenRequired))
+		}
+		if oauth2Client.AccessTokenSupported != nil {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_ACCESSTOKENSUPPORTED", *oauth2Client.AccessTokenSupported))
+		}
+		if oauth2Client.UserApiType != "" {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_USERAPITYPE", oauth2Client.UserApiType))
+		}
+		if oauth2Client.UserApi != "" {
+			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_USERAPI", oauth2Client.UserApi))
+		}
+	}
+
+	envList := pts.Spec.Containers[0].Env
+	for _, v := range ssoEnv {
+		if _, found := findEnvVar(v.Name, envList); !found {
+			pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, v)
 		}
 	}
 }

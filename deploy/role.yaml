@@ -39,8 +39,6 @@ rules:
   resources:
   - servicemonitors
   verbs:
-  - get
-  - create
   - '*'
 - apiGroups:
   - apps
@@ -59,8 +57,13 @@ rules:
   verbs:
   - '*'
 - apiGroups:
+  - image.openshift.io
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- apiGroups:
   - route.openshift.io
-  attributeRestrictions: null
   resources:
   - routes
   - routes/custom-host
@@ -68,15 +71,8 @@ rules:
   - '*'
 - apiGroups:
   - serving.knative.dev
-  attributeRestrictions: null
   resources:
   - services
-  verbs:
-  - '*'
-- apiGroups:
-  - image.openshift.io
-  resources:
-  - '*'
   verbs:
   - '*'
 - apiGroups:

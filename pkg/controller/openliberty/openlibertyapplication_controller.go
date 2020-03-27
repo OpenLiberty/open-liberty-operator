@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/application-stacks/runtime-component-operator/pkg/common"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -38,6 +39,9 @@ import (
 )
 
 var log = logf.Log.WithName("controller_openlibertyapplication")
+
+//Constant Values
+const ssoSecretNameSuffix = "-olapp-sso"
 
 // Holds a list of namespaces the operator will be watching
 var watchNamespaces []string
@@ -193,6 +197,26 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		IsController: true,
 		OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
 	}, predSubResource)
+	if err != nil {
+		return err
+	}
+
+	// Setup watch for SSO secret
+	err = c.Watch(
+		&source.Kind{Type: &corev1.Secret{}},
+		&handler.EnqueueRequestsFromMapFunc{
+			ToRequests: handler.ToRequestsFunc(func(a handler.MapObject) []reconcile.Request {
+				if !strings.HasSuffix(a.Meta.GetName(), ssoSecretNameSuffix) {
+					return nil
+				}
+				return []reconcile.Request{
+					{NamespacedName: types.NamespacedName{
+						Name:      strings.NewReplacer(ssoSecretNameSuffix, "").Replace(a.Meta.GetName()),
+						Namespace: a.Meta.GetNamespace(),
+					}},
+				}
+			}),
+		})
 	if err != nil {
 		return err
 	}
@@ -548,6 +572,15 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			oputils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
 			oputils.CustomizePersistence(statefulSet, instance)
 			lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance)
+			if instance.Spec.SSO != nil {
+				secretName := instance.GetName() + ssoSecretNameSuffix
+				ssoSecret := &corev1.Secret{}
+				err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: instance.GetNamespace()}, ssoSecret)
+				if err != nil {
+					return errors.Wrapf(err, "Secret for Single sign-on (SSO) was not found. Create a secret named %q in namespace %q with the credentials for the login providers you selected in application image.", secretName, instance.GetNamespace())
+				}
+				lutils.CustomizeEnvSSO(&statefulSet.Spec.Template, instance, ssoSecret)
+			}
 			lutils.ConfigureServiceability(&statefulSet.Spec.Template, instance)
 			if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
 				m := make(map[string]string)
@@ -583,6 +616,16 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			oputils.CustomizeDeployment(deploy, instance)
 			oputils.CustomizePodSpec(&deploy.Spec.Template, instance)
 			lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance)
+			if instance.Spec.SSO != nil {
+				secretName := instance.GetName() + ssoSecretNameSuffix
+				ssoSecret := &corev1.Secret{}
+				err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: instance.GetNamespace()}, ssoSecret)
+				if err != nil {
+					return errors.Wrapf(err, "Secret for Single sign-on (SSO) was not found. Create a secret named %q in namespace %q with the credentials for the login providers you selected in application image.", secretName, instance.GetNamespace())
+				}
+				lutils.CustomizeEnvSSO(&deploy.Spec.Template, instance, ssoSecret)
+			}
+
 			lutils.ConfigureServiceability(&deploy.Spec.Template, instance)
 			if instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
 				m := make(map[string]string)
