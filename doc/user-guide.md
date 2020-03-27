@@ -54,16 +54,24 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 
 | Parameter | Description |
 |---|---|
-| `applicationImage` | The absolute name of the image to be deployed, containing the registry and the tag. |
-| `pullPolicy` | The policy used when pulling the image.  One of: `Always`, `Never`, and `IfNotPresent`. |
-| `pullSecret` | If using a registry that requires authentication, the name of the secret containing credentials. |
 | `version` | The current version of the application. Label `app.kubernetes.io/version` will be added to all resources when the version is defined. |
 | `serviceAccountName` | The name of the OpenShift service account to be used during deployment. |
+| `applicationImage` | The absolute name of the image to be deployed, containing the registry and the tag. On OpenShift, it can also be set to `<project name>/<image stream name>[:tag]` to reference an image from an image stream. If `<project name>` and `<tag>` values are not defined, they default to the namespace of the CR and the value of `latest`, respectively. |
+
+| `applicationName` | The name of the application this resource is part of. If not specified, it defaults to the name of the CR. |
+| `createAppDefinition`   | A boolean to toggle the automatic configuration of Kubernetes resources for the `OpenLibertyApplication` CR to allow creation of an application definition by [kAppNav](https://kappnav.io/). The default value is `true`. See [Application Navigator](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#kubernetes-application-navigator-kappnav-support) for more information. |
+| `pullPolicy` | The policy used when pulling the image.  One of: `Always`, `Never`, and `IfNotPresent`. |
+| `pullSecret` | If using a registry that requires authentication, the name of the secret containing credentials. |
 | `initContainers` | The list of [Init Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#container-v1-core) definitions. |
+| `sidecarContainers` | The list of `sidecar` containers. These are additional containers to be added to the pods. Note: Sidecar containers should not be named `app`. |
 | `architecture` | An array of architectures to be considered for deployment. Their position in the array indicates preference. |
 | `service.port` | The port exposed by the container. |
+| `service.targetPort` | The port that the operator assigns to containers inside pods. Defaults to the value of `service.port`. |
+| `service.portName` | The name for the port exposed by the container. |
 | `service.type` | The Kubernetes [Service Type](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types). |
 | `service.annotations` | Annotations to be added to the service. |
+| `service.certificate` | A YAML object representing a [Certificate](https://cert-manager.io/docs/reference/api-docs/#cert-manager.io/v1alpha2.CertificateSpec). |
+| `service.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be mounted in the pod.  |
 | `service.provides.category` | Service binding type to be provided by this CR. At this time, the only allowed value is `openapi`. |
 | `service.provides.protocol` | Protocol of the provided service. Defauts to `http`. |
 | `service.provides.context` | Specifies context root of the service. |
@@ -72,7 +80,7 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `service.consumes` | An array consisting of services to be consumed by the `OpenLibertyApplication`. |
 | `service.consumes[].category` | The type of service binding to be consumed. At this time, the only allowed value is `openapi`. |
 | `service.consumes[].name` | The name of the service to be consumed. If binding to an `OpenLibertyApplication`, then this would be the provider's CR name. |
-| `service.consumes[].namespace` | The namespace of the service to be consumed. If binding to an `OpenLibertyApplication`, then this would be the provider's CR name. ||
+| `service.consumes[].namespace` | The namespace of the service to be consumed. If binding to an `OpenLibertyApplication`, then this would be the provider's CR namespace. |
 | `service.consumes[].mountPath` | Optional field to specify which location in the pod, service binding secret should be mounted. If not specified, the secret keys would be injected as environment variables. |
 | `createKnativeService`   | A boolean to toggle the creation of Knative resources and usage of Knative serving. |
 | `expose`   | A boolean that toggles the external exposure of this deployment via a Route or a Knative Route resource.|
@@ -84,8 +92,8 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `resourceConstraints.requests.memory` | The minimum memory in bytes. Specify integers with one of these suffixes: E, P, T, G, M, K, or power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.|
 | `resourceConstraints.limits.cpu` | The upper limit of CPU core. Specify integers, fractions (e.g. 0.5), or millicores values(e.g. 100m, where 100m is equivalent to .1 core). |
 | `resourceConstraints.limits.memory` | The memory upper limit in bytes. Specify integers with suffixes: E, P, T, G, M, K, or power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.|
-| `env`   | An array of environment variables following the format of `{name, value}`, where value is a simple string. It may also follow the format of `{name, valueFrom}`, where valueFrom refers to a value in a `ConfigMap` or `Secret` resource. See [Environment variables](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#environment-variables) for more info.|
-| `envFrom`   | An array of references to `ConfigMap` or `Secret` resources containing environment variables. Keys from `ConfigMap` or `Secret` resources become environment variable names in your container. See [Environment variables](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#environment-variables) for more info.|
+| `env`   | An array of environment variables following the format of `{name, value}`, where value is a simple string. It may also follow the format of `{name, valueFrom}`, where valueFrom refers to a value in a `ConfigMap` or `Secret` resource. See [Environment variables](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#environment-variables) for more info.|
+| `envFrom`   | An array of references to `ConfigMap` or `Secret` resources containing environment variables. Keys from `ConfigMap` or `Secret` resources become environment variable names in your container. See [Environment variables](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#environment-variables) for more info.|
 | `readinessProbe`   | A YAML object configuring the [Kubernetes readiness probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#define-readiness-probes) that controls when the pod is ready to receive traffic. |
 | `livenessProbe` | A YAML object configuring the [Kubernetes liveness probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#define-a-liveness-http-request) that controls when Kubernetes needs to restart the pod.|
 | `volumes` | A YAML object representing a [pod volume](https://kubernetes.io/docs/concepts/storage/volumes). |
@@ -95,9 +103,15 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `storage.volumeClaimTemplate` | A YAML object representing a [volumeClaimTemplate](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#components) component of a `StatefulSet`. |
 | `monitoring.labels` | Labels to set on [ServiceMonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitor). |
 | `monitoring.endpoints` | A YAML snippet representing an array of [Endpoint](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint) component from ServiceMonitor. |
-| `createAppDefinition`   | A boolean to toggle the automatic configuration of `OpenLibertyApplication`'s Kubernetes resources to allow creation of an application definition by [kAppNav](https://kappnav.io/). The default value is `true`. See [Application Navigator](#kubernetes-application-navigator-kappnav-support) for more information. |
 | `serviceability.size` | A convenient field to request the size of the persisted storage to use for serviceability. Can be overridden by the `serviceability.volumeClaimName` property. See [Storage for serviceability](#storage-for-serviceability) for more information. |
 | `serviceability.volumeClaimName` | The name of the [PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims) resource you created to be used for serviceability. Must be in the same namespace. |
+| `route.annotations` | Annotations to be added to the Route. |
+| `route.host`   | Hostname to be used for the Route. |
+| `route.path`   | Path to be used for Route. |
+| `route.termination`   | TLS termination policy. Can be one of `edge`, `reencrypt` and `passthrough`. |
+| `route.insecureEdgeTerminationPolicy`   | HTTP traffic policy with TLS enabled. Can be one of `Allow`, `Redirect` and `None`. |
+| `route.certificate`  | A YAML object representing a [Certificate](https://cert-manager.io/docs/reference/api-docs/#cert-manager.io/v1alpha2.CertificateSpec). |
+| `route.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be used in the route. Also can contain destination CA certificate.  |
 
 ### Basic usage
 
@@ -112,9 +126,9 @@ spec:
   applicationImage: quay.io/my-repo/my-app:1.0
 ```
 
-The `applicationImage` value must be defined in `OpenLibertyApplication` CR.
+The `applicationImage` value must be defined in `OpenLibertyApplication` CR. On OpenShift, the operator tries to find an image stream name with the `applicationImage` value. The operator falls back to the registry lookup if it is not able to find any image stream that matches the value. If you want to distinguish an image stream called `my-company/my-app` (project: `my-company`, image stream name: `my-app`) from the Docker Hub `my-company/my-app` image, you can use the full image reference as `docker.io/my-company/my-app`.
 
-To get information on the deployed CR, use one of the following:
+To get information on the deployed CR, use either of the following:
 
 ```sh
 oc get olapp my-liberty-app
@@ -142,6 +156,7 @@ RuntimeComponent` must be replaced with `Kind: OpenLibertyApplication`.
 - [Knative Support](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Knative-support)
 - [Exposing Service](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Exposing-service-externally)
 - [Kubernetes Application Navigator](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#kubernetes-application-navigator-kappnav-support)
+- [Certificate Manager](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#certificate-manager-integration)
 
 For functionality that is unique to the Open Liberty Operator, see the following sections.
 
