@@ -169,10 +169,26 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		},
 	}
 
+	predSubResWithGenCheck := predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Ignore updates to CR status in which case metadata.Generation does not change
+			return (isClusterWide || watchNamespacesMap[e.MetaOld.GetNamespace()]) && e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
+		},
+		CreateFunc: func(e event.CreateEvent) bool {
+			return false
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return isClusterWide || watchNamespacesMap[e.Meta.GetNamespace()]
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return false
+		},
+	}
+
 	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
-	}, predSubResource)
+	}, predSubResWithGenCheck)
 	if err != nil {
 		return err
 	}
@@ -180,7 +196,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	err = c.Watch(&source.Kind{Type: &appsv1.StatefulSet{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
-	}, predSubResource)
+	}, predSubResWithGenCheck)
 	if err != nil {
 		return err
 	}
