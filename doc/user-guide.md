@@ -57,7 +57,6 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `version` | The current version of the application. Label `app.kubernetes.io/version` will be added to all resources when the version is defined. |
 | `serviceAccountName` | The name of the OpenShift service account to be used during deployment. |
 | `applicationImage` | The absolute name of the image to be deployed, containing the registry and the tag. On OpenShift, it can also be set to `<project name>/<image stream name>[:tag]` to reference an image from an image stream. If `<project name>` and `<tag>` values are not defined, they default to the namespace of the CR and the value of `latest`, respectively. |
-
 | `applicationName` | The name of the application this resource is part of. If not specified, it defaults to the name of the CR. |
 | `createAppDefinition`   | A boolean to toggle the automatic configuration of Kubernetes resources for the `OpenLibertyApplication` CR to allow creation of an application definition by [kAppNav](https://kappnav.io/). The default value is `true`. See [Application Navigator](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#kubernetes-application-navigator-kappnav-support) for more information. |
 | `pullPolicy` | The policy used when pulling the image.  One of: `Always`, `Never`, and `IfNotPresent`. |
