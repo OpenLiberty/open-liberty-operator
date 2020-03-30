@@ -13,7 +13,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Added support for single sign-on using social login providers and any OIDC & OAuth 2.0 based clients. ([#123](https://github.com/OpenLiberty/open-liberty-operator/pull/122))
-- Added support for integration with OpenShift's Certificate Management. ([#122](https://github.com/OpenLiberty/open-liberty-operator/pull/122))
+- Added support for integration with cert-manager (Certificate CRD). ([#122](https://github.com/OpenLiberty/open-liberty-operator/pull/122))
 - Added support for referencing images in image streams. ([#122](https://github.com/OpenLiberty/open-liberty-operator/pull/122))
 - Added support to specify application name to group related resources. ([#122](https://github.com/OpenLiberty/open-liberty-operator/pull/122))
 - Added optional targetPort to service in the CRD. ([#122](https://github.com/OpenLiberty/open-liberty-operator/pull/122))
