@@ -2,7 +2,7 @@ FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 
 LABEL vendor="Open Liberty" \
       name="Open Liberty Operator" \
-      version="0.3.0" \
+      version="0.4.0" \
       summary="Image for Open Liberty Operator" \
       description="This image contains the controllers for Open Liberty Operator. See https://github.com/OpenLiberty/open-liberty-operator#open-liberty-operator"
       

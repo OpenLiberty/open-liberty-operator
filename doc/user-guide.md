@@ -112,6 +112,36 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `route.insecureEdgeTerminationPolicy`   | HTTP traffic policy with TLS enabled. Can be one of `Allow`, `Redirect` and `None`. |
 | `route.certificate`  | A YAML object representing a [Certificate](https://cert-manager.io/docs/reference/api-docs/#cert-manager.io/v1alpha2.CertificateSpec). |
 | `route.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be used in the route. Also can contain destination CA certificate.  |
+| `sso.mapToUserRegistry`   | Specifies whether to map userIdentifier to registry user. |
+| `sso.redirectToRPHostAndPort`   | Specifies a callback host and port number. |
+| `sso.github.hostname`   | The hostname of GitHub server. Needed for Github Enterprise (for example: github.mycompany.com). Default value is github.com |
+| `sso.oidc`   | P |
+| `sso.oidc[].discoveryEndpoint`   | P |
+| `sso.oidc[].displayName`   | P |
+| `sso.oidc[].groupNameAttribute`   | P |
+| `sso.oidc[].hostNameVerificationEnabled`   | P |
+| `sso.oidc[].id`   | P |
+| `sso.oidc[].realmNameAttribute`   | P |
+| `sso.oidc[].scope`   | P |
+| `sso.oidc[].tokenEndpointAuthMethod`   | P |
+| `sso.oidc[].userInfoEndpointEnabled`   | P |
+| `sso.oidc[].userNameAttribute`   | P |
+| `sso.oauth2`   | P |
+| `sso.oauth2[].authorizationEndpoint`   | P |
+| `sso.oauth2[].tokenEndpoint`   | P |
+| `sso.oauth2[].accessTokenHeaderName`   | P |
+| `sso.oauth2[].accessTokenRequired`   | P |
+| `sso.oauth2[].accessTokenSupported`   | P |
+| `sso.oauth2[].displayName`   | P |
+| `sso.oauth2[].groupNameAttribute`   | P |
+| `sso.oauth2[].id`   | P |
+| `sso.oauth2[].realmName`   | P |
+| `sso.oauth2[].realmNameAttribute`   | P |
+| `sso.oauth2[].scope`   | P |
+| `sso.oauth2[].tokenEndpointAuthMethod`   | P |
+| `sso.oauth2[].userNameAttribute`   | P |
+| `sso.oauth2[].userApi`   | P |
+| `sso.oauth2[].userApiType`   | P |
 
 ### Basic usage
 
@@ -138,24 +168,23 @@ oc get openlibertyapplication my-liberty-app
 
 ### Common Component Documentation
 
-Open Liberty Operator is based on the generic [Application Stacks
-Operator](https://github.com/application-stacks/operator). To see more
-information on the usage of common functionality, see Application Stacks
-documentation below. Note that, in the samples from the links below, the instances of `Kind:
+Open Liberty Operator is based on the generic [Runtime Component
+Operator](https://github.com/application-stacks/runtime-component-operator). To see more
+information on the usage of common functionality, see the Runtime Component Operator documentation below. Note that, in the samples from the links below, the instances of `Kind:
 RuntimeComponent` must be replaced with `Kind: OpenLibertyApplication`.
 
-- [Image Streams](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Image-streams)
-- [Service Account](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Service-account)
-- [Labels](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Labels)
-- [Annotations](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Annotations)
-- [Environment Variables](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Environment-variables)
-- [High Availability](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#High-availability)
-- [Persistence](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Persistence)
-- [Service Binding](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Service-binding)
-- [Monitoring](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Monitoring)
-- [Knative Support](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Knative-support)
-- [Exposing Service](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Exposing-service-externally)
-- [Kubernetes Application Navigator](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#kubernetes-application-navigator-kappnav-support)
+- [Image Streams](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#Image-streams)
+- [Service Account](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#Service-account)
+- [Labels](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#Labels)
+- [Annotations](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#Annotations)
+- [Environment Variables](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#Environment-variables)
+- [High Availability](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#High-availability)
+- [Persistence](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#Persistence)
+- [Service Binding](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#Service-binding)
+- [Monitoring](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#Monitoring)
+- [Knative Support](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#Knative-support)
+- [Exposing Service](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#Exposing-service-externally)
+- [Kubernetes Application Navigator](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#kubernetes-application-navigator-kappnav-support)
 - [Certificate Manager](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#certificate-manager-integration)
 
 For functionality that is unique to the Open Liberty Operator, see the following sections.

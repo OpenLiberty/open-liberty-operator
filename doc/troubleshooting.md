@@ -23,7 +23,9 @@ Here are some basic troubleshooting methods to check if the operator is running 
   $ oc logs open-liberty-operator-5c4548d98f-xgqtg
   ```
 
-If the operator is running fine, check the status of the `OpenLibertyApplication` Custom Resource (CR) instance:
+If the operator is running fine, check the status of the `OpenLibertyApplication` Custom Resource (CR) instance. 
+
+Note that the following commands use `olapp`, which is the short name for `OpenLibertyApplication`:
 
 * Check the CR status:
 
