@@ -8,18 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
-
-### Changed
-
-- Changed default labels for Liberty Logging to disable tracing to container
-  logs ([#95](https://github.com/OpenLiberty/open-liberty-operator/issues/95))
+## [0.4.0]
 
 ### Added
 
-- Added image stream support ([#122](https://github.com/OpenLiberty/open-liberty-operator/pull/122))
-- Added certificate manager support ([#122](https://github.com/OpenLiberty/open-liberty-operator/pull/122))
-- Added optional targetPort to service in the CRD ([#122](https://github.com/OpenLiberty/open-liberty-operator/pull/122))
+- Added support for single sign-on using social login providers and any OIDC & OAuth 2.0 based clients. ([#123](https://github.com/OpenLiberty/open-liberty-operator/pull/122))
+- Added support for integration with cert-manager (Certificate CRD). ([#122](https://github.com/OpenLiberty/open-liberty-operator/pull/122))
+- Added support for referencing images in image streams. ([#122](https://github.com/OpenLiberty/open-liberty-operator/pull/122))
+- Added support to specify application name to group related resources. ([#122](https://github.com/OpenLiberty/open-liberty-operator/pull/122))
+- Added optional targetPort to service in the CRD. ([#122](https://github.com/OpenLiberty/open-liberty-operator/pull/122))
+- Added support for sidecar containers. ([#122](https://github.com/OpenLiberty/open-liberty-operator/pull/122))
+- Added support for naming service port.  ([#122](https://github.com/OpenLiberty/open-liberty-operator/pull/122))
+- Added OpenShift specific annotations ([#54](https://github.com/application-stacks/runtime-component-operator/pull/54))
+- Set port name for Knative service if specified ([#55](https://github.com/application-stacks/runtime-component-operator/pull/55))
+
+### Changed
+
+- Changed the match label of the ServiceMonitor created by operator from `app.openliberty.io/monitor` to `monitor.openliberty.io/enabled` ([#122](https://github.com/OpenLiberty/open-liberty-operator/pull/122))
+- Updated default environment variable for liberty logging to remove tracing from container logs ([#95](https://github.com/OpenLiberty/open-liberty-operator/issues/95))
+- **Breaking change:** When `service.consumes[].namespace` is not specified, injected name of environment variable follows `<SERVICE-NAME>_<KEY>` format and binding information are mounted at `<mountPath>/<service_name>`. ([#27](https://github.com/application-stacks/runtime-component-operator/pull/27) and [#46](https://github.com/application-stacks/runtime-component-operator/pull/46))
 
 ## [0.3.0]
 
@@ -30,8 +37,9 @@ All notable changes to this project will be documented in this file.
 
 ## [0.0.1]
 
-The initial release of the helm-based Open Liberty Operator. 
+The initial release of the helm-based Open Liberty Operator.
 
-[Unreleased]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.0.1...v0.3.0
 [0.0.1]: https://github.com/OpenLiberty/open-liberty-operator/releases/tag/v0.0.1

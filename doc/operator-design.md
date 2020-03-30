@@ -8,6 +8,8 @@
 
 - We took the Appsody Operator 0.3.0 release as the base library for the re-launch of the Open Liberty Operator, releasing version 0.3.0 to stay in-sync with its upstream library.  
 
+- Open Liberty Operator, starting with 0.4.0, uses [Runtime Component Operator](https://github.com/application-stacks/runtime-component-operator) as the base library. 
+
 ## User stories
 - As Champ (architect) and Todd (admin), we would like to curate a single deployment artifact with general QoS and Open Liberty specific configuration covering advanced security, transactional and operational domains.  
 

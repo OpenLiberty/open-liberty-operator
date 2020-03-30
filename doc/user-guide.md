@@ -111,6 +111,37 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `route.insecureEdgeTerminationPolicy`   | HTTP traffic policy with TLS enabled. Can be one of `Allow`, `Redirect` and `None`. |
 | `route.certificate`  | A YAML object representing a [Certificate](https://cert-manager.io/docs/reference/api-docs/#cert-manager.io/v1alpha2.CertificateSpec). |
 | `route.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be used in the route. Also can contain destination CA certificate.  |
+| `sso`   | Specifies the configuration for single sign-on providers to authenticate with. Specify the sensitive information such as _clientId_  and _clientSecret_ for the selected providers using the Secret. |
+| `sso.mapToUserRegistry`   | Specifies whether to map user identifier to registry user. Applies to all providers. Default value is _false_ |
+| `sso.redirectToRPHostAndPort`   | Specifies a callback host and port number. Applies to all login providers. |
+| `sso.github.hostname`   | The hostname of GitHub. Needed for Github Enterprise (for example: github.mycompany.com). Default value is _github.com_ |
+| `sso.oidc`   | The list of OpenID Connect (OIDC) providers to authenticate with. Required fields: _discoveryEndpoint_. Specify _clientId_  and _clientSecret_ via the Secret.  |
+| `sso.oidc[].discoveryEndpoint`   | Specifies a discovery endpoint URL for the OpenID Connect provider. Required field.|
+| `sso.oidc[].displayName`   | The name of the social login configuration for display. |
+| `sso.oidc[].groupNameAttribute`   | Specifies the name of the claim to look at to use its value as the user group membership. |
+| `sso.oidc[].hostNameVerificationEnabled`   | Specifies whether to enable host name verification when the client contacts the provider. |
+| `sso.oidc[].id`   | The unique ID for the provider. Default value is _oidc_. |
+| `sso.oidc[].realmNameAttribute`   | Specifies the name of the claim to look at to use its value as the subject realm. |
+| `sso.oidc[].scope`   | Specifies the scope(s) to request. |
+| `sso.oidc[].tokenEndpointAuthMethod`   | Specifies required authentication method. |
+| `sso.oidc[].userInfoEndpointEnabled`   | Specifies whether the User Info endpoint is contacted. |
+| `sso.oidc[].userNameAttribute`   | Specifies the name of the claim to look at to use its value as the authenticated user principal. |
+| `sso.oauth2`   | The list of OAuth 2.0 providers to authenticate with. Required fields: _authorizationEndpoint_, _tokenEndpoint_. Specify _clientId_  and _clientSecret_ via the Secret. |
+| `sso.oauth2[].authorizationEndpoint`   | Specifies an authorization endpoint URL for the OAuth 2.0 provider. Required field.|
+| `sso.oauth2[].tokenEndpoint`   | Specifies a token endpoint URL for the OAuth 2.0 provider. Required field. |
+| `sso.oauth2[].accessTokenHeaderName`   | Name of the header to use when an OAuth access token is forwarded. |
+| `sso.oauth2[].accessTokenRequired`   | Determines whether the access token that is provided in the request is used for authentication. If true, the client must provide a valid access token. |
+| `sso.oauth2[].accessTokenSupported`   | Determines whether to support access token authentication if an access token is provided in the request. If true, and an access token is provided in the request, the access token is used as an authentication token. |
+| `sso.oauth2[].displayName`   | The name of the social login configuration for display. |
+| `sso.oauth2[].groupNameAttribute`   | Specifies the name of the claim to look at to use its value as the user group membership. |
+| `sso.oauth2[].id`   | The unique ID for the provider. Default value is _oauth2_. |
+| `sso.oauth2[].realmName`   | Specifies the realm name for this social media. |
+| `sso.oauth2[].realmNameAttribute`   | Specifies the name of the claim to look at to use its value as the subject realm. |
+| `sso.oauth2[].scope`   | Specifies the scope(s) to request. |
+| `sso.oauth2[].tokenEndpointAuthMethod`   | Specifies required authentication method. |
+| `sso.oauth2[].userNameAttribute`   | Specifies the name of the claim to look at to use its value as the authenticated user principal. |
+| `sso.oauth2[].userApi`   | The URL for retrieving the user information. |
+| `sso.oauth2[].userApiType`   | Indicates which specification to use for the user API.  |
 
 ### Basic usage
 
@@ -137,24 +168,23 @@ oc get openlibertyapplication my-liberty-app
 
 ### Common Component Documentation
 
-Open Liberty Operator is based on the generic [Application Stacks
-Operator](https://github.com/application-stacks/operator). To see more
-information on the usage of common functionality, see Application Stacks
-documentation below. Note that, in the samples from the links below, the instances of `Kind:
+Open Liberty Operator is based on the generic [Runtime Component
+Operator](https://github.com/application-stacks/runtime-component-operator). To see more
+information on the usage of common functionality, see the Runtime Component Operator documentation below. Note that, in the samples from the links below, the instances of `Kind:
 RuntimeComponent` must be replaced with `Kind: OpenLibertyApplication`.
 
-- [Image Streams](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Image-streams)
-- [Service Account](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Service-account)
-- [Labels](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Labels)
-- [Annotations](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Annotations)
-- [Environment Variables](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Environment-variables)
-- [High Availability](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#High-availability)
-- [Persistence](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Persistence)
-- [Service Binding](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Service-binding)
-- [Monitoring](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Monitoring)
-- [Knative Support](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Knative-support)
-- [Exposing Service](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#Exposing-service-externally)
-- [Kubernetes Application Navigator](https://github.com/application-stacks/operator/blob/master/doc/user-guide.md#kubernetes-application-navigator-kappnav-support)
+- [Image Streams](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#Image-streams)
+- [Service Account](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#Service-account)
+- [Labels](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#Labels)
+- [Annotations](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#Annotations)
+- [Environment Variables](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#Environment-variables)
+- [High Availability](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#High-availability)
+- [Persistence](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#Persistence)
+- [Service Binding](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#Service-binding)
+- [Monitoring](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#Monitoring)
+- [Knative Support](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#Knative-support)
+- [Exposing Service](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#Exposing-service-externally)
+- [Kubernetes Application Navigator](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#kubernetes-application-navigator-kappnav-support)
 - [Certificate Manager](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#certificate-manager-integration)
 
 For functionality that is unique to the Open Liberty Operator, see the following sections.
