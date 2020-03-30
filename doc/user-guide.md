@@ -57,7 +57,6 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `version` | The current version of the application. Label `app.kubernetes.io/version` will be added to all resources when the version is defined. |
 | `serviceAccountName` | The name of the OpenShift service account to be used during deployment. |
 | `applicationImage` | The absolute name of the image to be deployed, containing the registry and the tag. On OpenShift, it can also be set to `<project name>/<image stream name>[:tag]` to reference an image from an image stream. If `<project name>` and `<tag>` values are not defined, they default to the namespace of the CR and the value of `latest`, respectively. |
-
 | `applicationName` | The name of the application this resource is part of. If not specified, it defaults to the name of the CR. |
 | `createAppDefinition`   | A boolean to toggle the automatic configuration of Kubernetes resources for the `OpenLibertyApplication` CR to allow creation of an application definition by [kAppNav](https://kappnav.io/). The default value is `true`. See [Application Navigator](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#kubernetes-application-navigator-kappnav-support) for more information. |
 | `pullPolicy` | The policy used when pulling the image.  One of: `Always`, `Never`, and `IfNotPresent`. |
@@ -112,36 +111,37 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `route.insecureEdgeTerminationPolicy`   | HTTP traffic policy with TLS enabled. Can be one of `Allow`, `Redirect` and `None`. |
 | `route.certificate`  | A YAML object representing a [Certificate](https://cert-manager.io/docs/reference/api-docs/#cert-manager.io/v1alpha2.CertificateSpec). |
 | `route.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be used in the route. Also can contain destination CA certificate.  |
-| `sso.mapToUserRegistry`   | Specifies whether to map userIdentifier to registry user. |
-| `sso.redirectToRPHostAndPort`   | Specifies a callback host and port number. |
-| `sso.github.hostname`   | The hostname of GitHub server. Needed for Github Enterprise (for example: github.mycompany.com). Default value is github.com |
-| `sso.oidc`   | P |
-| `sso.oidc[].discoveryEndpoint`   | P |
-| `sso.oidc[].displayName`   | P |
-| `sso.oidc[].groupNameAttribute`   | P |
-| `sso.oidc[].hostNameVerificationEnabled`   | P |
-| `sso.oidc[].id`   | P |
-| `sso.oidc[].realmNameAttribute`   | P |
-| `sso.oidc[].scope`   | P |
-| `sso.oidc[].tokenEndpointAuthMethod`   | P |
-| `sso.oidc[].userInfoEndpointEnabled`   | P |
-| `sso.oidc[].userNameAttribute`   | P |
-| `sso.oauth2`   | P |
-| `sso.oauth2[].authorizationEndpoint`   | P |
-| `sso.oauth2[].tokenEndpoint`   | P |
-| `sso.oauth2[].accessTokenHeaderName`   | P |
-| `sso.oauth2[].accessTokenRequired`   | P |
-| `sso.oauth2[].accessTokenSupported`   | P |
-| `sso.oauth2[].displayName`   | P |
-| `sso.oauth2[].groupNameAttribute`   | P |
-| `sso.oauth2[].id`   | P |
-| `sso.oauth2[].realmName`   | P |
-| `sso.oauth2[].realmNameAttribute`   | P |
-| `sso.oauth2[].scope`   | P |
-| `sso.oauth2[].tokenEndpointAuthMethod`   | P |
-| `sso.oauth2[].userNameAttribute`   | P |
-| `sso.oauth2[].userApi`   | P |
-| `sso.oauth2[].userApiType`   | P |
+| `sso`   | Specifies the configuration for single sign-on providers to authenticate with. Specify the sensitive information such as _clientId_  and _clientSecret_ for the selected providers using the Secret. |
+| `sso.mapToUserRegistry`   | Specifies whether to map user identifier to registry user. Applies to all providers. Default value is _false_ |
+| `sso.redirectToRPHostAndPort`   | Specifies a callback host and port number. Applies to all login providers. |
+| `sso.github.hostname`   | The hostname of GitHub. Needed for Github Enterprise (for example: github.mycompany.com). Default value is _github.com_ |
+| `sso.oidc`   | The list of OpenID Connect (OIDC) providers to authenticate with. Required fields: _discoveryEndpoint_. Specify _clientId_  and _clientSecret_ via the Secret.  |
+| `sso.oidc[].discoveryEndpoint`   | Specifies a discovery endpoint URL for the OpenID Connect provider. Required field.|
+| `sso.oidc[].displayName`   | The name of the social login configuration for display. |
+| `sso.oidc[].groupNameAttribute`   | Specifies the name of the claim to look at to use its value as the user group membership. |
+| `sso.oidc[].hostNameVerificationEnabled`   | Specifies whether to enable host name verification when the client contacts the provider. |
+| `sso.oidc[].id`   | The unique ID for the provider. Default value is _oidc_. |
+| `sso.oidc[].realmNameAttribute`   | Specifies the name of the claim to look at to use its value as the subject realm. |
+| `sso.oidc[].scope`   | Specifies the scope(s) to request. |
+| `sso.oidc[].tokenEndpointAuthMethod`   | Specifies required authentication method. |
+| `sso.oidc[].userInfoEndpointEnabled`   | Specifies whether the User Info endpoint is contacted. |
+| `sso.oidc[].userNameAttribute`   | Specifies the name of the claim to look at to use its value as the authenticated user principal. |
+| `sso.oauth2`   | The list of OAuth 2.0 providers to authenticate with. Required fields: _authorizationEndpoint_, _tokenEndpoint_. Specify _clientId_  and _clientSecret_ via the Secret. |
+| `sso.oauth2[].authorizationEndpoint`   | Specifies an authorization endpoint URL for the OAuth 2.0 provider. Required field.|
+| `sso.oauth2[].tokenEndpoint`   | Specifies a token endpoint URL for the OAuth 2.0 provider. Required field. |
+| `sso.oauth2[].accessTokenHeaderName`   | Name of the header to use when an OAuth access token is forwarded. |
+| `sso.oauth2[].accessTokenRequired`   | Determines whether the access token that is provided in the request is used for authentication. If true, the client must provide a valid access token. |
+| `sso.oauth2[].accessTokenSupported`   | Determines whether to support access token authentication if an access token is provided in the request. If true, and an access token is provided in the request, the access token is used as an authentication token. |
+| `sso.oauth2[].displayName`   | The name of the social login configuration for display. |
+| `sso.oauth2[].groupNameAttribute`   | Specifies the name of the claim to look at to use its value as the user group membership. |
+| `sso.oauth2[].id`   | The unique ID for the provider. Default value is _oauth2_. |
+| `sso.oauth2[].realmName`   | Specifies the realm name for this social media. |
+| `sso.oauth2[].realmNameAttribute`   | Specifies the name of the claim to look at to use its value as the subject realm. |
+| `sso.oauth2[].scope`   | Specifies the scope(s) to request. |
+| `sso.oauth2[].tokenEndpointAuthMethod`   | Specifies required authentication method. |
+| `sso.oauth2[].userNameAttribute`   | Specifies the name of the claim to look at to use its value as the authenticated user principal. |
+| `sso.oauth2[].userApi`   | The URL for retrieving the user information. |
+| `sso.oauth2[].userApiType`   | Indicates which specification to use for the user API.  |
 
 ### Basic usage
 
