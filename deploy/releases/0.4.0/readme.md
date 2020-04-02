@@ -67,3 +67,4 @@ _Deleting the CRD will also delete all `OpenLibertyApplication` in the cluster_
 - The auto-creation of an application definition by kAppNav is not supported when Knative is enabled.
 - Monitoring feature does not support integration with Knative Service. Prometheus Operator is required to use ServiceMonitor.
 - After the initial deployment of `OpenLibertyApplication`, any changes to its labels would be applied only when one of the parameters from `spec` is updated.
+- Updating the value of an existing key in the SSO Secret is not propagated to the application by the Kubernetes Deployment. Delete the key & value pair and add it back with the new value (save the Secret in between).

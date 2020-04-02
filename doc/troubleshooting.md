@@ -64,3 +64,13 @@ Note that the following commands use `olapp`, which is the short name for `OpenL
   ```console
   $ oc describe olapp my-liberty-app
   ```
+
+
+### Problem Scenarios
+
+#### Single Sign-on (SSO)
+
+   -  _Problem_: Updated a value in the SSO Secret. But the application is still using the old value.
+      - Solution: Remove the key & value pair from the Secret, save the Secret, add them back and save the Secret.
+      - Explanation: Updating the value of an existing key in the SSO Secret is not propagated to the application by the Kubernetes Deployment (since the values are passed down to container as environment variables with references to keys in Secret). Deleting the key & value pair and adding it back will force the Deployment to restart the pod running the application.
+  
