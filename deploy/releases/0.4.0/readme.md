@@ -66,5 +66,10 @@ _Deleting the CRD will also delete all `OpenLibertyApplication` in the cluster_
 - Knative support is limited. Values specified for `autoscaling`, `resources` and `replicas` parameters would not apply for Knative when enabled using `createKnativeService` parameter.
 - The auto-creation of an application definition by kAppNav is not supported when Knative is enabled.
 - Monitoring feature does not support integration with Knative Service. Prometheus Operator is required to use ServiceMonitor.
-- After the initial deployment of `OpenLibertyApplication`, any changes to its labels would be applied only when one of the parameters from `spec` is updated.
-- Updating the value of an existing key in the SSO Secret is not propagated to the application by the Kubernetes Deployment. Delete the key & value pair and add it back with the new value (save the Secret in between).
+- After the initial deployment of the `OpenLibertyApplication` custom resource (CR), any changes to its labels would be applied only when one of the parameters from the `spec` element is updated.
+- Updating the value of an existing key in the `Secret` for SSO is not propagated to the application by the Kubernetes Deployment. Delete the key-value pair, save the SSO secret, add the key back with the new value, and then save the SSO secret again.
+
+## Known Issues
+
+- Auto scaling does not work as expected. The changes made to `Deployment` by `Horizontal Pod Autoscaler` are reversed. ([#68](https://github.com/application-stacks/runtime-component-operator/issues/68))
+- Operator might crash on startup when optional CRDs API group (eg. serving.knative.dev/v1alpha1) is available, but actual CRD (Knative Service) is not present. ([#66](https://github.com/application-stacks/runtime-component-operator/issues/66))

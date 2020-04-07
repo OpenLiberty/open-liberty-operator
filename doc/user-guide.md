@@ -110,35 +110,35 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `route.insecureEdgeTerminationPolicy`   | HTTP traffic policy with TLS enabled. Can be one of `Allow`, `Redirect` and `None`. |
 | `route.certificate`  | A YAML object representing a [Certificate](https://cert-manager.io/docs/reference/api-docs/#cert-manager.io/v1alpha2.CertificateSpec). |
 | `route.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be used in the route. Also can contain destination CA certificate.  |
-| `sso`   | Specifies the configuration for single sign-on providers to authenticate with. Specify sensitive information such as _clientId_  and _clientSecret_ for the selected providers using a Secret. See [Single Sign-On (SSO)](#single-sign-on-sso) for more info. |
-| `sso.mapToUserRegistry`   | Specifies whether to map user identifier to registry user. Applies to all providers. |
-| `sso.redirectToRPHostAndPort`   | Specifies a callback host and port number. Applies to all providers. |
-| `sso.github.hostname`   | The hostname of GitHub. Needed for Github Enterprise (for example: github.mycompany.com). Default value is _github.com_. |
-| `sso.oidc`   | The list of OpenID Connect (OIDC) providers to authenticate with. Required fields: _discoveryEndpoint_. Specify _clientId_  and _clientSecret_ via the Secret.  |
+| `sso`   | Specifies the configuration for single sign-on providers to authenticate with. Specify sensitive fields, such as _clientId_ and _clientSecret_, for the selected providers by using the `Secret`. For more information, see [Single Sign-On (SSO)](#single-sign-on-sso). |
+| `sso.mapToUserRegistry`   | Specifies whether to map a user identifier to a registry user. This parameter applies to all providers. |
+| `sso.redirectToRPHostAndPort`   | Specifies a callback host and port number. This parameter applies to all providers. |
+| `sso.github.hostname`   | Specifies the host name of your enterprise GitHub, such as _github.mycompany.com_. The default is _github.com_, which is the public Github. |
+| `sso.oidc`   | The list of OpenID Connect (OIDC) providers to authenticate with. Required fields: _discoveryEndpoint_. Specify sensitive fields, such as _clientId_  and _clientSecret_, by using the `Secret`.  |
 | `sso.oidc[].discoveryEndpoint`   | Specifies a discovery endpoint URL for the OpenID Connect provider. Required field.|
 | `sso.oidc[].displayName`   | The name of the social login configuration for display. |
-| `sso.oidc[].groupNameAttribute`   | Specifies the name of the claim to look at to use its value as the user group membership. |
+| `sso.oidc[].groupNameAttribute`   | Specifies the name of the claim. Use its value as the user group membership. |
 | `sso.oidc[].hostNameVerificationEnabled`   | Specifies whether to enable host name verification when the client contacts the provider. |
 | `sso.oidc[].id`   | The unique ID for the provider. Default value is _oidc_. |
-| `sso.oidc[].realmNameAttribute`   | Specifies the name of the claim to look at to use its value as the subject realm. |
-| `sso.oidc[].scope`   | Specifies the scope(s) to request. |
-| `sso.oidc[].tokenEndpointAuthMethod`   | Specifies required authentication method. |
-| `sso.oidc[].userInfoEndpointEnabled`   | Specifies whether the User Info endpoint is contacted. |
-| `sso.oidc[].userNameAttribute`   | Specifies the name of the claim to look at to use its value as the authenticated user principal. |
-| `sso.oauth2`   | The list of OAuth 2.0 providers to authenticate with. Required fields: _authorizationEndpoint_, _tokenEndpoint_. Specify _clientId_  and _clientSecret_ via the Secret. |
+| `sso.oidc[].realmNameAttribute`   | Specifies the name of the claim. Use its value as the subject realm. |
+| `sso.oidc[].scope`   | Specifies one or more scopes to request. |
+| `sso.oidc[].tokenEndpointAuthMethod`   | Specifies the required authentication method. |
+| `sso.oidc[].userInfoEndpointEnabled`   | Specifies whether the UserInfo endpoint is contacted. |
+| `sso.oidc[].userNameAttribute`   | Specifies the name of the claim. Use its value as the authenticated user principal. |
+| `sso.oauth2`   | The list of OAuth 2.0 providers to authenticate with. Required fields: _authorizationEndpoint_, _tokenEndpoint_. Specify sensitive fields, _clientId_  and _clientSecret_ by using the `Secret`. |
 | `sso.oauth2[].authorizationEndpoint`   | Specifies an authorization endpoint URL for the OAuth 2.0 provider. Required field.|
 | `sso.oauth2[].tokenEndpoint`   | Specifies a token endpoint URL for the OAuth 2.0 provider. Required field. |
 | `sso.oauth2[].accessTokenHeaderName`   | Name of the header to use when an OAuth access token is forwarded. |
-| `sso.oauth2[].accessTokenRequired`   | Determines whether the access token that is provided in the request is used for authentication. If true, the client must provide a valid access token. |
-| `sso.oauth2[].accessTokenSupported`   | Determines whether to support access token authentication if an access token is provided in the request. If true, and an access token is provided in the request, the access token is used as an authentication token. |
+| `sso.oauth2[].accessTokenRequired`   | Determines whether the access token that is provided in the request is used for authentication. If the parameter is set to true, the client must provide a valid access token. |
+| `sso.oauth2[].accessTokenSupported`   | Determines whether to support access token authentication if an access token is provided in the request. If the parameter is set to true and an access token is provided in the request, then the access token is used as an authentication token. |
 | `sso.oauth2[].displayName`   | The name of the social login configuration for display. |
-| `sso.oauth2[].groupNameAttribute`   | Specifies the name of the claim to look at to use its value as the user group membership. |
-| `sso.oauth2[].id`   | The unique ID for the provider. Default value is _oauth2_. |
+| `sso.oauth2[].groupNameAttribute`   | Specifies the name of the claim. Use its value as the user group membership. |
+| `sso.oauth2[].id`   | Specifies the unique ID for the provider. The default value is _oauth2_. |
 | `sso.oauth2[].realmName`   | Specifies the realm name for this social media. |
-| `sso.oauth2[].realmNameAttribute`   | Specifies the name of the claim to look at to use its value as the subject realm. |
-| `sso.oauth2[].scope`   | Specifies the scope(s) to request. |
-| `sso.oauth2[].tokenEndpointAuthMethod`   | Specifies required authentication method. |
-| `sso.oauth2[].userNameAttribute`   | Specifies the name of the claim to look at to use its value as the authenticated user principal. |
+| `sso.oauth2[].realmNameAttribute`   | Specifies the name of the claim. Use its value as the subject realm. |
+| `sso.oauth2[].scope`   | Specifies one or more scopes to request. |
+| `sso.oauth2[].tokenEndpointAuthMethod`   | Specifies the required authentication method. |
+| `sso.oauth2[].userNameAttribute`   | Specifies the name of the claim. Use its value as the authenticated user principal. |
 | `sso.oauth2[].userApi`   | The URL for retrieving the user information. |
 | `sso.oauth2[].userApiType`   | Indicates which specification to use for the user API.  |
 
@@ -220,7 +220,7 @@ spec:
 
 ### Single Sign-On (SSO)
 
-Open Liberty provides capabilities to delegate authentication to external providers. Your application users can log in using their existing social media credentials from providers such as Google, Facebook, LinkedIn, Twitter, GitHub, and any OpenID Connect (OIDC) or OAuth 2.0 clients. Open Liberty Operator allows to easily configure and manage the single sign-on information for your applications.
+Open Liberty provides capabilities to delegate authentication to external providers. Your application users can log in using their existing accounts for social media providers such as Google, Facebook, LinkedIn, Twitter, GitHub, or any OpenID Connect (OIDC) or OAuth 2.0 clients. Open Liberty Operator allows to easily configure and manage the single sign-on information for your applications.
 
 Configure and build the application image with single sign-on by following the instructions [here](https://github.com/OpenLiberty/ci.docker#security).
 
@@ -228,7 +228,7 @@ To specify sensitive information such as client IDs, client secrets and tokens f
 
 The keys within the `Secret` must follow this naming pattern: `<provider_name>-<sensitive_field_name>`. For example, `google-clientSecret`. Instead of the `-` character in between, you can also use `.` or `_`. For example, `oauth2_userApiToken`.
 
-_Note_: Open Liberty Operator watches for the creation and deletion of the SSO secret as well as any updates to it. Adding or removing keys from Secret will be passed down to the application automatically. However, updating the value of an existing key in Secret is not propagated to the application. See [troubleshooting](./troubleshooting.md#single-sign-on-sso) for solution and an explanation.
+_Note_: Open Liberty Operator watches for the creation and deletion of the SSO secret as well as any updates to it. Adding or removing keys from Secret will be passed down to the application automatically. However, updating the value of an existing key in `Secret` is not propagated to the application. See [troubleshooting](./troubleshooting.md#single-sign-on-sso) for solution and an explanation.
 
 ```yaml
 apiVersion: v1
@@ -256,7 +256,7 @@ Next, configure single sign-on in `OpenLibertyApplication` CR. At minimum, `sso:
 
 In addition, single sign-on requires secured Service and secured Route configured with necessary certificates. Refer to [Certificate Manager Integration](https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.md#certificate-manager-integration) for more information.
 
-To automatically trust certificates from well known identity providers, including social login providers such as Google and Facebook, set environment variable `SEC_TLS_TRUSTDEFAULTCERTS` to `true`. To automatically trust certificates issued by the Kubernetes cluster, set  environment variable `SEC_IMPORT_K8S_CERTS` to `true`. Alternatively, you could include the necessary certificates manually when building application image or mounting them using a volume when deploying your application.
+To automatically trust certificates from well known identity providers, including social login providers such as Google and Facebook, set environment variable `SEC_TLS_TRUSTDEFAULTCERTS` to `true`. To automatically trust certificates issued by the Kubernetes cluster, set environment variable `SEC_IMPORT_K8S_CERTS` to `true`. Alternatively, you could include the necessary certificates manually when building application image or mounting them using a volume when deploying your application.
 
 In the following example, a self-signed certificate is used for secured Service and Route.
 
@@ -302,9 +302,9 @@ spec:
 
 #### Using multiple OIDC and OAuth 2.0 providers (Advanced)
 
-You can use multiple OIDC and OAuth 2.0 providers to authenticate with. First, configure and build application image with multiple OIDC and/or OAuth 2.0 providers. For example, set `ARG SEC_SSO_PROVIDERS="google oidc:provider1,provider2 oauth2:provider3,provider4"` in your Dockerfile.
+You can use multiple OIDC and OAuth 2.0 providers to authenticate with. First, configure and build application image with multiple OIDC and/or OAuth 2.0 providers. For example, set `ARG SEC_SSO_PROVIDERS="google oidc:provider1,provider2 oauth2:provider3,provider4"` in your Dockerfile. Name of the provider must be unique and should only consist alphanumeric characters.
 
-Then, use the provider name in SSO `Secret` to specify its client ID and secret. For example, `provider1-clientSecret: dGhlbGF1Z2hpbmdjb3c=`. To configure a parameter for the corresponding provider in `OpenLibertyApplication` CR, use `sso.oidc[].id` and `sso.oauth2[].id` parameters.
+Then, use the provider name in SSO `Secret` to specify its client ID and secret. For example, `provider1-clientSecret: dGhlbGF1Z2hpbmdjb3c=`. To configure a parameter for the corresponding provider in `OpenLibertyApplication` CR, use `sso.oidc[].id` or `sso.oauth2[].id` parameter.
 
 ```yaml
   sso:
