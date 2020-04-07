@@ -64,3 +64,19 @@ Note that the following commands use `olapp`, which is the short name for `OpenL
   ```console
   $ oc describe olapp my-liberty-app
   ```
+
+## Known Issues
+
+- Auto scaling does not work as expected. The changes made to `Deployment` by `Horizontal Pod Autoscaler` are reversed. ([#68](https://github.com/application-stacks/runtime-component-operator/issues/68))
+- Operator might crash on startup when optional CRDs API group (eg. serving.knative.dev/v1alpha1) is available, but actual CRD (Knative Service) is not present. ([#66](https://github.com/application-stacks/runtime-component-operator/issues/66))
+
+### Problem scenarios
+
+Use the following information to help you resolve problems with application deployment.
+
+#### Single Sign-on (SSO)
+
+   -  _Problem_: A key-value pair in the `Secret` for SSO was updated, but the application still uses the old value.
+      - Solution: Delete the key-value pair, save the SSO secret, add the key back with the new value, and then save the SSO secret again.
+      - Explanation: Kubernetes `Deployment` does not propagate to an applicaion an updated value of an existing key that is in the `Secret`. The reason is that values are passed to the container as environment variables that have references to keys in the `Secret`. Deleting the key-value pair and adding it back forces the deployment to restart the pod that runs the application.
+  
