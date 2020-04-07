@@ -302,7 +302,7 @@ spec:
 
 #### Using multiple OIDC and OAuth 2.0 providers (Advanced)
 
-You can use multiple OIDC and OAuth 2.0 providers to authenticate with. First, configure and build application image with multiple OIDC and/or OAuth 2.0 providers. For example, set `ARG SEC_SSO_PROVIDERS="google oidc:provider1,provider2 oauth2:provider3,provider4"` in your Dockerfile. Name of the provider must be unique and should only consist alphanumeric characters.
+You can use multiple OIDC and OAuth 2.0 providers to authenticate with. First, configure and build application image with multiple OIDC and/or OAuth 2.0 providers. For example, set `ARG SEC_SSO_PROVIDERS="google oidc:provider1,provider2 oauth2:provider3,provider4"` in your Dockerfile. The provider name must be unique and must contain only alphanumeric characters.
 
 Then, use the provider name in SSO `Secret` to specify its client ID and secret. For example, `provider1-clientSecret: dGhlbGF1Z2hpbmdjb3c=`. To configure a parameter for the corresponding provider in `OpenLibertyApplication` CR, use `sso.oidc[].id` or `sso.oauth2[].id` parameter.
 
