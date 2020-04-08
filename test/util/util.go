@@ -8,12 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -59,6 +61,53 @@ func MakeBasicOpenLibertyApplication(t *testing.T, f *framework.Framework, n str
 				PeriodSeconds:       5,
 				SuccessThreshold:    1,
 				FailureThreshold:    12,
+			},
+		},
+	}
+}
+
+// MakeBasicOpenLibertyApplicationImageStreams ...
+func MakeBasicOpenLibertyApplicationImageStreams(t *testing.T, f *framework.Framework, n string, ns string, replicas int32) *v1beta1.OpenLibertyApplication {
+	probe := corev1.Handler{
+		HTTPGet: &corev1.HTTPGetAction{
+			Path: "/",
+			Port: intstr.FromInt(3000),
+		},
+	}
+	expose := false
+	serviceType := corev1.ServiceTypeClusterIP
+	return &v1beta1.OpenLibertyApplication{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "RuntimeComponent",
+			APIVersion: "app.stacks/v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      n,
+			Namespace: ns,
+		},
+		Spec: v1beta1.OpenLibertyApplicationSpec{
+			ApplicationImage: "navidsh/demo-day",
+			Replicas:         &replicas,
+			Expose:           &expose,
+			Service: &v1beta1.OpenLibertyApplicationService{
+				Port: 3000,
+				Type: &serviceType,
+			},
+			ReadinessProbe: &corev1.Probe{
+				Handler:             probe,
+				InitialDelaySeconds: 1,
+				TimeoutSeconds:      1,
+				PeriodSeconds:       5,
+				SuccessThreshold:    1,
+				FailureThreshold:    16,
+			},
+			LivenessProbe: &corev1.Probe{
+				Handler:             probe,
+				InitialDelaySeconds: 4,
+				TimeoutSeconds:      1,
+				PeriodSeconds:       5,
+				SuccessThreshold:    1,
+				FailureThreshold:    6,
 			},
 		},
 	}
@@ -332,4 +381,47 @@ func checkTraceStatus(f *framework.Framework, ns string, trace *openlibertyv1bet
 	}
 
 	return true, nil
+}
+
+// GetPods returns a list of pods
+func GetPods(f *framework.Framework, ctx *framework.TestCtx, target string, ns string) (*corev1.PodList, error) {
+	key := map[string]string{"app.kubernetes.io/name": target}
+
+	options := &dynclient.ListOptions{
+		LabelSelector: labels.Set(key).AsSelector(),
+		Namespace:     ns,
+	}
+
+	podList := &corev1.PodList{}
+
+	err := f.Client.List(goctx.TODO(), podList, options)
+	if err != nil {
+		return nil, err
+	}
+
+	return podList, nil
+}
+
+// UpdateApplication updates target app using provided function, retrying in the case that status has changed
+func UpdateApplication(f *framework.Framework, target types.NamespacedName, update func(r *v1beta1.OpenLibertyApplication)) error {
+	retryInterval := time.Second * 5
+	timeout := time.Second * 30
+	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
+		temp := &v1beta1.OpenLibertyApplication{}
+		err = f.Client.Get(goctx.TODO(), target, temp)
+		if err != nil {
+			return true, err
+		}
+
+		update(temp)
+
+		err = f.Client.Update(goctx.TODO(), temp)
+		if err != nil {
+			return false, err
+		}
+
+		return true, nil
+	})
+
+	return err
 }
