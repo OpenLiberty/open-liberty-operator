@@ -3,7 +3,7 @@
 # Observability with Open Liberty
 
 
-The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in the OpenShift cluster. This document has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2.
+The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in the OpenShift cluster. This document has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2 and 4.3.
 
 ## How to deploy Kibana dashboards to monitor Open Liberty logging events  
 
