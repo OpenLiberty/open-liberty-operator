@@ -115,6 +115,7 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `sso.redirectToRPHostAndPort`   | Specifies a callback host and port number. This parameter applies to all providers. |
 | `sso.github.hostname`   | Specifies the host name of your enterprise GitHub, such as _github.mycompany.com_. The default is _github.com_, which is the public Github. |
 | `sso.oidc`   | The list of OpenID Connect (OIDC) providers to authenticate with. Required fields: _discoveryEndpoint_. Specify sensitive fields, such as _clientId_  and _clientSecret_, by using the `Secret`.  |
+| `sso.oidc[].autoRegisterSecret | Specifies name of secret containing information to automatically register Liberty with the oidc provider. See [Using automatic registration with OIDC providers](#Using-automatic-registration-with-OIDC-providers). |
 | `sso.oidc[].discoveryEndpoint`   | Specifies a discovery endpoint URL for the OpenID Connect provider. Required field.|
 | `sso.oidc[].displayName`   | The name of the social login configuration for display. |
 | `sso.oidc[].groupNameAttribute`   | Specifies the name of the claim. Use its value as the user group membership. |
@@ -298,6 +299,34 @@ spec:
         kind: ClusterIssuer
         name: self-signed
     termination: reencrypt
+```
+
+#### Using automatic registration with OIDC providers
+
+The operator can request a client Id and client Secret from providers, rather than requiring them in advance. This can simplify deployment, as the provider's administrator can supply the information needed for registration once, instead of clientIds and secrets repetitively.  An additional secret specified by `sso.oidc[].autoRegisterSecret` contains the information necessary to perform the registration.  This is tested with RedHat Single Sign-on (RHSSO) and IBM Cloud Identity. 
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:  
+  name: my-autoreg-secret
+  # Secret must be created in the same namespace as the OpenLibertyApplication instance
+  namespace: demo
+type: Opaque
+data:
+  # RHSSO requires an initial access token for registration
+  initialAccessToken: xxxxxyyyyy
+  # ICI requires a dedicated clientId and clientSecret for registration
+  clientId: bW9vb29vb28=
+  clientSecret: dGhlbGF1Z2hpbmdjb3c=
+  #
+  # Optional: Grant types are the types of OAuth flows the resulting clients will allow
+  # Default is code,refresh_token.  Specify a comma separated list.
+  # grant-types: code,refresh_token
+  #
+  # Optional: Scopes limit the types of information about the user that the provider will return.
+  # Default is openid,profile.  Specify a comma-separated list.
+  # scopes: openid,profilelbGF1Z2hpbmdjb3c=
 ```
 
 #### Using multiple OIDC and OAuth 2.0 providers (Advanced)
