@@ -115,7 +115,7 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `sso.redirectToRPHostAndPort`   | Specifies a callback host and port number. This parameter applies to all providers. |
 | `sso.github.hostname`   | Specifies the host name of your enterprise GitHub, such as _github.mycompany.com_. The default is _github.com_, which is the public Github. |
 | `sso.oidc`   | The list of OpenID Connect (OIDC) providers to authenticate with. Required fields: _discoveryEndpoint_. Specify sensitive fields, such as _clientId_  and _clientSecret_, by using the `Secret`.  |
-| `sso.oidc[].autoRegisterSecret | Specifies name of secret containing information to automatically register Liberty with the oidc provider. See [Using automatic registration with OIDC providers](#Using-automatic-registration-with-OIDC-providers). |
+| `sso.oidc[].autoRegisterSecret` | Specifies name of secret containing information to automatically register Liberty with the OIDC provider. See [Using automatic registration with OIDC providers](#Using-automatic-registration-with-OIDC-providers). |
 | `sso.oidc[].discoveryEndpoint`   | Specifies a discovery endpoint URL for the OpenID Connect provider. Required field.|
 | `sso.oidc[].displayName`   | The name of the social login configuration for display. |
 | `sso.oidc[].groupNameAttribute`   | Specifies the name of the claim. Use its value as the user group membership. |
@@ -283,6 +283,7 @@ spec:
         tokenEndpoint: specify-required-value
     oidc:
       - discoveryEndpoint: specify-required-value
+      - autoRegisterSecret: specify-optional-value
   service:
     certificate:
       isCA: true
@@ -303,7 +304,7 @@ spec:
 
 #### Using automatic registration with OIDC providers
 
-The operator can request a client Id and client Secret from providers, rather than requiring them in advance. This can simplify deployment, as the provider's administrator can supply the information needed for registration once, instead of clientIds and secrets repetitively.  An additional secret specified by `sso.oidc[].autoRegisterSecret` contains the information necessary to perform the registration.  This is tested with RedHat Single Sign-on (RHSSO) and IBM Cloud Identity. 
+The operator can request a client Id and client Secret from providers, rather than requiring them in advance. This can simplify deployment, as the provider's administrator can supply the information needed for registration once, instead of clientIds and secrets repetitively.  An additional secret specified by `sso.oidc[].autoRegisterSecret` contains the information necessary to perform the registration.  Automatic registration takes precedence over the values in the sso secret. This is tested with RedHat Single Sign-on (RHSSO) (TODO: link) and IBM Cloud Identity (TODO: link). 
 
 ```yaml
 apiVersion: v1
@@ -321,12 +322,14 @@ data:
   clientSecret: dGhlbGF1Z2hpbmdjb3c=
   #
   # Optional: Grant types are the types of OAuth flows the resulting clients will allow
-  # Default is code,refresh_token.  Specify a comma separated list.
-  # grant-types: code,refresh_token
+  # Default is authorization_code,refresh_token.  Specify a comma separated list.
+  # grant-types: authorization_code,refresh_token
   #
   # Optional: Scopes limit the types of information about the user that the provider will return.
   # Default is openid,profile.  Specify a comma-separated list.
-  # scopes: openid,profilelbGF1Z2hpbmdjb3c=
+  # scopes: openid,profile
+  # TODO: do we need redirect URI? seems like the wrong place, but what if route can't cut it?
+  # TODO: should the code be aware of redirectToRPHostAnd port and use that if defined, inetead of the route?
 ```
 
 #### Using multiple OIDC and OAuth 2.0 providers (Advanced)

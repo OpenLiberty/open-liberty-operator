@@ -243,6 +243,7 @@ type OidcClient struct {
 	Scope                       string `json:"scope,omitempty"`
 	TokenEndpointAuthMethod     string `json:"tokenEndpointAuthMethod,omitempty"`
 	HostNameVerificationEnabled *bool  `json:"hostNameVerificationEnabled,omitempty"`
+	AutoRegisterSecret          string `json:"autoRegisterSecret,omitempty"`
 }
 
 // OAuth2Client represents configuration for an OAuth2 client
