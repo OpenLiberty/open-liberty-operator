@@ -286,6 +286,22 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 		if oidcClient.HostNameVerificationEnabled != nil {
 			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_HOSTNAMEVERIFICATIONENABLED", *oidcClient.HostNameVerificationEnabled))
 		}
+		// clientId & Secret from registration will replace anything from the *-olapp-sso secret
+		if(oidcClient.AutoRegisterSecret != ""){
+			regData := RegisterData{
+               DiscoveryURL: oidcClient.DiscoveryEndpoint,
+               RouteURL:  "fixme",
+               RedirectToRPHostAndPort: sso.RedirectToRPHostAndPort,
+               AutoRegisterSecretName: oidcClient.AutoRegisterSecret,
+            }
+			clientId, clientSecret, err := RegisterWithOidcProvider(regData)
+			if (err != nil){
+				// ??  should error be passed up the stack?  Should we log the details here first? 
+			} else {
+				ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_CLIENTID", clientId))
+				ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_CLIENTSECRET", clientSecret))
+			}
+		}
 	}
 
 	for _, oauth2Client := range sso.Oauth2 {
