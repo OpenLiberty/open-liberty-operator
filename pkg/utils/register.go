@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	corev1 "k8s.io/api/core/v1"
+	
     
 )
 
@@ -24,22 +26,21 @@ type RegisterData struct {
 	InitialAccessToken      string
 	InitialClientId         string
 	InitialClientSecret     string
-	AutoRegisterSecretName  string
 }
 
 
-func RegisterWithOidcProvider(regData RegisterData)(string, string, error){
-	populateFromSecret(&regData)
+func RegisterWithOidcProvider(regData RegisterData, regSecret *corev1.Secret)(string, string, error){
+	populateFromSecret(&regData, regSecret)
 	return doRegister(regData)
 }
 
-func populateFromSecret(regData *RegisterData){
-	secretName := regData.AutoRegisterSecretName
-	regSecret := &corev1.Secret{}
-	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: instance.GetNamespace()}, ssoSecret)
-	if err != nil {
-		return errors.Wrapf(err, "Registration Data Secret for Single sign-on (SSO) of name %q was not found. Create a secret of %q. in namespace %q with the credentials for the login providers you selected in application image.", secretName, instance.GetNamespace())
-	}
+func populateFromSecret(regData *RegisterData, regSecret *corev1.Secret){
+	// retrieve iat, clientId, clientSecret, grant-types, scopes
+	regData.InitialAccessToken = string(regSecret.Data["InitialAccessToken"])
+	regData.InitialClientId = string(regSecret.Data["InitialClientId"])
+	regData.InitialClientSecret = string(regSecret.Data["InitialClientSecret"])
+	regData.GrantTypes = string(regSecret.Data["GrantTypes"])
+	regData.Scopes = string(regSecret.Data["Scopes"])
 }
 
 

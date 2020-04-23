@@ -597,7 +597,11 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 				if err != nil {
 					return errors.Wrapf(err, "Secret for Single sign-on (SSO) was not found. Create a secret named %q in namespace %q with the credentials for the login providers you selected in application image.", secretName, instance.GetNamespace())
 				}
-				lutils.CustomizeEnvSSO(&statefulSet.Spec.Template, instance, ssoSecret)
+				err = lutils.CustomizeEnvSSO(&statefulSet.Spec.Template, instance, ssoSecret, r.GetClient())
+				if err != nil {
+					reqLogger.Error(err, "Failed to reconcile Single sign-on configuration")
+					return err		
+				}
 			}
 			lutils.ConfigureServiceability(&statefulSet.Spec.Template, instance)
 			if joiningExistingApplication || instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
@@ -640,7 +644,11 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 				if err != nil {
 					return errors.Wrapf(err, "Secret for Single sign-on (SSO) was not found. Create a secret named %q in namespace %q with the credentials for the login providers you selected in application image.", secretName, instance.GetNamespace())
 				}
-				lutils.CustomizeEnvSSO(&deploy.Spec.Template, instance, ssoSecret)
+				err = lutils.CustomizeEnvSSO(&deploy.Spec.Template, instance, ssoSecret, r.GetClient())
+				if err != nil {
+					reqLogger.Error(err, "Failed to reconcile Single sign-on configuration")
+					return err		
+				}
 			}
 
 			lutils.ConfigureServiceability(&deploy.Spec.Template, instance)

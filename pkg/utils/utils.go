@@ -6,10 +6,13 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-
+	"context"
+    
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
-
+    "sigs.k8s.io/controller-runtime/pkg/client"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -218,22 +221,22 @@ func createEnvVarSSO(loginID string, envSuffix string, value interface{}) *corev
 }
 
 // CustomizeEnvSSO Process the configuration for SSO login providers
-func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.OpenLibertyApplication, ssoSecret *corev1.Secret) {
+func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.OpenLibertyApplication, ssoSecret *corev1.Secret, client client.Client) (error) {
 
 	var secretKeys []string
 	for k := range ssoSecret.Data {
-		secretKeys = append(secretKeys, k)
+		secretKeys = append(secretKeys, k)  //ranging over a map returns it's keys.
 	}
 	sort.Strings(secretKeys)
 
 	ssoEnv := []corev1.EnvVar{}
-	for _, k := range secretKeys {
+	for _, k := range secretKeys {  //for each secretKey k
 		ssoEnv = append(ssoEnv, corev1.EnvVar{
 			Name: ssoEnvVarPrefix + normalizeEnvVariableName(k),
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: ssoSecret.GetName(),
+						Name: ssoSecret.GetName(), 
 					},
 					Key: k,
 				},
@@ -288,16 +291,23 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 		}
 		// clientId & Secret from registration will replace anything from the *-olapp-sso secret
 		if oidcClient.AutoRegisterSecret != "" {
+			secretName := oidcClient.AutoRegisterSecret
+			regSecret := &corev1.Secret{}
+			err := client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: instance.GetNamespace()}, regSecret)
+			if err != nil {
+				return errors.Wrapf(err, "Registration Data Secret for Single sign-on (SSO) of name %q was not found. Create a secret of %q. in namespace %q with the credentials for the login providers you selected in application image.", secretName, instance.GetNamespace())
+			}
 			regData := RegisterData{
 				DiscoveryURL:            oidcClient.DiscoveryEndpoint,
-				RouteURL:                "fixme",
+				RouteURL:                "fixme",  //todo
 				RedirectToRPHostAndPort: sso.RedirectToRPHostAndPort,
-				AutoRegisterSecretName:  oidcClient.AutoRegisterSecret,
 			}
-			clientId, clientSecret, err := RegisterWithOidcProvider(regData)
+			clientId, clientSecret, err := RegisterWithOidcProvider(regData, regSecret)
 			if err != nil {
 				// ??  should error be passed up the stack?  Should we log the details here first?
 			} else {
+				// todo: we need to store these away somewhere for idempotence.
+				// todo: append maybe not right function? 
 				ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_CLIENTID", clientId))
 				ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_CLIENTSECRET", clientSecret))
 			}
@@ -359,4 +369,5 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 			pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, v)
 		}
 	}
+	return nil
 }
