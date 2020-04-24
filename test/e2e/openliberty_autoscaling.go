@@ -107,7 +107,7 @@ func getHPA(hpa *autoscalingv1.HorizontalPodAutoscalerList, t *testing.T, f *fra
 
 func waitForHPA(hpa *autoscalingv1.HorizontalPodAutoscalerList, t *testing.T, minReplicas int32, maxReplicas int32, utiliz int32, f *framework.Framework, options k.ListOptions) error {
 	for counter := 0; counter < 6; counter++ {
-		time.Sleep(4000 * time.Millisecond)
+		time.Sleep(6000 * time.Millisecond)
 		hpa = getHPA(hpa, t, f, options)
 		if checkValues(hpa, t, minReplicas, maxReplicas, utiliz) == nil {
 			return nil
@@ -166,16 +166,11 @@ func checkValues(hpa *autoscalingv1.HorizontalPodAutoscalerList, t *testing.T, m
 
 // Updates the values and checks they are changed
 func updateTest(t *testing.T, f *framework.Framework, openLibertyApplication *openlibertyv1beta1.OpenLibertyApplication, options k.ListOptions, namespace string, hpa *autoscalingv1.HorizontalPodAutoscalerList) {
-
-	err := f.Client.Get(goctx.TODO(), types.NamespacedName{Name: "example-liberty-autoscaling", Namespace: namespace}, openLibertyApplication)
-	if err != nil {
-		util.FailureCleanup(t, f, namespace, err)
-	}
-
-	openLibertyApplication.Spec.ResourceConstraints = setResources("0.2")
-	openLibertyApplication.Spec.Autoscaling = setAutoScale(3, 2, 30)
-
-	err = f.Client.Update(goctx.TODO(), openLibertyApplication)
+	target := types.NamespacedName{Name: "example-liberty-autoscaling", Namespace: namespace}
+	err := util.UpdateApplication(f, target, func(r *openlibertyv1beta1.OpenLibertyApplication) {
+		r.Spec.ResourceConstraints = setResources("0.2")
+		r.Spec.Autoscaling = setAutoScale(3, 2, 30)
+	})
 	if err != nil {
 		util.FailureCleanup(t, f, namespace, err)
 	}
@@ -193,16 +188,12 @@ func updateTest(t *testing.T, f *framework.Framework, openLibertyApplication *op
 
 // Checks when max is less than min, there should be no update
 func minMaxTest(t *testing.T, f *framework.Framework, openLibertyApplication *openlibertyv1beta1.OpenLibertyApplication, options k.ListOptions, namespace string, hpa *autoscalingv1.HorizontalPodAutoscalerList) {
-
-	err := f.Client.Get(goctx.TODO(), types.NamespacedName{Name: "example-liberty-autoscaling", Namespace: namespace}, openLibertyApplication)
-	if err != nil {
-		util.FailureCleanup(t, f, namespace, err)
-	}
-
-	openLibertyApplication.Spec.ResourceConstraints = setResources("0.2")
-	openLibertyApplication.Spec.Autoscaling = setAutoScale(1, 6, 10)
-
-	err = f.Client.Update(goctx.TODO(), openLibertyApplication)
+	const name string = "example-liberty-autoscaling"
+	target := types.NamespacedName{Name: name, Namespace: namespace}
+	err := util.UpdateApplication(f, target, func(r *openlibertyv1beta1.OpenLibertyApplication) {
+		r.Spec.ResourceConstraints = setResources("0.2")
+		r.Spec.Autoscaling = setAutoScale(1, 6, 10)
+	})
 	if err != nil {
 		util.FailureCleanup(t, f, namespace, err)
 	}
@@ -213,6 +204,11 @@ func minMaxTest(t *testing.T, f *framework.Framework, openLibertyApplication *op
 	hpa = getHPA(hpa, t, f, options)
 
 	err = waitForHPA(hpa, t, 2, 3, 30, f, options)
+	if err != nil {
+		util.FailureCleanup(t, f, namespace, err)
+	}
+
+	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, name, 2, retryInterval, timeout)
 	if err != nil {
 		util.FailureCleanup(t, f, namespace, err)
 	}
@@ -220,16 +216,12 @@ func minMaxTest(t *testing.T, f *framework.Framework, openLibertyApplication *op
 
 // When min is set to less than 1, there should be no update since the minReplicas are updated to a value less than 1
 func minBoundaryTest(t *testing.T, f *framework.Framework, openLibertyApplication *openlibertyv1beta1.OpenLibertyApplication, options k.ListOptions, namespace string, hpa *autoscalingv1.HorizontalPodAutoscalerList) {
-
-	err := f.Client.Get(goctx.TODO(), types.NamespacedName{Name: "example-liberty-autoscaling", Namespace: namespace}, openLibertyApplication)
-	if err != nil {
-		util.FailureCleanup(t, f, namespace, err)
-	}
-
-	openLibertyApplication.Spec.ResourceConstraints = setResources("0.5")
-	openLibertyApplication.Spec.Autoscaling = setAutoScale(4, 0, 20)
-
-	err = f.Client.Update(goctx.TODO(), openLibertyApplication)
+	const name string = "example-liberty-autoscaling"
+	target := types.NamespacedName{Name: name, Namespace: namespace}
+	err := util.UpdateApplication(f, target, func(r *openlibertyv1beta1.OpenLibertyApplication) {
+		r.Spec.ResourceConstraints = setResources("0.5")
+		r.Spec.Autoscaling = setAutoScale(4, 0, 20)
+	})
 	if err != nil {
 		util.FailureCleanup(t, f, namespace, err)
 	}
@@ -240,6 +232,11 @@ func minBoundaryTest(t *testing.T, f *framework.Framework, openLibertyApplicatio
 	hpa = getHPA(hpa, t, f, options)
 
 	err = waitForHPA(hpa, t, 2, 3, 30, f, options)
+	if err != nil {
+		util.FailureCleanup(t, f, namespace, err)
+	}
+
+	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, name, 2, retryInterval, timeout)
 	if err != nil {
 		util.FailureCleanup(t, f, namespace, err)
 	}
@@ -280,15 +277,11 @@ func incorrectFieldsTest(t *testing.T, f *framework.Framework, ctx *framework.Te
 
 	options := k.ListOptions{FieldSelector: selec, Namespace: namespace}
 
-	err = f.Client.Get(goctx.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, openLibertyApplication)
-	if err != nil {
-		util.FailureCleanup(t, f, namespace, err)
-	}
-
-	openLibertyApplication.Spec.ResourceConstraints = setResources("0.3")
-	openLibertyApplication.Spec.Autoscaling = setAutoScale(4)
-
-	err = f.Client.Update(goctx.TODO(), openLibertyApplication)
+	target := types.NamespacedName{Name: name, Namespace: namespace}
+	err = util.UpdateApplication(f, target, func(r *openlibertyv1beta1.OpenLibertyApplication) {
+		r.Spec.ResourceConstraints = setResources("0.3")
+		r.Spec.Autoscaling = setAutoScale(4)
+	})
 	if err != nil {
 		util.FailureCleanup(t, f, namespace, err)
 	}
