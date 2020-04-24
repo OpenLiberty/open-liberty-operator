@@ -71,6 +71,9 @@ main() {
     echo "****** Pushing release: ${dockerTag}"
     push_release "${dockerTag}"
   done <<< "${tags}"
+
+  echo "****** Complete!"
+  git checkout -q "master"
 }
 
 build_release() {
