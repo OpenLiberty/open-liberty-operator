@@ -2289,7 +2289,7 @@ spec:
             serviceAccountName:
               type: string
             serviceability:
-              description: Open Liberty specific capabilities
+              description: OpenLibertyApplicationServiceability ...
               properties:
                 size:
                   pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$

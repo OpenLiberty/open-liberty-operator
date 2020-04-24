@@ -55,6 +55,7 @@ type OpenLibertyApplicationSpec struct {
 	Bindings          *OpenLibertyApplicationBindings `json:"bindings,omitempty"`
 
 	// Open Liberty specific capabilities
+
 	Serviceability *OpenLibertyApplicationServiceability `json:"serviceability,omitempty"`
 	SSO            *OpenLibertyApplicationSSO            `json:"sso,omitempty"`
 }

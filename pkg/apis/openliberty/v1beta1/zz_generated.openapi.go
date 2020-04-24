@@ -853,8 +853,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSpec(ref common.R
 					},
 					"serviceability": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Open Liberty specific capabilities",
-							Ref:         ref("./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationServiceability"),
+							Ref: ref("./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationServiceability"),
 						},
 					},
 					"sso": {
