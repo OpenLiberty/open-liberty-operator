@@ -51,6 +51,7 @@ main() {
   push_release "daily"
 
   ## loop through tagged releases and build
+  git fetch origin
   local tags=$(git tag -l)
   while read -r tag; do
     if [[ -z "${tag}" ]]; then
@@ -73,7 +74,7 @@ main() {
   done <<< "${tags}"
 
   echo "****** Complete!"
-  git checkout -q "master"
+  git checkout "${TRAVIS_BRANCH}"
 }
 
 build_release() {
