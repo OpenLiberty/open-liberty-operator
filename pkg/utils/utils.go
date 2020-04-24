@@ -337,6 +337,11 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 		}
 	}
 
+	secretRev := corev1.EnvVar{
+		Name:  "SSO_SECRET_REV",
+		Value: ssoSecret.ResourceVersion}
+	ssoEnv = append(ssoEnv, secretRev)
+
 	envList := pts.Spec.Containers[0].Env
 	for _, v := range ssoEnv {
 		if _, found := findEnvVar(v.Name, envList); !found {
