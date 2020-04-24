@@ -358,7 +358,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 
 	configMap, err := r.GetOpConfigMap("open-liberty-operator", ns)
 	if err != nil {
-		log.Info("Failed to find runtime-component-operator config map")
+		log.Info("Failed to find open-liberty-operator config map")
 		common.Config = common.DefaultOpConfig()
 		configMap = &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "open-liberty-operator", Namespace: ns}}
 		configMap.Data = common.Config
@@ -762,7 +762,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			}
 		}
 	} else {
-	
+
 		if ok, err := r.IsGroupVersionSupported(networkingv1beta1.SchemeGroupVersion.String(), "Ingress"); err != nil {
 			reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", networkingv1beta1.SchemeGroupVersion.String()))
 			r.ManageError(err, common.StatusConditionTypeReconciled, instance)
