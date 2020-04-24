@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+
 	"github.com/application-stacks/runtime-component-operator/pkg/common"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 
@@ -13,12 +15,15 @@ import (
 	oputils "github.com/application-stacks/runtime-component-operator/pkg/utils"
 
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
-	prometheusv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+
 	certmngrv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
+	applicationsv1beta1 "sigs.k8s.io/application/pkg/apis/app/v1beta1"
+
+	prometheusv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
-	"github.com/openshift/library-go/pkg/image/imageutil"
+	imageutil "github.com/openshift/library-go/pkg/image/imageutil"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -27,8 +32,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	applicationsv1beta1 "sigs.k8s.io/application/pkg/apis/app/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -101,6 +106,14 @@ func setup(mgr manager.Manager) {
 			}
 			fullName := fmt.Sprintf("%s/%s", imageNamespace, image.Name)
 			return []string{fullName}
+		}
+		return nil
+	})
+	mgr.GetFieldIndexer().IndexField(&openlibertyv1beta1.OpenLibertyApplication{}, indexFieldBindingsResourceRef, func(obj runtime.Object) []string {
+		instance := obj.(*openlibertyv1beta1.OpenLibertyApplication)
+
+		if instance.Spec.Bindings != nil && instance.Spec.Bindings.ResourceRef != "" {
+			return []string{instance.Spec.Bindings.ResourceRef}
 		}
 		return nil
 	})
@@ -255,17 +268,25 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	ok, _ := reconciler.IsGroupVersionSupported(imagev1.SchemeGroupVersion.String())
+	err = c.Watch(
+		&source.Kind{Type: &corev1.Secret{}},
+		&EnqueueRequestsForCustomIndexField{
+			Matcher: CreateBindingSecretMatcher(mgr.GetClient()),
+		})
+	if err != nil {
+		return err
+	}
+
+	ok, _ := reconciler.IsGroupVersionSupported(imagev1.SchemeGroupVersion.String(), "ImageStream")
 	if ok {
 		c.Watch(
 			&source.Kind{Type: &imagev1.ImageStream{}},
-			&EnqueueRequestsForImageStream{
-				Client:          mgr.GetClient(),
-				WatchNamespaces: watchNamespaces,
+			&EnqueueRequestsForCustomIndexField{
+				Matcher: CreateImageStreamMatcher(mgr.GetClient(), watchNamespaces),
 			})
 	}
 
-	ok, _ = reconciler.IsGroupVersionSupported(routev1.SchemeGroupVersion.String())
+	ok, _ = reconciler.IsGroupVersionSupported(routev1.SchemeGroupVersion.String(), "Route")
 	if ok {
 		err = c.Watch(&source.Kind{Type: &routev1.Route{}}, &handler.EnqueueRequestForOwner{
 			IsController: true,
@@ -273,7 +294,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		}, predSubResource)
 	}
 
-	ok, _ = reconciler.IsGroupVersionSupported(servingv1alpha1.SchemeGroupVersion.String())
+	ok, _ = reconciler.IsGroupVersionSupported(servingv1alpha1.SchemeGroupVersion.String(), "Service")
 	if ok {
 		err = c.Watch(&source.Kind{Type: &servingv1alpha1.Service{}}, &handler.EnqueueRequestForOwner{
 			IsController: true,
@@ -281,7 +302,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		}, predSubResource)
 	}
 
-	ok, _ = reconciler.IsGroupVersionSupported(certmngrv1alpha2.SchemeGroupVersion.String())
+	ok, _ = reconciler.IsGroupVersionSupported(certmngrv1alpha2.SchemeGroupVersion.String(), "Certificate")
 	if ok {
 		c.Watch(&source.Kind{Type: &certmngrv1alpha2.Certificate{}}, &handler.EnqueueRequestForOwner{
 			IsController: true,
@@ -289,7 +310,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		}, predSubResource)
 	}
 
-	ok, _ = reconciler.IsGroupVersionSupported(prometheusv1.SchemeGroupVersion.String())
+	ok, _ = reconciler.IsGroupVersionSupported(prometheusv1.SchemeGroupVersion.String(), "ServiceMonitor")
 	if ok {
 		c.Watch(&source.Kind{Type: &prometheusv1.ServiceMonitor{}}, &handler.EnqueueRequestForOwner{
 			IsController: true,
@@ -312,8 +333,6 @@ type ReconcileOpenLiberty struct {
 
 // Reconcile reads that state of the cluster for a OpenLiberty object and makes changes based on the state read
 // and what is in the OpenLiberty.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
-// a Pod as an example
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
@@ -340,8 +359,20 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 	configMap, err := r.GetOpConfigMap("open-liberty-operator", ns)
 	if err != nil {
 		log.Info("Failed to find runtime-component-operator config map")
+		common.Config = common.DefaultOpConfig()
+		configMap = &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "open-liberty-operator", Namespace: ns}}
+		configMap.Data = common.Config
 	} else {
 		common.Config.LoadFromConfigMap(configMap)
+	}
+
+	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.GetClient(), configMap, func() error {
+		configMap.Data = common.Config
+		return nil
+	})
+
+	if err != nil {
+		log.Info("Failed to update open-liberty-operator config map")
 	}
 
 	// Fetch the OpenLiberty instance
@@ -457,6 +488,19 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		return result, nil
 	}
 
+	if r.IsSeriveBindingSupported() {
+		result, err = r.ReconcileBindings(instance)
+		if err != nil || result != (reconcile.Result{}) {
+			return result, err
+		}
+	} else if instance.Spec.Bindings != nil {
+		return r.ManageError(errors.New("failed to reconcile as the operator failed to find Service Binding CRDs"), common.StatusConditionTypeReconciled, instance)
+	}
+	resolvedBindingSecret, err := r.GetResolvedBindingSecret(ba)
+	if err != nil {
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	}
+
 	if instance.Spec.ServiceAccountName == nil || *instance.Spec.ServiceAccountName == "" {
 		serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
 		err = r.CreateOrUpdate(serviceAccount, instance, func() error {
@@ -476,7 +520,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		}
 	}
 
-	isKnativeSupported, err := r.IsGroupVersionSupported(servingv1alpha1.SchemeGroupVersion.String())
+	isKnativeSupported, err := r.IsGroupVersionSupported(servingv1alpha1.SchemeGroupVersion.String(), "Service")
 	if err != nil {
 		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	} else if !isKnativeSupported {
@@ -490,7 +534,6 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: instance.Name + "-headless", Namespace: instance.Namespace}},
 			&appsv1.Deployment{ObjectMeta: defaultMeta},
 			&appsv1.StatefulSet{ObjectMeta: defaultMeta},
-			&routev1.Route{ObjectMeta: defaultMeta},
 			&autoscalingv1.HorizontalPodAutoscaler{ObjectMeta: defaultMeta},
 		}
 		err = r.DeleteResources(resources)
@@ -499,10 +542,23 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
 
+		if ok, _ := r.IsGroupVersionSupported(networkingv1beta1.SchemeGroupVersion.String(), "Ingress"); ok {
+			r.DeleteResource(&networkingv1beta1.Ingress{ObjectMeta: defaultMeta})
+		}
+
+		if r.IsOpenShift() {
+			route := &routev1.Route{ObjectMeta: defaultMeta}
+			err = r.DeleteResource(route)
+			if err != nil {
+				reqLogger.Error(err, "Failed to clean up non-Knative resource Route")
+				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			}
+		}
 		if isKnativeSupported {
 			ksvc := &servingv1alpha1.Service{ObjectMeta: defaultMeta}
 			err = r.CreateOrUpdate(ksvc, instance, func() error {
 				oputils.CustomizeKnativeService(ksvc, instance)
+				oputils.CustomizeServiceBinding(resolvedBindingSecret, &ksvc.Spec.Template.Spec.PodSpec, instance)
 				return nil
 			})
 
@@ -511,9 +567,8 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 			}
 			return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
-		} else {
-			return r.ManageError(errors.New("failed to reconcile Knative service as operator could not find Knative CRDs"), common.StatusConditionTypeReconciled, instance)
 		}
+		return r.ManageError(errors.New("failed to reconcile Knative service as operator could not find Knative CRDs"), common.StatusConditionTypeReconciled, instance)
 	}
 
 	if isKnativeSupported {
@@ -589,6 +644,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			oputils.CustomizeStatefulSet(statefulSet, instance)
 			oputils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
 			oputils.CustomizePersistence(statefulSet, instance)
+			oputils.CustomizeServiceBinding(resolvedBindingSecret, &statefulSet.Spec.Template.Spec, instance)
 			lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance)
 			if instance.Spec.SSO != nil {
 				secretName := instance.GetName() + ssoSecretNameSuffix
@@ -632,6 +688,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		err = r.CreateOrUpdate(deploy, instance, func() error {
 			oputils.CustomizeDeployment(deploy, instance)
 			oputils.CustomizePodSpec(&deploy.Spec.Template, instance)
+			oputils.CustomizeServiceBinding(resolvedBindingSecret, &deploy.Spec.Template.Spec, instance)
 			lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance)
 			if instance.Spec.SSO != nil {
 				secretName := instance.GetName() + ssoSecretNameSuffix
@@ -677,7 +734,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		}
 	}
 
-	if ok, err := r.IsGroupVersionSupported(routev1.SchemeGroupVersion.String()); err != nil {
+	if ok, err := r.IsGroupVersionSupported(routev1.SchemeGroupVersion.String(), "Route"); err != nil {
 		reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", routev1.SchemeGroupVersion.String()))
 		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	} else if ok {
@@ -705,11 +762,34 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			}
 		}
 	} else {
-		reqLogger.V(1).Info(fmt.Sprintf("%s is not supported", routev1.SchemeGroupVersion.String()))
+	
+		if ok, err := r.IsGroupVersionSupported(networkingv1beta1.SchemeGroupVersion.String(), "Ingress"); err != nil {
+			reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", networkingv1beta1.SchemeGroupVersion.String()))
+			r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		} else if ok {
+			if instance.Spec.Expose != nil && *instance.Spec.Expose {
+				ing := &networkingv1beta1.Ingress{ObjectMeta: defaultMeta}
+				err = r.CreateOrUpdate(ing, instance, func() error {
+					oputils.CustomizeIngress(ing, instance)
+					return nil
+				})
+				if err != nil {
+					reqLogger.Error(err, "Failed to reconcile Ingress")
+					return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+				}
+			} else {
+				ing := &networkingv1beta1.Ingress{ObjectMeta: defaultMeta}
+				err = r.DeleteResource(ing)
+				if err != nil {
+					reqLogger.Error(err, "Failed to delete Ingress")
+					return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+				}
+			}
+		}
 	}
 
-	if ok, err := r.IsGroupVersionSupported(prometheusv1.SchemeGroupVersion.String()); err != nil {
-		reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", routev1.SchemeGroupVersion.String()))
+	if ok, err := r.IsGroupVersionSupported(prometheusv1.SchemeGroupVersion.String(), "ServiceMonitor"); err != nil {
+		reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", prometheusv1.SchemeGroupVersion.String()))
 		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	} else if ok {
 		if instance.Spec.Monitoring != nil && (instance.Spec.CreateKnativeService == nil || !*instance.Spec.CreateKnativeService) {
@@ -732,7 +812,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		}
 
 	} else {
-		reqLogger.V(1).Info(fmt.Sprintf("%s is not supported", routev1.SchemeGroupVersion.String()))
+		reqLogger.V(1).Info(fmt.Sprintf("%s is not supported", prometheusv1.SchemeGroupVersion.String()))
 	}
 
 	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)

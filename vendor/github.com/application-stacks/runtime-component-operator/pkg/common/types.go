@@ -40,6 +40,8 @@ type BaseComponentStatus interface {
 	NewCondition() StatusCondition
 	GetConsumedServices() ConsumedServices
 	SetConsumedServices(ConsumedServices)
+	GetResolvedBindings() []string
+	SetResolvedBindings([]string)
 	GetImageReference() string
 	SetImageReference(string)
 }
@@ -75,6 +77,8 @@ type BaseComponentService interface {
 	GetTargetPort() *int32
 	GetPortName() string
 	GetType() *corev1.ServiceType
+	GetNodePort() *int32
+	GetPorts() []corev1.ServicePort
 	GetAnnotations() map[string]string
 	GetProvides() ServiceBindingProvides
 	GetConsumes() []ServiceBindingConsumes
@@ -121,6 +125,12 @@ type ServiceBindingAuth interface {
 	GetPassword() corev1.SecretKeySelector
 }
 
+// BaseComponentBindings represents Service Binding information
+type BaseComponentBindings interface {
+	GetAutoDetect() *bool
+	GetResourceRef() string
+}
+
 // ServiceBindingCategory ...
 type ServiceBindingCategory string
 
@@ -160,6 +170,7 @@ type BaseComponent interface {
 	GetSidecarContainers() []corev1.Container
 	GetGroupName() string
 	GetRoute() BaseComponentRoute
+	GetBindings() BaseComponentBindings
 }
 
 // Certificate returns cert-manager CertificateSpec
