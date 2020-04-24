@@ -187,10 +187,28 @@ func schema_pkg_apis_appstacks_v1beta1_RuntimeComponentService(ref common.Refere
 							Format: "int32",
 						},
 					},
+					"nodePort": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
 					"portName": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
 							Format: "",
+						},
+					},
+					"ports": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/api/core/v1.ServicePort"),
+									},
+								},
+							},
 						},
 					},
 					"annotations": {
@@ -244,7 +262,7 @@ func schema_pkg_apis_appstacks_v1beta1_RuntimeComponentService(ref common.Refere
 			},
 		},
 		Dependencies: []string{
-			"github.com/application-stacks/runtime-component-operator/pkg/apis/appstacks/v1beta1.Certificate", "github.com/application-stacks/runtime-component-operator/pkg/apis/appstacks/v1beta1.ServiceBindingConsumes", "github.com/application-stacks/runtime-component-operator/pkg/apis/appstacks/v1beta1.ServiceBindingProvides"},
+			"github.com/application-stacks/runtime-component-operator/pkg/apis/appstacks/v1beta1.Certificate", "github.com/application-stacks/runtime-component-operator/pkg/apis/appstacks/v1beta1.ServiceBindingConsumes", "github.com/application-stacks/runtime-component-operator/pkg/apis/appstacks/v1beta1.ServiceBindingProvides", "k8s.io/api/core/v1.ServicePort"},
 	}
 }
 
@@ -479,12 +497,17 @@ func schema_pkg_apis_appstacks_v1beta1_RuntimeComponentSpec(ref common.Reference
 							Ref: ref("github.com/application-stacks/runtime-component-operator/pkg/apis/appstacks/v1beta1.RuntimeComponentRoute"),
 						},
 					},
+					"bindings": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/application-stacks/runtime-component-operator/pkg/apis/appstacks/v1beta1.RuntimeComponentBindings"),
+						},
+					},
 				},
 				Required: []string{"applicationImage"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/application-stacks/runtime-component-operator/pkg/apis/appstacks/v1beta1.RuntimeComponentAutoScaling", "github.com/application-stacks/runtime-component-operator/pkg/apis/appstacks/v1beta1.RuntimeComponentMonitoring", "github.com/application-stacks/runtime-component-operator/pkg/apis/appstacks/v1beta1.RuntimeComponentRoute", "github.com/application-stacks/runtime-component-operator/pkg/apis/appstacks/v1beta1.RuntimeComponentService", "github.com/application-stacks/runtime-component-operator/pkg/apis/appstacks/v1beta1.RuntimeComponentStorage", "k8s.io/api/core/v1.Container", "k8s.io/api/core/v1.EnvFromSource", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.Probe", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Volume", "k8s.io/api/core/v1.VolumeMount"},
+			"github.com/application-stacks/runtime-component-operator/pkg/apis/appstacks/v1beta1.RuntimeComponentAutoScaling", "github.com/application-stacks/runtime-component-operator/pkg/apis/appstacks/v1beta1.RuntimeComponentBindings", "github.com/application-stacks/runtime-component-operator/pkg/apis/appstacks/v1beta1.RuntimeComponentMonitoring", "github.com/application-stacks/runtime-component-operator/pkg/apis/appstacks/v1beta1.RuntimeComponentRoute", "github.com/application-stacks/runtime-component-operator/pkg/apis/appstacks/v1beta1.RuntimeComponentService", "github.com/application-stacks/runtime-component-operator/pkg/apis/appstacks/v1beta1.RuntimeComponentStorage", "k8s.io/api/core/v1.Container", "k8s.io/api/core/v1.EnvFromSource", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.Probe", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Volume", "k8s.io/api/core/v1.VolumeMount"},
 	}
 }
 
@@ -528,6 +551,24 @@ func schema_pkg_apis_appstacks_v1beta1_RuntimeComponentStatus(ref common.Referen
 												},
 											},
 										},
+									},
+								},
+							},
+						},
+					},
+					"resolvedBindings": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "set",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
 									},
 								},
 							},

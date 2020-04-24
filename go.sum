@@ -79,8 +79,8 @@ github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4/go.mod h1:ybxpYRF
 github.com/ant31/crd-validation v0.0.0-20180702145049-30f8a35d0ac2/go.mod h1:X0noFIik9YqfhGYBLEHg8LJKEwy7QIitLQuFMpKLcPk=
 github.com/antihax/optional v0.0.0-20180407024304-ca021399b1a6/go.mod h1:V8iCPQYkqmusNa815XgQio277wI47sdRh1dUOLdyC6Q=
 github.com/apache/thrift v0.12.0/go.mod h1:cp2SuWMxlEZw2r+iP2GNCdIi4C1qmUzdZFSVb+bacwQ=
-github.com/application-stacks/runtime-component-operator v0.4.1 h1:EXrV+i6/2sgVt+OILH6kgpS0670MXycR+drIztdynPw=
-github.com/application-stacks/runtime-component-operator v0.4.1/go.mod h1:3TJa36rzYElnHB7MRA/2GCpEq4SbGmBVw5O7ueN/JeM=
+github.com/application-stacks/runtime-component-operator v0.5.0 h1:m06rPIUi5Btgn3QMmMA79U0r7/IJztPgJ3maV3KMIGQ=
+github.com/application-stacks/runtime-component-operator v0.5.0/go.mod h1:fcbZ5gYAnxyl+LANAlOqNO09R/e6jdCXIlSgvHVae9s=
 github.com/armon/circbuf v0.0.0-20150827004946-bbbad097214e/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=
 github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6/go.mod h1:grANhF5doyWs3UAsr3K4I6qtAmlQcZDesFNEHPZAzj8=
 github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da/go.mod h1:Q73ZrmVTwzkszR9V5SSuryQ31EELlFMUz1kKyl939pY=
