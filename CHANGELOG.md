@@ -6,7 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 -->
 
 # Changelog
+
 All notable changes to this project will be documented in this file.
+
+
+## [0.5.0]
+
+### Added
+
+- Added Ingress (vanilla) support ([#79](https://github.com/application-stacks/runtime-component-operator/pull/79), [#141](https://github.com/OpenLiberty/open-liberty-operator/pull/141))
+- Added support for external service bindings ([#76](https://github.com/application-stacks/runtime-component-operator/pull/76), [#141](https://github.com/OpenLiberty/open-liberty-operator/pull/141))
+- Added additional service ports support ([#80](https://github.com/application-stacks/runtime-component-operator/pull/80), [#141](https://github.com/OpenLiberty/open-liberty-operator/pull/141))
+- Added support to specify NodePort on service ([#60](https://github.com/application-stacks/runtime-component-operator/pull/60), [#141](https://github.com/OpenLiberty/open-liberty-operator/pull/141))
+
+### Fixed
+
+- Auto-scaling (HPA) not working as expected ([#72](https://github.com/application-stacks/runtime-component-operator/pull/72))
+- Operator crashes on some cluster due to optional CRDs (Knative Service, ServiceMonitor) not being present ([#141](https://github.com/OpenLiberty/open-liberty-operator/pull/141))
+
 
 ## [0.4.0]
 
@@ -39,7 +56,8 @@ All notable changes to this project will be documented in this file.
 
 The initial release of the helm-based Open Liberty Operator.
 
-[Unreleased]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.0.1...v0.3.0
 [0.0.1]: https://github.com/OpenLiberty/open-liberty-operator/releases/tag/v0.0.1

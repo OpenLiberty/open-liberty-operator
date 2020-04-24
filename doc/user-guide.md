@@ -230,7 +230,7 @@ To specify sensitive information such as client IDs, client secrets and tokens f
 
 The keys within the `Secret` must follow this naming pattern: `<provider_name>-<sensitive_field_name>`. For example, `google-clientSecret`. Instead of the `-` character in between, you can also use `.` or `_`. For example, `oauth2_userApiToken`.
 
-_Note_: Open Liberty Operator watches for the creation and deletion of the SSO secret as well as any updates to it. Adding or removing keys from Secret will be passed down to the application automatically. However, updating the value of an existing key in `Secret` is not propagated to the application. See [troubleshooting](./troubleshooting.md#single-sign-on-sso) for solution and an explanation.
+Open Liberty Operator watches for the creation and deletion of the SSO secret as well as any updates to it. Any changes to Secret will be passed down to the application automatically.
 
 ```yaml
 apiVersion: v1
