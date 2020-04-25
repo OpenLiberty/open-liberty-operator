@@ -1,4 +1,4 @@
-# Open Liberty Operatorv0.5.0
+# Open Liberty Operator v0.5.0
 
 ## Changelog
 
