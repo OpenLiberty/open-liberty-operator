@@ -1,8 +1,8 @@
-# Open Liberty Operator v0.5.0
+# Open Liberty Operator v0.5.1
 
 ## Changelog
 
-All notable changes are documented in the [Changelog](/CHANGELOG.md#0.5.0).
+All notable changes are documented in the [Changelog](/CHANGELOG.md#0.5.1).
 
 ## Installation
 
@@ -20,7 +20,7 @@ Appropriate cluster role and binding are required to watch another namespace, wa
 1. Install Custom Resource Definitions (CRDs) for `OpenLibertyApplication` and day-2 operations `OpenLibertyTrace` and `OpenLibertyDump`. This needs to be done only ONCE per cluster:
 
     ```console
-    kubectl apply -f https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/master/deploy/releases/0.5.0/openliberty-app-crd.yaml
+    kubectl apply -f https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/master/deploy/releases/0.5.1/openliberty-app-crd.yaml
     ```
 
 2. Install the Open Liberty Operator:
@@ -40,7 +40,7 @@ Appropriate cluster role and binding are required to watch another namespace, wa
     2.2. _Optional_: Install cluster-level role-based access. This step can be skipped if the operator is only watching own namespace:
   
     ```console
-    curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/master/deploy/releases/0.5.0/openliberty-app-cluster-rbac.yaml \
+    curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/master/deploy/releases/0.5.1/openliberty-app-cluster-rbac.yaml \
       | sed -e "s/OPEN_LIBERTY_OPERATOR_NAMESPACE/${OPERATOR_NAMESPACE}/" \
       | kubectl apply -f -
     ```
@@ -48,7 +48,7 @@ Appropriate cluster role and binding are required to watch another namespace, wa
     2.3. Install the operator:
 
     ```console
-    curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/master/deploy/releases/0.5.0/openliberty-app-operator.yaml \
+    curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/master/deploy/releases/0.5.1/openliberty-app-operator.yaml \
       | sed -e "s/OPEN_LIBERTY_WATCH_NAMESPACE/${WATCH_NAMESPACE}/" \
       | kubectl apply -n ${OPERATOR_NAMESPACE} -f -
     ```
@@ -67,8 +67,3 @@ _Deleting the CRD will also delete all `OpenLibertyApplication` in the cluster_
 - The auto-creation of an application definition by kAppNav is not supported when Knative is enabled.
 - Monitoring feature does not support integration with Knative Service. Prometheus Operator is required to use ServiceMonitor.
 - After the initial deployment of `OpenLibertyApplication`, any changes to its labels would be applied only when one of the parameters from `spec` is updated.
-
-## Known Issues
-
-- Operator can crash when creating Ingress resource if `spec.expose` is `true` and `spec.route` is not provided. 
-Possible fixes are either to disable Ingress by setting `spec.expose` to `false` or add `spec.route: {}`
