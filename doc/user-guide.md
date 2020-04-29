@@ -241,6 +241,7 @@ metadata:
   namespace: demo
 type: Opaque
 data:
+  # base64 encode the values before entering ( echo -n myclientsecret-xxx |base64 )
   # The keys must be in this format: <provider_name>-<sensitive_field_name>
   github-clientId: bW9vb29vb28=
   github-clientSecret: dGhlbGF1Z2hpbmdjb3c=
@@ -283,7 +284,7 @@ spec:
         tokenEndpoint: specify-required-value
     oidc:
       - discoveryEndpoint: specify-required-value
-      - autoRegisterSecret: specify-optional-value
+        autoRegisterSecret: specify-optional-value
   service:
     certificate:
       isCA: true

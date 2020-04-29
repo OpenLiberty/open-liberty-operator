@@ -36,11 +36,11 @@ func RegisterWithOidcProvider(regData RegisterData, regSecret *corev1.Secret)(st
 
 func populateFromSecret(regData *RegisterData, regSecret *corev1.Secret){
 	// retrieve iat, clientId, clientSecret, grant-types, scopes
-	regData.InitialAccessToken = string(regSecret.Data["InitialAccessToken"])
-	regData.InitialClientId = string(regSecret.Data["InitialClientId"])
-	regData.InitialClientSecret = string(regSecret.Data["InitialClientSecret"])
-	regData.GrantTypes = string(regSecret.Data["GrantTypes"])
-	regData.Scopes = string(regSecret.Data["Scopes"])
+	regData.InitialAccessToken = string(regSecret.Data["initialAccessToken"])
+	regData.InitialClientId = string(regSecret.Data["initialClientId"])
+	regData.InitialClientSecret = string(regSecret.Data["initialClientSecret"])
+	regData.GrantTypes = string(regSecret.Data["grantTypes"])
+	regData.Scopes = string(regSecret.Data["scopes"])
 }
 
 
@@ -245,8 +245,9 @@ func sendHTTPRequest(content string, URL string, method string, id string, passw
 		}
 	}
 
+    //bt: todo: fix preamble
 	const errorStr = "error"
-	var errorMsgPreamble = "Error occurred accessing " + URL + ": "
+	var errorMsgPreamble = "Error occurred.  passwordOrToken: "+ passwordOrToken + " URL: " + URL + ": "
 	if err != nil {
 		return errorStr, errors.New(errorMsgPreamble + err.Error())
 	}

@@ -591,13 +591,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			oputils.CustomizePersistence(statefulSet, instance)
 			lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance)
 			if instance.Spec.SSO != nil {
-				secretName := instance.GetName() + ssoSecretNameSuffix
-				ssoSecret := &corev1.Secret{}
-				err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: instance.GetNamespace()}, ssoSecret)
-				if err != nil {
-					return errors.Wrapf(err, "Secret for Single sign-on (SSO) was not found. Create a secret named %q in namespace %q with the credentials for the login providers you selected in application image.", secretName, instance.GetNamespace())
-				}
-				err = lutils.CustomizeEnvSSO(&statefulSet.Spec.Template, instance, ssoSecret, r.GetClient())
+				err = lutils.CustomizeEnvSSO(&statefulSet.Spec.Template, instance, r.GetClient())
 				if err != nil {
 					reqLogger.Error(err, "Failed to reconcile Single sign-on configuration")
 					return err		
@@ -638,13 +632,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			oputils.CustomizePodSpec(&deploy.Spec.Template, instance)
 			lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance)
 			if instance.Spec.SSO != nil {
-				secretName := instance.GetName() + ssoSecretNameSuffix
-				ssoSecret := &corev1.Secret{}
-				err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: instance.GetNamespace()}, ssoSecret)
-				if err != nil {
-					return errors.Wrapf(err, "Secret for Single sign-on (SSO) was not found. Create a secret named %q in namespace %q with the credentials for the login providers you selected in application image.", secretName, instance.GetNamespace())
-				}
-				err = lutils.CustomizeEnvSSO(&deploy.Spec.Template, instance, ssoSecret, r.GetClient())
+				err = lutils.CustomizeEnvSSO(&deploy.Spec.Template, instance, r.GetClient())
 				if err != nil {
 					reqLogger.Error(err, "Failed to reconcile Single sign-on configuration")
 					return err		
