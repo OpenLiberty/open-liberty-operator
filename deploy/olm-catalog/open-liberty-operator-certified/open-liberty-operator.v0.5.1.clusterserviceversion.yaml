@@ -1,16 +1,16 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: open-liberty-operator.v0.5.0
+  name: open-liberty-operator.v0.5.1
   namespace: placeholder
   annotations:
     alm-examples: >-
       [{"apiVersion":"openliberty.io/v1beta1","kind":"OpenLibertyApplication","metadata":{"name":"demo-app"},"spec":{"replicas":1,"applicationImage":"openliberty/open-liberty:full-java8-openj9-ubi","expose":true}},{"apiVersion": "openliberty.io/v1beta1","kind": "OpenLibertyDump","metadata": {"name": "example-dump"},"spec": {"podName": "Specify_Pod_Name_Here","include": ["heap","thread"]}},{"apiVersion": "openliberty.io/v1beta1","kind": "OpenLibertyTrace","metadata": {"name": "example-trace"},"spec": {"podName": "Specify_Pod_Name_Here","traceSpecification": "*=info:com.ibm.ws.webcontainer*=all"}}]
     categories: Application Runtime
     certified: 'true'
-    createdAt: 2020-04-24 09:00:00
+    createdAt: 2020-04-29 09:00:00
     description: Deploy and manage applications running on Open Liberty
-    containerImage: registry.connect.redhat.com/ibm/open-liberty-operator:0.5.0
+    containerImage: registry.connect.redhat.com/ibm/open-liberty-operator:0.5.1
     support: IBM
     capabilities: Auto Pilot
     repository: https://github.com/OpenLiberty/open-liberty-operator
@@ -137,8 +137,8 @@ spec:
         See our [**documentation**](https://github.com/OpenLiberty/open-liberty-operator/tree/master/doc/)
         for more information.'
   maturity: beta
-  replaces: open-liberty-operator.v0.4.0
-  version: 0.5.0
+  replaces: open-liberty-operator.v0.5.0
+  version: 0.5.1
   keywords:
     - Open Liberty
     - MicroProfile
@@ -370,7 +370,7 @@ spec:
                 serviceAccountName: open-liberty-operator
                 containers:
                   - name: open-liberty-operator
-                    image: registry.connect.redhat.com/ibm/open-liberty-operator:0.5.0
+                    image: registry.connect.redhat.com/ibm/open-liberty-operator:0.5.1
                     command:
                       - open-liberty-operator
                     imagePullPolicy: Always

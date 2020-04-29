@@ -135,7 +135,7 @@ spec:
       serviceAccountName: open-liberty-operator
       containers:
         - name: open-liberty-operator
-          image: openliberty/operator:0.5.0
+          image: openliberty/operator:0.5.1
           command:
           - open-liberty-operator
           imagePullPolicy: Always

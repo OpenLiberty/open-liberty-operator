@@ -62,7 +62,8 @@ All notable changes to this project will be documented in this file.
 
 The initial release of the helm-based Open Liberty Operator.
 
-[Unreleased]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.0.1...v0.3.0
