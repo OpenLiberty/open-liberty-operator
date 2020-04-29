@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.1]
+
+### Fixed
+
+- Operator crash when Ingress is created without defining spec.route field ([#147](https://github.com/OpenLiberty/open-liberty-operator/pull/147))
+- Unnecessary pod restarts due to adding kubectl.kubernetes.io/last-applied-configuration to resources created by the operator ([#147](https://github.com/OpenLiberty/open-liberty-operator/pull/147))
 
 ## [0.5.0]
 
