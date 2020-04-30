@@ -18,7 +18,7 @@ Appropriate cluster role and binding are required to watch another namespace, wa
 ---
 
 . Install Custom Resource Definitions (CRDs) for `OpenLibertyApplication` and day-2 operations `OpenLibertyTrace` and `OpenLibertyDump`. This needs to be done only ONCE per cluster:
-
++
 [source,sh]
 ----
     kubectl apply -f https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/master/deploy/releases/0.5.1/openliberty-app-crd.yaml
