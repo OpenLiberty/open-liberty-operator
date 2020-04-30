@@ -1,0 +1,5 @@
+= Documentation
+
+* See the link:++user-guide.adoc++[user guide], for information on how to use the Open Liberty Operator.
+* See the link:++troubleshooting.adoc++[troubleshooting guide] for information on how to investigate and resolve deployment problems.
+* See the link:++observability-deployment-rhocp4.2.adoc++[Observability with Open Liberty], for information on configuring and integrating your Open Liberty runtime with monitoring tools in the OpenShift cluster.
