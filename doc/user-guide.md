@@ -112,7 +112,7 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `route.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be used in the route. Also can contain destination CA certificate.  |
 | `sso`   | Specifies the configuration for single sign-on providers to authenticate with. Specify sensitive fields, such as _clientId_ and _clientSecret_, for the selected providers by using the `Secret`. For more information, see [Single Sign-On (SSO)](#single-sign-on-sso). |
 | `sso.mapToUserRegistry`   | Specifies whether to map a user identifier to a registry user. This parameter applies to all providers. |
-| `sso.redirectToRPHostAndPort`   | Specifies a callback host and port number. This parameter applies to all providers. |
+| `sso.redirectToRPHostAndPort`   | Specifies a callback protocol, host and port number, such as https://myfrontend.mycompany.com. This parameter applies to all providers. |
 | `sso.github.hostname`   | Specifies the host name of your enterprise GitHub, such as _github.mycompany.com_. The default is _github.com_, which is the public Github. |
 | `sso.oidc`   | The list of OpenID Connect (OIDC) providers to authenticate with. Required fields: _discoveryEndpoint_. Specify sensitive fields, such as _clientId_  and _clientSecret_, by using the `Secret`.  |
 | `sso.oidc[].autoRegisterSecret` | Specifies name of secret containing information to automatically register Liberty with the OIDC provider. See [Using automatic registration with OIDC providers](#Using-automatic-registration-with-OIDC-providers). |
@@ -276,7 +276,7 @@ spec:
     - name: SEC_IMPORT_K8S_CERTS
       value: "true"
   sso:
-    redirectToRPHostAndPort: redirect-url.mycompany.com
+    redirectToRPHostAndPort: https://redirect-url.mycompany.com
     github:
       hostname: github.mycompany.com
     oauth2:
@@ -305,7 +305,7 @@ spec:
 
 #### Using automatic registration with OIDC providers
 
-The operator can request a client Id and client Secret from providers, rather than requiring them in advance. This can simplify deployment, as the provider's administrator can supply the information needed for registration once, instead of clientIds and secrets repetitively.  An additional secret specified by `sso.oidc[].autoRegisterSecret` contains the information necessary to perform the registration.  Automatic registration takes precedence over the values in the sso secret. This is tested with RedHat Single Sign-on (RHSSO) (TODO: link) and IBM Cloud Identity (TODO: link). 
+The operator can request a client Id and client Secret from providers, rather than requiring them in advance. This can simplify deployment, as the provider's administrator can supply the information needed for registration once, instead of clientIds and secrets repetitively.  An additional secret specified by `sso.oidc[].autoRegisterSecret` contains the information necessary to perform the registration.  Automatic registration takes precedence over the values in the sso secret. This is tested with RedHat Single Sign-on (RHSSO). 
 
 ```yaml
 apiVersion: v1
@@ -316,21 +316,20 @@ metadata:
   namespace: demo
 type: Opaque
 data:
+  # base64 encode the data before entering it here.
   # RHSSO requires an initial access token for registration
   initialAccessToken: xxxxxyyyyy
-  # ICI requires a dedicated clientId and clientSecret for registration
+  # others require a dedicated clientId and clientSecret for registration
   clientId: bW9vb29vb28=
   clientSecret: dGhlbGF1Z2hpbmdjb3c=
   #
   # Optional: Grant types are the types of OAuth flows the resulting clients will allow
   # Default is authorization_code,refresh_token.  Specify a comma separated list.
-  # grant-types: authorization_code,refresh_token
+  # grantTypes: authorization_code,refresh_token
   #
   # Optional: Scopes limit the types of information about the user that the provider will return.
   # Default is openid,profile.  Specify a comma-separated list.
   # scopes: openid,profile
-  # TODO: do we need redirect URI? seems like the wrong place, but what if route can't cut it?
-  # TODO: should the code be aware of redirectToRPHostAnd port and use that if defined, inetead of the route?
 ```
 
 #### Using multiple OIDC and OAuth 2.0 providers (Advanced)

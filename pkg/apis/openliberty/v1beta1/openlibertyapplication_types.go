@@ -162,6 +162,7 @@ type OpenLibertyApplicationStatus struct {
 	ImageReference             string                  `json:"imageReference,omitempty"`
 	RegisteredOidcClientId     string                  `json:"registeredOidcClientId,omitempty"`
 	RegisteredOidcClientSecret string                  `json:"regsiteredOidcClientSecret,omitempty"`
+	RouteAvailable             *bool                   `json:"routeAvailable,omitempty"`
 }
 
 // StatusCondition ...

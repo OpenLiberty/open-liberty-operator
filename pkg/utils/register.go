@@ -41,6 +41,8 @@ func populateFromSecret(regData *RegisterData, regSecret *corev1.Secret){
 	regData.InitialClientSecret = string(regSecret.Data["initialClientSecret"])
 	regData.GrantTypes = string(regSecret.Data["grantTypes"])
 	regData.Scopes = string(regSecret.Data["scopes"])
+	fmt.Println("**** read from secret, scopes: "+ regData.Scopes)
+	fmt.Println("**** read from secret, grantTypes: " + regData.GrantTypes)
 }
 
 
@@ -143,13 +145,12 @@ func buildRegistrationRequestJson(rdata RegisterData) string {
 
 func getScopes(rdata RegisterData)(string){
 	if (rdata.Scopes == ""){
-		return "\"openid profile\"";
+		return "openid profile";
 	}
 	fmt.Println(rdata.Scopes)
 	var result=""
 	gts := strings.Split(rdata.Scopes,",")
 	for _,gt := range gts{
-		fmt.Println("gt " + gt)
 		result +=  strings.Trim(gt, " ") + " "
 	}
 	return strings.TrimSuffix(result," ")
@@ -163,7 +164,6 @@ func getGrantTypes(rdata RegisterData)(string){
 	var result=""
 	gts := strings.Split(rdata.GrantTypes,",")
 	for _,gt := range gts{
-		fmt.Println("gt " + gt)
 		result +=  "\"" + strings.Trim(gt, " ") + "\"" + ","
 	}
 	return strings.TrimSuffix(result,",")
@@ -245,9 +245,9 @@ func sendHTTPRequest(content string, URL string, method string, id string, passw
 		}
 	}
 
-    //bt: todo: fix preamble
+    
 	const errorStr = "error"
-	var errorMsgPreamble = "Error occurred.  passwordOrToken: "+ passwordOrToken + " URL: " + URL + ": "
+	var errorMsgPreamble = "Error occurred communicating with OIDC provider.  URL: " + URL + ": "
 	if err != nil {
 		return errorStr, errors.New(errorMsgPreamble + err.Error())
 	}

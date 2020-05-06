@@ -320,7 +320,6 @@ type ReconcileOpenLiberty struct {
 func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling OpenLibertyApplication")
-
 	ns, err := k8sutil.GetOperatorNamespace()
 	// When running the operator locally, `ns` will be empty string
 	if ns == "" {
@@ -591,7 +590,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			oputils.CustomizePersistence(statefulSet, instance)
 			lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance)
 			if instance.Spec.SSO != nil {
-				err = lutils.CustomizeEnvSSO(&statefulSet.Spec.Template, instance, r.GetClient())
+				err = lutils.CustomizeEnvSSO(&deploy.Spec.Template, instance, r.GetClient(), r.IsOpenShift())
 				if err != nil {
 					reqLogger.Error(err, "Failed to reconcile Single sign-on configuration")
 					return err		
@@ -608,7 +607,13 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			reqLogger.Error(err, "Failed to reconcile StatefulSet")
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
-
+		
+		resultStatefulSet := &appsv1.StatefulSet{}
+		err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: instance.GetName(), Namespace: instance.GetNamespace()}, resultStatefulSet)
+		if err != nil {  
+		   reqLogger.Error(err, "Failed to retrieve StatefulSet")
+		} 
+		
 	} else {
 		// Delete StatefulSet if exists
 		statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
@@ -631,8 +636,8 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			oputils.CustomizeDeployment(deploy, instance)
 			oputils.CustomizePodSpec(&deploy.Spec.Template, instance)
 			lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance)
-			if instance.Spec.SSO != nil {
-				err = lutils.CustomizeEnvSSO(&deploy.Spec.Template, instance, r.GetClient())
+			if instance.Spec.SSO != nil  {
+				err = lutils.CustomizeEnvSSO(&deploy.Spec.Template, instance, r.GetClient(), r.IsOpenShift())
 				if err != nil {
 					reqLogger.Error(err, "Failed to reconcile Single sign-on configuration")
 					return err		
@@ -684,7 +689,6 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 				if err != nil {
 					return err
 				}
-
 				oputils.CustomizeRoute(route, instance, key, cert, caCert, destCACert)
 				return nil
 			})
@@ -692,6 +696,26 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 				reqLogger.Error(err, "Failed to reconcile Route")
 				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 			}
+		    /*
+			resultDeployment := &appsv1.Deployment{ObjectMeta: defaultMeta}
+			err = r.CreateOrUpdate(resultDeployment, instance, func() error {
+				if instance.Spec.SSO != nil {
+					ssoTarget = ssoTarget
+					lutils.CustomizeLibertyEnv(&resultDeployment.Spec.Template, instance)
+					err = lutils.CustomizeEnvSSO(&resultDeployment.Spec.Template, instance, r.GetClient())  
+					if err != nil {
+						reqLogger.Error(err, "Failed to reconcile Single sign-on ")
+						return err		
+					}
+				}	
+				return nil
+			})
+			if err != nil {
+				reqLogger.Error(err, "Failed to reconcile Single sign-on configuration")
+				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			}	
+			*/
+			
 		} else {
 			route := &routev1.Route{ObjectMeta: defaultMeta}
 			err = r.DeleteResource(route)
@@ -731,6 +755,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		reqLogger.V(1).Info(fmt.Sprintf("%s is not supported", routev1.SchemeGroupVersion.String()))
 	}
 
+    fmt.Println("************ reconciliation has completed ***************")
 	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
 }
 
