@@ -5,7 +5,7 @@ metadata:
   namespace: placeholder
   annotations:
     alm-examples: >-
-      [{"apiVersion":"openliberty.io/v1beta1","kind":"OpenLibertyApplication","metadata":{"name":"demo-app"},"spec":{"replicas":1,"applicationImage":"openliberty/open-liberty:full-java8-openj9-ubi","expose":true}},{"apiVersion": "openliberty.io/v1beta1","kind": "OpenLibertyDump","metadata": {"name": "example-dump"},"spec": {"podName": "Specify_Pod_Name_Here","include": ["heap","thread"]}},{"apiVersion": "openliberty.io/v1beta1","kind": "OpenLibertyTrace","metadata": {"name": "example-trace"},"spec": {"podName": "Specify_Pod_Name_Here","traceSpecification": "*=info:com.ibm.ws.webcontainer*=all"}}]
+      [{"apiVersion":"openliberty.io/v1beta1","kind":"OpenLibertyApplication","metadata":{"name":"demo-app"},"spec":{"replicas":1,"applicationImage":"registry.connect.redhat.com/ibm/open-liberty-samples:springPetClinic","expose":true}},{"apiVersion": "openliberty.io/v1beta1","kind": "OpenLibertyDump","metadata": {"name": "example-dump"},"spec": {"podName": "Specify_Pod_Name_Here","include": ["heap","thread"]}},{"apiVersion": "openliberty.io/v1beta1","kind": "OpenLibertyTrace","metadata": {"name": "example-trace"},"spec": {"podName": "Specify_Pod_Name_Here","traceSpecification": "*=info:com.ibm.ws.webcontainer*=all"}}]
     categories: Application Runtime
     certified: 'true'
     createdAt: 2020-04-24 09:00:00
