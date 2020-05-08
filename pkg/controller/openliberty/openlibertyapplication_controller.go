@@ -664,12 +664,6 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
 		
-		resultStatefulSet := &appsv1.StatefulSet{}
-		err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: instance.GetName(), Namespace: instance.GetNamespace()}, resultStatefulSet)
-		if err != nil {  
-		   reqLogger.Error(err, "Failed to retrieve StatefulSet")
-		} 
-		
 	} else {
 		// Delete StatefulSet if exists
 		statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
@@ -753,26 +747,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 				reqLogger.Error(err, "Failed to reconcile Route")
 				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 			}
-		    /*
-			resultDeployment := &appsv1.Deployment{ObjectMeta: defaultMeta}
-			err = r.CreateOrUpdate(resultDeployment, instance, func() error {
-				if instance.Spec.SSO != nil {
-					ssoTarget = ssoTarget
-					lutils.CustomizeLibertyEnv(&resultDeployment.Spec.Template, instance)
-					err = lutils.CustomizeEnvSSO(&resultDeployment.Spec.Template, instance, r.GetClient())  
-					if err != nil {
-						reqLogger.Error(err, "Failed to reconcile Single sign-on ")
-						return err		
-					}
-				}	
-				return nil
-			})
-			if err != nil {
-				reqLogger.Error(err, "Failed to reconcile Single sign-on configuration")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}	
-			*/
-			
+
 		} else {
 			route := &routev1.Route{ObjectMeta: defaultMeta}
 			err = r.DeleteResource(route)
