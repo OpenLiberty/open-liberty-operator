@@ -3,17 +3,16 @@ package utils
 import (
 	"bytes"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
-	"fmt"
+	gherrors "github.com/pkg/errors"
 	"io/ioutil"
+	corev1 "k8s.io/api/core/v1"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-	corev1 "k8s.io/api/core/v1"
-	
-    
 )
 
 type RegisterData struct {
@@ -26,41 +25,46 @@ type RegisterData struct {
 	InitialAccessToken      string
 	InitialClientId         string
 	InitialClientSecret     string
+	InsecureTLS             bool
 }
 
 
-func RegisterWithOidcProvider(regData RegisterData, regSecret *corev1.Secret)(string, string, error){
+func RegisterWithOidcProvider(regData RegisterData, regSecret *corev1.Secret) (string, string, error) {
 	populateFromSecret(&regData, regSecret)
 	return doRegister(regData)
 }
 
-func populateFromSecret(regData *RegisterData, regSecret *corev1.Secret){
-	// retrieve iat, clientId, clientSecret, grant-types, scopes
+func populateFromSecret(regData *RegisterData, regSecret *corev1.Secret) {
+	buf := string(regSecret.Data["insecureTLS"])
+	insecure := buf == "true" || buf == "TRUE"
 	regData.InitialAccessToken = string(regSecret.Data["initialAccessToken"])
 	regData.InitialClientId = string(regSecret.Data["initialClientId"])
 	regData.InitialClientSecret = string(regSecret.Data["initialClientSecret"])
 	regData.GrantTypes = string(regSecret.Data["grantTypes"])
 	regData.Scopes = string(regSecret.Data["scopes"])
-	fmt.Println("**** read from secret, scopes: "+ regData.Scopes)
-	fmt.Println("**** read from secret, grantTypes: " + regData.GrantTypes)
+	regData.InsecureTLS = insecure
 }
-
 
 // register with oidc provider and create a new client.  return the new client id and client secret, or an error.
 func doRegister(rdata RegisterData) (string, string, error) {
 	// process:
 	//  1) call the provider's discovery endpoint to find the token and registration urls.
-	//  2) If we do not have an initial access token, 
+	//  2) If we do not have an initial access token,
 	//  2.5) Use supplied clientId and secret in a Client Credentials grant to obtain an access token.
 	//  3) Use the access token to register and obtain a new client id and secret.
+	
 
-	registrationURL, tokenURL, err := getURLs(rdata.DiscoveryURL)
+	registrationURL, tokenURL, err := getURLs(rdata.DiscoveryURL, rdata.InsecureTLS)
 	if err != nil {
 		return "", "", err
 	}
 
 	// ICI: if we don't have initial token, use client and secret to go get one.
 	var token = rdata.InitialAccessToken
+	if token == "" && (rdata.InitialClientId == "" || rdata.InitialClientSecret == "") {
+		return "", "", gherrors.New("Registration Data Secret for Single sign-on (SSO) is missing required fields," +
+			" one or more of initialAccessToken, initialClientId, or initialClientSecret.")
+	}
 	if token == "" {
 		rtoken, err := requestAccessToken(rdata, tokenURL)
 		if err != nil {
@@ -68,12 +72,9 @@ func doRegister(rdata RegisterData) (string, string, error) {
 		}
 		token = rtoken
 	}
-
-	fmt.Println("token: " + rdata.InitialAccessToken )
-
 	registrationRequestJson := buildRegistrationRequestJson(rdata)
-	fmt.Println("request: " + registrationRequestJson)
-	registrationResponse, err := sendHTTPRequest(registrationRequestJson, registrationURL, "POST", "", token)
+
+	registrationResponse, err := sendHTTPRequest(registrationRequestJson, registrationURL, "POST", "", token, rdata.InsecureTLS)
 	if err != nil {
 		return "", "", err
 	}
@@ -87,8 +88,8 @@ func doRegister(rdata RegisterData) (string, string, error) {
 }
 
 func requestAccessToken(rdata RegisterData, tokenURL string) (string, error) {
-	tokenRequestContent := "grant_type=client_credentials&scope=openid"
-	tokenResponse, err := sendHTTPRequest(tokenRequestContent, tokenURL, "POST", rdata.InitialClientId, rdata.InitialClientSecret)
+	tokenRequestContent := "grant_type=client_credentials&scope=" + getScopes(rdata)
+	tokenResponse, err := sendHTTPRequest(tokenRequestContent, tokenURL, "POST", rdata.InitialClientId, rdata.InitialClientSecret, rdata.InsecureTLS)
 	if err != nil {
 		return "", err
 	}
@@ -130,7 +131,7 @@ func parseRegistrationResponseJson(respJson string) (string, string, error) {
 
 // build the JSON for the client registration request. Form the redirectURL from the route URL.
 func buildRegistrationRequestJson(rdata RegisterData) string {
-	
+
 	now := time.Now()
 	sysClockMillisec := now.UnixNano() / 1000000
 	//	rhsso will not accept a supplied value for client_id, so leave a comment in the name
@@ -138,44 +139,44 @@ func buildRegistrationRequestJson(rdata RegisterData) string {
 
 	return "{" +
 		"\"client_name\":\"" + clientName + "\"," +
-		"\"grant_types\":["+ getGrantTypes(rdata) + "]," +
-		"\"scope\":\"" + getScopes(rdata) + "\"," + 
+		"\"grant_types\":[" + getGrantTypes(rdata) + "]," +
+		"\"scope\":\"" + getScopes(rdata) + "\"," +
 		"\"redirect_uris\":[\"" + getRedirectUri(rdata) + "\"]}"
 }
 
-func getScopes(rdata RegisterData)(string){
-	if (rdata.Scopes == ""){
-		return "openid profile";
+func getScopes(rdata RegisterData) string {
+	if rdata.Scopes == "" {
+		return "openid profile"
 	}
-	fmt.Println(rdata.Scopes)
-	var result=""
-	gts := strings.Split(rdata.Scopes,",")
-	for _,gt := range gts{
-		result +=  strings.Trim(gt, " ") + " "
+
+	var result = ""
+	gts := strings.Split(rdata.Scopes, ",")
+	for _, gt := range gts {
+		result += strings.Trim(gt, " ") + " "
 	}
-	return strings.TrimSuffix(result," ")
+	return strings.TrimSuffix(result, " ")
 }
 
-func getGrantTypes(rdata RegisterData)(string){
-	if (rdata.GrantTypes == ""){
-		return "\"authorization_code\",\"refresh_token\"";
+func getGrantTypes(rdata RegisterData) string {
+	if rdata.GrantTypes == "" {
+		return "\"authorization_code\",\"refresh_token\""
 	}
-	fmt.Println(rdata.GrantTypes)
-	var result=""
-	gts := strings.Split(rdata.GrantTypes,",")
-	for _,gt := range gts{
-		result +=  "\"" + strings.Trim(gt, " ") + "\"" + ","
+
+	var result = ""
+	gts := strings.Split(rdata.GrantTypes, ",")
+	for _, gt := range gts {
+		result += "\"" + strings.Trim(gt, " ") + "\"" + ","
 	}
-	return strings.TrimSuffix(result,",")
+	return strings.TrimSuffix(result, ",")
 }
 
-func getRedirectUri(rdata RegisterData)(string){
+func getRedirectUri(rdata RegisterData) string {
 	providerId := rdata.ProviderId
-	if (providerId == ""){
+	if providerId == "" {
 		providerId = "oidc"
 	}
-	suffix := "/ibm/api/social-login/redirect/"+providerId
-	if(rdata.RedirectToRPHostAndPort !=""){
+	suffix := "/ibm/api/social-login/redirect/" + providerId
+	if rdata.RedirectToRPHostAndPort != "" {
 		return rdata.RedirectToRPHostAndPort + suffix
 	}
 	return rdata.RouteURL + suffix
@@ -184,8 +185,8 @@ func getRedirectUri(rdata RegisterData)(string){
 // retrieve the registration and token URLs from the provider's discovery URL.
 // return an error if we don't get back two valid url's.
 // todo: more error checking needed to make that true?
-func getURLs(discoveryURL string) (string, string, error) {
-	discoveryResult, err := sendHTTPRequest("", discoveryURL, "GET", "", "")
+func getURLs(discoveryURL string, insecureTLS bool) (string, string, error) {
+	discoveryResult, err := sendHTTPRequest("", discoveryURL, "GET", "", "", insecureTLS)
 	if err != nil {
 		return "", "", err
 	}
@@ -216,13 +217,27 @@ func getURLs(discoveryURL string) (string, string, error) {
 // content to send can be an empty string. Json will be detected. Method should be GET or POST.
 // if id is set, send id and passwordOrToken as basic auth header, otherwise send token as bearer auth header.
 // If error occurs, body will be "error".
-func sendHTTPRequest(content string, URL string, method string, id string, passwordOrToken string) (string, error) {
+func sendHTTPRequest(content string, URL string, method string, id string, passwordOrToken string, insecureTLS bool) (string, error) {
+
+	rootCAPool, _ := x509.SystemCertPool()
+	if rootCAPool == nil {
+		rootCAPool = x509.NewCertPool()
+	}
+
+	if !insecureTLS {
+		cert, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt")
+		if err != nil {
+			return "", errors.New("Error reading TLS certificates: " + err.Error())
+		}
+		rootCAPool.AppendCertsFromPEM(cert)
+	}
 
 	client := &http.Client{
 		Timeout: time.Second * 20,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
+				RootCAs:            rootCAPool,
+				InsecureSkipVerify: insecureTLS,
 			},
 		},
 	}
@@ -245,7 +260,6 @@ func sendHTTPRequest(content string, URL string, method string, id string, passw
 		}
 	}
 
-    
 	const errorStr = "error"
 	var errorMsgPreamble = "Error occurred communicating with OIDC provider.  URL: " + URL + ": "
 	if err != nil {

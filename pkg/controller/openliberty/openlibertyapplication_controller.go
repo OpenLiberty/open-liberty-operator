@@ -319,7 +319,7 @@ type ReconcileOpenLiberty struct {
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling OpenLibertyApplication")
+	reqLogger.Info("Reconcile OpenLibertyApplication - starting")
 	ns, err := k8sutil.GetOperatorNamespace()
 	// When running the operator locally, `ns` will be empty string
 	if ns == "" {
@@ -755,7 +755,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		reqLogger.V(1).Info(fmt.Sprintf("%s is not supported", routev1.SchemeGroupVersion.String()))
 	}
 
-    fmt.Println("************ reconciliation has completed ***************")
+    reqLogger.Info("Reconcile OpenLibertyApplication - completed")
 	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
 }
 

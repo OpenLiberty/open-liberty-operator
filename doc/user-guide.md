@@ -325,11 +325,14 @@ data:
   #
   # Optional: Grant types are the types of OAuth flows the resulting clients will allow
   # Default is authorization_code,refresh_token.  Specify a comma separated list.
-  # grantTypes: authorization_code,refresh_token
+  # grantTypes: base64 data goes here
   #
   # Optional: Scopes limit the types of information about the user that the provider will return.
   # Default is openid,profile.  Specify a comma-separated list.
-  # scopes: openid,profile
+  # scopes: base64 data goes here
+  #
+  # Optional: To skip TLS certificate checking with the provider, specify insecureTLS as true.  Default is false.
+  # insecureTLS: dHJ1ZQ==
 ```
 
 #### Using multiple OIDC and OAuth 2.0 providers (Advanced)

@@ -122,7 +122,6 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *openlibertyv1beta1.Ope
 // findEnvVars checks if the environment variable is already present
 func findEnvVar(name string, envList []corev1.EnvVar) (*corev1.EnvVar, bool) {
 	for i, val := range envList {
-		fmt.Println( "**************** >"+val.Name + "<  >" + name + "<")
 		if val.Name == name {
 			return &envList[i], true
 		}
@@ -317,33 +316,28 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 				// but we'll update status of the instance so reconcilation will be triggered again.
 				b := false
 				instance.Status.RouteAvailable = &b
-				fmt.Println("************ Route not available, update status ")
+				logf.Log.WithName("utils").Info("CustomizeEnvSSO waiting for route to become available, requeue")
 				return nil
 			}
 			clientId := instance.Status.RegisteredOidcClientId
 			clientSecret := instance.Status.RegisteredOidcClientSecret
-			fmt.Println("************ Client Id from status: "+clientId)
-			fmt.Println("************ Route host: " + theRoute.Spec.Host)
 			
 			if clientId == "" {
 				// if we don't have a client id and secret yet, go get one and cache it in the status.
 				regData := RegisterData{
 					DiscoveryURL:            oidcClient.DiscoveryEndpoint,
-					RouteURL:                "https://" + theRoute.Spec.Host
+					RouteURL:                "https://" + theRoute.Spec.Host,
 					RedirectToRPHostAndPort: sso.RedirectToRPHostAndPort,
 				}
 				clientId, clientSecret, err = RegisterWithOidcProvider(regData, regSecret)
-				fmt.Println("************ Client Id from fresh registration: "+clientId)
 				if err != nil {
 					return errors.Wrapf(err, "Error occured during registration with OIDC provider")
-				} 
-				fmt.Println("************ instance status being updated. "+clientId)
+				}
 				instance.Status.RegisteredOidcClientId = clientId
 				instance.Status.RegisteredOidcClientSecret = clientSecret
 				b := true
 				instance.Status.RouteAvailable = &b
 			} 
-			fmt.Println("************ Client Id being appended to env: "+clientId)
 			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_CLIENTID", clientId))
 			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_CLIENTSECRET", clientSecret))
 		} else {
@@ -404,10 +398,8 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 
 	envList := pts.Spec.Containers[0].Env
 	for _, v := range ssoEnv {
-		fmt.Println("******** check for existence of " + v.Name)
 		if _, found := findEnvVar(v.Name, envList); !found {
 			pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, v)
-			fmt.Println("********* update env "+ v.Name + " " + v.Value)
 		}
 	}
 	return nil
