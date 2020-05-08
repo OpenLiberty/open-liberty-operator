@@ -50,10 +50,14 @@ type OpenLibertyApplicationSpec struct {
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 	// +listType=map
 	// +listMapKey=name
-	SidecarContainers []corev1.Container                    `json:"sidecarContainers,omitempty"`
-	Serviceability    *OpenLibertyApplicationServiceability `json:"serviceability,omitempty"`
-	Route             *OpenLibertyApplicationRoute          `json:"route,omitempty"`
-	SSO               *OpenLibertyApplicationSSO            `json:"sso,omitempty"`
+	SidecarContainers []corev1.Container              `json:"sidecarContainers,omitempty"`
+	Route             *OpenLibertyApplicationRoute    `json:"route,omitempty"`
+	Bindings          *OpenLibertyApplicationBindings `json:"bindings,omitempty"`
+
+	// Open Liberty specific capabilities
+
+	Serviceability *OpenLibertyApplicationServiceability `json:"serviceability,omitempty"`
+	SSO            *OpenLibertyApplicationSSO            `json:"sso,omitempty"`
 }
 
 // OpenLibertyApplicationAutoScaling ...
@@ -78,7 +82,13 @@ type OpenLibertyApplicationService struct {
 	// +kubebuilder:validation:Minimum=1
 	TargetPort *int32 `json:"targetPort,omitempty"`
 
+	// +kubebuilder:validation:Maximum=65535
+	// +kubebuilder:validation:Minimum=0
+	NodePort *int32 `json:"nodePort,omitempty"`
+
 	PortName string `json:"portName,omitempty"`
+
+	Ports []corev1.ServicePort `json:"ports,omitempty"`
 
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// +listType=atomic
@@ -152,6 +162,12 @@ type ServiceBindingAuth struct {
 	Password corev1.SecretKeySelector `json:"password,omitempty"`
 }
 
+// OpenLibertyApplicationBindings represents service binding related parameters
+type OpenLibertyApplicationBindings struct {
+	AutoDetect  *bool  `json:"autoDetect,omitempty"`
+	ResourceRef string `json:"resourceRef,omitempty"`
+}
+
 // OpenLibertyApplicationStatus defines the observed state of OpenLibertyApplication
 // +k8s:openapi-gen=true
 type OpenLibertyApplicationStatus struct {
@@ -163,6 +179,11 @@ type OpenLibertyApplicationStatus struct {
 	RegisteredOidcClientId     string                  `json:"registeredOidcClientId,omitempty"`
 	RegisteredOidcClientSecret string                  `json:"regsiteredOidcClientSecret,omitempty"`
 	RouteAvailable             *bool                   `json:"routeAvailable,omitempty"`
+	Conditions       []StatusCondition       		   `json:"conditions,omitempty"`
+	ConsumedServices common.ConsumedServices 		   `json:"consumedServices,omitempty"`
+	// +listType=set
+	ResolvedBindings []string                          `json:"resolvedBindings,omitempty"`
+	ImageReference   string                            `json:"imageReference,omitempty"`
 }
 
 // StatusCondition ...
@@ -429,6 +450,24 @@ func (cr *OpenLibertyApplication) GetRoute() common.BaseComponentRoute {
 	return cr.Spec.Route
 }
 
+// GetBindings returns route configuration for OpenLibertyApplication
+func (cr *OpenLibertyApplication) GetBindings() common.BaseComponentBindings {
+	if cr.Spec.Bindings == nil {
+		return nil
+	}
+	return cr.Spec.Bindings
+}
+
+// GetResolvedBindings returns a map of all the service names to be consumed by the application
+func (s *OpenLibertyApplicationStatus) GetResolvedBindings() []string {
+	return s.ResolvedBindings
+}
+
+// SetResolvedBindings sets ConsumedServices
+func (s *OpenLibertyApplicationStatus) SetResolvedBindings(rb []string) {
+	s.ResolvedBindings = rb
+}
+
 // GetConsumedServices returns a map of all the service names to be consumed by the application
 func (s *OpenLibertyApplicationStatus) GetConsumedServices() common.ConsumedServices {
 	if s.ConsumedServices == nil {
@@ -477,7 +516,7 @@ func (s *OpenLibertyApplicationStorage) GetMountPath() string {
 	return s.MountPath
 }
 
-// GetVolumeClaimTemplate returns a template representing requested persitent volume
+// GetVolumeClaimTemplate returns a template representing requested persistent volume
 func (s *OpenLibertyApplicationStorage) GetVolumeClaimTemplate() *corev1.PersistentVolumeClaim {
 	return s.VolumeClaimTemplate
 }
@@ -510,6 +549,14 @@ func (s *OpenLibertyApplicationService) GetPort() int32 {
 	return 9080
 }
 
+// GetNodePort returns service nodePort
+func (s *OpenLibertyApplicationService) GetNodePort() *int32 {
+	if s.NodePort == nil {
+		return nil
+	}
+	return s.NodePort
+}
+
 // GetTargetPort return the internal target container port
 func (s *OpenLibertyApplicationService) GetTargetPort() *int32 {
 	return s.TargetPort
@@ -523,6 +570,11 @@ func (s *OpenLibertyApplicationService) GetPortName() string {
 // GetType returns service type
 func (s *OpenLibertyApplicationService) GetType() *corev1.ServiceType {
 	return s.Type
+}
+
+// GetPorts returns a list of service ports
+func (s *OpenLibertyApplicationService) GetPorts() []corev1.ServicePort {
+	return s.Ports
 }
 
 // GetProvides returns service provider configuration
@@ -656,6 +708,16 @@ func (r *OpenLibertyApplicationRoute) GetPath() string {
 	return r.Path
 }
 
+// GetAutoDetect returns a boolean to specify if the operator should auto-detect ServiceBinding CRs with the same name as the OpenLibertyApplication CR
+func (r *OpenLibertyApplicationBindings) GetAutoDetect() *bool {
+	return r.AutoDetect
+}
+
+// GetResourceRef returns name of ServiceBinding CRs created manually in the same namespace as the OpenLibertyApplication CR
+func (r *OpenLibertyApplicationBindings) GetResourceRef() string {
+	return r.ResourceRef
+}
+
 // Initialize sets default values
 func (cr *OpenLibertyApplication) Initialize() {
 	if cr.Spec.PullPolicy == nil {
@@ -663,16 +725,17 @@ func (cr *OpenLibertyApplication) Initialize() {
 		cr.Spec.PullPolicy = &pp
 	}
 
+	if cr.Spec.ResourceConstraints == nil {
+		cr.Spec.ResourceConstraints = &corev1.ResourceRequirements{}
+	}
+
+	// Default applicationName to cr.Name, if a user sets createAppDefinition to true but doesn't set applicationName
 	if cr.Spec.ApplicationName == "" {
 		if cr.Labels != nil && cr.Labels["app.kubernetes.io/part-of"] != "" {
 			cr.Spec.ApplicationName = cr.Labels["app.kubernetes.io/part-of"]
 		} else {
 			cr.Spec.ApplicationName = cr.Name
 		}
-	}
-
-	if cr.Spec.ResourceConstraints == nil {
-		cr.Spec.ResourceConstraints = &corev1.ResourceRequirements{}
 	}
 
 	if cr.Labels != nil {
@@ -747,7 +810,12 @@ func (cr *OpenLibertyApplication) GetLabels() map[string]string {
 
 // GetAnnotations returns set of annotations to be added to all resources
 func (cr *OpenLibertyApplication) GetAnnotations() map[string]string {
-	return cr.Annotations
+	annotations := map[string]string{}
+	for k, v := range cr.Annotations {
+		annotations[k] = v
+	}
+	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
+	return annotations
 }
 
 // GetType returns status condition type

@@ -517,10 +517,28 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationService(ref commo
 							Format: "int32",
 						},
 					},
+					"nodePort": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
 					"portName": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
 							Format: "",
+						},
+					},
+					"ports": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/api/core/v1.ServicePort"),
+									},
+								},
+							},
 						},
 					},
 					"annotations": {
@@ -574,7 +592,11 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationService(ref commo
 			},
 		},
 		Dependencies: []string{
+<<<<<<< HEAD
 			"github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.Certificate", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.ServiceBindingConsumes", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.ServiceBindingProvides"},
+=======
+			"./pkg/apis/openliberty/v1beta1.Certificate", "./pkg/apis/openliberty/v1beta1.ServiceBindingConsumes", "./pkg/apis/openliberty/v1beta1.ServiceBindingProvides", "k8s.io/api/core/v1.ServicePort"},
+>>>>>>> origin/master
 	}
 }
 
@@ -829,14 +851,27 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSpec(ref common.R
 							},
 						},
 					},
-					"serviceability": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationServiceability"),
-						},
-					},
 					"route": {
 						SchemaProps: spec.SchemaProps{
+<<<<<<< HEAD
+							Ref: ref("github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationServiceability"),
+=======
+							Ref: ref("./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationRoute"),
+>>>>>>> origin/master
+						},
+					},
+					"bindings": {
+						SchemaProps: spec.SchemaProps{
+<<<<<<< HEAD
 							Ref: ref("github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationRoute"),
+=======
+							Ref: ref("./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationBindings"),
+						},
+					},
+					"serviceability": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationServiceability"),
+>>>>>>> origin/master
 						},
 					},
 					"sso": {
@@ -849,7 +884,11 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSpec(ref common.R
 			},
 		},
 		Dependencies: []string{
+<<<<<<< HEAD
 			"github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAutoScaling", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationMonitoring", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationRoute", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationSSO", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationService", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationServiceability", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationStorage", "k8s.io/api/core/v1.Container", "k8s.io/api/core/v1.EnvFromSource", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.Probe", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Volume", "k8s.io/api/core/v1.VolumeMount"},
+=======
+			"./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAutoScaling", "./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationBindings", "./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationMonitoring", "./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationRoute", "./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationSSO", "./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationService", "./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationServiceability", "./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationStorage", "k8s.io/api/core/v1.Container", "k8s.io/api/core/v1.EnvFromSource", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.Probe", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Volume", "k8s.io/api/core/v1.VolumeMount"},
+>>>>>>> origin/master
 	}
 }
 
@@ -894,6 +933,24 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationStatus(ref common
 												},
 											},
 										},
+									},
+								},
+							},
+						},
+					},
+					"resolvedBindings": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "set",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
 									},
 								},
 							},

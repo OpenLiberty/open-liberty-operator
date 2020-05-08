@@ -51,8 +51,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 1,
-  "iteration": 1579291037704,
+  "iteration": 1587406765528,
   "links": [],
   "panels": [
     {
@@ -66,95 +65,127 @@
       "id": 45,
       "panels": [
         {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
+          "columns": [],
           "datasource": "${DS_PROMETHEUS}",
-          "fill": 1,
-          "fillGradient": 0,
+          "description": "The total number of CPU threads available to the JVM.",
+          "fontSize": "100%",
           "gridPos": {
-            "h": 9,
-            "w": 8,
+            "h": 6,
+            "w": 24,
             "x": 0,
             "y": 1
           },
           "id": 39,
-          "legend": {
-            "alignAsTable": true,
-            "avg": true,
-            "current": true,
-            "max": true,
-            "min": true,
-            "show": true,
-            "sortDesc": true,
-            "total": false,
-            "values": true
-          },
-          "lines": true,
-          "linewidth": 1,
           "links": [],
-          "nullPointMode": "null",
-          "options": {
-            "dataLinks": []
+          "options": {},
+          "pageSize": null,
+          "scroll": true,
+          "showHeader": true,
+          "sort": {
+            "col": 8,
+            "desc": true
           },
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
+          "styles": [
+            {
+              "alias": "Time",
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "pattern": "Time",
+              "type": "hidden"
+            },
+            {
+              "alias": "",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "decimals": 2,
+              "pattern": "__name__",
+              "thresholds": [],
+              "type": "hidden",
+              "unit": "short"
+            },
+            {
+              "alias": "",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "endpoint",
+              "thresholds": [],
+              "type": "hidden",
+              "unit": "short"
+            },
+            {
+              "alias": "",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "instance",
+              "thresholds": [],
+              "type": "hidden",
+              "unit": "short"
+            },
+            {
+              "alias": "",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "job",
+              "thresholds": [],
+              "type": "hidden",
+              "unit": "short"
+            },
+            {
+              "alias": "Threads",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 0,
+              "mappingType": 1,
+              "pattern": "Value",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            }
+          ],
           "targets": [
             {
               "expr": "base_cpu_availableProcessors{pod=~`[[pod]]`}",
-              "format": "time_series",
+              "format": "table",
+              "instant": true,
               "intervalFactor": 2,
               "legendFormat": "pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
           ],
-          "thresholds": [],
           "timeFrom": null,
-          "timeRegions": [],
           "timeShift": null,
-          "title": "Available CPU Processors",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
+          "title": "Available CPUs",
+          "transform": "table",
+          "type": "table"
         },
         {
           "aliasColors": {},
@@ -162,14 +193,16 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
+          "description": "The portion of CPU available to each Liberty instance that has been used within the last [[dur]] on average.",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
             "h": 9,
-            "w": 8,
-            "x": 8,
-            "y": 1
+            "w": 12,
+            "x": 0,
+            "y": 7
           },
+          "hiddenSeries": false,
           "id": 20,
           "legend": {
             "alignAsTable": true,
@@ -211,7 +244,7 @@
           "timeFrom": null,
           "timeRegions": [],
           "timeShift": null,
-          "title": "Available CPU Time Percent",
+          "title": "Process CPU Time",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -255,14 +288,16 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
+          "description": "For CPUs Liberty is running on, the average number of runnable entities that have been scheduled or executed by the system, over the last minute.",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
             "h": 9,
-            "w": 8,
-            "x": 16,
-            "y": 1
+            "w": 12,
+            "x": 12,
+            "y": 7
           },
+          "hiddenSeries": false,
           "id": 21,
           "legend": {
             "alignAsTable": true,
@@ -303,7 +338,7 @@
           "timeFrom": null,
           "timeRegions": [],
           "timeShift": null,
-          "title": "CPU System Load Average",
+          "title": "CPU System Load",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -357,6 +392,8 @@
       "panels": [
         {
           "columns": [],
+          "datasource": "${DS_PROMETHEUS}",
+          "description": "Pods that are currently utilizing more than [$heapUsageThreshold%] of their configured maximum heap size.",
           "fontSize": "100%",
           "gridPos": {
             "h": 4,
@@ -412,7 +449,8 @@
         },
         {
           "columns": [],
-          "description": "",
+          "datasource": "${DS_PROMETHEUS}",
+          "description": "Pods with an increase in heap usage within the last [[dur]].",
           "fontSize": "100%",
           "gridPos": {
             "h": 4,
@@ -458,6 +496,7 @@
               "expr": "deriv(base_memory_usedHeap_bytes{pod=~`[[pod]]`}[[dur]]) > 0",
               "format": "table",
               "instant": true,
+              "intervalFactor": 1,
               "legendFormat": "",
               "refId": "A"
             }
@@ -470,6 +509,8 @@
         },
         {
           "columns": [],
+          "datasource": "${DS_PROMETHEUS}",
+          "description": "Pods projected to reach their maximum heap size within [$maxHeapUsageProjection hour(s)] based on  data over the last [[dur]].",
           "fontSize": "100%",
           "gridPos": {
             "h": 4,
@@ -478,6 +519,7 @@
             "y": 6
           },
           "id": 73,
+          "links": [],
           "options": {},
           "pageSize": null,
           "scroll": true,
@@ -513,6 +555,7 @@
               "expr": "predict_linear(base_memory_usedHeap_bytes{pod=~`[[pod]]`}[[dur]], [[maxHeapUsageProjection]] * 3600) > base_memory_maxHeap_bytes{pod=~`[[pod]]`}",
               "format": "table",
               "instant": true,
+              "intervalFactor": 1,
               "refId": "A"
             }
           ],
@@ -525,6 +568,7 @@
         {
           "columns": [],
           "datasource": "${DS_PROMETHEUS}",
+          "description": "A pod's maximum heap size.",
           "fontSize": "100%",
           "gridPos": {
             "h": 6,
@@ -595,6 +639,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
+          "description": "The percentage of heap memory currently in use.",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -603,6 +648,7 @@
             "x": 0,
             "y": 16
           },
+          "hiddenSeries": false,
           "id": 53,
           "legend": {
             "alignAsTable": true,
@@ -666,7 +712,7 @@
               "format": "percentunit",
               "label": null,
               "logBase": 1,
-              "max": null,
+              "max": "1",
               "min": null,
               "show": true
             },
@@ -697,19 +743,479 @@
         "x": 0,
         "y": 2
       },
+      "id": 105,
+      "panels": [
+        {
+          "columns": [],
+          "datasource": "${DS_PROMETHEUS}",
+          "description": "The average response time for requests made to a particular REST resource method, based on data over the last [[dur]].",
+          "fontSize": "100%",
+          "gridPos": {
+            "h": 5,
+            "w": 24,
+            "x": 0,
+            "y": 3
+          },
+          "id": 115,
+          "links": [],
+          "options": {},
+          "pageSize": null,
+          "scroll": true,
+          "showHeader": true,
+          "sort": {
+            "col": 3,
+            "desc": true
+          },
+          "styles": [
+            {
+              "alias": "Time",
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "pattern": "Time",
+              "type": "hidden"
+            },
+            {
+              "alias": "",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "decimals": 2,
+              "pattern": "__name__",
+              "thresholds": [],
+              "type": "hidden",
+              "unit": "short"
+            },
+            {
+              "alias": "Average Response Time",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value",
+              "thresholds": [],
+              "type": "number",
+              "unit": "s"
+            }
+          ],
+          "targets": [
+            {
+              "expr": "avg(rate(base_REST_request_elapsedTime_seconds{pod=~`[[pod]]`}[[dur]]) / rate(base_REST_request_total{pod=~`[[pod]]`}[[dur]])) by (class, method) > 0",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Slowest REST Resources Over Last [[dur]] by Average Response Time",
+          "transform": "table",
+          "type": "table"
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_PROMETHEUS}",
+          "description": "The number of visits made to a REST resource instance within the past [[dur]].",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 8
+          },
+          "hiddenSeries": false,
+          "id": 111,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "increase(base_REST_request_total{pod=~`[[pod]]`}[[dur]])",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "pod: {{pod}}, class: {{class}}, method: {{method}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "REST Request Count Over Last [[dur]]",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 0,
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_PROMETHEUS}",
+          "description": "The average response time for a request made to a REST resource instance, based on data over the last [[dur]].",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 8
+          },
+          "hiddenSeries": false,
+          "id": 113,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "rate(base_REST_request_elapsedTime_seconds{pod=~`[[pod]]`}[[dur]])/rate(base_REST_request_total{pod=~`[[pod]]`}[[dur]])",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "pod: {{pod}}, class: {{class}}, method: {{method}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Average Response Time per REST Request Over Last [[dur]] ",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_PROMETHEUS}",
+          "description": "The sum of visits to a particular REST resource over all servers, based on data over the last [[dur]].",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 16
+          },
+          "hiddenSeries": false,
+          "id": 107,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(increase(base_REST_request_total{pod=~`[[pod]]`}[[dur]])) by (class, method)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "class: {{class}}, method: {{method}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Request Count by REST Resource Over Last [[dur]]",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_PROMETHEUS}",
+          "description": "The average response time for requests made to a particular REST resource method, based on data over the last [[dur]].",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 16
+          },
+          "hiddenSeries": false,
+          "id": 109,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "avg(rate(base_REST_request_elapsedTime_seconds{pod=~`[[pod]]`}[[dur]]) / rate(base_REST_request_total{pod=~`[[pod]]`}[[dur]])) by (class, method)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "class: {{class}}, method: {{method}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Average Response Time per Request Over Last [[dur]] by REST Resource",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "title": "REST",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 3
+      },
       "id": 47,
       "panels": [
         {
           "columns": [],
           "datasource": "${DS_PROMETHEUS}",
+          "description": "The average response time for requests made to a particular servlet, across all servers, based on data over the last [[dur]].",
           "fontSize": "100%",
           "gridPos": {
             "h": 4,
             "w": 24,
             "x": 0,
-            "y": 3
+            "y": 4
           },
           "id": 59,
+          "links": [],
           "maxPerRow": null,
           "options": {},
           "pageSize": null,
@@ -765,14 +1271,17 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
+          "datasource": "${DS_PROMETHEUS}",
+          "description": "The number of visits made to a servlet instance within the past [[dur]].",
           "fill": 0,
           "fillGradient": 0,
           "gridPos": {
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 7
+            "y": 8
           },
+          "hiddenSeries": false,
           "id": 55,
           "legend": {
             "alignAsTable": true,
@@ -801,6 +1310,7 @@
           "targets": [
             {
               "expr": "increase(vendor_servlet_request_total{pod=~`[[pod]]`}[[dur]])",
+              "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "pod: {{pod}}, servlet: {{servlet}}, instance: {{instance}}",
               "refId": "A"
@@ -852,14 +1362,17 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
+          "datasource": "${DS_PROMETHEUS}",
+          "description": "The average response time for a request made to a servlet instance, based on data over the last [[dur]].",
           "fill": 0,
           "fillGradient": 0,
           "gridPos": {
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 7
+            "y": 8
           },
+          "hiddenSeries": false,
           "id": 57,
           "legend": {
             "alignAsTable": true,
@@ -888,6 +1401,7 @@
           "targets": [
             {
               "expr": "rate(vendor_servlet_responseTime_total_seconds{pod=~`[[pod]]`}[[dur]])/rate(vendor_servlet_request_total{pod=~`[[pod]]`}[[dur]])",
+              "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "pod: {{pod}}, servlet: {{servlet}}, instance: {{instance}}",
               "refId": "A"
@@ -940,14 +1454,16 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
+          "description": "The sum of visits to a particular servlet over all servers, based on data over the last [[dur]].",
           "fill": 0,
           "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 15
+            "y": 16
           },
+          "hiddenSeries": false,
           "id": 18,
           "legend": {
             "alignAsTable": true,
@@ -976,7 +1492,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(vendor_servlet_request_total{pod=~`[[pod]]`}) by (servlet)",
+              "expr": "sum(increase(vendor_servlet_request_total{pod=~`[[pod]]`}[[dur]])) by (servlet)",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "servlet: {{servlet}}",
@@ -987,7 +1503,7 @@
           "timeFrom": null,
           "timeRegions": [],
           "timeShift": null,
-          "title": "Request Count by Servlet",
+          "title": "Request Count by Servlet Over Last [[dur]]",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -1031,14 +1547,16 @@
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
           "decimals": 2,
+          "description": "The average response time for requests made to a particular servlet, across all servers, based on data over the last [[dur]].",
           "fill": 0,
           "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 15
+            "y": 16
           },
+          "hiddenSeries": false,
           "id": 17,
           "legend": {
             "alignAsTable": true,
@@ -1129,21 +1647,23 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 3
+        "y": 4
       },
       "id": 48,
       "panels": [
         {
           "columns": [],
-          "description": "",
+          "datasource": "${DS_PROMETHEUS}",
+          "description": "The total number of connection requests that were used over the last [[dur]]. Any connections that are currently in use are not included in this total.",
           "fontSize": "100%",
           "gridPos": {
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 34
+            "y": 5
           },
           "id": 103,
+          "links": [],
           "options": {},
           "pageSize": null,
           "scroll": true,
@@ -1181,6 +1701,7 @@
               "expr": "increase(vendor_connectionpool_usedConnections_total{pod=~`[[pod]]`}[[dur]]) > 0",
               "format": "table",
               "instant": true,
+              "intervalFactor": 1,
               "refId": "A"
             }
           ],
@@ -1193,12 +1714,13 @@
         {
           "columns": [],
           "datasource": "${DS_PROMETHEUS}",
+          "description": "The total number of connection requests that waited for a connection because of a full connection pool over the last [[dur]].",
           "fontSize": "100%",
           "gridPos": {
             "h": 6,
             "w": 12,
             "x": 12,
-            "y": 34
+            "y": 5
           },
           "id": 81,
           "options": {},
@@ -1261,14 +1783,17 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
+          "datasource": "${DS_PROMETHEUS}",
+          "description": "The average time any used connection was put in use, based on data over the last [[dur]].",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 40
+            "y": 11
           },
+          "hiddenSeries": false,
           "id": 95,
           "legend": {
             "avg": false,
@@ -1296,6 +1821,8 @@
           "targets": [
             {
               "expr": "rate(vendor_connectionpool_inUseTime_total_seconds{pod=~`[[pod]]`}[[dur]]) / rate(vendor_connectionpool_usedConnections_total{pod=~`[[pod]]`}[[dur]]) > 0",
+              "format": "time_series",
+              "intervalFactor": 1,
               "legendFormat": "datasource: {{datasource}}, pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
@@ -1347,14 +1874,17 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
+          "datasource": "${DS_PROMETHEUS}",
+          "description": "The average wait time for any queued connection request, based on data over the last [[dur]].",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 40
+            "y": 11
           },
+          "hiddenSeries": false,
           "id": 101,
           "legend": {
             "avg": false,
@@ -1382,6 +1912,8 @@
           "targets": [
             {
               "expr": "rate(vendor_connectionpool_waitTime_total_seconds{pod=~`[[pod]]`}[[dur]]) / rate(vendor_connectionpool_queuedRequests_total{pod=~`[[pod]]`}[[dur]]) > 0",
+              "format": "time_series",
+              "intervalFactor": 1,
               "legendFormat": "datasource: {{datasource}}, pod: {{pod}}, instance: {{instance}}",
               "refId": "A"
             }
@@ -1433,14 +1965,16 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
+          "description": "The sum of managed connections in the free, shared, and unshared pools.",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 47
+            "y": 18
           },
+          "hiddenSeries": false,
           "id": 30,
           "legend": {
             "alignAsTable": true,
@@ -1526,14 +2060,16 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
+          "description": "The number of managed connections in the free pool.",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 53
+            "y": 24
           },
+          "hiddenSeries": false,
           "id": 27,
           "legend": {
             "alignAsTable": true,
@@ -1619,14 +2155,16 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
+          "description": "The number of connections that are in use. This number might include multiple connections that are shared from a single managed connection.",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
             "h": 6,
             "w": 12,
             "x": 12,
-            "y": 53
+            "y": 24
           },
+          "hiddenSeries": false,
           "id": 28,
           "legend": {
             "alignAsTable": true,
@@ -1712,14 +2250,16 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
+          "description": "The total number of managed connections created since the pool was created.",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 59
+            "y": 30
           },
+          "hiddenSeries": false,
           "id": 31,
           "legend": {
             "alignAsTable": true,
@@ -1805,14 +2345,16 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
+          "description": "The total number of managed connections destroyed since the pool was created.",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
             "h": 6,
             "w": 12,
             "x": 12,
-            "y": 59
+            "y": 30
           },
+          "hiddenSeries": false,
           "id": 29,
           "legend": {
             "alignAsTable": true,
@@ -1904,7 +2446,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 4
+        "y": 5
       },
       "id": 49,
       "panels": [
@@ -1914,14 +2456,16 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
+          "description": "A session is considered active if the application server is processing a request that uses that user session.",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 5
+            "y": 6
           },
+          "hiddenSeries": false,
           "id": 32,
           "legend": {
             "alignAsTable": true,
@@ -2009,14 +2553,16 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
+          "description": "A session is considered live if the session is loaded into memory by the application server.",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 12
+            "y": 13
           },
+          "hiddenSeries": false,
           "id": 33,
           "legend": {
             "alignAsTable": true,
@@ -2109,20 +2655,23 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 5
+        "y": 6
       },
       "id": 50,
       "panels": [
         {
           "columns": [],
+          "datasource": "${DS_PROMETHEUS}",
+          "description": "The size of the Default Executor thread pool in each instance.",
           "fontSize": "100%",
           "gridPos": {
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 6
+            "y": 7
           },
           "id": 61,
+          "links": [],
           "options": {},
           "pageSize": null,
           "scroll": true,
@@ -2155,7 +2704,7 @@
           ],
           "targets": [
             {
-              "expr": "max_over_time(vendor_threadpool_size{pod=~`[[pod]]`}[1m])",
+              "expr": "max_over_time(vendor_threadpool_size{pod=~`[[pod]]`}[[dur]])",
               "format": "table",
               "instant": true,
               "intervalFactor": 2,
@@ -2174,14 +2723,16 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
+          "description": "The number of threads that are actively running tasks.",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 12
+            "y": 13
           },
+          "hiddenSeries": false,
           "id": 37,
           "legend": {
             "alignAsTable": true,
@@ -2268,14 +2819,16 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
+          "description": "The size of the Default Executor thread pool in each instance.",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 19
+            "y": 20
           },
+          "hiddenSeries": false,
           "id": 38,
           "legend": {
             "alignAsTable": true,
@@ -2366,22 +2919,23 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 6
+        "y": 7
       },
       "id": 51,
       "panels": [
         {
           "columns": [],
           "datasource": "${DS_PROMETHEUS}",
-          "description": "",
+          "description": "Pods that spent more than [$garbageCollectionThreshold%] of the time garbage collecting, during the last [[dur]].",
           "fontSize": "100%",
           "gridPos": {
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 7
+            "y": 8
           },
           "id": 77,
+          "links": [],
           "options": {},
           "pageSize": null,
           "scroll": true,
@@ -2414,7 +2968,7 @@
           ],
           "targets": [
             {
-              "expr": "sum (rate(base_gc_time_seconds{pod=~`[[pod]]`}[[dur]])) by (namespace, pod, service) > [[garbageCollectionThreshold]] / 100",
+              "expr": "sum(rate(base_gc_time_seconds{pod=~`[[pod]]`}[[dur]])) by (namespace, pod, service) > [[garbageCollectionThreshold]] / 100",
               "format": "table",
               "instant": true,
               "intervalFactor": 2,
@@ -2430,14 +2984,16 @@
         {
           "columns": [],
           "datasource": "${DS_PROMETHEUS}",
+          "description": "The portion of time an instance spent on a specific type of garbage collection, based on data over the last [[dur]]. ",
           "fontSize": "100%",
           "gridPos": {
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 13
+            "y": 14
           },
           "id": 63,
+          "links": [],
           "options": {},
           "pageSize": null,
           "scroll": true,
@@ -2491,14 +3047,16 @@
           "dashes": false,
           "datasource": "${DS_PROMETHEUS}",
           "decimals": 2,
+          "description": "The average time an instance took on a specific type of garbage collection, based on data over the last [[dur]].",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
             "h": 8,
             "w": 24,
             "x": 0,
-            "y": 20
+            "y": 21
           },
+          "hiddenSeries": false,
           "id": 40,
           "legend": {
             "alignAsTable": true,
@@ -2588,19 +3146,20 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 7
+        "y": 8
       },
       "id": 52,
       "panels": [
         {
           "columns": [],
           "datasource": "${DS_PROMETHEUS}",
+          "description": "The time elapsed since the start of the JVM.",
           "fontSize": "100%",
           "gridPos": {
             "h": 10,
             "w": 24,
             "x": 0,
-            "y": 8
+            "y": 9
           },
           "id": 43,
           "links": [],
@@ -2609,8 +3168,8 @@
           "scroll": true,
           "showHeader": true,
           "sort": {
-            "col": 10,
-            "desc": false
+            "col": 8,
+            "desc": true
           },
           "styles": [
             {
@@ -2637,7 +3196,7 @@
           ],
           "targets": [
             {
-              "expr": "base_jvm_uptime_seconds {pod=~`[[pod]]`}",
+              "expr": "base_jvm_uptime_seconds{pod=~`[[pod]]`}",
               "format": "table",
               "instant": true,
               "intervalFactor": 2,
@@ -2656,7 +3215,7 @@
     }
   ],
   "refresh": "5s",
-  "schemaVersion": 20,
+  "schemaVersion": 18,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -2669,7 +3228,7 @@
             "$__all"
           ]
         },
-        "datasource": "${DS_PROMETHEUS}",
+        "datasource": "default",
         "definition": "base_cpu_processCpuLoad_percent",
         "hide": 0,
         "includeAll": true,
@@ -2692,7 +3251,6 @@
         "allValue": null,
         "current": {
           "selected": true,
-          "tags": [],
           "text": "[10m]",
           "value": "[10m]"
         },
@@ -2745,7 +3303,7 @@
       {
         "allValue": null,
         "current": {
-          "tags": [],
+          "selected": true,
           "text": "80",
           "value": "80"
         },
@@ -2812,6 +3370,7 @@
       },
       {
         "current": {
+          "selected": true,
           "text": "1",
           "value": "1"
         },
@@ -2831,8 +3390,8 @@
       },
       {
         "current": {
-          "text": "[45s]",
-          "value": "[45s]"
+          "text": "[1m]",
+          "value": "[1m]"
         },
         "hide": 2,
         "label": null,
@@ -2840,18 +3399,18 @@
         "options": [
           {
             "selected": true,
-            "text": "[45s]",
-            "value": "[45s]"
+            "text": "[1m]",
+            "value": "[1m]"
           }
         ],
-        "query": "[45s]",
+        "query": "[1m]",
         "skipUrlSync": false,
         "type": "constant"
       },
       {
         "allValue": null,
         "current": {
-          "tags": [],
+          "selected": true,
           "text": "10",
           "value": "10"
         },
@@ -2957,7 +3516,7 @@
     ]
   },
   "timezone": "",
-  "title": "Liberty-Metrics-M2-G5-20200120",
+  "title": "Liberty-Metrics-M2-G5-20200421",
   "uid": "websphere-liberty-m2",
   "version": 1
 }

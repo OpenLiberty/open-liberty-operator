@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+
 	"github.com/application-stacks/runtime-component-operator/pkg/common"
 	prometheusv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 
@@ -27,7 +29,9 @@ func CustomizeDeployment(deploy *appsv1.Deployment, ba common.BaseComponent) {
 	deploy.Labels = ba.GetLabels()
 	deploy.Annotations = MergeMaps(deploy.Annotations, ba.GetAnnotations())
 
-	deploy.Spec.Replicas = ba.GetReplicas()
+	if ba.GetAutoscaling() == nil {
+		deploy.Spec.Replicas = ba.GetReplicas()
+	}
 
 	if deploy.Spec.Selector == nil {
 		deploy.Spec.Selector = &metav1.LabelSelector{
@@ -46,7 +50,9 @@ func CustomizeStatefulSet(statefulSet *appsv1.StatefulSet, ba common.BaseCompone
 	statefulSet.Labels = ba.GetLabels()
 	statefulSet.Annotations = MergeMaps(statefulSet.Annotations, ba.GetAnnotations())
 
-	statefulSet.Spec.Replicas = ba.GetReplicas()
+	if ba.GetAutoscaling() == nil {
+		statefulSet.Spec.Replicas = ba.GetReplicas()
+	}
 	statefulSet.Spec.ServiceName = obj.GetName() + "-headless"
 	if statefulSet.Spec.Selector == nil {
 		statefulSet.Spec.Selector = &metav1.LabelSelector{
@@ -91,7 +97,12 @@ func CustomizeRoute(route *routev1.Route, ba common.BaseComponent, key string, c
 	if ba.GetRoute() != nil {
 		rt := ba.GetRoute()
 		route.Annotations = MergeMaps(route.Annotations, rt.GetAnnotations())
-		route.Spec.Host = rt.GetHost()
+
+		host := rt.GetHost()
+		if host == "" && common.Config[common.OpConfigDefaultHostname] != "" {
+			host = obj.GetName() + "-" + obj.GetNamespace() + "." + common.Config[common.OpConfigDefaultHostname]
+		}
+		route.Spec.Host = host
 		route.Spec.Path = rt.GetPath()
 		if ba.GetRoute().GetTermination() != nil {
 			if route.Spec.TLS == nil {
@@ -164,6 +175,15 @@ func CustomizeService(svc *corev1.Service, ba common.BaseComponent) {
 	} else {
 		svc.Spec.Ports[0].Name = strconv.Itoa(int(ba.GetService().GetPort())) + "-tcp"
 	}
+
+	if *ba.GetService().GetType() == corev1.ServiceTypeNodePort && ba.GetService().GetNodePort() != nil {
+		svc.Spec.Ports[0].NodePort = *ba.GetService().GetNodePort()
+	}
+
+	if *ba.GetService().GetType() == corev1.ServiceTypeClusterIP {
+		svc.Spec.Ports[0].NodePort = 0
+	}
+
 	svc.Spec.Type = *ba.GetService().GetType()
 	svc.Spec.Selector = map[string]string{
 		"app.kubernetes.io/instance": obj.GetName(),
@@ -171,6 +191,45 @@ func CustomizeService(svc *corev1.Service, ba common.BaseComponent) {
 
 	if ba.GetService().GetTargetPort() != nil {
 		svc.Spec.Ports[0].TargetPort = intstr.FromInt(int(*ba.GetService().GetTargetPort()))
+	}
+
+	numOfAdditionalPorts := len(ba.GetService().GetPorts())
+	numOfCurrentPorts := len(svc.Spec.Ports) - 1
+	for i := 0; i < numOfAdditionalPorts; i++ {
+		for numOfCurrentPorts < numOfAdditionalPorts {
+			svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{})
+			numOfCurrentPorts++
+		}
+		for numOfCurrentPorts > numOfAdditionalPorts && len(svc.Spec.Ports) != 0 {
+			svc.Spec.Ports = svc.Spec.Ports[:len(svc.Spec.Ports)-1]
+			numOfCurrentPorts--
+		}
+		svc.Spec.Ports[i+1].Port = ba.GetService().GetPorts()[i].Port
+		svc.Spec.Ports[i+1].TargetPort = intstr.FromInt(int(ba.GetService().GetPorts()[i].Port))
+
+		if ba.GetService().GetPorts()[i].Name != "" {
+			svc.Spec.Ports[i+1].Name = ba.GetService().GetPorts()[i].Name
+		} else {
+			svc.Spec.Ports[i+1].Name = strconv.Itoa(int(ba.GetService().GetPorts()[i].Port)) + "-tcp"
+		}
+
+		if ba.GetService().GetPorts()[i].TargetPort.String() != "" {
+			svc.Spec.Ports[i+1].TargetPort = intstr.FromInt(ba.GetService().GetPorts()[i].TargetPort.IntValue())
+		}
+
+		if *ba.GetService().GetType() == corev1.ServiceTypeNodePort && ba.GetService().GetPorts()[i].NodePort != 0 {
+			svc.Spec.Ports[i+1].NodePort = ba.GetService().GetPorts()[i].NodePort
+		}
+
+		if *ba.GetService().GetType() == corev1.ServiceTypeClusterIP {
+			svc.Spec.Ports[i+1].NodePort = 0
+		}
+	}
+	if len(ba.GetService().GetPorts()) == 0 {
+		for numOfCurrentPorts > 0 {
+			svc.Spec.Ports = svc.Spec.Ports[:len(svc.Spec.Ports)-1]
+			numOfCurrentPorts--
+		}
 	}
 }
 
@@ -295,6 +354,26 @@ func CustomizePodSpec(pts *corev1.PodTemplateSpec, ba common.BaseComponent) {
 	if len(ba.GetArchitecture()) > 0 {
 		pts.Spec.Affinity = &corev1.Affinity{}
 		CustomizeAffinity(pts.Spec.Affinity, ba)
+	}
+}
+
+// CustomizeServiceBinding ...
+func CustomizeServiceBinding(secret *corev1.Secret, podSpec *corev1.PodSpec, ba common.BaseComponent) {
+	if len(ba.GetStatus().GetResolvedBindings()) != 0 {
+		appContainer := GetAppContainer(podSpec.Containers)
+		binding := ba.GetStatus().GetResolvedBindings()[0]
+		bindingSecret := corev1.EnvFromSource{
+			SecretRef: &corev1.SecretEnvSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: binding,
+				}},
+		}
+		appContainer.EnvFrom = append(appContainer.EnvFrom, bindingSecret)
+
+		secretRev := corev1.EnvVar{
+			Name:  "RESOLVED_BINDING_SECRET_REV",
+			Value: secret.ResourceVersion}
+		appContainer.Env = append(appContainer.Env, secretRev)
 	}
 }
 
@@ -590,10 +669,27 @@ func CustomizeServiceMonitor(sm *prometheusv1.ServiceMonitor, ba common.BaseComp
 	if len(sm.Spec.Endpoints) == 0 {
 		sm.Spec.Endpoints = append(sm.Spec.Endpoints, prometheusv1.Endpoint{})
 	}
-	if ba.GetService().GetPortName() != "" {
-		sm.Spec.Endpoints[0].Port = ba.GetService().GetPortName()
-	} else {
-		sm.Spec.Endpoints[0].Port = strconv.Itoa(int(ba.GetService().GetPort())) + "-tcp"
+	sm.Spec.Endpoints[0].Port = ""
+	sm.Spec.Endpoints[0].TargetPort = nil
+	if len(ba.GetMonitoring().GetEndpoints()) > 0 {
+		port := ba.GetMonitoring().GetEndpoints()[0].Port
+		targetPort := ba.GetMonitoring().GetEndpoints()[0].TargetPort
+		if port != "" {
+			sm.Spec.Endpoints[0].Port = port
+		}
+		if targetPort != nil {
+			sm.Spec.Endpoints[0].TargetPort = targetPort
+		}
+		if port != "" && targetPort != nil {
+			sm.Spec.Endpoints[0].TargetPort = nil
+		}
+	}
+	if sm.Spec.Endpoints[0].Port == "" && sm.Spec.Endpoints[0].TargetPort == nil {
+		if ba.GetService().GetPortName() != "" {
+			sm.Spec.Endpoints[0].Port = ba.GetService().GetPortName()
+		} else {
+			sm.Spec.Endpoints[0].Port = strconv.Itoa(int(ba.GetService().GetPort())) + "-tcp"
+		}
 	}
 	if len(ba.GetMonitoring().GetLabels()) > 0 {
 		for k, v := range ba.GetMonitoring().GetLabels() {
@@ -822,4 +918,73 @@ func GetAppContainer(containerList []corev1.Container) *corev1.Container {
 		}
 	}
 	return &containerList[0]
+}
+
+// CustomizeIngress customizes ingress resource
+func CustomizeIngress(ing *networkingv1beta1.Ingress, ba common.BaseComponent) {
+	obj := ba.(metav1.Object)
+	ing.Labels = ba.GetLabels()
+	servicePort := strconv.Itoa(int(ba.GetService().GetPort())) + "-tcp"
+	host := ""
+	path := ""
+	rt := ba.GetRoute()
+	if rt != nil {
+		host = rt.GetHost()
+		path = rt.GetPath()
+		ing.Annotations = MergeMaps(ing.Annotations, ba.GetAnnotations(), rt.GetAnnotations())
+	} else {
+		ing.Annotations = MergeMaps(ing.Annotations, ba.GetAnnotations())
+	}
+
+	if ba.GetService().GetPortName() != "" {
+		servicePort = ba.GetService().GetPortName()
+	}
+
+	if host == "" && common.Config[common.OpConfigDefaultHostname] != "" {
+		host = obj.GetName() + "-" + obj.GetNamespace() + "." + common.Config[common.OpConfigDefaultHostname]
+	}
+	if host == "" {
+		l := log.WithValues("Request.Namespace", obj.GetNamespace(), "Request.Name", obj.GetName())
+		l.Info("No Ingress hostname is provided. Ingress might not function correctly without hostname. It is recommended to set Ingress host or to provide default value through operator's config map.")
+	}
+
+	ing.Spec.Rules = []networkingv1beta1.IngressRule{
+		{
+			Host: host,
+			IngressRuleValue: networkingv1beta1.IngressRuleValue{
+				HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+					Paths: []networkingv1beta1.HTTPIngressPath{
+						{
+							Path: path,
+							Backend: networkingv1beta1.IngressBackend{
+								ServiceName: obj.GetName(),
+								ServicePort: intstr.IntOrString{Type: intstr.String, StrVal: servicePort},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	tlsSecretName := ""
+	if rt != nil && rt.GetCertificate() != nil {
+		tlsSecretName = obj.GetName() + "-route-tls"
+		if rt.GetCertificate().GetSpec().SecretName != "" {
+			tlsSecretName = obj.GetName() + rt.GetCertificate().GetSpec().SecretName
+		}
+	}
+	if rt != nil && rt.GetCertificateSecretRef() != nil && *rt.GetCertificateSecretRef() != "" {
+		tlsSecretName = *rt.GetCertificateSecretRef()
+	}
+	if tlsSecretName != "" && host != "" {
+		ing.Spec.TLS = []networkingv1beta1.IngressTLS{
+			{
+				Hosts:      []string{host},
+				SecretName: tlsSecretName,
+			},
+		}
+	} else {
+		ing.Spec.TLS = nil
+	}
 }
