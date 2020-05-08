@@ -612,6 +612,11 @@ func (in *OpenLibertyApplicationStatus) DeepCopyInto(out *OpenLibertyApplication
 			(*out)[key] = outVal
 		}
 	}
+	if in.RouteAvailable != nil {
+		in, out := &in.RouteAvailable, &out.RouteAvailable
+		*out = new(bool)
+		**out = **in
+	}
 	if in.ResolvedBindings != nil {
 		in, out := &in.ResolvedBindings, &out.ResolvedBindings
 		*out = make([]string, len(*in))

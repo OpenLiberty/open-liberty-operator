@@ -179,11 +179,8 @@ type OpenLibertyApplicationStatus struct {
 	RegisteredOidcClientId     string                  `json:"registeredOidcClientId,omitempty"`
 	RegisteredOidcClientSecret string                  `json:"regsiteredOidcClientSecret,omitempty"`
 	RouteAvailable             *bool                   `json:"routeAvailable,omitempty"`
-	Conditions       []StatusCondition       		   `json:"conditions,omitempty"`
-	ConsumedServices common.ConsumedServices 		   `json:"consumedServices,omitempty"`
 	// +listType=set
 	ResolvedBindings []string                          `json:"resolvedBindings,omitempty"`
-	ImageReference   string                            `json:"imageReference,omitempty"`
 }
 
 // StatusCondition ...

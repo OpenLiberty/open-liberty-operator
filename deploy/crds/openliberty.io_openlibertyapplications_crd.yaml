@@ -4877,6 +4877,8 @@ spec:
               items:
                 type: string
               type: array
+            routeAvailable:
+              type: boolean
           type: object
   version: v1beta1
   versions:
