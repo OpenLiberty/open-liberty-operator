@@ -21,20 +21,20 @@ import (
 )
 
 var (
-	openlibertyProvider    = "openliberty-provider"
-	openlibertyConsumer    = "openliberty-consumer"
-	openlibertyConsumer2   = "openliberty-consumer2"
-	openlibertyConsumerEnv = "openliberty-consumer-env"
-	openlibertySecret      = "my-secret"
-	openlibertySecret2     = "my-secret2"
-	context                = "my-context"
-	port                   = "9443"
-	mount                  = "sample"
-	usernameValue          = "admin"
-	passwordValue          = "adminpass"
-	usernameValue2         = "admin2"
-	passwordValue2         = "adminpass2"
-	context2               = "my-context2"
+	olProvider     = "ol-provider"
+	olConsumer     = "ol-consumer"
+	olConsumer2    = "ol-consumer2"
+	olConsumerEnv  = "ol-consumer-env"
+	olSecret       = "my-secret"
+	olSecret2      = "my-secret2"
+	context        = "my-context"
+	port           = "9443"
+	mount          = "sample"
+	usernameValue  = "admin"
+	passwordValue  = "adminpass"
+	usernameValue2 = "admin2"
+	passwordValue2 = "adminpass2"
+	context2       = "my-context2"
 )
 
 // OpenLibertyServiceBindingTest verify behaviour of service binding feature
@@ -105,7 +105,7 @@ func createSecret(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, 
 }
 
 func createProviderService(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, ns string, con string) error {
-	openliberty := util.MakeBasicOpenLibertyApplication(t, f, openlibertyProvider, ns, 1)
+	openliberty := util.MakeBasicOpenLibertyApplication(t, f, olProvider, ns, 1)
 	svctype := v1.ServiceTypeClusterIP
 	openliberty.Spec.Service = &v1beta1.OpenLibertyApplicationService{Type: &svctype, Port: 9443}
 	openliberty.Spec.Service.Provides = &v1beta1.ServiceBindingProvides{
@@ -113,11 +113,11 @@ func createProviderService(t *testing.T, f *framework.Framework, ctx *framework.
 		Context:  "/" + con,
 		Auth: &v1beta1.ServiceBindingAuth{
 			Username: corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{Name: openlibertySecret},
+				LocalObjectReference: corev1.LocalObjectReference{Name: olSecret},
 				Key:                  "username",
 			},
 			Password: corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{Name: openlibertySecret},
+				LocalObjectReference: corev1.LocalObjectReference{Name: olSecret},
 				Key:                  "password",
 			},
 		},
@@ -128,7 +128,7 @@ func createProviderService(t *testing.T, f *framework.Framework, ctx *framework.
 		return err
 	}
 
-	err = e2eutil.WaitForDeployment(t, f.KubeClient, ns, openlibertyProvider, 1, retryInterval, timeout)
+	err = e2eutil.WaitForDeployment(t, f.KubeClient, ns, olProvider, 1, retryInterval, timeout)
 	if err != nil {
 		return err
 	}
@@ -173,7 +173,7 @@ func createConsumeServiceMount(t *testing.T, f *framework.Framework, ctx *framew
 }
 
 func setUpMounting(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, ns string) error {
-	err := createSecret(t, f, ctx, ns, openlibertySecret, usernameValue, passwordValue)
+	err := createSecret(t, f, ctx, ns, olSecret, usernameValue, passwordValue)
 	if err != nil {
 		util.FailureCleanup(t, f, ns, err)
 	}
@@ -184,13 +184,13 @@ func setUpMounting(t *testing.T, f *framework.Framework, ctx *framework.TestCtx,
 	}
 
 	// Create service with namespace under consumes
-	err = createConsumeServiceMount(t, f, ctx, ns, openlibertyProvider, openlibertyConsumer, true)
+	err = createConsumeServiceMount(t, f, ctx, ns, olProvider, olConsumer, true)
 	if err != nil {
 		util.FailureCleanup(t, f, ns, err)
 	}
 
 	// Create service without namespace under consumes
-	err = createConsumeServiceMount(t, f, ctx, ns, openlibertyProvider, openlibertyConsumer2, false)
+	err = createConsumeServiceMount(t, f, ctx, ns, olProvider, olConsumer2, false)
 	if err != nil {
 		util.FailureCleanup(t, f, ns, err)
 	}
@@ -201,14 +201,14 @@ func setUpMounting(t *testing.T, f *framework.Framework, ctx *framework.TestCtx,
 func mountingTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, ns string, userValue string, passValue string, con string) error {
 
 	// Get consumer pod
-	pods, err := util.GetPods(f, ctx, openlibertyConsumer, ns)
+	pods, err := util.GetPods(f, ctx, olConsumer, ns)
 	if err != nil {
 		util.FailureCleanup(t, f, ns, err)
 	}
 	podName := pods.Items[0].GetName()
 
 	// Go inside the pod the pod for Consume service and check values are set
-	out, err := exec.Command("kubectl", "exec", "-n", ns, "-it", podName, "--", "ls", "../"+mount+"/"+ns+"/"+openlibertyProvider).Output()
+	out, err := exec.Command("kubectl", "exec", "-n", ns, "-it", podName, "--", "ls", "../"+mount+"/"+ns+"/"+olProvider).Output()
 	err = util.CommandError(t, err, out)
 	if err != nil {
 		t.Fatal("Directory not made")
@@ -219,11 +219,11 @@ func mountingTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, 
 	// Set values to check
 	valuePairs := map[string]string{
 		"context":  con,
-		"hostname": openlibertyProvider + "." + ns + ".svc.cluster.local",
+		"hostname": olProvider + "." + ns + ".svc.cluster.local",
 		"password": passValue,
 		"port":     port,
 		"protocol": "http",
-		"url":      "http://" + openlibertyProvider + "." + ns + ".svc.cluster.local:" + port + "/" + con,
+		"url":      "http://" + olProvider + "." + ns + ".svc.cluster.local:" + port + "/" + con,
 		"username": userValue,
 	}
 
@@ -232,14 +232,14 @@ func mountingTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, 
 	}
 
 	// Get consumer pod
-	pods, err = util.GetPods(f, ctx, openlibertyConsumer2, ns)
+	pods, err = util.GetPods(f, ctx, olConsumer2, ns)
 	if err != nil {
 		util.FailureCleanup(t, f, ns, err)
 	}
 	podName = pods.Items[0].GetName()
 
 	// Go inside the pod the pod for Consume service and check values are set
-	out, err = exec.Command("kubectl", "exec", "-n", ns, "-it", podName, "--", "ls", "../"+mount+"/"+openlibertyProvider).Output()
+	out, err = exec.Command("kubectl", "exec", "-n", ns, "-it", podName, "--", "ls", "../"+mount+"/"+olProvider).Output()
 	err = util.CommandError(t, err, out)
 	if err != nil {
 		t.Fatal("Directory not made")
@@ -259,9 +259,9 @@ func checkSecret(t *testing.T, f *framework.Framework, ns string, podName string
 
 	for i := 0; i < 20; i++ {
 		if setNamespace == true {
-			out, err = exec.Command("kubectl", "exec", "-n", ns, "-it", podName, "--", "cat", "../"+mount+"/"+ns+"/"+openlibertyProvider+"/"+directory).Output()
+			out, err = exec.Command("kubectl", "exec", "-n", ns, "-it", podName, "--", "cat", "../"+mount+"/"+ns+"/"+olProvider+"/"+directory).Output()
 		} else if setNamespace == false {
-			out, err = exec.Command("kubectl", "exec", "-n", ns, "-it", podName, "--", "cat", "../"+mount+"/"+openlibertyProvider+"/"+directory).Output()
+			out, err = exec.Command("kubectl", "exec", "-n", ns, "-it", podName, "--", "cat", "../"+mount+"/"+olProvider+"/"+directory).Output()
 		}
 		err = util.CommandError(t, err, out)
 		if err != nil {
@@ -308,13 +308,13 @@ func createConsumeServiceEnv(t *testing.T, f *framework.Framework, ctx *framewor
 func envTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, ns string) error {
 
 	// Create service with namespace under consumes
-	err := createConsumeServiceEnv(t, f, ctx, ns, openlibertyProvider, openlibertyConsumerEnv)
+	err := createConsumeServiceEnv(t, f, ctx, ns, olProvider, olConsumerEnv)
 	if err != nil {
 		util.FailureCleanup(t, f, ns, err)
 	}
 
 	// Get consumer pod
-	pods, err := util.GetPods(f, ctx, openlibertyConsumerEnv, ns)
+	pods, err := util.GetPods(f, ctx, olConsumerEnv, ns)
 	if err != nil {
 		util.FailureCleanup(t, f, ns, err)
 	}
@@ -331,7 +331,7 @@ func envTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, ns st
 
 func searchValues(t *testing.T, ns string, podEnv []corev1.EnvVar) error {
 	nsUpper := strings.ToUpper(ns)
-	providerUpper := strings.ToUpper(strings.ReplaceAll(openlibertyProvider, "-", "_"))
+	providerUpper := strings.ToUpper(strings.ReplaceAll(olProvider, "-", "_"))
 	values := [7]string{"username", "password", "context", "hostname", "port", "protocol", "url"}
 
 	for i := 0; i < len(podEnv); i++ {
@@ -350,24 +350,24 @@ func searchValues(t *testing.T, ns string, podEnv []corev1.EnvVar) error {
 }
 
 func updateProviderTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, ns string) error {
-	err := createSecret(t, f, ctx, ns, openlibertySecret2, usernameValue2, passwordValue2)
+	err := createSecret(t, f, ctx, ns, olSecret2, usernameValue2, passwordValue2)
 	if err != nil {
 		util.FailureCleanup(t, f, ns, err)
 	}
 
 	// Update provider application
-	target := types.NamespacedName{Name: openlibertyProvider, Namespace: ns}
+	target := types.NamespacedName{Name: olProvider, Namespace: ns}
 	err = util.UpdateApplication(f, target, func(r *openlibertyv1beta1.OpenLibertyApplication) {
 		r.Spec.Service.Provides = &v1beta1.ServiceBindingProvides{
 			Category: "openapi",
 			Context:  "/" + context2,
 			Auth: &v1beta1.ServiceBindingAuth{
 				Username: corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{Name: openlibertySecret2},
+					LocalObjectReference: corev1.LocalObjectReference{Name: olSecret2},
 					Key:                  "username",
 				},
 				Password: corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{Name: openlibertySecret2},
+					LocalObjectReference: corev1.LocalObjectReference{Name: olSecret2},
 					Key:                  "password",
 				},
 			},
