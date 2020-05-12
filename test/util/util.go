@@ -215,6 +215,25 @@ func WaitForKnativeDeployment(t *testing.T, f *framework.Framework, ns, n string
 	return err
 }
 
+// IsKnativeServiceDeployed : Check if the Knative service is deployed.
+func IsKnativeServiceDeployed(t *testing.T, f *framework.Framework, ns, n string) (bool, error) {
+	err := servingv1alpha1.AddToScheme(f.Scheme)
+	if err != nil {
+		return false, err
+	}
+
+	ksvc := &servingv1alpha1.ServiceList{}
+	lerr := f.Client.Get(goctx.TODO(), types.NamespacedName{Name: n, Namespace: ns}, ksvc)
+	if lerr != nil {
+		if apierrors.IsNotFound(lerr) {
+			return false, nil
+		}
+		return false, lerr
+	}
+
+	return true, nil
+}
+
 // MakeOpenLibertyDump : Create a dump.
 func MakeOpenLibertyDump(t *testing.T, f *framework.Framework, n string, ns string, podName string) *openlibertyv1beta1.OpenLibertyDump {
 	dumps := make([]openlibertyv1beta1.OpenLibertyDumpInclude, 2)
