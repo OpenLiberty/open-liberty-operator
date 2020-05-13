@@ -9,6 +9,7 @@ import (
 	"time"
 
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
+	certmngrv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	corev1 "k8s.io/api/core/v1"
@@ -32,6 +33,7 @@ func MakeBasicOpenLibertyApplication(t *testing.T, f *framework.Framework, n str
 		},
 	}
 	expose := false
+	serviceType := corev1.ServiceTypeClusterIP
 	return &openlibertyv1beta1.OpenLibertyApplication{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "OpenLibertyApplication",
@@ -45,6 +47,10 @@ func MakeBasicOpenLibertyApplication(t *testing.T, f *framework.Framework, n str
 			ApplicationImage: "openliberty/open-liberty:kernel-java8-openj9-ubi",
 			Replicas:         &replicas,
 			Expose:           &expose,
+			Service: &openlibertyv1beta1.OpenLibertyApplicationService{
+				Port: 3000,
+				Type: &serviceType,
+			},
 			ReadinessProbe: &corev1.Probe{
 				Handler:             probe,
 				InitialDelaySeconds: 1,
@@ -233,6 +239,84 @@ func IsKnativeServiceDeployed(t *testing.T, f *framework.Framework, ns, n string
 	}
 
 	return true, nil
+}
+
+func IsCertManagerInstalled(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) bool {
+	certmngrv1alpha2.AddToScheme(f.Scheme)
+
+	ns, _ := ctx.GetNamespace()
+
+	certIssuer := &certmngrv1alpha2.Issuer{}
+
+	err := f.Client.Get(goctx.TODO(), types.NamespacedName{Name: "name", Namespace: ns}, certIssuer)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			t.Log(err)
+			return false
+		}
+	}
+
+	return true
+}
+
+// CreateCertificateIssuer ...
+func CreateCertificateIssuer(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, n string) error {
+	err := certmngrv1alpha2.AddToScheme(f.Scheme)
+	if err != nil {
+		return err
+	}
+
+	ns, _ := ctx.GetNamespace()
+
+	certIssuer := &certmngrv1alpha2.ClusterIssuer{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterIssuer",
+			APIVersion: "cert-manager.io/v1alpha2",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      n,
+			Namespace: ns,
+		},
+		Spec: certmngrv1alpha2.IssuerSpec{
+			IssuerConfig: certmngrv1alpha2.IssuerConfig{
+				SelfSigned: &certmngrv1alpha2.SelfSignedIssuer{},
+			},
+		},
+	}
+	err = f.Client.Create(goctx.TODO(), certIssuer, &framework.CleanupOptions{TestContext: ctx, Timeout: time.Second, RetryInterval: time.Second})
+	if err != nil {
+		t.Log("failed to create cert issuer!")
+		return err
+	}
+
+	t.Log("cert issuer successfully created!")
+	return nil
+}
+
+// WaitForCertificate : Poll for generated certificates from our cert manager functionality
+func WaitForCertificate(t *testing.T, f *framework.Framework, ns, n string, retryInterval, timeout time.Duration) error {
+	err := certmngrv1alpha2.AddToScheme(f.Scheme)
+	if err != nil {
+		return err
+	}
+
+	err = wait.Poll(retryInterval, timeout, func() (done bool, err error) {
+		cert := &certmngrv1alpha2.Certificate{}
+		certErr := f.Client.Get(goctx.TODO(), types.NamespacedName{Name: n, Namespace: ns}, cert)
+		if certErr != nil {
+			if apierrors.IsNotFound(certErr) {
+				t.Logf("waiting for certificate %s...", n)
+				return false, nil
+			}
+			t.Log("new error encountered")
+			return true, certErr
+		}
+
+		t.Logf("found certificate %s", n)
+		return true, nil
+	})
+
+	return err
 }
 
 // MakeOpenLibertyDump : Create a dump.
