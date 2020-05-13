@@ -14,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -375,4 +376,23 @@ func UpdateApplication(f *framework.Framework, target types.NamespacedName, upda
 	})
 
 	return err
+}
+
+// GetPods returns a list of pods
+func GetPods(f *framework.Framework, ctx *framework.TestCtx, target string, ns string) (*corev1.PodList, error) {
+	key := map[string]string{"app.kubernetes.io/name": target}
+
+	options := &dynclient.ListOptions{
+		LabelSelector: labels.Set(key).AsSelector(),
+		Namespace:     ns,
+	}
+
+	podList := &corev1.PodList{}
+
+	err := f.Client.List(goctx.TODO(), podList, options)
+	if err != nil {
+		return nil, err
+	}
+
+	return podList, nil
 }
