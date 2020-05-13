@@ -64,7 +64,7 @@ func runtimeImageStreamTest(t *testing.T, f *framework.Framework, ctx *framework
 	t.Logf("Namespace: %s", ns)
 
 	// Create the imagestream
-	out, err := exec.Command("oc", "import-image", imgstreamName, "--from=navidsh/demo-day:v0.1.0", "-n", ns, "--confirm").Output()
+	out, err := exec.Command("oc", "import-image", imgstreamName, "--from=openliberty/open-liberty:kernel-java8-openj9-ubi", "-n", ns, "--confirm").Output()
 	if err != nil {
 		t.Fatalf("Creating the imagestream failed: %s", out)
 	}
@@ -116,7 +116,7 @@ func runtimeImageStreamTest(t *testing.T, f *framework.Framework, ctx *framework
 
 	firstImage := exampleOpenLiberty.Status.ImageReference
 	// Update the imagestreamtag
-	tag := `{"tag":{"from":{"name": "navidsh/demo-day:v0.2.0"}}}`
+	tag := `{"tag":{"from":{"name": "openliberty/open-liberty:kernel-java11-openj9-ubi"}}}`
 	out, err = exec.Command("oc", "patch", "imagestreamtag", imgstreamName+":latest", "-n", ns, "-p", tag).Output()
 	if err != nil {
 		t.Fatalf("Updating the imagestreamtag failed: %s", out)
@@ -137,7 +137,7 @@ func runtimeImageStreamTest(t *testing.T, f *framework.Framework, ctx *framework
 	}
 
 	// Update the imagestreamtag again
-	tag = `{"tag":{"from":{"name": "navidsh/demo-day:v0.1.0"}}}`
+	tag = `{"tag":{"from":{"name": "openliberty/open-liberty:kernel-java8-openj9-ubi"}}}`
 	out, err = exec.Command("oc", "patch", "imagestreamtag", imgstreamName+":latest", "-n", ns, "-p", tag).Output()
 	if err != nil {
 		t.Fatalf("Updating the imagestreamtag failed: %s", out)
