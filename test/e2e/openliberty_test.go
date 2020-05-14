@@ -35,12 +35,12 @@ func TestOpenLibertyApplication(t *testing.T) {
 		t.Fatalf("Failed to add Trace scheme to framework: %v", err)
 	}
 	// basic tests that are runnable locally in minishift/kube
-	// t.Run("OpenLibertyPullPolicyTest", OpenLibertyPullPolicyTest)
-	// t.Run("OpenLibertyBasicTest", OpenLibertyBasicTest)
-	// t.Run("OpenLibertyProbeTest", OpenLibertyProbeTest)
-	// t.Run("OpenLibertyAutoScalingTest", OpenLibertyAutoScalingTest)
-	// t.Run("OpenLibertyStorageTest", OpenLibertyBasicStorageTest)
-	// t.Run("OpenLibertyPersistenceTest", OpenLibertyPersistenceTest)
+	t.Run("OpenLibertyPullPolicyTest", OpenLibertyPullPolicyTest)
+	t.Run("OpenLibertyBasicTest", OpenLibertyBasicTest)
+	t.Run("OpenLibertyProbeTest", OpenLibertyProbeTest)
+	t.Run("OpenLibertyAutoScalingTest", OpenLibertyAutoScalingTest)
+	t.Run("OpenLibertyStorageTest", OpenLibertyBasicStorageTest)
+	t.Run("OpenLibertyPersistenceTest", OpenLibertyPersistenceTest)
 	t.Run("OpenLibertyTraceTest", OpenLibertyTraceTest)
 	t.Run("OpenLibertyDumpsTest", OpenLibertyDumpsTest)
 
@@ -65,15 +65,15 @@ func TestOpenLibertyApplication(t *testing.T) {
 func testAdvancedFeatures(t *testing.T) {
 	// These features require a bit of configuration
 	// which makes them less ideal for quick minikube tests
-	// t.Run("RuntimeServiceMonitorTest", OpenLibertyServiceMonitorTest)
-	// t.Run("RuntimeKnativeTest", OpenLibertyKnativeTest)
-	t.Run("RuntimeServiceBindingTest", OpenLibertyServiceBindingTest)
-	t.Run("RuntimeCertManagerTest", OpenLibertyCertManagerTest)
+	t.Run("OpenLibertyServiceMonitorTest", OpenLibertyServiceMonitorTest)
+	t.Run("OpenLibertyKnativeTest", OpenLibertyKnativeTest)
+	t.Run("OpenLibertyServiceBindingTest", OpenLibertyServiceBindingTest)
+	t.Run("OpenLibertyCertManagerTest", OpenLibertyCertManagerTest)
 }
 
 // Verify functionality that is tied to OCP
 func testOCPFeatures(t *testing.T) {
-	// t.Run("RuntimeImageStreamTest", OpenLibertyImageStreamTest)
+	t.Run("OpenLibertyImageStreamTest", OpenLibertyImageStreamTest)
 }
 
 // Verify functionality that is not expected to run on OCP
