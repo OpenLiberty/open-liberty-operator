@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"os"
 	"testing"
 
 	"github.com/OpenLiberty/open-liberty-operator/pkg/apis"
@@ -10,6 +11,9 @@ import (
 )
 
 func TestOpenLibertyApplication(t *testing.T) {
+	cluster := os.Getenv("CLUSTER_ENV")
+	t.Logf("running e2e tests as '%s'", cluster)
+
 	openLibertyApplicationList := &openlibertyv1beta1.OpenLibertyApplicationList{
 		TypeMeta: metav1.TypeMeta{
 			Kind: "OpenLibertyApplication",
@@ -30,16 +34,49 @@ func TestOpenLibertyApplication(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to add Trace scheme to framework: %v", err)
 	}
-
-	t.Run("OpenLibertyPullPolicyTest", OpenLibertyPullPolicyTest)
-	t.Run("OpenLibertyBasicTest", OpenLibertyBasicTest)
-	t.Run("OpenLibertyStorageTest", OpenLibertyBasicStorageTest)
-	t.Run("OpenLibertyPersistenceTest", OpenLibertyPersistenceTest)
-	t.Run("OpenLibertyProbeTest", OpenLibertyProbeTest)
-	t.Run("OpenLibertyAutoScalingTest", OpenLibertyAutoScalingTest)
-	t.Run("OpenLibertyServiceMonitorTest", OpenLibertyServiceMonitorTest)
-	t.Run("OpenLibertyKnativeTest", OpenLibertyKnativeTest)
+	// basic tests that are runnable locally in minishift/kube
+	// t.Run("OpenLibertyPullPolicyTest", OpenLibertyPullPolicyTest)
+	// t.Run("OpenLibertyBasicTest", OpenLibertyBasicTest)
+	// t.Run("OpenLibertyProbeTest", OpenLibertyProbeTest)
+	// t.Run("OpenLibertyAutoScalingTest", OpenLibertyAutoScalingTest)
+	// t.Run("OpenLibertyStorageTest", OpenLibertyBasicStorageTest)
+	// t.Run("OpenLibertyPersistenceTest", OpenLibertyPersistenceTest)
 	t.Run("OpenLibertyTraceTest", OpenLibertyTraceTest)
 	t.Run("OpenLibertyDumpsTest", OpenLibertyDumpsTest)
-	t.Run("OpenLibertyServiceBindingTest", OpenLibertyServiceBindingTest)
+
+	if cluster != "local" {
+		// only test non-OCP features on minikube
+		if cluster == "minikube" {
+			testIndependantFeatures(t)
+			return
+		}
+
+		// test all features that require some configuration
+		testAdvancedFeatures(t)
+		// test featurest hat require OCP
+		if cluster == "ocp" {
+			testOCPFeatures(t)
+		}
+	}
+
+
+}
+
+func testAdvancedFeatures(t *testing.T) {
+	// These features require a bit of configuration
+	// which makes them less ideal for quick minikube tests
+	// t.Run("RuntimeServiceMonitorTest", OpenLibertyServiceMonitorTest)
+	// t.Run("RuntimeKnativeTest", OpenLibertyKnativeTest)
+	t.Run("RuntimeServiceBindingTest", OpenLibertyServiceBindingTest)
+	t.Run("RuntimeCertManagerTest", OpenLibertyCertManagerTest)
+}
+
+// Verify functionality that is tied to OCP
+func testOCPFeatures(t *testing.T) {
+	// t.Run("RuntimeImageStreamTest", OpenLibertyImageStreamTest)
+}
+
+// Verify functionality that is not expected to run on OCP
+func testIndependantFeatures(t *testing.T) {
+	// TODO: implement test for ingress
 }

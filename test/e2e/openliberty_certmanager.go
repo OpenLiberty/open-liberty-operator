@@ -12,6 +12,7 @@ import (
 	v1 "github.com/openshift/api/route/v1"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -60,7 +61,12 @@ func runtimePodCertificateTest(t *testing.T, f *framework.Framework, ctx *framew
 	}
 
 	runtime := util.MakeBasicOpenLibertyApplication(t, f, name, ns, 1)
-	// runtime.Spec.Service.Certificate = &v1beta1.Certificate{}
+	serviceType := corev1.ServiceTypeClusterIP
+	runtime.Spec.Service = &v1beta1.OpenLibertyApplicationService{
+			Port: 3000,
+			Type: &serviceType,
+			Certificate: &v1beta1.Certificate{},
+		}
 
 	timestamp := time.Now().UTC()
 	t.Logf("%s - Creating cert-manager pod test...", timestamp)
