@@ -102,7 +102,8 @@ func testKnIsTrueAndTurnOff(t *testing.T, f *framework.Framework, ctx *framework
 	exampleOpenLiberty.Spec.CreateKnativeService = &knativeBool
 
 	// create application deployment and wait
-	err := f.Client.Create(goctx.TODO(), exampleOpenLiberty, &framework.CleanupOptions{TestContext: ctx, Timeout: time.Second, RetryInterval: time.Second})
+	err := f.Client.Create(goctx.TODO(), exampleOpenLiberty, 
+		&framework.CleanupOptions{TestContext: ctx, Timeout: time.Second, RetryInterval: time.Second})
 	if err != nil {
 		util.FailureCleanup(t, f, namespace, err)
 	}

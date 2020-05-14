@@ -43,26 +43,26 @@ func OpenLibertyCertManagerTest(t *testing.T) {
 		util.FailureCleanup(t, f, namespace, err)
 	}
 
-	if err = runtimePodCertificateTest(t, f, ctx); err != nil {
+	if err = libertyPodCertificateTest(t, f, ctx); err != nil {
 		util.FailureCleanup(t, f, namespace, err)
 	}
 
-	if err = runtimeRouteCertificateTest(t, f, ctx); err != nil {
+	if err = libertyRouteCertificateTest(t, f, ctx); err != nil {
 		util.FailureCleanup(t, f, namespace, err)
 	}
 }
 
-func runtimePodCertificateTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
-	const name = "example-runtime-pod-cert"
+func libertyPodCertificateTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
+	const name = "example-liberty-pod-cert"
 
 	ns, err := ctx.GetNamespace()
 	if err != nil {
 		return fmt.Errorf("could not get namespace: %v", err)
 	}
 
-	runtime := util.MakeBasicOpenLibertyApplication(t, f, name, ns, 1)
+	openLibertyApplication := util.MakeBasicOpenLibertyApplication(t, f, name, ns, 1)
 	serviceType := corev1.ServiceTypeClusterIP
-	runtime.Spec.Service = &v1beta1.OpenLibertyApplicationService{
+	openLibertyApplication.Spec.Service = &v1beta1.OpenLibertyApplicationService{
 			Port: 3000,
 			Type: &serviceType,
 			Certificate: &v1beta1.Certificate{},
@@ -70,7 +70,8 @@ func runtimePodCertificateTest(t *testing.T, f *framework.Framework, ctx *framew
 
 	timestamp := time.Now().UTC()
 	t.Logf("%s - Creating cert-manager pod test...", timestamp)
-	err = f.Client.Create(goctx.TODO(), runtime, &framework.CleanupOptions{TestContext: ctx, Timeout: time.Second, RetryInterval: time.Second})
+	err = f.Client.Create(goctx.TODO(), openLibertyApplication,
+		&framework.CleanupOptions{TestContext: ctx, Timeout: time.Second, RetryInterval: time.Second})
 	if err != nil {
 		return err
 	}
@@ -88,19 +89,19 @@ func runtimePodCertificateTest(t *testing.T, f *framework.Framework, ctx *framew
 	return nil
 }
 
-func runtimeRouteCertificateTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
-	const name = "example-runtime-route-cert"
+func libertyRouteCertificateTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
+	const name = "example-liberty-route-cert"
 
 	ns, err := ctx.GetNamespace()
 	if err != nil {
 		return fmt.Errorf("could not get namespace %v", err)
 	}
 
-	runtime := util.MakeBasicOpenLibertyApplication(t, f, name, ns, 1)
+	openLibertyApplication := util.MakeBasicOpenLibertyApplication(t, f, name, ns, 1)
 	terminationPolicy := v1.TLSTerminationReencrypt
 	expose := true
-	runtime.Spec.Expose = &expose
-	runtime.Spec.Route = &v1beta1.OpenLibertyApplicationRoute{
+	openLibertyApplication.Spec.Expose = &expose
+	openLibertyApplication.Spec.Route = &v1beta1.OpenLibertyApplicationRoute{
 		Host:        "myapp.mycompany.com",
 		Termination: &terminationPolicy,
 		Certificate: &v1beta1.Certificate{},
@@ -109,7 +110,8 @@ func runtimeRouteCertificateTest(t *testing.T, f *framework.Framework, ctx *fram
 	timestamp := time.Now().UTC()
 	t.Logf("%s - Creating cert-manager route test...", timestamp)
 
-	err = f.Client.Create(goctx.TODO(), runtime, &framework.CleanupOptions{TestContext: ctx, Timeout: time.Second, RetryInterval: time.Second})
+	err = f.Client.Create(goctx.TODO(), openLibertyApplication,
+		&framework.CleanupOptions{TestContext: ctx, Timeout: time.Second, RetryInterval: time.Second})
 	if err != nil {
 		return err
 	}
@@ -127,22 +129,22 @@ func runtimeRouteCertificateTest(t *testing.T, f *framework.Framework, ctx *fram
 	return nil
 }
 
-func runtimeAdvancedCertificateTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
-	const name = "example-runtime-advanced-cert"
+func libertyAdvancedCertificateTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
+	const name = "example-liberty-advanced-cert"
 	ns, err := ctx.GetNamespace()
 	if err != nil {
 		return fmt.Errorf("could not get namespace %v", err)
 	}
 
-	runtime := util.MakeBasicOpenLibertyApplication(t, f, name, ns, 1)
+	openLibertyApplication := util.MakeBasicOpenLibertyApplication(t, f, name, ns, 1)
 	terminationPolicy := v1.TLSTerminationReencrypt
 	expose := true
 	var durationTime time.Duration = 8000
 	duration := metav1.Duration{
 		Duration: durationTime,
 	}
-	runtime.Spec.Expose = &expose
-	runtime.Spec.Route = &v1beta1.OpenLibertyApplicationRoute{
+	openLibertyApplication.Spec.Expose = &expose
+	openLibertyApplication.Spec.Route = &v1beta1.OpenLibertyApplicationRoute{
 		Host:        "myapp.mycompany.com",
 		Termination: &terminationPolicy,
 		Certificate: &v1beta1.Certificate{
@@ -158,7 +160,8 @@ func runtimeAdvancedCertificateTest(t *testing.T, f *framework.Framework, ctx *f
 	timestamp := time.Now().UTC()
 	t.Logf("%s - Creating cert-manager route test...", timestamp)
 
-	err = f.Client.Create(goctx.TODO(), runtime, &framework.CleanupOptions{TestContext: ctx, Timeout: time.Second, RetryInterval: time.Second})
+	err = f.Client.Create(goctx.TODO(), openLibertyApplication,
+		&framework.CleanupOptions{TestContext: ctx, Timeout: time.Second, RetryInterval: time.Second})
 	if err != nil {
 		return err
 	}

@@ -44,7 +44,7 @@ func OpenLibertyImageStreamTest(t *testing.T) {
 		util.FailureCleanup(t, f, namespace, err)
 	}
 
-	if err = runtimeImageStreamTest(t, f, ctx); err != nil {
+	if err = libertyImageStreamTest(t, f, ctx); err != nil {
 		out, err := exec.Command("oc", "delete", "imagestream", "imagestream-example").Output()
 		if err != nil {
 			t.Fatalf("Failed to delete imagestream: %s", out)
@@ -53,8 +53,8 @@ func OpenLibertyImageStreamTest(t *testing.T) {
 	}
 }
 
-func runtimeImageStreamTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
-	const name = "runtime-app"
+func libertyImageStreamTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
+	const name = "liberty-app"
 	const imgstreamName = "imagestream-example"
 
 	ns, err := ctx.GetNamespace()
