@@ -60,7 +60,7 @@ func runtimePodCertificateTest(t *testing.T, f *framework.Framework, ctx *framew
 	}
 
 	runtime := util.MakeBasicOpenLibertyApplication(t, f, name, ns, 1)
-	runtime.Spec.Service.Certificate = &v1beta1.Certificate{}
+	// runtime.Spec.Service.Certificate = &v1beta1.Certificate{}
 
 	timestamp := time.Now().UTC()
 	t.Logf("%s - Creating cert-manager pod test...", timestamp)
