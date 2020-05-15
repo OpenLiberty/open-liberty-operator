@@ -38,7 +38,7 @@ unit-test: ## Run unit tests
 test-e2e: setup ## Run end-to-end tests
 	./scripts/e2e.sh
 
-test-minikube: setup set-minikube
+test-minikube: setup setup-minikube
 	CLUSTER_ENV=minikube operator-sdk test local github.com/OpenLiberty/open-liberty-operator/test/e2e --verbose --debug --up-local --namespace default
 
 test-e2e-locally: setup
