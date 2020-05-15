@@ -2,11 +2,13 @@ package e2e
 
 import (
 	goctx "context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"testing"
 	"time"
 
+	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 	"github.com/OpenLiberty/open-liberty-operator/test/util"
 	imagev1 "github.com/openshift/api/image/v1"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
@@ -160,6 +162,44 @@ func libertyImageStreamTest(t *testing.T, f *framework.Framework, ctx *framework
 	out, err = exec.Command("oc", "delete", "imagestream", "imagestream-example", "-n", ns).Output()
 	if err != nil {
 		t.Fatalf("Failed to delete imagestream: %s", out)
+	}
+
+	if err = testRemoveImageStream(t, f, ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	return nil
+}
+
+func testRemoveImageStream(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
+	const name = "liberty-app"
+	ns, err := ctx.GetNamespace()
+	if err != nil {
+		return err
+	}
+	target := types.NamespacedName{Namespace: ns, Name: name}
+	err = util.UpdateApplication(f, target, func(r *openlibertyv1beta1.OpenLibertyApplication) {
+		r.Spec.ApplicationImage = "openliberty/open-liberty"
+	})
+	if err != nil {
+		return err
+	}
+
+	err = e2eutil.WaitForDeployment(t, f.KubeClient, ns, name, 1, retryInterval, timeout)
+	if err != nil {
+		return err
+	}
+
+	application := openlibertyv1beta1.OpenLibertyApplication{}
+
+	// Get the application
+	f.Client.Get(goctx.TODO(), target, &application)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if application.Status.ImageReference != "openliberty/open-liberty" {
+		return errors.New("image reference not updated to docker hub ref")
 	}
 
 	return nil

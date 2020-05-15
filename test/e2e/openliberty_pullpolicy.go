@@ -3,15 +3,21 @@ package e2e
 import (
 	goctx "context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
-	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 	"github.com/OpenLiberty/open-liberty-operator/test/util"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	e2eutil "github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
-	k "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	ifNotPresentMessage = "Container image \"openliberty/open-liberty\" already present on machine"
+	alwaysMessage       = "Pulling image \"openliberty/open-liberty"
+	neverMessage        = "Container image \"openliberty/open-liberty-fake\" is not present with pull policy of Never"
 )
 
 // OpenLibertyPullPolicyTest checks that the configured pull policy is applied to deployment
@@ -35,50 +41,119 @@ func OpenLibertyPullPolicyTest(t *testing.T) {
 	timestamp := time.Now().UTC()
 	t.Logf("%s - Starting liberty pull policy test...", timestamp)
 
-	// create one replica of the operator deployment in current namespace with provided name
-	err = e2eutil.WaitForOperatorDeployment(t, f.KubeClient, namespace, "open-liberty-operator", 1, retryInterval, operatorTimeout)
-	if err != nil {
-		t.Fatal(err)
+	if err = testPullPolicyAlways(t, f, namespace, ctx); err != nil {
+		util.FailureCleanup(t, f, namespace, err)
 	}
 
-	replicas := int32(1)
-	policy := k.PullAlways
+	if err = testPullPolicyIfNotPresent(t, f, namespace, ctx); err != nil {
+		util.FailureCleanup(t, f, namespace, err)
+	}
 
-	openLibertyApplication := util.MakeBasicOpenLibertyApplication(t, f, "example-liberty-pullpolicy", namespace, replicas)
+	if err = testPullPolicyNever(t, f, namespace, ctx); err != nil {
+		util.FailureCleanup(t, f, namespace, err)
+	}
+}
+func testPullPolicyAlways(t *testing.T, f *framework.Framework, namespace string, ctx *framework.TestCtx) error {
+	applicationName := "example-liberty-pullpolicy"
+	replicas := int32(1)
+	policy := corev1.PullAlways
+
+	openLibertyApplication := util.MakeBasicOpenLibertyApplication(t, f, applicationName, namespace, replicas)
 	openLibertyApplication.Spec.PullPolicy = &policy
 
 	// use TestCtx's create helper to create the object and add a cleanup function for the new object
-	err = f.Client.Create(goctx.TODO(), openLibertyApplication, &framework.CleanupOptions{TestContext: ctx, Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
+	err := f.Client.Create(goctx.TODO(), openLibertyApplication, 
+		&framework.CleanupOptions{TestContext: ctx, Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	if err != nil {
 		util.FailureCleanup(t, f, namespace, err)
 	}
 
 	// wait for example-liberty-pullpolicy to reach 2 replicas
-	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, "example-liberty-pullpolicy", 1, retryInterval, timeout)
+	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, applicationName, 1, retryInterval, timeout)
 	if err != nil {
 		util.FailureCleanup(t, f, namespace, err)
 	}
 
-	timestamp = time.Now().UTC()
+	timestamp := time.Now().UTC()
 	t.Logf("%s - Deployment created, verifying pull policy...", timestamp)
 
-	if err = verifyPullPolicy(t, f, openLibertyApplication); err != nil {
-		util.FailureCleanup(t, f, namespace, err)
-	}
+	return searchEventMessages(t, f, alwaysMessage, namespace)
 }
 
-func verifyPullPolicy(t *testing.T, f *framework.Framework, app *openlibertyv1beta1.OpenLibertyApplication) error {
-	name := app.ObjectMeta.Name
-	ns := app.ObjectMeta.Namespace
+func testPullPolicyIfNotPresent(t *testing.T, f *framework.Framework, namespace string, ctx *framework.TestCtx) error {
+	applicationName := "example-liberty-pullpolicy-ifnotpresent"
+	replicas := int32(1)
 
-	deploy, err := f.KubeClient.AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
+	openLibertyApplication := util.MakeBasicOpenLibertyApplication(t, f, applicationName, namespace, replicas)
+
+	// use TestCtx's create helper to create the object and add a cleanup function for the new object
+	err := f.Client.Create(goctx.TODO(), openLibertyApplication,
+		&framework.CleanupOptions{TestContext: ctx, Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	if err != nil {
-		t.Logf("Got error when getting PullPolicy %s: %s", name, err)
-		return err
+		util.FailureCleanup(t, f, namespace, err)
 	}
 
-	if deploy.Spec.Template.Spec.Containers[0].ImagePullPolicy != "Always" {
-		return errors.New("pull policy was not successfully configured from the default value")
+	// wait for example-runtime-pullpolicy-ifnotpresent to reach 1 replica
+	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, applicationName, 1, retryInterval, timeout)
+	if err != nil {
+		util.FailureCleanup(t, f, namespace, err)
 	}
-	return nil
+
+	timestamp := time.Now().UTC()
+	t.Logf("%s - Deployment created, verifying pull policy...", timestamp)
+
+	return searchEventMessages(t, f, ifNotPresentMessage, namespace)
+}
+
+func searchEventMessages(t *testing.T, f *framework.Framework, key string, namespace string) error {
+	options := &dynclient.ListOptions{
+		Namespace: namespace,
+	}
+
+	eventlist := &corev1.EventList{}
+	err := f.Client.List(goctx.TODO(), eventlist, options)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("***** Logging events in namespace: %s", namespace)
+	lowerKey := strings.ToLower(key)
+	for i := len(eventlist.Items) - 1; i >= 0; i-- {
+		lowerMessage := strings.ToLower(eventlist.Items[i].Message)
+		if strings.Contains(lowerMessage, "openliberty/open-liberty") {
+			t.Log(lowerMessage)
+			if strings.Contains(lowerMessage, lowerKey){
+				return nil
+			}
+		}
+		t.Log("------------------------------------------------------------")
+		t.Log(eventlist.Items[i].Message)
+	}
+
+	return errors.New("The pull policy was not correctly set")
+}
+
+func testPullPolicyNever(t *testing.T, f *framework.Framework, namespace string, ctx *framework.TestCtx) error {
+	replicas := int32(1)
+	policy := corev1.PullNever
+
+	openLibertyApplication := util.MakeBasicOpenLibertyApplication(t, f, "example-runtime-pullpolicy-never", namespace, replicas)
+	openLibertyApplication.Spec.PullPolicy = &policy
+	openLibertyApplication.Spec.ApplicationImage = "openliberty/open-liberty-fake"
+
+	// use TestCtx's create helper to create the object and add a cleanup function for the new object
+	err := f.Client.Create(goctx.TODO(), openLibertyApplication,
+		&framework.CleanupOptions{TestContext: ctx, Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
+	if err != nil {
+		util.FailureCleanup(t, f, namespace, err)
+	}
+
+	for i := 0; i < 5; i++ {
+		time.Sleep(time.Millisecond * 1000)
+	}
+
+	timestamp := time.Now().UTC()
+	t.Logf("%s - Deployment created, verifying pull policy...", timestamp)
+
+	return searchEventMessages(t, f, neverMessage, namespace)
 }
