@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	ifNotPresentMessage = "Container image \"openliberty/open-liberty\" already present on machine"
-	alwaysMessage       = "Pulling image \"openliberty/open-liberty"
+	ifNotPresentMessage = "Container image \"openliberty/open-liberty:kernel-java8-openj9-ubi\" already present on machine"
+	alwaysMessage       = "Pulling image \"openliberty/open-liberty:kernel-java8-openj9-ubi\""
 	neverMessage        = "Container image \"openliberty/open-liberty-fake\" is not present with pull policy of Never"
 )
 
@@ -120,11 +120,8 @@ func searchEventMessages(t *testing.T, f *framework.Framework, key string, names
 	lowerKey := strings.ToLower(key)
 	for i := len(eventlist.Items) - 1; i >= 0; i-- {
 		lowerMessage := strings.ToLower(eventlist.Items[i].Message)
-		if strings.Contains(lowerMessage, "openliberty/open-liberty") {
-			t.Log(lowerMessage)
-			if strings.Contains(lowerMessage, lowerKey){
-				return nil
-			}
+		if lowerMessage == lowerKey {
+			return nil
 		}
 		t.Log("------------------------------------------------------------")
 		t.Log(eventlist.Items[i].Message)
