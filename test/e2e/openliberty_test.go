@@ -42,7 +42,7 @@ func TestOpenLibertyApplication(t *testing.T) {
 	t.Run("OpenLibertyStorageTest", OpenLibertyBasicStorageTest)
 	t.Run("OpenLibertyPersistenceTest", OpenLibertyPersistenceTest)
 	t.Run("OpenLibertyTraceTest", OpenLibertyTraceTest)
-	t.Run("OpenLibertyDumpsTest", OpenLibertyDumpsTest)
+
 
 	if cluster != "local" {
 		// only test non-OCP features on minikube
@@ -74,6 +74,7 @@ func testAdvancedFeatures(t *testing.T) {
 // Verify functionality that is tied to OCP
 func testOCPFeatures(t *testing.T) {
 	t.Run("OpenLibertyImageStreamTest", OpenLibertyImageStreamTest)
+	t.Run("OpenLibertyDumpsTest", OpenLibertyDumpsTest)
 }
 
 // Verify functionality that is not expected to run on OCP
