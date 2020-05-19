@@ -177,10 +177,10 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 	zipFile := zip[0]
 
 	// Copy the file to local machine
-	out, err = exec.Command("oc", "cp", ns+"/"+podName+":"+"serviceability/"+ns+"/"+podName+"/"+zipFile, ".").Output()
+	out, err = exec.Command("kubectl", "cp", ns+"/"+podName+":"+"serviceability/"+ns+"/"+podName+"/"+zipFile, ".").Output()
 	err = util.CommandError(t, err, out)
 	if err != nil {
-		t.Fatal("oc cp command failed")
+		t.Fatal("kubectl cp command failed")
 	}
 
 	// Check if the zip file exists on local machine

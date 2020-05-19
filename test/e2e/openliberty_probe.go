@@ -49,6 +49,14 @@ func OpenLibertyProbeTest(t *testing.T) {
 	if err = probeTest(t, f, ctx, libertyProbe); err != nil {
 		util.FailureCleanup(t, f, namespace, err)
 	}
+
+	if err = editProbeTest(t, f, ctx); err != nil {
+		util.FailureCleanup(t, f, namespace, err)
+	}
+
+	if err = deleteProbeTest(t, f, ctx); err != nil {
+		util.FailureCleanup(t, f, namespace, err)
+	}
 }
 
 func probeTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, probe corev1.Handler) error {
@@ -72,32 +80,47 @@ func probeTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, pro
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
-func editProbeTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, app *openlibertyv1beta1.OpenLibertyApplication) error {
+func editProbeTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
+	applicationName := "example-liberty-readiness"
 	namespace, err := ctx.GetNamespace()
 	if err != nil {
 		return err
 	}
 
-	err = f.Client.Get(goctx.TODO(), types.NamespacedName{Name: "example-liberty-readiness", Namespace: namespace}, app)
+	target := types.NamespacedName{Name: applicationName, Namespace: namespace}
+	util.UpdateApplication(f, target, func(r *openlibertyv1beta1.OpenLibertyApplication) {
+		// Adjust tests for update SMALL amounts to keep the test fast.
+		r.Spec.LivenessProbe.InitialDelaySeconds = int32(6)
+		r.Spec.ReadinessProbe.InitialDelaySeconds = int32(3)
+	})
+
+	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, applicationName, 1, retryInterval, timeout)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func deleteProbeTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
+	applicationName := "example-liberty-readiness"
+	namespace, err := ctx.GetNamespace()
 	if err != nil {
 		return err
 	}
 
-	// Adjust tests for update SMALL amounts to keep the test fast.
-	app.Spec.LivenessProbe.InitialDelaySeconds = int32(6)
-	app.Spec.ReadinessProbe.InitialDelaySeconds = int32(3)
-	err = f.Client.Update(goctx.TODO(), app)
+	target := types.NamespacedName{Namespace: namespace, Name: applicationName}
+	util.UpdateApplication(f, target, func(r *openlibertyv1beta1.OpenLibertyApplication) {
+		r.Spec.LivenessProbe = nil
+		r.Spec.ReadinessProbe = nil
+	})
+
+	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, applicationName, 1, retryInterval, timeout)
 	if err != nil {
 		return err
 	}
 
-	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, "example-liberty-readiness", 1, retryInterval, timeout)
-	if err != nil {
-		return err
-	}
 	return nil
 }
