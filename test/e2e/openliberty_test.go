@@ -35,15 +35,13 @@ func TestOpenLibertyApplication(t *testing.T) {
 		t.Fatalf("Failed to add Trace scheme to framework: %v", err)
 	}
 	// basic tests that are runnable locally in minishift/kube
-	// t.Run("OpenLibertyPullPolicyTest", OpenLibertyPullPolicyTest)
-	// t.Run("OpenLibertyBasicTest", OpenLibertyBasicTest)
-	// t.Run("OpenLibertyProbeTest", OpenLibertyProbeTest)
-	// t.Run("OpenLibertyAutoScalingTest", OpenLibertyAutoScalingTest)
-	// t.Run("OpenLibertyStorageTest", OpenLibertyBasicStorageTest)
-	// t.Run("OpenLibertyPersistenceTest", OpenLibertyPersistenceTest)
-	// t.Run("OpenLibertyTraceTest", OpenLibertyTraceTest)
-	
-
+	t.Run("OpenLibertyPullPolicyTest", OpenLibertyPullPolicyTest)
+	t.Run("OpenLibertyBasicTest", OpenLibertyBasicTest)
+	t.Run("OpenLibertyProbeTest", OpenLibertyProbeTest)
+	t.Run("OpenLibertyAutoScalingTest", OpenLibertyAutoScalingTest)
+	t.Run("OpenLibertyStorageTest", OpenLibertyBasicStorageTest)
+	t.Run("OpenLibertyPersistenceTest", OpenLibertyPersistenceTest)
+	t.Run("OpenLibertyTraceTest", OpenLibertyTraceTest)
 
 	if cluster != "local" {
 		// only test non-OCP features on minikube
@@ -54,22 +52,21 @@ func TestOpenLibertyApplication(t *testing.T) {
 
 		// test all features that require some configuration
 		testAdvancedFeatures(t)
-		// test featurest hat require OCP
+
+		// test features that require OCP
 		if cluster == "ocp" {
 			testOCPFeatures(t)
 		}
 	}
-
-
 }
 
 func testAdvancedFeatures(t *testing.T) {
 	// These features require a bit of configuration
 	// which makes them less ideal for quick minikube tests
-	// t.Run("OpenLibertyServiceMonitorTest", OpenLibertyServiceMonitorTest)
-	// t.Run("OpenLibertyKnativeTest", OpenLibertyKnativeTest)
-	// t.Run("OpenLibertyServiceBindingTest", OpenLibertyServiceBindingTest)
-	// t.Run("OpenLibertyCertManagerTest", OpenLibertyCertManagerTest)
+	t.Run("OpenLibertyServiceMonitorTest", OpenLibertyServiceMonitorTest)
+	t.Run("OpenLibertyKnativeTest", OpenLibertyKnativeTest)
+	t.Run("OpenLibertyServiceBindingTest", OpenLibertyServiceBindingTest)
+	t.Run("OpenLibertyCertManagerTest", OpenLibertyCertManagerTest)
 	t.Run("OpenLibertyDumpsTest", OpenLibertyDumpsTest)
 }
 
