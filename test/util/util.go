@@ -46,10 +46,6 @@ func MakeBasicOpenLibertyApplication(t *testing.T, f *framework.Framework, n str
 			ApplicationImage: "openliberty/open-liberty:kernel-java8-openj9-ubi",
 			Replicas:         &replicas,
 			Expose:           &expose,
-			// Service: &openlibertyv1beta1.OpenLibertyApplicationService{
-			// 	Port: 9080,
-			// 	Type: &serviceType,
-			// },
 			ReadinessProbe: &corev1.Probe{
 				Handler:             probe,
 				InitialDelaySeconds: 1,
