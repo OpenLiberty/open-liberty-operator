@@ -2,6 +2,7 @@ package openliberty
 
 import (
 	"context"
+	"strings"
 
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 	appstacksutils "github.com/application-stacks/runtime-component-operator/pkg/utils"
@@ -22,13 +23,14 @@ var _ handler.EventHandler = &EnqueueRequestsForCustomIndexField{}
 const (
 	indexFieldImageStreamName     = "spec.applicationImage"
 	indexFieldBindingsResourceRef = "spec.bindings.resourceRef"
+	bindingSecretSuffix           = "-binding"
 )
 
-// EnqueueRequestsForCustomIndexField enqueues reconcile Requests Open Liberty Applications if the app is relying on
+// EnqueueRequestsForCustomIndexField enqueues reconcile Requests for OpenLiberty Applications if the app is relying on
 // the modified resource
 type EnqueueRequestsForCustomIndexField struct {
 	handler.Funcs
-	Matcher func(metav1.Object) ([]openlibertyv1beta1.OpenLibertyApplication, error)
+	Matcher CustomMatcher
 }
 
 // Update implements EventHandler
@@ -48,7 +50,7 @@ func (e *EnqueueRequestsForCustomIndexField) Generic(evt event.GenericEvent, q w
 
 // handle common implementation to enqueue reconcile Requests for applications
 func (e *EnqueueRequestsForCustomIndexField) handle(evtMeta metav1.Object, evtObj runtime.Object, q workqueue.RateLimitingInterface) {
-	apps, _ := e.Matcher(evtMeta)
+	apps, _ := e.Matcher.Match(evtMeta)
 	for _, app := range apps {
 		q.Add(reconcile.Request{
 			NamespacedName: types.NamespacedName{
@@ -58,64 +60,79 @@ func (e *EnqueueRequestsForCustomIndexField) handle(evtMeta metav1.Object, evtOb
 	}
 }
 
-// CreateImageStreamMatcher return a func that matches all applications using the input ImageStreamTag
-func CreateImageStreamMatcher(clnt client.Client, watchNamespaces []string) func(metav1.Object) ([]openlibertyv1beta1.OpenLibertyApplication, error) {
-	matcher := func(imageStreamTag metav1.Object) ([]openlibertyv1beta1.OpenLibertyApplication, error) {
-		apps := []openlibertyv1beta1.OpenLibertyApplication{}
-		var namespaces []string
-		if appstacksutils.IsClusterWide(watchNamespaces) {
-			nsList := &corev1.NamespaceList{}
-			if err := clnt.List(context.Background(), nsList, client.InNamespace("")); err != nil {
-				return nil, err
-			}
-			for _, ns := range nsList.Items {
-				namespaces = append(namespaces, ns.Name)
-			}
-		} else {
-			namespaces = watchNamespaces
-		}
-		for _, ns := range namespaces {
-			appList := &openlibertyv1beta1.OpenLibertyApplicationList{}
-			err := clnt.List(context.Background(),
-				appList,
-				client.InNamespace(ns),
-				client.MatchingFields{indexFieldImageStreamName: imageStreamTag.GetNamespace() + "/" + imageStreamTag.GetName()})
-			if err != nil {
-				return nil, err
-			}
-			apps = append(apps, appList.Items...)
-		}
-		return apps, nil
-	}
-	return matcher
+// CustomMatcher is an interface for matching apps that satisfy a custom logic
+type CustomMatcher interface {
+	Match(metav1.Object) ([]openlibertyv1beta1.OpenLibertyApplication, error)
 }
 
-//CreateBindingSecretMatcher return a func that matches all applications that "could" rely on the secret as a secret binding
-func CreateBindingSecretMatcher(clnt client.Client) func(metav1.Object) ([]openlibertyv1beta1.OpenLibertyApplication, error) {
-	matcher := func(secret metav1.Object) ([]openlibertyv1beta1.OpenLibertyApplication, error) {
-		apps := []openlibertyv1beta1.OpenLibertyApplication{}
+// ImageStreamMatcher implements CustomMatcher for Image Streams
+type ImageStreamMatcher struct {
+	Klient          client.Client
+	WatchNamespaces []string
+}
 
-		// Adding apps which have this secret defined in the spec.bindings.resourceRef
+// Match returns all applications using the input ImageStreamTag
+func (i *ImageStreamMatcher) Match(imageStreamTag metav1.Object) ([]openlibertyv1beta1.OpenLibertyApplication, error) {
+	apps := []openlibertyv1beta1.OpenLibertyApplication{}
+	var namespaces []string
+	if appstacksutils.IsClusterWide(i.WatchNamespaces) {
+		nsList := &corev1.NamespaceList{}
+		if err := i.Klient.List(context.Background(), nsList, client.InNamespace("")); err != nil {
+			return nil, err
+		}
+		for _, ns := range nsList.Items {
+			namespaces = append(namespaces, ns.Name)
+		}
+	} else {
+		namespaces = i.WatchNamespaces
+	}
+	for _, ns := range namespaces {
 		appList := &openlibertyv1beta1.OpenLibertyApplicationList{}
-		err := clnt.List(context.Background(),
+		err := i.Klient.List(context.Background(),
 			appList,
-			client.InNamespace(secret.GetNamespace()),
-			client.MatchingFields{indexFieldBindingsResourceRef: secret.GetName()})
+			client.InNamespace(ns),
+			client.MatchingFields{indexFieldImageStreamName: imageStreamTag.GetNamespace() + "/" + imageStreamTag.GetName()})
 		if err != nil {
 			return nil, err
 		}
 		apps = append(apps, appList.Items...)
+	}
 
+	return apps, nil
+}
+
+// BindingSecretMatcher implements CustomMatcher for Binding Secrets
+type BindingSecretMatcher struct {
+	klient client.Client
+}
+
+// Match returns all applications that "could" rely on the secret as a secret binding by finding apps that have
+// resourceRef matching the secret name OR app name matching the secret name
+func (b *BindingSecretMatcher) Match(secret metav1.Object) ([]openlibertyv1beta1.OpenLibertyApplication, error) {
+	apps := []openlibertyv1beta1.OpenLibertyApplication{}
+
+	// Adding apps which have this secret defined in the spec.bindings.resourceRef
+	appList := &openlibertyv1beta1.OpenLibertyApplicationList{}
+	err := b.klient.List(context.Background(),
+		appList,
+		client.InNamespace(secret.GetNamespace()),
+		client.MatchingFields{indexFieldBindingsResourceRef: secret.GetName()})
+	if err != nil {
+		return nil, err
+	}
+	apps = append(apps, appList.Items...)
+
+	if strings.HasSuffix(secret.GetName(), bindingSecretSuffix) {
+		appName := strings.TrimSuffix(secret.GetName(), bindingSecretSuffix)
 		// If we are able to find an app with the secret name, add the app. This is to cover the autoDetect scenario
 		app := &openlibertyv1beta1.OpenLibertyApplication{}
-		err = clnt.Get(context.Background(), types.NamespacedName{Name: secret.GetName(), Namespace: secret.GetNamespace()}, app)
-		if err != nil {
-			if !kerrors.IsNotFound(err) {
-				return nil, err
-			}
+		err = b.klient.Get(context.Background(), types.NamespacedName{Name: appName, Namespace: secret.GetNamespace()}, app)
+		if err == nil {
+			apps = append(apps, *app)
+		} else if !kerrors.IsNotFound(err) {
+			return nil, err
 		}
-		apps = append(apps, *app)
-		return apps, nil
 	}
-	return matcher
+
+	return apps, nil
 }

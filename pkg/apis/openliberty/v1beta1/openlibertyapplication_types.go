@@ -8,6 +8,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
@@ -164,8 +165,9 @@ type ServiceBindingAuth struct {
 
 // OpenLibertyApplicationBindings represents service binding related parameters
 type OpenLibertyApplicationBindings struct {
-	AutoDetect  *bool  `json:"autoDetect,omitempty"`
-	ResourceRef string `json:"resourceRef,omitempty"`
+	AutoDetect  *bool                 `json:"autoDetect,omitempty"`
+	ResourceRef string                `json:"resourceRef,omitempty"`
+	Embedded    *runtime.RawExtension `json:"embedded,omitempty"`
 }
 
 // OpenLibertyApplicationStatus defines the observed state of OpenLibertyApplication
@@ -709,6 +711,11 @@ func (r *OpenLibertyApplicationBindings) GetAutoDetect() *bool {
 // GetResourceRef returns name of ServiceBinding CRs created manually in the same namespace as the OpenLibertyApplication CR
 func (r *OpenLibertyApplicationBindings) GetResourceRef() string {
 	return r.ResourceRef
+}
+
+// GetEmbedded returns the embedded underlying Service Binding resource
+func (r *OpenLibertyApplicationBindings) GetEmbedded() *runtime.RawExtension {
+	return r.Embedded
 }
 
 // Initialize sets default values
