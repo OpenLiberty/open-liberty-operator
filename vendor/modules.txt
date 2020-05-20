@@ -15,7 +15,7 @@ github.com/Azure/go-autorest/tracing
 github.com/PuerkitoBio/purell
 # github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578
 github.com/PuerkitoBio/urlesc
-# github.com/application-stacks/runtime-component-operator v0.5.1
+# github.com/application-stacks/runtime-component-operator v0.6.0
 github.com/application-stacks/runtime-component-operator/pkg/apis/appstacks/v1beta1
 github.com/application-stacks/runtime-component-operator/pkg/common
 github.com/application-stacks/runtime-component-operator/pkg/utils

@@ -6,6 +6,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // StatusConditionType ...
@@ -129,6 +130,7 @@ type ServiceBindingAuth interface {
 type BaseComponentBindings interface {
 	GetAutoDetect() *bool
 	GetResourceRef() string
+	GetEmbedded() *runtime.RawExtension
 }
 
 // ServiceBindingCategory ...
@@ -138,6 +140,15 @@ const (
 	// ServiceBindingCategoryOpenAPI ...
 	ServiceBindingCategoryOpenAPI ServiceBindingCategory = "openapi"
 )
+
+// BaseComponentAffinity describes deployment and pod affinity
+type BaseComponentAffinity interface {
+	GetNodeAffinity() *corev1.NodeAffinity
+	GetPodAffinity() *corev1.PodAffinity
+	GetPodAntiAffinity() *corev1.PodAntiAffinity
+	GetArchitecture() []string
+	GetNodeAffinityLabels() map[string]string
+}
 
 // BaseComponent represents basic kubernetes application
 type BaseComponent interface {
@@ -171,6 +182,7 @@ type BaseComponent interface {
 	GetGroupName() string
 	GetRoute() BaseComponentRoute
 	GetBindings() BaseComponentBindings
+	GetAffinity() BaseComponentAffinity
 }
 
 // Certificate returns cert-manager CertificateSpec

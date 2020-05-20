@@ -66,7 +66,7 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `sidecarContainers` | The list of `sidecar` containers. These are additional containers to be added to the pods. Note: Sidecar containers should not be named `app`.
 | `architecture` | An array of architectures to be considered for deployment. Their position in the array indicates preference.
 | `bindings.embedded` | A YAML object that represents a `ServiceBindingRequest` custom resource.
-| `bindings.autoDetect` | A boolean to toggle whether the operator should automatically detect and use a `ServiceBindingRequest` custom resource with the same name as the CR. The default value for this parameter is `true`.
+| `bindings.autoDetect` | A boolean to toggle whether the operator should automatically detect and use a `ServiceBindingRequest` resource with `<CR_NAME>-binding` naming format. The default value for this parameter is `true`.
 | `bindings.resourceRef` | The name of a `ServiceBindingRequest` custom resource created manually in the same namespace as the application.
 | `service.port` | The port exposed by the container.
 | `service.targetPort` | The port that the operator assigns to containers inside pods. Defaults to the value of `service.port`.

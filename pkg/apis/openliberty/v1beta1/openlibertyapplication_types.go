@@ -54,11 +54,23 @@ type OpenLibertyApplicationSpec struct {
 	SidecarContainers []corev1.Container              `json:"sidecarContainers,omitempty"`
 	Route             *OpenLibertyApplicationRoute    `json:"route,omitempty"`
 	Bindings          *OpenLibertyApplicationBindings `json:"bindings,omitempty"`
+	Affinity          *OpenLibertyApplicationAffinity `json:"affinity,omitempty"`
 
 	// Open Liberty specific capabilities
 
 	Serviceability *OpenLibertyApplicationServiceability `json:"serviceability,omitempty"`
 	SSO            *OpenLibertyApplicationSSO            `json:"sso,omitempty"`
+}
+
+// OpenLibertyApplicationAffinity deployment affinity settings
+// +k8s:openapi-gen=true
+type OpenLibertyApplicationAffinity struct {
+	NodeAffinity    *corev1.NodeAffinity    `json:"nodeAffinity,omitempty"`
+	PodAffinity     *corev1.PodAffinity     `json:"podAffinity,omitempty"`
+	PodAntiAffinity *corev1.PodAntiAffinity `json:"podAntiAffinity,omitempty"`
+	// +listType=set
+	Architecture       []string          `json:"architecture,omitempty"`
+	NodeAffinityLabels map[string]string `json:"nodeAffinityLabels,omitempty"`
 }
 
 // OpenLibertyApplicationAutoScaling ...
@@ -453,6 +465,14 @@ func (cr *OpenLibertyApplication) GetBindings() common.BaseComponentBindings {
 	return cr.Spec.Bindings
 }
 
+// GetAffinity returns deployment's node and pod affinity settings
+func (cr *OpenLibertyApplication) GetAffinity() common.BaseComponentAffinity {
+	if cr.Spec.Affinity == nil {
+		return nil
+	}
+	return cr.Spec.Affinity
+}
+
 // GetResolvedBindings returns a map of all the service names to be consumed by the application
 func (s *OpenLibertyApplicationStatus) GetResolvedBindings() []string {
 	return s.ResolvedBindings
@@ -552,7 +572,7 @@ func (s *OpenLibertyApplicationService) GetNodePort() *int32 {
 	return s.NodePort
 }
 
-// GetTargetPort return the internal target container port
+// GetTargetPort returns the internal target port for containers
 func (s *OpenLibertyApplicationService) GetTargetPort() *int32 {
 	return s.TargetPort
 }
@@ -678,7 +698,7 @@ func (r *OpenLibertyApplicationRoute) GetCertificate() common.Certificate {
 	return r.Certificate
 }
 
-// GetCertificateSecretRef returns the secret ref for route certificate
+// GetCertificateSecretRef returns a secret reference with a certificate
 func (r *OpenLibertyApplicationRoute) GetCertificateSecretRef() *string {
 	return r.CertificateSecretRef
 }
@@ -716,6 +736,31 @@ func (r *OpenLibertyApplicationBindings) GetResourceRef() string {
 // GetEmbedded returns the embedded underlying Service Binding resource
 func (r *OpenLibertyApplicationBindings) GetEmbedded() *runtime.RawExtension {
 	return r.Embedded
+}
+
+// GetNodeAffinity returns node affinity
+func (a *OpenLibertyApplicationAffinity) GetNodeAffinity() *corev1.NodeAffinity {
+	return a.NodeAffinity
+}
+
+// GetPodAffinity returns pod affinity
+func (a *OpenLibertyApplicationAffinity) GetPodAffinity() *corev1.PodAffinity {
+	return a.PodAffinity
+}
+
+// GetPodAntiAffinity returns pod anti-affinity
+func (a *OpenLibertyApplicationAffinity) GetPodAntiAffinity() *corev1.PodAntiAffinity {
+	return a.PodAntiAffinity
+}
+
+// GetArchitecture returns list of architecture names
+func (a *OpenLibertyApplicationAffinity) GetArchitecture() []string {
+	return a.Architecture
+}
+
+// GetNodeAffinityLabels returns list of architecture names
+func (a *OpenLibertyApplicationAffinity) GetNodeAffinityLabels() map[string]string {
+	return a.NodeAffinityLabels
 }
 
 // Initialize sets default values
