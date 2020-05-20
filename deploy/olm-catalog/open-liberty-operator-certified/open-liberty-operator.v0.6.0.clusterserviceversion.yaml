@@ -8,7 +8,7 @@ metadata:
       [{"apiVersion":"openliberty.io/v1beta1","kind":"OpenLibertyApplication","metadata":{"name":"demo-app"},"spec":{"replicas":1,"applicationImage":"registry.connect.redhat.com/ibm/open-liberty-samples:springPetClinic","expose":true}},{"apiVersion": "openliberty.io/v1beta1","kind": "OpenLibertyDump","metadata": {"name": "example-dump"},"spec": {"podName": "Specify_Pod_Name_Here","include": ["heap","thread"]}},{"apiVersion": "openliberty.io/v1beta1","kind": "OpenLibertyTrace","metadata": {"name": "example-trace"},"spec": {"podName": "Specify_Pod_Name_Here","traceSpecification": "*=info:com.ibm.ws.webcontainer*=all"}}]
     categories: Application Runtime
     certified: 'true'
-    createdAt: 2020-04-29 09:00:00
+    createdAt: 2020-05-21 09:00:00
     description: Deploy and manage applications running on Open Liberty
     containerImage: registry.connect.redhat.com/ibm/open-liberty-operator:0.6.0
     support: IBM
