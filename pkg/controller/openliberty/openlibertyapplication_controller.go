@@ -51,11 +51,6 @@ const ssoSecretNameSuffix = "-olapp-sso"
 // Holds a list of namespaces the operator will be watching
 var watchNamespaces []string
 
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
-
 // Add creates a new OpenLiberty Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
@@ -129,6 +124,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if err != nil {
 		return err
 	}
+
+	reconciler.SetController(c)
 
 	watchNamespaces, err := oputils.GetWatchNamespaces()
 	if err != nil {
@@ -271,7 +268,9 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	err = c.Watch(
 		&source.Kind{Type: &corev1.Secret{}},
 		&EnqueueRequestsForCustomIndexField{
-			Matcher: CreateBindingSecretMatcher(mgr.GetClient()),
+			Matcher: &BindingSecretMatcher{
+				klient: mgr.GetClient(),
+			},
 		})
 	if err != nil {
 		return err
@@ -282,13 +281,16 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		c.Watch(
 			&source.Kind{Type: &imagev1.ImageStream{}},
 			&EnqueueRequestsForCustomIndexField{
-				Matcher: CreateImageStreamMatcher(mgr.GetClient(), watchNamespaces),
+				Matcher: &ImageStreamMatcher{
+					Klient:          mgr.GetClient(),
+					WatchNamespaces: watchNamespaces,
+				},
 			})
 	}
 
 	ok, _ = reconciler.IsGroupVersionSupported(routev1.SchemeGroupVersion.String(), "Route")
 	if ok {
-		err = c.Watch(&source.Kind{Type: &routev1.Route{}}, &handler.EnqueueRequestForOwner{
+		c.Watch(&source.Kind{Type: &routev1.Route{}}, &handler.EnqueueRequestForOwner{
 			IsController: true,
 			OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
 		}, predSubResource)
@@ -296,7 +298,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	ok, _ = reconciler.IsGroupVersionSupported(servingv1alpha1.SchemeGroupVersion.String(), "Service")
 	if ok {
-		err = c.Watch(&source.Kind{Type: &servingv1alpha1.Service{}}, &handler.EnqueueRequestForOwner{
+		c.Watch(&source.Kind{Type: &servingv1alpha1.Service{}}, &handler.EnqueueRequestForOwner{
 			IsController: true,
 			OwnerType:    &openlibertyv1beta1.OpenLibertyApplication{},
 		}, predSubResource)
@@ -488,7 +490,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		return result, nil
 	}
 
-	if r.IsSeriveBindingSupported() {
+	if r.IsServiceBindingSupported() {
 		result, err = r.ReconcileBindings(instance)
 		if err != nil || result != (reconcile.Result{}) {
 			return result, err
@@ -745,8 +747,8 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 				if err != nil {
 					return err
 				}
-
 				oputils.CustomizeRoute(route, instance, key, cert, caCert, destCACert)
+
 				return nil
 			})
 			if err != nil {
