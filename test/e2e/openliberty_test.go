@@ -68,6 +68,7 @@ func testAdvancedFeatures(t *testing.T) {
 	t.Run("OpenLibertyServiceBindingTest", OpenLibertyServiceBindingTest)
 	t.Run("OpenLibertyCertManagerTest", OpenLibertyCertManagerTest)
 	t.Run("OpenLibertyDumpsTest", OpenLibertyDumpsTest)
+	t.Run("OpenLibertyKappNavTest", OpenLibertyKappNavTest)
 }
 
 // Verify functionality that is tied to OCP
