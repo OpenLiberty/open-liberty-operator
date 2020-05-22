@@ -189,6 +189,7 @@ RuntimeComponent` must be replaced with `Kind: OpenLibertyApplication`.
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Annotations++[Annotations]
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Environment-variables++[Environment Variables]
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#High-availability++[High Availability]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Service-ports++[Service Ports]
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Persistence++[Persistence]
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Service-binding++[Service Binding]
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Monitoring++[Monitoring]
@@ -211,7 +212,7 @@ The Open Liberty Operator sets a number of environment variables related to cons
 | `WLP_LOGGING_CONSOLE_FORMAT`   | json
 |===
 
-To override these default values with your own values, set them manually in your CR `env` list.
+To override these default values with your own values, set them manually in your CR `env` list. Refer to Open Liberty's link:++https://openliberty.io/docs/ref/config/logging.html++[logging] documentation for information on values you can set.
 
 [source,yaml]
 ----
@@ -223,7 +224,7 @@ spec:
   applicationImage: quay.io/my-repo/my-app:1.0
   env:
     - name: WLP_LOGGING_CONSOLE_FORMAT
-      value: "basic"
+      value: "DEV"
     - name: WLP_LOGGING_CONSOLE_SOURCE
       value: "messages,trace,accessLog"
     - name: WLP_LOGGING_CONSOLE_LOGLEVEL
