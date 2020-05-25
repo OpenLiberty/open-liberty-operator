@@ -17,6 +17,8 @@ The Open Liberty Operator can be installed to:
 
 Appropriate cluster roles and bindings are required to watch another namespace, watch multiple namespaces or watch all namespaces in the cluster.
 
+NOTE: The Open Liberty Operator can only interact with resources it is given permission to interact through link:++https://kubernetes.io/docs/reference/access-authn-authz/rbac/++[Role-based access control (RBAC)]. Some of the operator features require interacting with resources in other namespaces. In that case, the operator must be installed with correct `ClusterRole` definitions.
+
 == Overview
 
 The architecture of the Open Liberty Operator follows the basic controller pattern:  the Operator container with the controller is deployed into a Pod and listens for incoming resources with `Kind: OpenLibertyApplication`. Creating an `OpenLibertyApplication` custom resource (CR) triggers the Open Liberty Operator to create, update or delete Kubernetes resources needed by the application to run on your cluster.
