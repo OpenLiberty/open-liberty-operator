@@ -13,9 +13,7 @@ import (
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	e2eutil "github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
-	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // OpenLibertyDumpsTest ... Check dumps
@@ -58,7 +56,7 @@ func OpenLibertyDumpsTest(t *testing.T) {
 	}
 
 	// Get the pods for the above app
-	podList, err := getPods(f, ctx, app, namespace)
+	podList, err := util.GetPods(f, ctx, app, namespace)
 	if err != nil {
 		util.FailureCleanup(t, f, namespace, err)
 	}
@@ -95,24 +93,6 @@ func createApp(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, tar
 	}
 
 	return nil
-}
-
-func getPods(f *framework.Framework, ctx *framework.TestCtx, target string, ns string) (*corev1.PodList, error) {
-	key := map[string]string{"app.kubernetes.io/name": target}
-
-	options := &dynclient.ListOptions{
-		LabelSelector: labels.Set(key).AsSelector(),
-		Namespace:     ns,
-	}
-
-	podList := &corev1.PodList{}
-
-	err := f.Client.List(goctx.TODO(), podList, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return podList, nil
 }
 
 func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, pods *corev1.PodList) error {
@@ -197,10 +177,10 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 	zipFile := zip[0]
 
 	// Copy the file to local machine
-	out, err = exec.Command("oc", "cp", ns+"/"+podName+":"+"serviceability/"+ns+"/"+podName+"/"+zipFile, ".").Output()
+	out, err = exec.Command("kubectl", "cp", ns+"/"+podName+":"+"serviceability/"+ns+"/"+podName+"/"+zipFile, ".").Output()
 	err = util.CommandError(t, err, out)
 	if err != nil {
-		t.Fatal("oc cp command failed")
+		t.Fatal("kubectl cp command failed")
 	}
 
 	// Check if the zip file exists on local machine

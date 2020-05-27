@@ -23,6 +23,9 @@ setup: ## Ensure Operator SDK is installed
 setup-manifest:
 	./scripts/installers/install-manifest-tool.sh
 
+setup-minikube:
+	./scripts/installers/install-minikube.sh
+
 tidy: ## Clean up Go modules by adding missing and removing unused modules
 	go mod tidy
 
@@ -35,9 +38,12 @@ unit-test: ## Run unit tests
 test-e2e: setup ## Run end-to-end tests
 	./scripts/e2e.sh
 
+test-minikube: setup setup-minikube
+	CLUSTER_ENV=minikube operator-sdk test local github.com/OpenLiberty/open-liberty-operator/test/e2e --verbose --debug --up-local --namespace ${WATCH_NAMESPACE}
+
 test-e2e-locally: setup
 	kubectl apply -f scripts/servicemonitor.crd.yaml
-	operator-sdk test local github.com/OpenLiberty/open-liberty-operator/test/e2e --verbose --debug --up-local --namespace ${WATCH_NAMESPACE}
+	CLUSTER_ENV=local operator-sdk test local github.com/OpenLiberty/open-liberty-operator/test/e2e --verbose --debug --up-local --namespace ${WATCH_NAMESPACE}
 
 generate: setup ## Invoke `k8s` and `openapi` generators
 	operator-sdk generate k8s

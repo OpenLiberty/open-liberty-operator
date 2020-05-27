@@ -15,6 +15,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OAuth2Client":                         schema_pkg_apis_openliberty_v1beta1_OAuth2Client(ref),
 		"github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OidcClient":                           schema_pkg_apis_openliberty_v1beta1_OidcClient(ref),
 		"github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplication":               schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplication(ref),
+		"github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAffinity":       schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationAffinity(ref),
 		"github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAutoScaling":    schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationAutoScaling(ref),
 		"github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationMonitoring":     schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationMonitoring(ref),
 		"github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationRoute":          schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationRoute(ref),
@@ -282,6 +283,68 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplication(ref common.Refer
 		},
 		Dependencies: []string{
 			"github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationSpec", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationAffinity(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "OpenLibertyApplicationAffinity deployment affinity settings",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"nodeAffinity": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/api/core/v1.NodeAffinity"),
+						},
+					},
+					"podAffinity": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/api/core/v1.PodAffinity"),
+						},
+					},
+					"podAntiAffinity": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/api/core/v1.PodAntiAffinity"),
+						},
+					},
+					"architecture": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "set",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"nodeAffinityLabels": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/api/core/v1.NodeAffinity", "k8s.io/api/core/v1.PodAffinity", "k8s.io/api/core/v1.PodAntiAffinity"},
 	}
 }
 
@@ -857,6 +920,11 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSpec(ref common.R
 							Ref: ref("github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationBindings"),
 						},
 					},
+					"affinity": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAffinity"),
+						},
+					},
 					"serviceability": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationServiceability"),
@@ -872,7 +940,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSpec(ref common.R
 			},
 		},
 		Dependencies: []string{
-			"github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAutoScaling", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationBindings", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationMonitoring", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationRoute", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationSSO", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationService", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationServiceability", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationStorage", "k8s.io/api/core/v1.Container", "k8s.io/api/core/v1.EnvFromSource", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.Probe", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Volume", "k8s.io/api/core/v1.VolumeMount"},
+			"github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAffinity", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAutoScaling", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationBindings", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationMonitoring", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationRoute", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationSSO", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationService", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationServiceability", "github.com/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationStorage", "k8s.io/api/core/v1.Container", "k8s.io/api/core/v1.EnvFromSource", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.Probe", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Volume", "k8s.io/api/core/v1.VolumeMount"},
 	}
 }
 
