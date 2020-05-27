@@ -25,6 +25,7 @@ type RegisterData struct {
 	InitialAccessToken      string
 	InitialClientId         string
 	InitialClientSecret     string
+	RegistrationURL         string
 	InsecureTLS             bool
 }
 
@@ -42,6 +43,7 @@ func populateFromSecret(regData *RegisterData, regSecret *corev1.Secret) {
 	regData.InitialClientSecret = string(regSecret.Data["initialClientSecret"])
 	regData.GrantTypes = string(regSecret.Data["grantTypes"])
 	regData.Scopes = string(regSecret.Data["scopes"])
+	regData.RegistrationURL = string(regSecret.Data["registrationURL"])
 	regData.InsecureTLS = insecure
 }
 
@@ -58,6 +60,9 @@ func doRegister(rdata RegisterData) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
+	if tokenURL == "" {
+		return "", "", gherrors.New("Failed to obtain token endpoint from discovery endpoint")
+	}
 
 	// ICI: if we don't have initial token, use client and secret to go get one.
 	var token = rdata.InitialAccessToken
@@ -70,11 +75,22 @@ func doRegister(rdata RegisterData) (string, string, error) {
 		if err != nil {
 			return "", "", err
 		}
-		token = rtoken
+		if rtoken == "" {
+			return "", "", gherrors.New("Failed to obtain access token for registration.")
+		}
+		rdata.InitialAccessToken = rtoken
 	}
+	
+	if rdata.RegistrationURL != "" {
+		registrationURL = rdata.RegistrationURL
+	}
+	if registrationURL == "" {
+		return "", "", gherrors.New("Failed to obtain registration URL - specify registrationURL in registration data secret.")
+	}
+	
 	registrationRequestJson := buildRegistrationRequestJson(rdata)
 
-	registrationResponse, err := sendHTTPRequest(registrationRequestJson, registrationURL, "POST", "", token, rdata.InsecureTLS)
+	registrationResponse, err := sendHTTPRequest(registrationRequestJson, registrationURL, "POST", "", rdata.InitialAccessToken, rdata.InsecureTLS)
 	if err != nil {
 		return "", "", err
 	}

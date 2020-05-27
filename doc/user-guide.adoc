@@ -320,7 +320,7 @@ spec:
 ----
 ==== Using automatic registration with OIDC providers
 
-The operator can request a client Id and client Secret from providers, rather than requiring them in advance. This can simplify deployment, as the provider's administrator can supply the information needed for registration once, instead of clientIds and secrets repetitively.  An additional secret specified by `sso.oidc[].autoRegisterSecret` contains the information necessary to perform the registration.  Automatic registration takes precedence over the values in the sso secret. This is tested with Red Hat Single Sign-on (RHSSO). 
+The operator can request a client Id and client Secret from providers, rather than requiring them in advance. This can simplify deployment, as the provider's administrator can supply the information needed for registration once, instead of supplying clientIds and secrets repetitively.  An additional secret specified by `sso.oidc[].autoRegisterSecret` contains additional information necessary to perform the registration.  First the operator will make an https request to the `sso.oidc[].discoveryEndpoint` to obtain URLs for subsequent REST calls.  Next it will make additional REST calls to the provider and obtain a client Id and client Secret. Automatic registration takes precedence over the values in the sso secret. This is tested with Red Hat Single Sign-on (RHSSO). 
 
 [source,yaml]
 ----
@@ -333,14 +333,16 @@ metadata:
 type: Opaque
 data:
   # base64 encode the data before entering it here.
-  # RHSSO requires an initial access token for registration
-  initialAccessToken: xxxxxyyyyy
-  # others (IBM Cloud Identity) may require a dedicated clientId and clientSecret for registration
-  clientId: bW9vb29vb28=
-  clientSecret: dGhlbGF1Z2hpbmdjb3c=
   #
-  # IBM Cloud Identity requires the registration URL to be specified.
+  # Red Hat Single Sign On requires an initial access token for registration
+  initialAccessToken: xxxxxyyyyy
+  #
+  # IBM Cloud Identity requires a speicial clientId and clientSecret for registration, and the registration URL.
+  # clientId: bW9vb29vb28=
+  # clientSecret: dGhlbGF1Z2hpbmdjb3c=  
   # registrationURL: base64 data here
+  #
+  
   # Optional: Grant types are the types of OAuth flows the resulting clients will allow
   # Default is authorization_code,refresh_token.  Specify a comma separated list.
   # grantTypes: base64 data goes here
