@@ -317,7 +317,7 @@ spec:
 ----
 ==== Using automatic registration with OIDC providers
 
-The operator can request a client Id and client Secret from providers, rather than requiring them in advance. This can simplify deployment, as the provider's administrator can supply the information needed for registration once, instead of clientIds and secrets repetitively.  An additional secret specified by `sso.oidc[].autoRegisterSecret` contains the information necessary to perform the registration.  Automatic registration takes precedence over the values in the sso secret. This is tested with RedHat Single Sign-on (RHSSO). 
+The operator can request a client Id and client Secret from providers, rather than requiring them in advance. This can simplify deployment, as the provider's administrator can supply the information needed for registration once, instead of clientIds and secrets repetitively.  An additional secret specified by `sso.oidc[].autoRegisterSecret` contains the information necessary to perform the registration.  Automatic registration takes precedence over the values in the sso secret. This is tested with Red Hat Single Sign-on (RHSSO). 
 
 [source,yaml]
 ----
@@ -332,10 +332,12 @@ data:
   # base64 encode the data before entering it here.
   # RHSSO requires an initial access token for registration
   initialAccessToken: xxxxxyyyyy
-  # others may require a dedicated clientId and clientSecret for registration
+  # others (IBM Cloud Identity) may require a dedicated clientId and clientSecret for registration
   clientId: bW9vb29vb28=
   clientSecret: dGhlbGF1Z2hpbmdjb3c=
   #
+  # IBM Cloud Identity requires the registration URL to be specified.
+  # registrationURL: base64 data here
   # Optional: Grant types are the types of OAuth flows the resulting clients will allow
   # Default is authorization_code,refresh_token.  Specify a comma separated list.
   # grantTypes: base64 data goes here
@@ -347,6 +349,9 @@ data:
   # Optional: To skip TLS certificate checking with the provider, specify insecureTLS as true.  Default is false.
   # insecureTLS: dHJ1ZQ==
 ----
+
+Note: for RHSSO, set the oidc parameter userNameAttribute to preferred_username to obtain the user ID that was used to log in.
+
 ==== Using multiple OIDC and OAuth 2.0 providers (Advanced)
 
 You can use multiple OIDC and OAuth 2.0 providers to authenticate with. First, configure and build application image with multiple OIDC and/or OAuth 2.0 providers. For example, set `ARG SEC_SSO_PROVIDERS="google oidc:provider1,provider2 oauth2:provider3,provider4"` in your Dockerfile. The provider name must be unique and must contain only alphanumeric characters.
