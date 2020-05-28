@@ -351,11 +351,33 @@ data:
   # Default is openid,profile.  Specify a comma-separated list.
   # scopes: base64 data goes here
   #
-  # Optional: To skip TLS certificate checking with the provider, specify insecureTLS as true.  Default is false.
+  # Optional: To skip TLS certificate checking with the provider during registration, specify insecureTLS as true.  Default is false.
   # insecureTLS: dHJ1ZQ==
 ----
 
-Note: for RHSSO, set the oidc parameter userNameAttribute to preferred_username to obtain the user ID that was used to log in.
+The following example uses automatic registration.
+
+[source,yaml]
+----
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyApplication
+metadata:
+  name: test1-app
+spec:
+  replicas: 1
+  applicationImage: image-registry.openshift-image-registry.svc:5000/test1/rp1
+  expose: true
+  service:
+    port: 9443
+  route:
+    termination: passthrough
+  sso:    
+    oidc:     
+      - discoveryEndpoint: https://sso-rhsso.apps.testcluster051320.os.fyre.ibm.com/auth/realms/sso_realm/.well-known/uma2-configuration        
+        autoRegisterSecret: my-autoreg-secret
+----
+
+Note: for RHSSO, optionally set the oidc parameter userNameAttribute to preferred_username to obtain the user ID that was used to log in.
 
 ==== Using multiple OIDC and OAuth 2.0 providers (Advanced)
 
