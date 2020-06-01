@@ -157,8 +157,6 @@ func useExistingApplications(t *testing.T, f *framework.Framework, ctx *framewor
 	target := types.NamespacedName{Namespace: ns, Name: name}
 
 	err = util.UpdateApplication(f, target, func(r *openlibertyv1beta1.OpenLibertyApplication) {
-		createApp := false
-		r.Spec.CreateAppDefinition = &createApp
 		r.Spec.ApplicationName = existingAppName
 	})
 	if err != nil {
