@@ -320,14 +320,14 @@ spec:
 ----
 ==== Using automatic registration with OIDC providers
 
-The operator can request a client Id and client Secret from providers, rather than requiring them in advance. This can simplify deployment, as the provider's administrator can supply the information needed for registration once, instead of supplying clientIds and secrets repetitively.  An additional secret specified by `sso.oidc[].autoRegisterSecret` contains additional information necessary to perform the registration.  First the operator will make an https request to the `sso.oidc[].discoveryEndpoint` to obtain URLs for subsequent REST calls.  Next it will make additional REST calls to the provider and obtain a client Id and client Secret. Automatic registration takes precedence over the values in the sso secret. This is tested with Red Hat Single Sign-on (RHSSO). 
+The operator can request a client Id and client Secret from providers, rather than requiring them in advance. This can simplify deployment, as the provider's administrator can supply the information needed for registration once, instead of supplying clientIds and secrets repetitively.  An additional secret specified by `sso.oidc[].autoRegisterSecret` contains additional information necessary to perform the registration.  First the operator will make an https request to the `sso.oidc[].discoveryEndpoint` to obtain URLs for subsequent REST calls.  Next it will make additional REST calls to the provider and obtain a client Id and client Secret. Automatic registration takes precedence over the values in the sso secret. The name of this secret should end with `-olapp-sso` for it to be monitored for changes.  This is tested with Red Hat Single Sign-on (RHSSO). 
 
 [source,yaml]
 ----
 apiVersion: v1
 kind: Secret
 metadata:  
-  name: my-autoreg-secret
+  name: my-autoreg-secret-olapp-sso
   # Secret must be created in the same namespace as the OpenLibertyApplication instance
   namespace: demo
 type: Opaque
@@ -374,7 +374,7 @@ spec:
   sso:    
     oidc:     
       - discoveryEndpoint: https://sso-rhsso.apps.testcluster051320.os.fyre.ibm.com/auth/realms/sso_realm/.well-known/uma2-configuration        
-        autoRegisterSecret: my-autoreg-secret
+        autoRegisterSecret: my-autoreg-secret-olapp-sso
 ----
 
 Note: for RHSSO, optionally set the oidc parameter userNameAttribute to preferred_username to obtain the user ID that was used to log in.

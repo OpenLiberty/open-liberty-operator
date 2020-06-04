@@ -21,6 +21,7 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	routev1 "github.com/openshift/api/route/v1"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // Utility methods specific to Open Liberty and its configuration
@@ -319,11 +320,12 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 				logf.Log.WithName("utils").Info("CustomizeEnvSSO waiting for route to become available, requeue")
 				return nil
 			}
-			clientId := instance.Status.RegisteredOidcClientId
-			clientSecret := instance.Status.RegisteredOidcClientSecret
+		
+			clientId := string(regSecret.Data["RegisteredOidcClientId"])
+			clientSecret := string(regSecret.Data["RegisteredOidcSecret"])
 			
 			if clientId == "" {
-				// if we don't have a client id and secret yet, go get one and cache it in the status.
+				// if we don't have a client id and secret yet, go get one
 				regData := RegisterData{
 					DiscoveryURL:            oidcClient.DiscoveryEndpoint,
 					RouteURL:                "https://" + theRoute.Spec.Host,
@@ -333,8 +335,17 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 				if err != nil {
 					return errors.Wrapf(err, "Error occured during registration with OIDC provider")
 				}
-				instance.Status.RegisteredOidcClientId = clientId
-				instance.Status.RegisteredOidcClientSecret = clientSecret
+				
+				_, err = controllerutil.CreateOrUpdate(context.TODO(), client, regSecret, func() error {
+					regSecret.Data["RegisteredOidcClientId"] = []byte(clientId)
+					regSecret.Data["RegisteredOidcSecret"] = []byte(clientSecret)
+					return nil
+				})
+
+				if err != nil {
+					return errors.Wrapf(err, "Error occured when updating SSO autoregistration secret")
+				}
+		
 				b := true
 				instance.Status.RouteAvailable = &b
 			} 
