@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
-	applicationsv1beta1 "sigs.k8s.io/application/pkg/apis/app/v1beta1"
 	certmngrv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -21,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	applicationsv1beta1 "sigs.k8s.io/application/pkg/apis/app/v1beta1"
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
@@ -351,6 +353,58 @@ func CommandError(t *testing.T, err error, out []byte) error {
 	return nil
 }
 
+func CheckEnvVarValue(t *testing.T, encodedValue []byte, envVar *corev1.EnvVar, pod *corev1.Pod) (bool, error) {
+	t.Logf("checking value for %s", envVar.Name)
+	args := []string{
+		"exec",
+		"-n",
+		pod.GetNamespace(),
+		"-it",
+		pod.GetName(),
+		"--",
+		"env",
+	}
+	// time.Sleep(time.Minute * 3)
+	// setup command to get environment of pod
+	envCmd := exec.Command("kubectl", args...)
+	envPipe, err := envCmd.StdoutPipe()
+	if err != nil {
+		return false, err
+	}
+
+	// command to filter for our env var
+	grep := exec.Command("grep", envVar.Name)
+	grep.Stdin = envPipe
+
+	envCmd.Start()
+
+	out, err := grep.Output()
+	if err != nil {
+		t.Log("error encountered")
+		t.Log(out)
+		return false, err
+	} else if len(out) == 0 {
+		t.Log("output empty")
+		return false, nil
+	}
+	value := string(out)[strings.IndexByte(string(out), '=')+1:]
+	value = strings.TrimSuffix(value, "\n")
+
+	decoded := string(encodedValue)
+	if err != nil {
+		t.Log("error decoding encoded values")
+		return false, err
+	}
+
+	if decoded != string(value) {
+		t.Log(string(decoded))
+		t.Log(string(value))
+		return false, nil
+	}
+
+	return true, nil
+}
+
 // WaitForStatusConditions waits for dump/trace to be created and for non error conditions to appear
 func WaitForStatusConditions(t *testing.T, f *framework.Framework, n, ns string, retryInterval, timeout time.Duration) error {
 	oltrace := &openlibertyv1beta1.OpenLibertyTrace{}
@@ -477,6 +531,67 @@ func GetPods(f *framework.Framework, ctx *framework.TestCtx, target string, ns s
 	return podList, nil
 }
 
+func CreateSecretForSSO(f *framework.Framework, ctx *framework.TestCtx, target types.NamespacedName, data map[string]string) error {
+	secret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: target.Name,
+			Namespace: target.Namespace,
+		},
+		Type: corev1.SecretTypeOpaque,
+		StringData: data,
+	}
+
+	err := f.Client.Create(goctx.TODO(), &secret, &framework.CleanupOptions{TestContext: ctx, RetryInterval: time.Second * 2, Timeout: time.Second * 30})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func WaitForPodUpdates(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, target types.NamespacedName, replicas int) error {
+	retryInterval := time.Second * 2
+	timeout := time.Second * 30
+	// give operator a moment to kick off NEW pod
+	time.Sleep(time.Second * 4)
+	// wait for only the new pod to be running
+	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
+		podList, err := GetPods(f, ctx, target.Name, target.Namespace)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return false, err
+			}
+			return true, err
+		}
+
+		runningPods := 0
+
+		for _, pod := range podList.Items {
+			if pod.Status.Phase == "Running" {
+				runningPods += 1
+			}
+		}
+
+		if runningPods == replicas && len(podList.Items) == replicas {
+			return true, nil
+		}
+
+		t.Log("waiting for pods to finish updating")
+		return false, nil
+	})
+
+	return err
+}
+
+// this is pretty loud don't use for repeated logs like polling
+// LogTestUpdates - convenience method for creating visible logs to update progress
+func LogTestUpdates(t *testing.T, message string) {
+	t.Log("---------------------------------------------")
+	t.Log(time.Now())
+	t.Logf("%s", message)
+	t.Log("---------------------------------------------")
+}
+
 // WaitForApplicationDelete wait for kappnav to delete the generated application
 func WaitForApplicationDelete(t *testing.T, f *framework.Framework, target types.NamespacedName) error {
 	retryInterval := time.Second * 5
@@ -519,6 +634,7 @@ func WaitForApplicationCreated(t *testing.T, f *framework.Framework, target type
 	return err
 }
 
+// CreateApplicationTarget - create an Application resource for the kappnav tests to target
 func CreateApplicationTarget(f *framework.Framework, ctx *framework.TestCtx, target types.NamespacedName, l map[string]string) error {
 	ns, err := ctx.GetNamespace()
 	if err != nil {
