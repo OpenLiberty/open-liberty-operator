@@ -3962,8 +3962,6 @@ spec:
                     description: OidcClient represents configuration for an OpenID
                       Connect (OIDC) client
                     properties:
-                      autoRegisterSecret:
-                        type: string
                       discoveryEndpoint:
                         type: string
                       displayName:
@@ -5450,10 +5448,6 @@ spec:
               description: ConsumedServices stores status of the service binding dependencies
               type: object
             imageReference:
-              type: string
-            registeredOidcClientId:
-              type: string
-            regsiteredOidcClientSecret:
               type: string
             resolvedBindings:
               items:

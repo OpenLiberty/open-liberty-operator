@@ -229,12 +229,6 @@ func schema_pkg_apis_openliberty_v1beta1_OidcClient(ref common.ReferenceCallback
 							Format: "",
 						},
 					},
-					"autoRegisterSecret": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
 				},
 				Required: []string{"discoveryEndpoint"},
 			},
@@ -991,18 +985,6 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationStatus(ref common
 						},
 					},
 					"imageReference": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"registeredOidcClientId": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"regsiteredOidcClientSecret": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
 							Format: "",
