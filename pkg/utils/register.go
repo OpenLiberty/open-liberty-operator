@@ -8,7 +8,6 @@ import (
 	"errors"
 	gherrors "github.com/pkg/errors"
 	"io/ioutil"
-	corev1 "k8s.io/api/core/v1"
 	"net/http"
 	"strconv"
 	"strings"
@@ -30,21 +29,8 @@ type RegisterData struct {
 }
 
 
-func RegisterWithOidcProvider(regData RegisterData, regSecret *corev1.Secret) (string, string, error) {
-	populateFromSecret(&regData, regSecret)
+func RegisterWithOidcProvider(regData RegisterData) (string, string, error) {
 	return doRegister(regData)
-}
-
-func populateFromSecret(regData *RegisterData, regSecret *corev1.Secret) {
-	buf := string(regSecret.Data["insecureTLS"])
-	insecure := buf == "true" || buf == "TRUE"
-	regData.InitialAccessToken = string(regSecret.Data["initialAccessToken"])
-	regData.InitialClientId = string(regSecret.Data["initialClientId"])
-	regData.InitialClientSecret = string(regSecret.Data["initialClientSecret"])
-	regData.GrantTypes = string(regSecret.Data["grantTypes"])
-	regData.Scopes = string(regSecret.Data["scopes"])
-	regData.RegistrationURL = string(regSecret.Data["registrationURL"])
-	regData.InsecureTLS = insecure
 }
 
 // register with oidc provider and create a new client.  return the new client id and client secret, or an error.
@@ -56,18 +42,18 @@ func doRegister(rdata RegisterData) (string, string, error) {
 	//  3) Use the access token to register and obtain a new client id and secret.
 	
 
-	registrationURL, tokenURL, err := getURLs(rdata.DiscoveryURL, rdata.InsecureTLS)
+	registrationURL, tokenURL, err := getURLs(rdata.DiscoveryURL, rdata.InsecureTLS, rdata.ProviderId)
 	if err != nil {
 		return "", "", err
 	}
 	if tokenURL == "" {
-		return "", "", gherrors.New("Failed to obtain token endpoint from discovery endpoint")
+		return "", "", gherrors.New("Provider " + rdata.ProviderId + ": failed to obtain token endpoint from discovery endpoint.")
 	}
 
 	// ICI: if we don't have initial token, use client and secret to go get one.
 	var token = rdata.InitialAccessToken
 	if token == "" && (rdata.InitialClientId == "" || rdata.InitialClientSecret == "") {
-		return "", "", gherrors.New("Registration Data Secret for Single sign-on (SSO) is missing required fields," +
+		return "", "", gherrors.New("Provider " + rdata.ProviderId + ": registration data for Single sign-on (SSO) is missing required fields," +
 			" one or more of initialAccessToken, initialClientId, or initialClientSecret.")
 	}
 	if token == "" {
@@ -76,7 +62,7 @@ func doRegister(rdata RegisterData) (string, string, error) {
 			return "", "", err
 		}
 		if rtoken == "" {
-			return "", "", gherrors.New("Failed to obtain access token for registration.")
+			return "", "", gherrors.New("Provider " + rdata.ProviderId + ": failed to obtain access token for registration.")
 		}
 		rdata.InitialAccessToken = rtoken
 	}
@@ -84,19 +70,20 @@ func doRegister(rdata RegisterData) (string, string, error) {
 	if rdata.RegistrationURL != "" {
 		registrationURL = rdata.RegistrationURL
 	}
-	if registrationURL == "" {
-		return "", "", gherrors.New("Failed to obtain registration URL - specify registrationURL in registration data secret.")
+	// registrationURL should be in discovery data but allow it to be supplied manually if not.
+	if registrationURL == "" {  
+		return "", "", gherrors.New("Provider " + rdata.ProviderId + ": failed to obtain registration URL - specify registrationURL in registration data secret.")
 	}
 	
 	registrationRequestJson := buildRegistrationRequestJson(rdata)
 
-	registrationResponse, err := sendHTTPRequest(registrationRequestJson, registrationURL, "POST", "", rdata.InitialAccessToken, rdata.InsecureTLS)
+	registrationResponse, err := sendHTTPRequest(registrationRequestJson, registrationURL, "POST", "", rdata.InitialAccessToken, rdata.InsecureTLS, rdata.ProviderId)
 	if err != nil {
 		return "", "", err
 	}
 
 	// extract id and secret from body
-	id, secret, err := parseRegistrationResponseJson(registrationResponse)
+	id, secret, err := parseRegistrationResponseJson(registrationResponse, rdata.ProviderId)
 	if err != nil {
 		return "", "", err
 	}
@@ -105,11 +92,11 @@ func doRegister(rdata RegisterData) (string, string, error) {
 
 func requestAccessToken(rdata RegisterData, tokenURL string) (string, error) {
 	tokenRequestContent := "grant_type=client_credentials&scope=" + getScopes(rdata)
-	tokenResponse, err := sendHTTPRequest(tokenRequestContent, tokenURL, "POST", rdata.InitialClientId, rdata.InitialClientSecret, rdata.InsecureTLS)
+	tokenResponse, err := sendHTTPRequest(tokenRequestContent, tokenURL, "POST", rdata.InitialClientId, rdata.InitialClientSecret, rdata.InsecureTLS, rdata.ProviderId)
 	if err != nil {
 		return "", err
 	}
-	token, err := parseTokenResponse(tokenResponse)
+	token, err := parseTokenResponse(tokenResponse, rdata.ProviderId)
 	if err != nil {
 		return "", err
 	}
@@ -118,20 +105,20 @@ func requestAccessToken(rdata RegisterData, tokenURL string) (string, error) {
 }
 
 // parse token response and return token
-func parseTokenResponse(respJson string) (string, error) {
+func parseTokenResponse(respJson string, providerId string) (string, error) {
 	type token struct {
 		Access_token string
 	}
 	var cdata token
 	err := json.Unmarshal([]byte(respJson), &cdata)
 	if err != nil {
-		return "", errors.New("Error parsing token response: " + err.Error() + " Data: " + respJson)
+		return "", errors.New("Provider " + providerId + ": error parsing token response: " + err.Error() + " Data: " + respJson)
 	}
 	return cdata.Access_token, nil
 }
 
 // parse the response and return the client id and client secret
-func parseRegistrationResponseJson(respJson string) (string, string, error) {
+func parseRegistrationResponseJson(respJson string, providerId string) (string, string, error) {
 	type idsecret struct {
 		Client_id     string
 		Client_secret string
@@ -140,7 +127,7 @@ func parseRegistrationResponseJson(respJson string) (string, string, error) {
 	var cdata idsecret
 	err := json.Unmarshal([]byte(respJson), &cdata)
 	if err != nil {
-		return "", "", errors.New("Error parsing registration response: " + err.Error() + " Data: " + respJson)
+		return "", "", errors.New("Provider " + providerId + ": error parsing registration response: " + err.Error() + " Data: " + respJson)
 	}
 	return cdata.Client_id, cdata.Client_secret, nil
 }
@@ -201,8 +188,8 @@ func getRedirectUri(rdata RegisterData) string {
 // retrieve the registration and token URLs from the provider's discovery URL.
 // return an error if we don't get back two valid url's.
 // todo: more error checking needed to make that true?
-func getURLs(discoveryURL string, insecureTLS bool) (string, string, error) {
-	discoveryResult, err := sendHTTPRequest("", discoveryURL, "GET", "", "", insecureTLS)
+func getURLs(discoveryURL string, insecureTLS bool, providerId string) (string, string, error) {
+	discoveryResult, err := sendHTTPRequest("", discoveryURL, "GET", "", "", insecureTLS, providerId)
 	if err != nil {
 		return "", "", err
 	}
@@ -219,11 +206,11 @@ func getURLs(discoveryURL string, insecureTLS bool) (string, string, error) {
 	var tokendata tokenEp
 	err = json.Unmarshal([]byte(discoveryResult), &regdata)
 	if err != nil {
-		return "", "", errors.New("Error unmarshaling data from discovery endpoint: " + err.Error() + " Data: " + discoveryResult)
+		return "", "", errors.New("Provider " + providerId +": error unmarshalling data from discovery endpoint: " + err.Error() + " Data: " + discoveryResult)
 	}
 	err = json.Unmarshal([]byte(discoveryResult), &tokendata)
 	if err != nil {
-		return "", "", errors.New("Error unmarshaling data from discovery endpoint: " + err.Error() + " Data: " + discoveryResult)
+		return "", "", errors.New("Provider " + providerId + ": error unmarshalling data from discovery endpoint: " + err.Error() + " Data: " + discoveryResult)
 	}
 
 	return regdata.Registration_endpoint, tokendata.Token_endpoint, nil
@@ -233,7 +220,7 @@ func getURLs(discoveryURL string, insecureTLS bool) (string, string, error) {
 // content to send can be an empty string. Json will be detected. Method should be GET or POST.
 // if id is set, send id and passwordOrToken as basic auth header, otherwise send token as bearer auth header.
 // If error occurs, body will be "error".
-func sendHTTPRequest(content string, URL string, method string, id string, passwordOrToken string, insecureTLS bool) (string, error) {
+func sendHTTPRequest(content string, URL string, method string, id string, passwordOrToken string, insecureTLS bool, providerId string) (string, error) {
 
 	rootCAPool, _ := x509.SystemCertPool()
 	if rootCAPool == nil {
@@ -277,7 +264,7 @@ func sendHTTPRequest(content string, URL string, method string, id string, passw
 	}
 
 	const errorStr = "error"
-	var errorMsgPreamble = "Error occurred communicating with OIDC provider.  URL: " + URL + ": "
+	var errorMsgPreamble = "Provider " + providerId + ": error occurred communicating with OIDC provider.  URL: " + URL + ": "
 	if err != nil {
 		return errorStr, errors.New(errorMsgPreamble + err.Error())
 	}

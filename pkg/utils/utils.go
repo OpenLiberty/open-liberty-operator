@@ -224,39 +224,42 @@ func createEnvVarSSO(loginID string, envSuffix string, value interface{}) *corev
 
 // CustomizeEnvSSO Process the configuration for SSO login providers
 func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.OpenLibertyApplication,  client client.Client, isOpenShift bool ) (error) {
-    
 	const ssoSecretNameSuffix = "-olapp-sso"
-	secretName := instance.GetName() + ssoSecretNameSuffix
+	const autoregFragment = "-autoreg-"
+    secretName := instance.GetName() + ssoSecretNameSuffix
 	ssoSecret := &corev1.Secret{}
-	haveSsoSecret := true
 	err := client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: instance.GetNamespace()}, ssoSecret)
-	if err != nil {  
-	    haveSsoSecret = false
-	} 
+	if err != nil {
+		return errors.Wrapf(err, "Secret for Single sign-on (SSO) was not found. Create a secret named %q in namespace %q with the credentials for the login providers you selected in application image.", secretName, instance.GetNamespace())
+	}
 
     ssoEnv := []corev1.EnvVar{}
-    if haveSsoSecret {
-		var secretKeys []string
-		for k := range ssoSecret.Data {
-			secretKeys = append(secretKeys, k)  //ranging over a map returns it's keys.
+   
+	var secretKeys []string
+	for k := range ssoSecret.Data { //ranging over a map returns it's keys.
+		if strings.Contains(k, autoregFragment) {  // skip -autoreg-
+			continue
 		}
-		sort.Strings(secretKeys)
-		
-		for _, k := range secretKeys {  //for each secretKey k
-			ssoEnv = append(ssoEnv, corev1.EnvVar{
-				Name: ssoEnvVarPrefix + normalizeEnvVariableName(k),
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: ssoSecret.GetName(), 
-						},
-						Key: k,
+		secretKeys = append(secretKeys, k)  
+	}
+	sort.Strings(secretKeys)
+	
+	// append all the values in the secret into the env vars.
+	for _, k := range secretKeys {  
+		ssoEnv = append(ssoEnv, corev1.EnvVar{
+			Name: ssoEnvVarPrefix + normalizeEnvVariableName(k),
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: ssoSecret.GetName(), 
 					},
+					Key: k,
 				},
-			})
-		}
-    }
-
+			},
+		})
+	}
+	
+	// append all the values in the spec into the env vars.
 	sso := instance.Spec.SSO
 	if sso.MapToUserRegistry != nil {
 		ssoEnv = append(ssoEnv, *createEnvVarSSO("", "MAPTOUSERREGISTRY", *sso.MapToUserRegistry))
@@ -302,60 +305,61 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 		if oidcClient.HostNameVerificationEnabled != nil {
 			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_HOSTNAMEVERIFICATIONENABLED", *oidcClient.HostNameVerificationEnabled))
 		}
-		// clientId & Secret from registration will replace anything from the *-olapp-sso secret
-		if isOpenShift && oidcClient.AutoRegisterSecret != "" {
-			secretName := oidcClient.AutoRegisterSecret
-			regSecret := &corev1.Secret{}
-			err := client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: instance.GetNamespace()}, regSecret)
-			if err != nil {
-				return errors.Wrapf(err, "Registration Data Secret for Single sign-on (SSO) of name %q was not found. Create a secret in namespace %q with the credentials for the login providers you selected in application image.", secretName, instance.GetNamespace())
-			}
+		// if no clientId specified for this provider, try auto-registration
+		clientId  := string(ssoSecret.Data[strings.ToLower(id) + "-clientId"])
+		clientSecret  := string(ssoSecret.Data[strings.ToLower(id) + "-clientSecret"])
+		providerId := strings.ToLower(id)
+		if isOpenShift && clientId == "" {
 			theRoute := &routev1.Route{}
 			err = client.Get(context.TODO(), types.NamespacedName{Name: instance.GetName(), Namespace: instance.GetNamespace()}, theRoute)
 			if err != nil {
-				// if route is unavailable, we want to let reconciliation proceed so it will be created,
-				// but we'll update status of the instance so reconcilation will be triggered again.
+				// if route is unavailable, we want to let reconciliation proceed so it will be created.
+				// Update status of the instance so reconcilation will be triggered again.
 				b := false
 				instance.Status.RouteAvailable = &b
-				logf.Log.WithName("utils").Info("CustomizeEnvSSO waiting for route to become available, requeue")
+				logf.Log.WithName("utils").Info("CustomizeEnvSSO waiting for route to become available for provider " + providerId + ", requeue")
 				return nil
 			}
-		
-			clientId := string(regSecret.Data["RegisteredOidcClientId"])
-			clientSecret := string(regSecret.Data["RegisteredOidcSecret"])
 			
-			if clientId == "" {
-				// if we don't have a client id and secret yet, go get one
-				regData := RegisterData{
-					DiscoveryURL:            oidcClient.DiscoveryEndpoint,
-					RouteURL:                "https://" + theRoute.Spec.Host,
-					RedirectToRPHostAndPort: sso.RedirectToRPHostAndPort,
-				}
-				clientId, clientSecret, err = RegisterWithOidcProvider(regData, regSecret)
-				if err != nil {
-					return errors.Wrapf(err, "Error occured during registration with OIDC provider")
-				}
-				
-				_, err = controllerutil.CreateOrUpdate(context.TODO(), client, regSecret, func() error {
-					regSecret.Data["RegisteredOidcClientId"] = []byte(clientId)
-					regSecret.Data["RegisteredOidcSecret"] = []byte(clientSecret)
-					return nil
-				})
+			// route available, we don't have a client id and secret yet, go get one
+			prefix := strings.ToLower(id) + autoregFragment 
+			buf := string(ssoSecret.Data[ prefix + "insecureTLS"])
+			insecure := buf == "true" || buf == "TRUE"
+			regData := RegisterData{
+				DiscoveryURL:            oidcClient.DiscoveryEndpoint,
+				RouteURL:                "https://" + theRoute.Spec.Host,
+				RedirectToRPHostAndPort: sso.RedirectToRPHostAndPort,
+				InitialAccessToken: string(ssoSecret.Data[prefix + "initialAccessToken"]),
+				InitialClientId: string(ssoSecret.Data[prefix + "initialClientId"]),
+				InitialClientSecret: string(ssoSecret.Data[prefix + "initialClientSecret"]),
+				GrantTypes: string(ssoSecret.Data[prefix + "grantTypes"]),
+				Scopes: string(ssoSecret.Data[prefix + "scopes"]),
+				InsecureTLS: insecure,
+				ProviderId: providerId,
+			}
+			
+			clientId, clientSecret, err = RegisterWithOidcProvider(regData)
+			if err != nil {
+				return errors.Wrapf(err, "Error occured during registration with OIDC for provider " + providerId)
+			}
+			
+			_, err = controllerutil.CreateOrUpdate(context.TODO(), client, ssoSecret, func() error {
+				ssoSecret.Data[strings.ToLower(id) + autoregFragment + "RegisteredOidcClientId"] = []byte(clientId)
+				ssoSecret.Data[strings.ToLower(id) + autoregFragment + "RegisteredOidcSecret"] = []byte(clientSecret)
+				ssoSecret.Data[strings.ToLower(id) + "-clientId"] = []byte(clientId)
+				ssoSecret.Data[strings.ToLower(id) + "-clientSecret"] = []byte(clientSecret)
+				return nil
+			})
 
-				if err != nil {
-					return errors.Wrapf(err, "Error occured when updating SSO autoregistration secret")
-				}
-		
-				b := true
-				instance.Status.RouteAvailable = &b
-			} 
+			if err != nil {
+				return errors.Wrapf(err, "Error occured when updating SSO secret for provider " + providerId)
+			}
+	
+			b := true
+			instance.Status.RouteAvailable = &b
+		}	
 			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_CLIENTID", clientId))
 			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_CLIENTSECRET", clientSecret))
-		} else {
-			if !haveSsoSecret {  // if we don't have an autoreg secret, we need an sso secret.
-				return errors.Wrapf(err, "Secret for Single sign-on (SSO) was not found. Create a secret named %q in namespace %q with the credentials for the login providers you selected in application image.", secretName, instance.GetNamespace())
-			}
-		}
 	}
 
 	for _, oauth2Client := range sso.Oauth2 {

@@ -648,7 +648,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			oputils.CustomizeServiceBinding(resolvedBindingSecret, &statefulSet.Spec.Template.Spec, instance)
 			lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance)
 			if instance.Spec.SSO != nil {
-				err = lutils.CustomizeEnvSSO(&deploy.Spec.Template, instance, r.GetClient(), r.IsOpenShift())
+				err = lutils.CustomizeEnvSSO(&statefulSet.Spec.Template, instance, r.GetClient(), r.IsOpenShift())
 				if err != nil {
 					reqLogger.Error(err, "Failed to reconcile Single sign-on configuration")
 					return err		
