@@ -358,8 +358,7 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 			b := true
 			instance.Status.RouteAvailable = &b
 		}	
-		ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_CLIENTID", clientId))
-		ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_CLIENTSECRET", clientSecret))
+
 	}
 
 	for _, oauth2Client := range sso.Oauth2 {
