@@ -345,7 +345,7 @@ data:
   # Red Hat Single Sign On requires an initial access token for registration
   oidc-autoreg-initialAccessToken: xxxxxyyyyy
   #
-  # IBM Cloud Identity requires a special clientId and clientSecret for registration.
+  # IBM Security Verify requires a special clientId and clientSecret for registration.
   # oidc-autoreg-clientId: bW9vb29vb28=
   # oidc-autoreg-clientSecret: dGhlbGF1Z2hpbmdjb3c=  
   # Optional: Grant types are the types of OAuth flows the resulting clients will allow
@@ -363,6 +363,7 @@ data:
 
 
 Note: for RHSSO, optionally set the oidc parameter userNameAttribute to preferred_username to obtain the user ID that was used to log in.
+For IBM Security Verify, set the attribute to given_name.
 
 ==== Using multiple OIDC and OAuth 2.0 providers (Advanced)
 

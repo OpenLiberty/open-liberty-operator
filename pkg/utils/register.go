@@ -81,7 +81,7 @@ func doRegister(rdata RegisterData) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-
+	
 	// extract id and secret from body
 	id, secret, err := parseRegistrationResponseJson(registrationResponse, rdata.ProviderId)
 	if err != nil {
@@ -139,8 +139,16 @@ func buildRegistrationRequestJson(rdata RegisterData) string {
 	sysClockMillisec := now.UnixNano() / 1000000
 	//	rhsso will not accept a supplied value for client_id, so leave a comment in the name
 	var clientName = "createdByOpenLibertyOperator-" + strconv.FormatInt(sysClockMillisec, 10)
+	
+	// IBM Security Verify needs some special things in the request.
+	isvAttribs := ""
+	if rdata.InitialClientId != "" {
+		isvAttribs =    "\"enforce_pkce\":false,"+
+	   "\"all_users_entitled\":true," +
+	   "\"consent_action\":\"never_prompt\","
+	}
 
-	return "{" +
+	return "{" + isvAttribs + 
 		"\"client_name\":\"" + clientName + "\"," +
 		"\"grant_types\":[" + getGrantTypes(rdata) + "]," +
 		"\"scope\":\"" + getScopes(rdata) + "\"," +
