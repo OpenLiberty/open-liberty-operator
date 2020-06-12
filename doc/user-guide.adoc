@@ -213,7 +213,7 @@ The Open Liberty Operator sets a number of environment variables related to cons
 | `WLP_LOGGING_CONSOLE_FORMAT`   | json
 |===
 
-To override these default values with your own values, set them manually in your CR `env` list.
+To override these default values with your own values, set them manually in your CR `env` list. Refer to Open Liberty's link:++https://openliberty.io/docs/ref/config/logging.html++[logging] documentation for information on values you can set.
 
 [source,yaml]
 ----
@@ -225,7 +225,7 @@ spec:
   applicationImage: quay.io/my-repo/my-app:1.0
   env:
     - name: WLP_LOGGING_CONSOLE_FORMAT
-      value: "basic"
+      value: "DEV"
     - name: WLP_LOGGING_CONSOLE_SOURCE
       value: "messages,trace,accessLog"
     - name: WLP_LOGGING_CONSOLE_LOGLEVEL
