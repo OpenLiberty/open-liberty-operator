@@ -2,26 +2,26 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"sort"
 	"strconv"
 	"strings"
-	"context"
-    
+
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
+	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-	routev1 "github.com/openshift/api/route/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 // Utility methods specific to Open Liberty and its configuration
@@ -223,42 +223,42 @@ func createEnvVarSSO(loginID string, envSuffix string, value interface{}) *corev
 }
 
 // CustomizeEnvSSO Process the configuration for SSO login providers
-func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.OpenLibertyApplication,  client client.Client, isOpenShift bool ) (error) {
+func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.OpenLibertyApplication, client client.Client, isOpenShift bool) error {
 	const ssoSecretNameSuffix = "-olapp-sso"
 	const autoregFragment = "-autoreg-"
-    secretName := instance.GetName() + ssoSecretNameSuffix
+	secretName := instance.GetName() + ssoSecretNameSuffix
 	ssoSecret := &corev1.Secret{}
 	err := client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: instance.GetNamespace()}, ssoSecret)
 	if err != nil {
 		return errors.Wrapf(err, "Secret for Single sign-on (SSO) was not found. Create a secret named %q in namespace %q with the credentials for the login providers you selected in application image.", secretName, instance.GetNamespace())
 	}
 
-    ssoEnv := []corev1.EnvVar{}
-   
+	ssoEnv := []corev1.EnvVar{}
+
 	var secretKeys []string
 	for k := range ssoSecret.Data { //ranging over a map returns it's keys.
-		if strings.Contains(k, autoregFragment) {  // skip -autoreg-
+		if strings.Contains(k, autoregFragment) { // skip -autoreg-
 			continue
 		}
-		secretKeys = append(secretKeys, k)  
+		secretKeys = append(secretKeys, k)
 	}
 	sort.Strings(secretKeys)
-	
+
 	// append all the values in the secret into the env vars.
-	for _, k := range secretKeys {  
+	for _, k := range secretKeys {
 		ssoEnv = append(ssoEnv, corev1.EnvVar{
 			Name: ssoEnvVarPrefix + normalizeEnvVariableName(k),
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: ssoSecret.GetName(), 
+						Name: ssoSecret.GetName(),
 					},
 					Key: k,
 				},
 			},
 		})
 	}
-	
+
 	// append all the values in the spec into the env vars.
 	sso := instance.Spec.SSO
 	if sso.MapToUserRegistry != nil {
@@ -273,6 +273,7 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 		ssoEnv = append(ssoEnv, *createEnvVarSSO("", "GITHUB_HOSTNAME", sso.Github.Hostname))
 	}
 
+	ssoSecretUpdates := make(map[string][]byte)
 	for _, oidcClient := range sso.OIDC {
 		id := strings.ToUpper(oidcClient.ID)
 		if id == "" {
@@ -306,9 +307,13 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_HOSTNAMEVERIFICATIONENABLED", *oidcClient.HostNameVerificationEnabled))
 		}
 		// if no clientId specified for this provider, try auto-registration
-		clientId  := string(ssoSecret.Data[strings.ToLower(id) + "-clientId"])
-		clientSecret  := string(ssoSecret.Data[strings.ToLower(id) + "-clientSecret"])
-		providerId := strings.ToLower(id)
+		clientName := oidcClient.ID
+			if clientName == "" {
+			    clientName = "oidc"
+			}
+		clientId := string(ssoSecret.Data[clientName + "-clientId"])
+		clientSecret := string(ssoSecret.Data[clientName + "-clientSecret"])
+
 		if isOpenShift && clientId == "" {
 			theRoute := &routev1.Route{}
 			err = client.Get(context.TODO(), types.NamespacedName{Name: instance.GetName(), Namespace: instance.GetNamespace()}, theRoute)
@@ -317,48 +322,53 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 				// Update status of the instance so reconcilation will be triggered again.
 				b := false
 				instance.Status.RouteAvailable = &b
-				logf.Log.WithName("utils").Info("CustomizeEnvSSO waiting for route to become available for provider " + providerId + ", requeue")
+				logf.Log.WithName("utils").Info("CustomizeEnvSSO waiting for route to become available for provider " + clientName + ", requeue")
 				return nil
 			}
-			
+
 			// route available, we don't have a client id and secret yet, go get one
-			prefix := strings.ToLower(id) + autoregFragment 
-			buf := string(ssoSecret.Data[ prefix + "insecureTLS"])
+			prefix := strings.ToLower(id) + autoregFragment
+			buf := string(ssoSecret.Data[prefix+"insecureTLS"])
 			insecure := buf == "true" || buf == "TRUE"
 			regData := RegisterData{
 				DiscoveryURL:            oidcClient.DiscoveryEndpoint,
 				RouteURL:                "https://" + theRoute.Spec.Host,
 				RedirectToRPHostAndPort: sso.RedirectToRPHostAndPort,
-				InitialAccessToken: string(ssoSecret.Data[prefix + "initialAccessToken"]),
-				InitialClientId: string(ssoSecret.Data[prefix + "initialClientId"]),
-				InitialClientSecret: string(ssoSecret.Data[prefix + "initialClientSecret"]),
-				GrantTypes: string(ssoSecret.Data[prefix + "grantTypes"]),
-				Scopes: string(ssoSecret.Data[prefix + "scopes"]),
-				InsecureTLS: insecure,
-				ProviderId: providerId,
+				InitialAccessToken:      string(ssoSecret.Data[prefix+"initialAccessToken"]),
+				InitialClientId:         string(ssoSecret.Data[prefix+"initialClientId"]),
+				InitialClientSecret:     string(ssoSecret.Data[prefix+"initialClientSecret"]),
+				GrantTypes:              string(ssoSecret.Data[prefix+"grantTypes"]),
+				Scopes:                  string(ssoSecret.Data[prefix+"scopes"]),
+				InsecureTLS:             insecure,
+				ProviderId:              clientName,
 			}
-			
+
 			clientId, clientSecret, err = RegisterWithOidcProvider(regData)
 			if err != nil {
-				return errors.Wrapf(err, "Error occured during registration with OIDC for provider " + providerId)
+				return errors.Wrapf(err, "Error occured during registration with OIDC for provider " + clientName)
 			}
-			
-			_, err = controllerutil.CreateOrUpdate(context.TODO(), client, ssoSecret, func() error {
-				ssoSecret.Data[strings.ToLower(id) + autoregFragment + "RegisteredOidcClientId"] = []byte(clientId)
-				ssoSecret.Data[strings.ToLower(id) + autoregFragment + "RegisteredOidcSecret"] = []byte(clientSecret)
-				ssoSecret.Data[strings.ToLower(id) + "-clientId"] = []byte(clientId)
-				ssoSecret.Data[strings.ToLower(id) + "-clientSecret"] = []byte(clientSecret)
-				return nil
-			})
+            
+			ssoSecretUpdates[clientName + autoregFragment + "RegisteredOidcClientId"] = []byte(clientId)
+			ssoSecretUpdates[clientName + autoregFragment + "RegisteredOidcSecret"] = []byte(clientSecret)
+			ssoSecretUpdates[clientName + "-clientId"] = []byte(clientId)
+			ssoSecretUpdates[clientName + "-clientSecret"] = []byte(clientSecret)
 
-			if err != nil {
-				return errors.Wrapf(err, "Error occured when updating SSO secret for provider " + providerId)
-			}
-	
 			b := true
 			instance.Status.RouteAvailable = &b
-		}	
+		} // end auto-reg
+	} // end for
 
+	if len(ssoSecretUpdates) > 0 { // performant: do all the secret udpates at once
+		_, err = controllerutil.CreateOrUpdate(context.TODO(), client, ssoSecret, func() error {
+			for key, value := range ssoSecretUpdates {
+				ssoSecret.Data[key] = value
+			}
+			return nil
+		})
+
+		if err != nil {
+			return errors.Wrapf(err, "Error occured when updating SSO secret")
+		}
 	}
 
 	for _, oauth2Client := range sso.Oauth2 {

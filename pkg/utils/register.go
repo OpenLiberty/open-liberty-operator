@@ -28,7 +28,6 @@ type RegisterData struct {
 	InsecureTLS             bool
 }
 
-
 func RegisterWithOidcProvider(regData RegisterData) (string, string, error) {
 	return doRegister(regData)
 }
@@ -40,7 +39,6 @@ func doRegister(rdata RegisterData) (string, string, error) {
 	//  2) If we do not have an initial access token,
 	//  2.5) Use supplied clientId and secret in a Client Credentials grant to obtain an access token.
 	//  3) Use the access token to register and obtain a new client id and secret.
-	
 
 	registrationURL, tokenURL, err := getURLs(rdata.DiscoveryURL, rdata.InsecureTLS, rdata.ProviderId)
 	if err != nil {
@@ -66,22 +64,22 @@ func doRegister(rdata RegisterData) (string, string, error) {
 		}
 		rdata.InitialAccessToken = rtoken
 	}
-	
+
 	if rdata.RegistrationURL != "" {
 		registrationURL = rdata.RegistrationURL
 	}
 	// registrationURL should be in discovery data but allow it to be supplied manually if not.
-	if registrationURL == "" {  
+	if registrationURL == "" {
 		return "", "", gherrors.New("Provider " + rdata.ProviderId + ": failed to obtain registration URL - specify registrationURL in registration data secret.")
 	}
-	
+
 	registrationRequestJson := buildRegistrationRequestJson(rdata)
 
 	registrationResponse, err := sendHTTPRequest(registrationRequestJson, registrationURL, "POST", "", rdata.InitialAccessToken, rdata.InsecureTLS, rdata.ProviderId)
 	if err != nil {
 		return "", "", err
 	}
-	
+
 	// extract id and secret from body
 	id, secret, err := parseRegistrationResponseJson(registrationResponse, rdata.ProviderId)
 	if err != nil {
@@ -134,21 +132,21 @@ func parseRegistrationResponseJson(respJson string, providerId string) (string, 
 
 // build the JSON for the client registration request. Form the redirectURL from the route URL.
 func buildRegistrationRequestJson(rdata RegisterData) string {
-
 	now := time.Now()
 	sysClockMillisec := now.UnixNano() / 1000000
 	//	rhsso will not accept a supplied value for client_id, so leave a comment in the name
-	var clientName = "createdByOpenLibertyOperator-" + strconv.FormatInt(sysClockMillisec, 10)
-	
+	clientName := "LibertyOperator-" + strings.Replace(rdata.RouteURL, "https://", "", 1) + "-" +
+		strconv.FormatInt(sysClockMillisec, 10)
+
 	// IBM Security Verify needs some special things in the request.
 	isvAttribs := ""
 	if rdata.InitialClientId != "" {
-		isvAttribs =    "\"enforce_pkce\":false,"+
-	   "\"all_users_entitled\":true," +
-	   "\"consent_action\":\"never_prompt\","
+		isvAttribs = "\"enforce_pkce\":false," +
+			"\"all_users_entitled\":true," +
+			"\"consent_action\":\"never_prompt\","
 	}
 
-	return "{" + isvAttribs + 
+	return "{" + isvAttribs +
 		"\"client_name\":\"" + clientName + "\"," +
 		"\"grant_types\":[" + getGrantTypes(rdata) + "]," +
 		"\"scope\":\"" + getScopes(rdata) + "\"," +
@@ -214,7 +212,7 @@ func getURLs(discoveryURL string, insecureTLS bool, providerId string) (string, 
 	var tokendata tokenEp
 	err = json.Unmarshal([]byte(discoveryResult), &regdata)
 	if err != nil {
-		return "", "", errors.New("Provider " + providerId +": error unmarshalling data from discovery endpoint: " + err.Error() + " Data: " + discoveryResult)
+		return "", "", errors.New("Provider " + providerId + ": error unmarshalling data from discovery endpoint: " + err.Error() + " Data: " + discoveryResult)
 	}
 	err = json.Unmarshal([]byte(discoveryResult), &tokendata)
 	if err != nil {
