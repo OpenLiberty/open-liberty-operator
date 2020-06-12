@@ -191,6 +191,7 @@ RuntimeComponent` must be replaced with `Kind: OpenLibertyApplication`.
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Annotations++[Annotations]
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Environment-variables++[Environment Variables]
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#High-availability++[High Availability]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Service-ports++[Service Ports]
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Persistence++[Persistence]
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Service-binding++[Service Binding]
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Monitoring++[Monitoring]
@@ -237,6 +238,35 @@ spec:
 Open Liberty provides capabilities to delegate authentication to external providers. Your application users can log in using their existing accounts for social media providers such as Google, Facebook, LinkedIn, Twitter, GitHub, or any OpenID Connect (OIDC) or OAuth 2.0 clients. Open Liberty Operator allows to easily configure and manage the single sign-on information for your applications.
 
 Configure and build the application image with single sign-on by following the instructions link:++https://github.com/OpenLiberty/ci.docker#security++[here].
+
+To specify sensitive information such as client IDs, client secrets and tokens for the login providers you selected in application image, create a `Secret` named `<OpenLibertyApplication_name>-olapp-sso` in the same namespace as the `OpenLibertyApplication` instance. In the sample snippets provided below, `OpenLibertyApplication` is named `my-app`, hence secret must be named `my-app-olapp-sso`. Both are in the same namespace called `demo`.
+
+The keys within the `Secret` must follow this naming pattern: `<provider_name>-<sensitive_field_name>`. For example, `google-clientSecret`. Instead of the `-` character in between, you can also use `.` or `_`. For example, `oauth2_userApiToken`.
+
+Open Liberty Operator watches for the creation and deletion of the SSO secret as well as any updates to it. Adding, updating or removing keys from Secret will be passed down to the application automatically.
+
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  # Name of the secret should be in this format: <OpenLibertyApplication_name>-olapp-sso
+  name: my-app-olapp-sso
+  # Secret must be created in the same namespace as the OpenLibertyApplication instance
+  namespace: demo
+type: Opaque
+data:
+  # The keys must be in this format: <provider_name>-<sensitive_field_name>
+  github-clientId: bW9vb29vb28=
+  github-clientSecret: dGhlbGF1Z2hpbmdjb3c=
+  twitter-consumerKey: bW9vb29vb28=
+  twitter-consumerSecret: dGhlbGF1Z2hpbmdjb3c=
+  oidc-clientId: bW9vb29vb28=
+  oidc-clientSecret: dGhlbGF1Z2hpbmdjb3c=
+  oauth2-clientId: bW9vb29vb28=
+  oauth2-clientSecret: dGhlbGF1Z2hpbmdjb3c=
+  oauth2-userApiToken: dGhlbGF1Z2hpbmdjb3c=
+----
 
 Next, configure single sign-on in `OpenLibertyApplication` CR. At minimum, `sso: {}` should be set in order for the operator to pass the values from the above `Secret` to your application. Refer to the link:++#custom-resource-definition-crd++[parameters list] for additional configurations for `sso`.
 
@@ -288,36 +318,6 @@ spec:
 ----
 
 
-To specify sensitive information such as client IDs, client secrets and tokens for the login providers you selected in application image, create a `Secret` named `<OpenLibertyApplication_name>-olapp-sso` in the same namespace as the `OpenLibertyApplication` instance. In the sample snippet provided above, `OpenLibertyApplication` is named `my-app`, hence secret must be named `my-app-olapp-sso`. Both are in the same namespace called `demo`.
-
-The keys within the `Secret` must follow this naming pattern: `<provider_name>-<sensitive_field_name>`. For example, `google-clientSecret`. Instead of the `-` character in between, you can also use `.` or `_`. For example, `oauth2_userApiToken`.
-
-_Note_: Open Liberty Operator watches for the creation and deletion of the SSO secret as well as any updates to it. Adding or removing keys from Secret will be passed down to the application automatically. However, updating the value of an existing key in `Secret` is not propagated to the application. See link:++./troubleshooting.adoc#single-sign-on-sso++[troubleshooting] for solution and an explanation.
-
-[source,yaml]
-----
-apiVersion: v1
-kind: Secret
-metadata:
-  # Name of the secret should be in this format: <OpenLibertyApplication_name>-olapp-sso
-  name: my-app-olapp-sso
-  # Secret must be created in the same namespace as the OpenLibertyApplication instance
-  namespace: demo
-type: Opaque
-data:
-  # base64 encode the values before entering ( echo -n myclientsecret-xxx |base64 )
-  # The keys must be in this format: <provider_name>-<sensitive_field_name>
-  github-clientId: bW9vb29vb28=
-  github-clientSecret: dGhlbGF1Z2hpbmdjb3c=
-  twitter-consumerKey: bW9vb29vb28=
-  twitter-consumerSecret: dGhlbGF1Z2hpbmdjb3c=
-  oidc-clientId: bW9vb29vb28=
-  oidc-clientSecret: dGhlbGF1Z2hpbmdjb3c=
-  oauth2-clientId: bW9vb29vb28=
-  oauth2-clientSecret: dGhlbGF1Z2hpbmdjb3c=
-  oauth2-userApiToken: dGhlbGF1Z2hpbmdjb3c=
-----
-
 ==== Using automatic registration with OIDC providers
 
 The operator can request a client Id and client Secret from providers, rather than requiring them in advance. This can simplify deployment, as the provider's administrator can supply the information needed for registration once, instead of supplying clientIds and secrets repetitively.  Additional attributes named `<provider_name>-autoreg-<field_name>` are added to the secret shown above.  First the operator will make an https request to the `sso.oidc[].discoveryEndpoint` to obtain URLs for subsequent REST calls.  Next it will make additional REST calls to the provider and obtain a client Id and client Secret. The secret will be updated with the obtained values. This is tested with Red Hat Single Sign-on (RHSSO). See the following example. 
@@ -359,8 +359,6 @@ data:
   # Optional: To skip TLS certificate checking with the provider during registration, specify insecureTLS as true.  Default is false.
   # oidc-autoreg-insecureTLS: dHJ1ZQ==
 ----
-
-
 
 Note: for RHSSO, optionally set the oidc parameter userNameAttribute to preferred_username to obtain the user ID that was used to log in.
 For IBM Security Verify, set the attribute to given_name.
