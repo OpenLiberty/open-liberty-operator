@@ -108,6 +108,8 @@ func TestCustomizeEnvSSO(t *testing.T) {
 		Certificate: &v1beta1.Certificate{},
 	}
 	spec.SSO = &v1beta1.OpenLibertyApplicationSSO{
+		RedirectToRPHostAndPort: "redirectvalue",
+		MapToUserRegistry: &expose,
 		Github: &v1beta1.GithubLogin{Hostname: "github.com"},
 		OIDC: []v1beta1.OidcClient{
 			{
@@ -174,6 +176,8 @@ func TestCustomizeEnvSSO(t *testing.T) {
 		{"Github clientSecret set", string(data["github-clientSecret"]), podEnv["SEC_SSO_GITHUB_CLIENTSECRET"]},
 		{"OIDC clientId set", string(data["oidc-clientId"]), podEnv["SEC_SSO_OIDC_CLIENTID"]},
 		{"OIDC clientSecret set", string(data["oidc-clientSecret"]), podEnv["SEC_SSO_OIDC_CLIENTSECRET"]},
+		{"redirect to rp host and port", "redirectvalue", podEnv["SEC_SSO_REDIRECTTORPHOSTANDPORT"]},
+		{"map to user registry", "true", podEnv["SEC_SSO_MAPTOUSERREGISTRY"]},
 		{"Github hostname set", "github.com", podEnv["SEC_SSO_GITHUB_HOSTNAME"]},
 		{"oidc-custom3 discovery endpoint", "myapp.mycompany.com", podEnv["SEC_SSO_CUSTOM3_DISCOVERYENDPOINT"]},
 		{"oidc-custom3 group name attribute", "specify-required-value1", podEnv["SEC_SSO_CUSTOM3_GROUPNAMEATTRIBUTE"]},
