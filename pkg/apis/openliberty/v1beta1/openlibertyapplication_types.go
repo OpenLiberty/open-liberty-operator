@@ -187,11 +187,12 @@ type OpenLibertyApplicationBindings struct {
 type OpenLibertyApplicationStatus struct {
 	// +listType=map
 	// +listMapKey=type
-	Conditions       []StatusCondition       `json:"conditions,omitempty"`
-	ConsumedServices common.ConsumedServices `json:"consumedServices,omitempty"`
+	Conditions                 []StatusCondition       `json:"conditions,omitempty"`
+	ConsumedServices           common.ConsumedServices `json:"consumedServices,omitempty"`
+	ImageReference             string                  `json:"imageReference,omitempty"`
+	RouteAvailable             *bool                   `json:"routeAvailable,omitempty"`
 	// +listType=set
-	ResolvedBindings []string `json:"resolvedBindings,omitempty"`
-	ImageReference   string   `json:"imageReference,omitempty"`
+	ResolvedBindings []string                          `json:"resolvedBindings,omitempty"`
 }
 
 // StatusCondition ...

@@ -121,7 +121,7 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `route.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be used in the route. Also can contain destination CA certificate.
 | `sso`   | Specifies the configuration for single sign-on providers to authenticate with. Specify sensitive fields, such as _clientId_ and _clientSecret_, for the selected providers by using the `Secret`. For more information, see link:++#single-sign-on-sso++[Single Sign-On (SSO)].
 | `sso.mapToUserRegistry`   | Specifies whether to map a user identifier to a registry user. This parameter applies to all providers.
-| `sso.redirectToRPHostAndPort`   | Specifies a callback host and port number. This parameter applies to all providers.
+| `sso.redirectToRPHostAndPort`   | Specifies a callback protocol, host and port number, such as https://myfrontend.mycompany.com. This parameter applies to all providers. 
 | `sso.github.hostname`   | Specifies the host name of your enterprise GitHub, such as _github.mycompany.com_. The default is _github.com_, which is the public Github.
 | `sso.oidc`   | The list of OpenID Connect (OIDC) providers to authenticate with. Required fields: _discoveryEndpoint_. Specify sensitive fields, such as _clientId_  and _clientSecret_, by using the `Secret`.
 | `sso.oidc[].discoveryEndpoint`   | Specifies a discovery endpoint URL for the OpenID Connect provider. Required field.
@@ -291,14 +291,14 @@ spec:
     - name: SEC_IMPORT_K8S_CERTS
       value: "true"
   sso:
-    redirectToRPHostAndPort: redirect-url.mycompany.com
+    redirectToRPHostAndPort: https://redirect-url.mycompany.com
     github:
       hostname: github.mycompany.com
     oauth2:
       - authorizationEndpoint: specify-required-value
         tokenEndpoint: specify-required-value
     oidc:
-      - discoveryEndpoint: specify-required-value
+      - discoveryEndpoint: specify-required-value        
   service:
     certificate:
       isCA: true
@@ -316,6 +316,52 @@ spec:
         name: self-signed
     termination: reencrypt
 ----
+
+
+==== Using automatic registration with OIDC providers
+
+The operator can request a client Id and client Secret from providers, rather than requiring them in advance. This can simplify deployment, as the provider's administrator can supply the information needed for registration once, instead of supplying clientIds and secrets repetitively.  Additional attributes named `<provider_name>-autoreg-<field_name>` are added to the secret shown above.  First the operator will make an https request to the `sso.oidc[].discoveryEndpoint` to obtain URLs for subsequent REST calls.  Next it will make additional REST calls to the provider and obtain a client Id and client Secret. The secret will be updated with the obtained values. This is tested with Red Hat Single Sign-on (RHSSO). See the following example. 
+
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:  
+  # Name of the secret should be in this format: <OpenLibertyApplication_name>-olapp-sso
+  name: my-app-olapp-sso
+  # Secret must be created in the same namespace as the OpenLibertyApplication instance
+  namespace: demo
+type: Opaque
+data:
+  # base64 encode the data before entering it here.
+  #
+  # Leave the clientId and secret out, registration will obtain them and update their values
+  # oidc-clientId
+  # oidc-clientSecret
+  # Reserved: <provider>-autoreg-registeredClientId and registeredClientSecret also contain these values.
+  # 
+  # Automatic registration attributes have -autoreg- after the provider name
+
+  # Red Hat Single Sign On requires an initial access token for registration
+  oidc-autoreg-initialAccessToken: xxxxxyyyyy
+  #
+  # IBM Security Verify requires a special clientId and clientSecret for registration.
+  # oidc-autoreg-clientId: bW9vb29vb28=
+  # oidc-autoreg-clientSecret: dGhlbGF1Z2hpbmdjb3c=  
+  # Optional: Grant types are the types of OAuth flows the resulting clients will allow
+  # Default is authorization_code,refresh_token.  Specify a comma separated list.
+  # oidc-autoreg-grantTypes: base64 data goes here
+  #
+  # Optional: Scopes limit the types of information about the user that the provider will return.
+  # Default is openid,profile.  Specify a comma-separated list.
+  # oidc-autoreg-scopes: base64 data goes here
+  #
+  # Optional: To skip TLS certificate checking with the provider during registration, specify insecureTLS as true.  Default is false.
+  # oidc-autoreg-insecureTLS: dHJ1ZQ==
+----
+
+Note: for RHSSO, optionally set the oidc parameter userNameAttribute to preferred_username to obtain the user ID that was used to log in.
+For IBM Security Verify, set the attribute to given_name.
 
 ==== Using multiple OIDC and OAuth 2.0 providers (Advanced)
 

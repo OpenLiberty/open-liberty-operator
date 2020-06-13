@@ -340,8 +340,7 @@ type ReconcileOpenLiberty struct {
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling OpenLibertyApplication")
-
+	reqLogger.Info("Reconcile OpenLibertyApplication - starting")
 	ns, err := k8sutil.GetOperatorNamespace()
 	// When running the operator locally, `ns` will be empty string
 	if ns == "" {
@@ -649,13 +648,11 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			oputils.CustomizeServiceBinding(resolvedBindingSecret, &statefulSet.Spec.Template.Spec, instance)
 			lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance)
 			if instance.Spec.SSO != nil {
-				secretName := instance.GetName() + ssoSecretNameSuffix
-				ssoSecret := &corev1.Secret{}
-				err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: instance.GetNamespace()}, ssoSecret)
+				err = lutils.CustomizeEnvSSO(&statefulSet.Spec.Template, instance, r.GetClient(), r.IsOpenShift())
 				if err != nil {
-					return errors.Wrapf(err, "Secret for Single sign-on (SSO) was not found. Create a secret named %q in namespace %q with the credentials for the login providers you selected in application image.", secretName, instance.GetNamespace())
+					reqLogger.Error(err, "Failed to reconcile Single sign-on configuration")
+					return err		
 				}
-				lutils.CustomizeEnvSSO(&statefulSet.Spec.Template, instance, ssoSecret)
 			}
 			lutils.ConfigureServiceability(&statefulSet.Spec.Template, instance)
 			if joiningExistingApplication || instance.Spec.CreateAppDefinition == nil || *instance.Spec.CreateAppDefinition {
@@ -668,7 +665,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			reqLogger.Error(err, "Failed to reconcile StatefulSet")
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
-
+		
 	} else {
 		// Delete StatefulSet if exists
 		statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
@@ -692,14 +689,12 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			oputils.CustomizePodSpec(&deploy.Spec.Template, instance)
 			oputils.CustomizeServiceBinding(resolvedBindingSecret, &deploy.Spec.Template.Spec, instance)
 			lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance)
-			if instance.Spec.SSO != nil {
-				secretName := instance.GetName() + ssoSecretNameSuffix
-				ssoSecret := &corev1.Secret{}
-				err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: instance.GetNamespace()}, ssoSecret)
+			if instance.Spec.SSO != nil  {
+				err = lutils.CustomizeEnvSSO(&deploy.Spec.Template, instance, r.GetClient(), r.IsOpenShift())
 				if err != nil {
-					return errors.Wrapf(err, "Secret for Single sign-on (SSO) was not found. Create a secret named %q in namespace %q with the credentials for the login providers you selected in application image.", secretName, instance.GetNamespace())
+					reqLogger.Error(err, "Failed to reconcile Single sign-on configuration")
+					return err		
 				}
-				lutils.CustomizeEnvSSO(&deploy.Spec.Template, instance, ssoSecret)
 			}
 
 			lutils.ConfigureServiceability(&deploy.Spec.Template, instance)
@@ -755,6 +750,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 				reqLogger.Error(err, "Failed to reconcile Route")
 				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 			}
+
 		} else {
 			route := &routev1.Route{ObjectMeta: defaultMeta}
 			err = r.DeleteResource(route)
@@ -817,6 +813,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		reqLogger.V(1).Info(fmt.Sprintf("%s is not supported", prometheusv1.SchemeGroupVersion.String()))
 	}
 
+    reqLogger.Info("Reconcile OpenLibertyApplication - completed")
 	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
 }
 
