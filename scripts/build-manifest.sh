@@ -33,6 +33,8 @@ main() {
   echo "****** Building manifest for: daily"
   build_manifest "daily"
 
+  exit 0
+
   local tags=$(git tag -l)
   while read -r tag; do
     if [[ -z "${tag}" ]]; then

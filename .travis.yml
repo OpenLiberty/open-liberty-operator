@@ -20,23 +20,23 @@ services:
 stages:
   - name: test
   - name: build
-    if: branch = master AND fork = false AND type != pull_request
+    # if: branch = master AND fork = false AND type != pull_request
   - name: build manifest
-    if: branch = master AND fork = false AND type != pull_request
+    # if: branch = master AND fork = false AND type != pull_request
 
 jobs:
  include:
-  - name: Unit testing
-    stage: test
-    script: make unit-test
+  # - name: Unit testing
+  #   stage: test
+  #   script: make unit-test
   - name: Verify operator image build
     script: make build-image
     if: branch != master OR fork = true OR type = pull_request
-  - name: E2E testing on Minikube
-    script: make test-minikube
-  - name: E2E testing on OCP 3.11
-    script: make test-e2e
-    if: fork = false
+  # - name: E2E testing on Minikube
+  #   script: make test-minikube
+  # - name: E2E testing on OCP 3.11
+  #   script: make test-e2e
+  #   if: fork = false
   ## if master branch build and push image for amd64,ppc64le,s390 to DH
   - name: Build image on amd64
     stage: build

@@ -50,6 +50,7 @@ main() {
   echo "****** Pushing release: daily"
   push_release "daily"
 
+  exit 0
   ## loop through tagged releases and build
   git fetch origin
   local tags=$(git tag -l)
@@ -108,12 +109,12 @@ build_release() {
 push_release() {
   local release="$1"
 
-  if [[ "${TRAVIS}" = "true" && "${TRAVIS_PULL_REQUEST}" = "false" && "${TRAVIS_BRANCH}" = "master" ]]; then
+  # if [[ "${TRAVIS}" = "true" && "${TRAVIS_PULL_REQUEST}" = "false" && "${TRAVIS_BRANCH}" = "master" ]]; then
     echo "****** Pushing image: ${IMAGE}:${release}-${arch}"
     docker push "${IMAGE}:${release}-${arch}"
-  else
-    echo "****** Skipping push for branch ${TRAVIS_BRANCH}"
-  fi
+  # else
+    # echo "****** Skipping push for branch ${TRAVIS_BRANCH}"
+  # fi
 }
 
 parse_args() {
