@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"reflect"
@@ -14,10 +15,15 @@ import (
 	v1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	fakediscovery "k8s.io/client-go/discovery/fake"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	coretesting "k8s.io/client-go/testing"
+	"k8s.io/client-go/tools/record"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -28,7 +34,7 @@ var (
 	appImage            = "my-image"
 	consoleFormat       = "json"
 	replicas      int32 = 3
-	clusterType = corev1.ServiceTypeClusterIP
+	clusterType         = corev1.ServiceTypeClusterIP
 )
 
 type Test struct {
@@ -72,7 +78,7 @@ func TestCustomizeLibertyEnv(t *testing.T) {
 	}
 
 	spec = openlibertyv1beta1.OpenLibertyApplicationSpec{
-		Env: targetEnv,
+		Env:     targetEnv,
 		Service: svc,
 	}
 	pts = &corev1.PodTemplateSpec{}
@@ -94,6 +100,13 @@ func TestCustomizeEnvSSO(t *testing.T) {
 	os.Setenv("WATCH_NAMESPACE", namespace)
 	svc := &openlibertyv1beta1.OpenLibertyApplicationService{Port: 8080, Type: &clusterType}
 	spec := openlibertyv1beta1.OpenLibertyApplicationSpec{Service: svc}
+	liberty := createOpenLibertyApp(name, namespace, spec)
+	objs, s := []runtime.Object{liberty}, scheme.Scheme
+	s.AddKnownTypes(openlibertyv1beta1.SchemeGroupVersion, liberty)
+
+	cl := fakeclient.NewFakeClient(objs...)
+
+	rb := oputils.NewReconcilerBase(cl, s, &rest.Config{}, record.NewFakeRecorder(10))
 
 	terminationPolicy := v1.TLSTerminationReencrypt
 	expose := true
@@ -109,66 +122,70 @@ func TestCustomizeEnvSSO(t *testing.T) {
 	}
 	spec.SSO = &v1beta1.OpenLibertyApplicationSSO{
 		RedirectToRPHostAndPort: "redirectvalue",
-		MapToUserRegistry: &expose,
-		Github: &v1beta1.GithubLogin{Hostname: "github.com"},
+		MapToUserRegistry:       &expose,
+		Github:                  &v1beta1.GithubLogin{Hostname: "github.com"},
 		OIDC: []v1beta1.OidcClient{
 			{
-				DiscoveryEndpoint: "myapp.mycompany.com",
-				ID: "custom3",
-				GroupNameAttribute: "specify-required-value1",
-				UserNameAttribute: "specify-required-value2",
-				DisplayName: "specify-required-value3",
-				UserInfoEndpointEnabled: &expose,
-				RealmNameAttribute: "specify-required-value4",
-				Scope: "specify-required-value5",
-				TokenEndpointAuthMethod: "specify-required-value6",
+				DiscoveryEndpoint:           "myapp.mycompany.com",
+				ID:                          "custom3",
+				GroupNameAttribute:          "specify-required-value1",
+				UserNameAttribute:           "specify-required-value2",
+				DisplayName:                 "specify-required-value3",
+				UserInfoEndpointEnabled:     &expose,
+				RealmNameAttribute:          "specify-required-value4",
+				Scope:                       "specify-required-value5",
+				TokenEndpointAuthMethod:     "specify-required-value6",
 				HostNameVerificationEnabled: &expose,
 			},
 		},
 		Oauth2: []v1beta1.OAuth2Client{
 			{
-				ID: "custom1",
+				ID:                    "custom1",
 				AuthorizationEndpoint: "specify-required-value",
-				TokenEndpoint: "specify-required-value",
+				TokenEndpoint:         "specify-required-value",
 			},
 			{
-				ID: "custom2",
-				AuthorizationEndpoint: "specify-required-value1",
-				TokenEndpoint: "specify-required-value2",
-				GroupNameAttribute: "specify-required-value3",
-				UserNameAttribute: "specify-required-value4",
-				DisplayName: "specify-required-value5",
-				RealmNameAttribute: "specify-required-value6",
-				RealmName: "specify-required-value7",
-				Scope: "specify-required-value8",
+				ID:                      "custom2",
+				AuthorizationEndpoint:   "specify-required-value1",
+				TokenEndpoint:           "specify-required-value2",
+				GroupNameAttribute:      "specify-required-value3",
+				UserNameAttribute:       "specify-required-value4",
+				DisplayName:             "specify-required-value5",
+				RealmNameAttribute:      "specify-required-value6",
+				RealmName:               "specify-required-value7",
+				Scope:                   "specify-required-value8",
 				TokenEndpointAuthMethod: "specify-required-value9",
-				AccessTokenHeaderName: "specify-required-value10",
-				AccessTokenRequired: &expose,
-				AccessTokenSupported: &expose,
-				UserApiType: "specify-required-value11",
-				UserApi: "specify-required-value12",
+				AccessTokenHeaderName:   "specify-required-value10",
+				AccessTokenRequired:     &expose,
+				AccessTokenSupported:    &expose,
+				UserApiType:             "specify-required-value11",
+				UserApi:                 "specify-required-value12",
 			},
 		},
 	}
-	data :=  map[string][]byte{
-			"github-clientId": []byte("bW9vb29vb28="),
-			"github-clientSecret": []byte("dGhlbGF1Z2hpbmdjb3c="),
-			"oidc-clientId": []byte("bW9vb29vb28="),
-			"oidc-clientSecret": []byte("dGhlbGF1Z2hpbmdjb3c="),
+	data := map[string][]byte{
+		"github-clientId":     []byte("bW9vb29vb28="),
+		"github-clientSecret": []byte("dGhlbGF1Z2hpbmdjb3c="),
+		"oidc-clientId":       []byte("bW9vb29vb28="),
+		"oidc-clientSecret":   []byte("dGhlbGF1Z2hpbmdjb3c="),
 	}
 	pts := &corev1.PodTemplateSpec{}
 	ssoSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name+"-olapp-sso",
+			Name:      name + "-olapp-sso",
 			Namespace: namespace,
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: data,
 	}
 
+	err := rb.GetClient().Create(context.TODO(), ssoSecret)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	oputils.CustomizePodSpec(pts, openliberty)
-	CustomizeEnvSSO(pts, openliberty, ssoSecret)
+	CustomizeEnvSSO(pts, openliberty, rb.GetClient(), false)
 
 	podEnv := envSliceToMap(pts.Spec.Containers[0].Env, data, t)
 	tests := []Test{
@@ -217,7 +234,7 @@ func envSliceToMap(env []corev1.EnvVar, data map[string][]byte, t *testing.T) ma
 	for _, el := range env {
 		if el.ValueFrom != nil {
 			val := data[el.ValueFrom.SecretKeyRef.Key]
-			out[el.Name] = ""+ string(val)
+			out[el.Name] = "" + string(val)
 		} else {
 			out[el.Name] = string(el.Value)
 		}
