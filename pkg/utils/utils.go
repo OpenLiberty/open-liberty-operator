@@ -308,11 +308,11 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 		}
 		// if no clientId specified for this provider, try auto-registration
 		clientName := oidcClient.ID
-			if clientName == "" {
-			    clientName = "oidc"
-			}
-		clientId := string(ssoSecret.Data[clientName + "-clientId"])
-		clientSecret := string(ssoSecret.Data[clientName + "-clientSecret"])
+		if clientName == "" {
+			clientName = "oidc"
+		}
+		clientId := string(ssoSecret.Data[clientName+"-clientId"])
+		clientSecret := string(ssoSecret.Data[clientName+"-clientSecret"])
 
 		if isOpenShift && clientId == "" {
 			theRoute := &routev1.Route{}
@@ -345,13 +345,13 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 
 			clientId, clientSecret, err = RegisterWithOidcProvider(regData)
 			if err != nil {
-				return errors.Wrapf(err, "Error occured during registration with OIDC for provider " + clientName)
+				return errors.Wrapf(err, "Error occured during registration with OIDC for provider "+clientName)
 			}
-            
-			ssoSecretUpdates[clientName + autoregFragment + "RegisteredOidcClientId"] = []byte(clientId)
-			ssoSecretUpdates[clientName + autoregFragment + "RegisteredOidcSecret"] = []byte(clientSecret)
-			ssoSecretUpdates[clientName + "-clientId"] = []byte(clientId)
-			ssoSecretUpdates[clientName + "-clientSecret"] = []byte(clientSecret)
+
+			ssoSecretUpdates[clientName+autoregFragment+"RegisteredOidcClientId"] = []byte(clientId)
+			ssoSecretUpdates[clientName+autoregFragment+"RegisteredOidcSecret"] = []byte(clientSecret)
+			ssoSecretUpdates[clientName+"-clientId"] = []byte(clientId)
+			ssoSecretUpdates[clientName+"-clientSecret"] = []byte(clientSecret)
 
 			b := true
 			instance.Status.RouteAvailable = &b

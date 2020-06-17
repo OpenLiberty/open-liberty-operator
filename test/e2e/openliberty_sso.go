@@ -64,13 +64,13 @@ func testSocialLogin(t *testing.T, f *framework.Framework, ctx *framework.TestCt
 	const name string = "openliberty-sso"
 
 	// Create Secret for Github Login
-	secretTarget := types.NamespacedName{Name: name+"-olapp-sso", Namespace: ns}
+	secretTarget := types.NamespacedName{Name: name + "-olapp-sso", Namespace: ns}
 	a := "mysecretvalue"
 	data := map[string]string{
-		"github-clientId": a,
+		"github-clientId":     a,
 		"github-clientSecret": a,
-		"oidc-clientId": a,
-		"oidc-clientSecret": a,
+		"oidc-clientId":       a,
+		"oidc-clientSecret":   a,
 	}
 
 	err = util.CreateSecretForSSO(f, ctx, secretTarget, data)
@@ -90,15 +90,15 @@ func testSocialLogin(t *testing.T, f *framework.Framework, ctx *framework.TestCt
 		{Name: "SEC_IMPORTS_K8S_CERTS", Value: "true"},
 	}
 	openliberty.Spec.Service = &v1beta1.OpenLibertyApplicationService{
-		Type: &clusterIp,
-		Port: 9080,
+		Type:        &clusterIp,
+		Port:        9080,
 		Certificate: &v1beta1.Certificate{},
 	}
 	openliberty.Spec.Expose = &expose
 	openliberty.Spec.SSO = &v1beta1.OpenLibertyApplicationSSO{
 		Github: &githubLogin,
 	}
-	err = f.Client.Create(goctx.TODO(), openliberty, &framework.CleanupOptions{TestContext: ctx, RetryInterval: time.Second, Timeout: time.Second })
+	err = f.Client.Create(goctx.TODO(), openliberty, &framework.CleanupOptions{TestContext: ctx, RetryInterval: time.Second, Timeout: time.Second})
 	if err != nil {
 		return err
 	}
@@ -123,11 +123,11 @@ func testSocialLogin(t *testing.T, f *framework.Framework, ctx *framework.TestCt
 		return err
 	}
 
-	secret.StringData = map[string]string {
-		"github-clientId": `mygithubclientid`,
+	secret.StringData = map[string]string{
+		"github-clientId":     `mygithubclientid`,
 		"github-clientSecret": `mygithubclientsecret`,
-		"oidc-clientId": a,
-		"oidc-clientSecret": a,
+		"oidc-clientId":       a,
+		"oidc-clientSecret":   a,
 	}
 
 	err = f.Client.Update(goctx.TODO(), &secret)
@@ -152,12 +152,12 @@ func testSocialLogin(t *testing.T, f *framework.Framework, ctx *framework.TestCt
 		return err
 	}
 
-	secret.StringData = map[string]string {
-		"github-clientId": `mygithubclientid`,
-		"github-clientSecret": `mygithubclientsecret`,
-		"oidc-clientId": a,
-		"oidc-clientSecret": a,
-		"twitter-consumerKey": `twitterconsumerkey`,
+	secret.StringData = map[string]string{
+		"github-clientId":        `mygithubclientid`,
+		"github-clientSecret":    `mygithubclientsecret`,
+		"oidc-clientId":          a,
+		"oidc-clientSecret":      a,
+		"twitter-consumerKey":    `twitterconsumerkey`,
 		"twitter-consumerSecret": `twitterconsumersecret`,
 	}
 
@@ -175,7 +175,6 @@ func testSocialLogin(t *testing.T, f *framework.Framework, ctx *framework.TestCt
 		return err
 	}
 	util.LogTestUpdates(t, "secret data updated with new values successfully")
-
 
 	// Turn off SSO and verify cleanup
 	err = util.UpdateApplication(f, target, func(r *openlibertyv1beta1.OpenLibertyApplication) {
@@ -219,14 +218,16 @@ func testProviderLogins(t *testing.T, f *framework.Framework, ctx *framework.Tes
 	const name string = "openliberty-sso-1"
 
 	// Create Secret for Github Login
-	secretTarget := types.NamespacedName{Name: name+"-olapp-sso", Namespace: ns}
+	secretTarget := types.NamespacedName{Name: name + "-olapp-sso", Namespace: ns}
 	data := map[string]string{
-		"github-clientId": `gclientid`,
-		"github-clientSecret": `gclientsecret`,
-		"provider1-clientId": `provider1clientid`,
+		"github-clientId":        `gclientid`,
+		"github-clientSecret":    `gclientsecret`,
+		"provider1-clientId":     `provider1clientid`,
 		"provider1-clientSecret": `provider1clientsecret`,
-		"custom1-clientId": `custom1clientid`,
-		"custom1-clientSecret": `custom1clientsecret`,
+		"provider2-clientId":     `provider2clientid`,
+		"provider2-clientSecret": `provider2clientsecret`,
+		"custom1-clientId":       `custom1clientid`,
+		"custom1-clientSecret":   `custom1clientsecret`,
 	}
 
 	err = util.CreateSecretForSSO(f, ctx, secretTarget, data)
@@ -246,8 +247,8 @@ func testProviderLogins(t *testing.T, f *framework.Framework, ctx *framework.Tes
 		{Name: "SEC_IMPORTS_K8S_CERTS", Value: "true"},
 	}
 	openliberty.Spec.Service = &v1beta1.OpenLibertyApplicationService{
-		Type: &clusterIp,
-		Port: 9080,
+		Type:        &clusterIp,
+		Port:        9080,
 		Certificate: &v1beta1.Certificate{},
 	}
 	openliberty.Spec.Expose = &expose
@@ -260,7 +261,7 @@ func testProviderLogins(t *testing.T, f *framework.Framework, ctx *framework.Tes
 			{ID: "custom1", AuthorizationEndpoint: "specify-required-value", TokenEndpoint: "specify-value"},
 		},
 	}
-	err = f.Client.Create(goctx.TODO(), openliberty, &framework.CleanupOptions{TestContext: ctx, RetryInterval: time.Second, Timeout: time.Second })
+	err = f.Client.Create(goctx.TODO(), openliberty, &framework.CleanupOptions{TestContext: ctx, RetryInterval: time.Second, Timeout: time.Second})
 	if err != nil {
 		return err
 	}
@@ -361,6 +362,7 @@ func verifyEnvVariables(t *testing.T, ctx *framework.TestCtx, f *framework.Frame
 
 	return nil
 }
+
 // NOTE this is not a comprehensive check, is only to verify that the config was read
 // the unit tests verify values more comprehensively
 func verifyConfiguredSSOFields(env []corev1.EnvVar, spec v1beta1.OpenLibertyApplicationSpec) error {
@@ -418,7 +420,7 @@ func findEnvFromWithKey(key string, env []corev1.EnvVar) *corev1.EnvVar {
 
 func findEnvFromWithName(name string, env []corev1.EnvVar) bool {
 	for _, e := range env {
-		if e.ValueFrom == nil && e.Name == name{
+		if e.ValueFrom == nil && e.Name == name {
 			return true
 		}
 	}
