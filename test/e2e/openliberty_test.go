@@ -7,6 +7,7 @@ import (
 	"github.com/OpenLiberty/open-liberty-operator/pkg/apis"
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

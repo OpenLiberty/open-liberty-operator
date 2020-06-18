@@ -2,7 +2,6 @@ package e2e
 
 import (
 	goctx "context"
-	// "encoding/base64"
 	"errors"
 	"fmt"
 	"strings"
@@ -12,8 +11,6 @@ import (
 	"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 	"github.com/OpenLiberty/open-liberty-operator/test/util"
-
-	// v1 "github.com/openshift/api/route/v1"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	e2eutil "github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
 
@@ -63,7 +60,7 @@ func testSocialLogin(t *testing.T, f *framework.Framework, ctx *framework.TestCt
 
 	const name string = "openliberty-sso"
 
-	// Create Secret for Github Login
+	// create secret for Github Login
 	secretTarget := types.NamespacedName{Name: name + "-olapp-sso", Namespace: ns}
 	a := "mysecretvalue"
 	data := map[string]string{
@@ -77,8 +74,7 @@ func testSocialLogin(t *testing.T, f *framework.Framework, ctx *framework.TestCt
 	if err != nil {
 		return err
 	}
-	// Set up certificates for route, see: cert-manager test in RC
-	// terminationPolicy := v1.TLSTerminationReencrypt
+	// set up certificates for route, see: cert-manager test in RC
 	expose := true
 	clusterIp := corev1.ServiceTypeClusterIP
 	githubLogin := v1beta1.GithubLogin{Hostname: "github.com"}

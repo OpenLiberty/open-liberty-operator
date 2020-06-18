@@ -10,6 +10,7 @@ import (
 	"github.com/OpenLiberty/open-liberty-operator/test/util"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	e2eutil "github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
+
 	corev1 "k8s.io/api/core/v1"
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -22,7 +23,7 @@ const (
 
 // OpenLibertyPullPolicyTest checks that the configured pull policy is applied to deployment
 func OpenLibertyPullPolicyTest(t *testing.T) {
-
+	// standard initialization
 	ctx, err := util.InitializeContext(t, cleanupTimeout, retryInterval)
 	if err != nil {
 		t.Fatal(err)
@@ -62,7 +63,7 @@ func testPullPolicyAlways(t *testing.T, f *framework.Framework, namespace string
 	openLibertyApplication.Spec.PullPolicy = &policy
 
 	// use TestCtx's create helper to create the object and add a cleanup function for the new object
-	err := f.Client.Create(goctx.TODO(), openLibertyApplication, 
+	err := f.Client.Create(goctx.TODO(), openLibertyApplication,
 		&framework.CleanupOptions{TestContext: ctx, Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	if err != nil {
 		util.FailureCleanup(t, f, namespace, err)
@@ -145,9 +146,7 @@ func testPullPolicyNever(t *testing.T, f *framework.Framework, namespace string,
 		util.FailureCleanup(t, f, namespace, err)
 	}
 
-	for i := 0; i < 5; i++ {
-		time.Sleep(time.Millisecond * 1000)
-	}
+	time.Sleep(5 * time.Second)
 
 	timestamp := time.Now().UTC()
 	t.Logf("%s - Deployment created, verifying pull policy...", timestamp)
