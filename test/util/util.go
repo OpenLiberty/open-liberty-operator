@@ -70,7 +70,7 @@ func MakeBasicOpenLibertyApplication(t *testing.T, f *framework.Framework, n str
 	}
 }
 
-// Make BasicOpenLibertyTrace
+// MakeBasicOpenLibertyTrace : Returns a pointer to a simple OpenLibertyTrace object.
 func MakeBasicOpenLibertyTrace(n, ns, pod string) *openlibertyv1beta1.OpenLibertyTrace {
 	maxFiles := int32(5)
 	maxFileSize := int32(20)
@@ -240,6 +240,7 @@ func IsKnativeServiceDeployed(t *testing.T, f *framework.Framework, ns, n string
 	return true, nil
 }
 
+// IsCertManagerInstalled : Check if a cert manager issuer exists in the cluster.
 func IsCertManagerInstalled(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) bool {
 	certmngrv1alpha2.AddToScheme(f.Scheme)
 
@@ -365,7 +366,7 @@ func CheckEnvVarValue(t *testing.T, encodedValue []byte, envVar *corev1.EnvVar, 
 		"--",
 		"env",
 	}
-	// time.Sleep(time.Minute * 3)
+	// time.Sleep(time.Minute * 3)u
 	// setup command to get environment of pod
 	envCmd := exec.Command("kubectl", args...)
 	envPipe, err := envCmd.StdoutPipe()
