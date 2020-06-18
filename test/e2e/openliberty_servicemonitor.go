@@ -126,7 +126,7 @@ func OpenLibertyServiceMonitorTest(t *testing.T) {
 		{"service monitor path",
 			"", sm.Spec.Endpoints[0].Path},
 		{"service monitor port",
-			"3000-tcp", sm.Spec.Endpoints[0].Port},
+			"9080-tcp", sm.Spec.Endpoints[0].Port},
 		{"service monitor params",
 			nil, sm.Spec.Endpoints[0].Params},
 		{"service monitor scheme",
