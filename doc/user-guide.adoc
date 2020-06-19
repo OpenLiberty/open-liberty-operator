@@ -335,19 +335,21 @@ type: Opaque
 data:
   # base64 encode the data before entering it here.
   #
-  # Leave the clientId and secret out, registration will obtain them and update their values
+  # Leave the clientId and secret out, registration will obtain them and update their values.
   # oidc-clientId
   # oidc-clientSecret
-  # Reserved: <provider>-autoreg-registeredClientId and registeredClientSecret also contain these values.
+  #
+  # Reserved: <provider>-autoreg-registeredClientId and registeredClientSecret 
+  # are used by the operator to store a copy of the clientId abd clientSecret values.
   # 
-  # Automatic registration attributes have -autoreg- after the provider name
-
-  # Red Hat Single Sign On requires an initial access token for registration
+  # Automatic registration attributes have -autoreg- after the provider name.
+  #
+  # Red Hat Single Sign On requires an initial access token for registration.
   oidc-autoreg-initialAccessToken: xxxxxyyyyy
   #
   # IBM Security Verify requires a special clientId and clientSecret for registration.
-  # oidc-autoreg-clientId: bW9vb29vb28=
-  # oidc-autoreg-clientSecret: dGhlbGF1Z2hpbmdjb3c=  
+  # oidc-autoreg-initialClientId: bW9vb29vb28=
+  # oidc-autoreg-initialClientSecret: dGhlbGF1Z2hpbmdjb3c=  
   # Optional: Grant types are the types of OAuth flows the resulting clients will allow
   # Default is authorization_code,refresh_token.  Specify a comma separated list.
   # oidc-autoreg-grantTypes: base64 data goes here
@@ -367,8 +369,6 @@ For IBM Security Verify, set the attribute to given_name.
 
 You can use multiple OIDC and OAuth 2.0 providers to authenticate with. First, configure and build application image with multiple OIDC and/or OAuth 2.0 providers. For example, set `ARG SEC_SSO_PROVIDERS="google oidc:provider1,provider2 oauth2:provider3,provider4"` in your Dockerfile. The provider name must be unique and must contain only alphanumeric characters.
 
-Then, use the provider name in SSO `Secret` to specify its client ID and secret. For example, `provider1-clientSecret: dGhlbGF1Z2hpbmdjb3c=`. To configure a parameter for the corresponding provider in `OpenLibertyApplication` CR, use `sso.oidc[].id` or `sso.oauth2[].id` parameter.
-
 [source,yaml]
 ----
   sso:
@@ -384,6 +384,32 @@ Then, use the provider name in SSO `Secret` to specify its client ID and secret.
       - id: provider4
         authorizationEndpoint: specify-required-value
         tokenEndpoint: specify-required-value
+----
+
+Next, use the provider name in SSO `Secret` to specify its client ID and secret. For example, `provider1-clientSecret: dGhlbGF1Z2hpbmdjb3c=`. To configure a parameter for the corresponding provider in `OpenLibertyApplication` CR, use `sso.oidc[].id` or `sso.oauth2[].id` parameter as in the following example.
+
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  # Name of the secret should be in this format: <OpenLibertyApplication_name>-olapp-sso
+  name: my-app-olapp-sso
+  # Secret must be created in the same namespace as the OpenLibertyApplication instance
+  namespace: demo
+type: Opaque
+data:
+  # The keys must be in this format: <provider_name>-<sensitive_field_name>
+  google-clientId: xxxxxxxxxxxxx
+  google-clientSecret: yyyyyyyyyyyyyy
+  provider1-clientId: bW9vb29vb28=
+  provider1-clientSecret: dGhlbGF1Z2hpbmdjb3c=
+  provider2-autoreg-initialClientId: bW9vb29vb28=
+  provider2-autoreg-initialClientSecret: dGhlbGF1Z2hpbmdjb3c=
+  provider3-clientId: bW9vb29vb28=
+  provider3-clientSecret: dGhlbGF1Z2hpbmdjb3c=
+  provider4-clientId: bW9vb29vb28=
+  provider4-clientSecret: dGhlbGF1Z2hpbmdjb3c=  
 ----
 
 === Storage for serviceability
