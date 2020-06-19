@@ -127,8 +127,10 @@ func OpenLibertyServiceMonitorTest(t *testing.T) {
 			"", sm.Spec.Endpoints[0].Path},
 		{"service monitor port",
 			"9080-tcp", sm.Spec.Endpoints[0].Port},
-		{"service monitor params",
-			nil, sm.Spec.Endpoints[0].Params},
+		{"service monitor params type",
+			reflect.Map, reflect.ValueOf(sm.Spec.Endpoints[0].Params).Kind()},
+		{"service monitor params length",
+			0, len(sm.Spec.Endpoints[0].Params)},
 		{"service monitor scheme",
 			"", sm.Spec.Endpoints[0].Scheme},
 		{"service monitor scrape timeout",
@@ -152,10 +154,12 @@ func testSettingOpenLibertyServiceMonitor(t *testing.T, f *framework.Framework, 
 	}
 
 	params := map[string][]string{
-		"params": []string{"param1", "param2"},
+		"params": {"param1", "param2"},
 	}
 	username := v1.SecretKeySelector{Key: "username"}
 	password := v1.SecretKeySelector{Key: "password"}
+	tlsconfig := &prometheusv1.TLSConfig{InsecureSkipVerify: true}
+	basicauth := &prometheusv1.BasicAuth{Username: username, Password: password}
 
 	// creates the endpoint fields the user can customize
 	endpoint := prometheusv1.Endpoint{
@@ -164,9 +168,9 @@ func testSettingOpenLibertyServiceMonitor(t *testing.T, f *framework.Framework, 
 		Params:          params,
 		Interval:        "30s",
 		ScrapeTimeout:   "10s",
-		TLSConfig:       &prometheusv1.TLSConfig{InsecureSkipVerify: true},
+		TLSConfig:       tlsconfig,
 		BearerTokenFile: "myBTF",
-		BasicAuth:       &prometheusv1.BasicAuth{Username: username, Password: password},
+		BasicAuth:       basicauth,
 	}
 
 	endpoints := []prometheusv1.Endpoint{endpoint}
@@ -206,6 +210,7 @@ func testSettingOpenLibertyServiceMonitor(t *testing.T, f *framework.Framework, 
 
 	// gets the service monitor
 	sm := smList.Items[0]
+	t.Logf("IMPORTANT%v",sm.Spec.Endpoints[0].Params)
 	err = verifyTests([]Test{
 		{"service monitor should be connected to the liberty application",
 			"example-liberty-sm", sm.Spec.Selector.MatchLabels["app.kubernetes.io/instance"]},
@@ -214,7 +219,7 @@ func testSettingOpenLibertyServiceMonitor(t *testing.T, f *framework.Framework, 
 		{"service monitor port",
 			"9080-tcp", sm.Spec.Endpoints[0].Port},
 		{"service monitor params",
-			reflect.Map, reflect.ValueOf(sm.Spec.Endpoints[0].Params).Kind()},
+			[]string{"param1", "param2"}, sm.Spec.Endpoints[0].Params["params"]},
 		{"service monitor scheme",
 			"myScheme", sm.Spec.Endpoints[0].Scheme},
 		{"service monitor scrape timeout",
@@ -224,9 +229,9 @@ func testSettingOpenLibertyServiceMonitor(t *testing.T, f *framework.Framework, 
 		{"service monitor bearer token file",
 			"myBTF", sm.Spec.Endpoints[0].BearerTokenFile},
 		{"service monitor TLSConfig",
-			nil, sm.Spec.Endpoints[0].TLSConfig},
+			tlsconfig, sm.Spec.Endpoints[0].TLSConfig},
 		{"service monitor basic auth",
-			nil, sm.Spec.Endpoints[0].BasicAuth},
+			basicauth, sm.Spec.Endpoints[0].BasicAuth},
 	})
 	if err != nil {
 		util.FailureCleanup(t, f, namespace, err)
