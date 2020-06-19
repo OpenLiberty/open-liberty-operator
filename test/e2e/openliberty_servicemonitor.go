@@ -152,7 +152,7 @@ func testSettingOpenLibertyServiceMonitor(t *testing.T, f *framework.Framework, 
 	}
 
 	params := map[string][]string{
-		"params": {"param1", "param2"},
+		"params": []string{"param1", "param2"},
 	}
 	username := v1.SecretKeySelector{Key: "username"}
 	password := v1.SecretKeySelector{Key: "password"}
@@ -214,7 +214,7 @@ func testSettingOpenLibertyServiceMonitor(t *testing.T, f *framework.Framework, 
 		{"service monitor port",
 			"9080-tcp", sm.Spec.Endpoints[0].Port},
 		{"service monitor params",
-			nil, sm.Spec.Endpoints[0].Params},
+			reflect.Map, reflect.ValueOf(sm.Spec.Endpoints[0].Params).Kind()},
 		{"service monitor scheme",
 			"myScheme", sm.Spec.Endpoints[0].Scheme},
 		{"service monitor scrape timeout",
