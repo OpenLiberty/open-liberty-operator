@@ -7,12 +7,12 @@ import (
 
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 	"github.com/OpenLiberty/open-liberty-operator/test/util"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
-
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	e2eutil "github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
+
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // OpenLibertyProbeTest make sure user defined liveness/readiness probes reach ready state.
@@ -45,7 +45,7 @@ func OpenLibertyProbeTest(t *testing.T) {
 		},
 	}
 
-	// run test for readiness probe and then liveness
+	// run tests for readiness probe and then liveness
 	if err = probeTest(t, f, ctx, libertyProbe); err != nil {
 		util.FailureCleanup(t, f, namespace, err)
 	}
@@ -77,10 +77,7 @@ func probeTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, pro
 	}
 
 	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, "example-liberty-readiness", 1, retryInterval, timeout)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err // implicitly return nil if no error
 }
 
 func editProbeTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
@@ -92,16 +89,13 @@ func editProbeTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx)
 
 	target := types.NamespacedName{Name: applicationName, Namespace: namespace}
 	util.UpdateApplication(f, target, func(r *openlibertyv1beta1.OpenLibertyApplication) {
-		// Adjust tests for update SMALL amounts to keep the test fast.
+		// adjust tests for update SMALL amounts to keep the test fast.
 		r.Spec.LivenessProbe.InitialDelaySeconds = int32(6)
 		r.Spec.ReadinessProbe.InitialDelaySeconds = int32(3)
 	})
 
 	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, applicationName, 1, retryInterval, timeout)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err // implicitly return nil if no error
 }
 
 func deleteProbeTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
@@ -118,9 +112,5 @@ func deleteProbeTest(t *testing.T, f *framework.Framework, ctx *framework.TestCt
 	})
 
 	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, applicationName, 1, retryInterval, timeout)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err // implicitly return nil if no error
 }

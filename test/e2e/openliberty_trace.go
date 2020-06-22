@@ -12,13 +12,14 @@ import (
 	"github.com/OpenLiberty/open-liberty-operator/test/util"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	e2eutil "github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// OpenLibertyTraceTest ...
+// OpenLibertyTraceTest tests functionalities related to traces.
 func OpenLibertyTraceTest(t *testing.T) {
 	ctx, err := util.InitializeContext(t, cleanupTimeout, retryInterval)
 	if err != nil {
@@ -167,7 +168,7 @@ func editTraceTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx,
 		RetryInterval: time.Second,
 	}
 
-	// Create trace and verify successful creation
+	// create trace and verify successful creation
 	olTrace := util.MakeBasicOpenLibertyTrace(traceName, ns, targetPodName)
 	err = f.Client.Create(goctx.TODO(), olTrace, options)
 	if err != nil {
@@ -185,7 +186,7 @@ func editTraceTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx,
 		return errors.New("could not find trace file despite good status")
 	}
 
-	// Update trace to target new pod and verify transition
+	// update trace to target new pod and verify transition
 	err = f.Client.Get(goctx.TODO(), types.NamespacedName{Name: olTrace.GetName(), Namespace: ns}, olTrace)
 	if err != nil {
 		return err
@@ -203,7 +204,7 @@ func editTraceTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx,
 		return err
 	}
 
-	// Trace should now be enabled in new pod and disabled in old
+	// trace should now be enabled in new pod and disabled in old
 	ok, err = util.TraceIsEnabled(t, f, targetPodName, ns)
 	if err != nil {
 		return err
@@ -248,11 +249,7 @@ func createTargetApp(t *testing.T, f *framework.Framework, ctx *framework.TestCt
 	}
 
 	err = e2eutil.WaitForDeployment(t, f.KubeClient, ns, target, replicas, retryInterval, timeout)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err // implicitly return nil if no error
 }
 
 // getTargetPodList returns the pods created for targetApplication as a podList

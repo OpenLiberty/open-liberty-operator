@@ -10,6 +10,7 @@ import (
 	"github.com/OpenLiberty/open-liberty-operator/test/util"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	e2eutil "github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
+
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -61,7 +62,7 @@ func openLibertyBasicScaleTest(t *testing.T, f *framework.Framework, ctx *framew
 
 	timestamp := time.Now().UTC()
 	t.Logf("%s - Creating basic liberty application for scaling test...", timestamp)
-	// Create application deployment and wait
+	// create application deployment and wait
 	err = f.Client.Create(goctx.TODO(), exampleOpenLiberty, &framework.CleanupOptions{TestContext: ctx, Timeout: time.Second, RetryInterval: time.Second})
 	if err != nil {
 		return err
@@ -96,8 +97,5 @@ func openLibertyUpdateScaleTest(t *testing.T, f *framework.Framework, namespace 
 
 	// wait for example-memcached to reach 2 replicas
 	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, "example-liberty", 2, retryInterval, timeout)
-	if err != nil {
-		return err
-	}
-	return err
+	return err // implicitly return nil if no error
 }

@@ -6,18 +6,18 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 	"github.com/OpenLiberty/open-liberty-operator/test/util"
-
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	e2eutil "github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
+
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 var (
@@ -80,7 +80,6 @@ func OpenLibertyServiceBindingTest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 }
 
 func createSecret(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, ns string, n string, userValue string, passValue string) error {
@@ -97,11 +96,7 @@ func createSecret(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, 
 	}
 
 	err := f.Client.Create(goctx.TODO(), &secret, &framework.CleanupOptions{TestContext: ctx, Timeout: timeout, RetryInterval: retryInterval})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err // implicitly return nil if no error
 }
 
 func createProviderService(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, ns string, con string) error {
@@ -129,18 +124,14 @@ func createProviderService(t *testing.T, f *framework.Framework, ctx *framework.
 	}
 
 	err = e2eutil.WaitForDeployment(t, f.KubeClient, ns, olProvider, 1, retryInterval, timeout)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err // implicitly return nil if no error
 }
 
 func createConsumeServiceMount(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, ns string, n string, appName string, set bool) error {
 	openliberty := util.MakeBasicOpenLibertyApplication(t, f, appName, ns, 1)
 	svctype := v1.ServiceTypeClusterIP
 	openliberty.Spec.Service = &v1beta1.OpenLibertyApplicationService{Type: &svctype, Port: 9443}
-	if set == true {
+	if set {
 		openliberty.Spec.Service.Consumes = []v1beta1.ServiceBindingConsumes{
 			v1beta1.ServiceBindingConsumes{
 				Name:      n,
@@ -149,7 +140,7 @@ func createConsumeServiceMount(t *testing.T, f *framework.Framework, ctx *framew
 				MountPath: "/" + mount,
 			},
 		}
-	} else if set == false {
+	} else {
 		openliberty.Spec.Service.Consumes = []v1beta1.ServiceBindingConsumes{
 			v1beta1.ServiceBindingConsumes{
 				Name:      n,
@@ -165,11 +156,7 @@ func createConsumeServiceMount(t *testing.T, f *framework.Framework, ctx *framew
 	}
 
 	err = e2eutil.WaitForDeployment(t, f.KubeClient, ns, appName, 1, retryInterval, timeout)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err // implicitly return nil if no error
 }
 
 func setUpMounting(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, ns string) error {
@@ -183,13 +170,13 @@ func setUpMounting(t *testing.T, f *framework.Framework, ctx *framework.TestCtx,
 		util.FailureCleanup(t, f, ns, err)
 	}
 
-	// Create service with namespace under consumes
+	// create service with namespace under consumes
 	err = createConsumeServiceMount(t, f, ctx, ns, olProvider, olConsumer, true)
 	if err != nil {
 		util.FailureCleanup(t, f, ns, err)
 	}
 
-	// Create service without namespace under consumes
+	// create service without namespace under consumes
 	err = createConsumeServiceMount(t, f, ctx, ns, olProvider, olConsumer2, false)
 	if err != nil {
 		util.FailureCleanup(t, f, ns, err)
@@ -200,14 +187,14 @@ func setUpMounting(t *testing.T, f *framework.Framework, ctx *framework.TestCtx,
 
 func mountingTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, ns string, userValue string, passValue string, con string) error {
 
-	// Get consumer pod
+	// get consumer pod
 	pods, err := util.GetPods(f, ctx, olConsumer, ns)
 	if err != nil {
 		util.FailureCleanup(t, f, ns, err)
 	}
 	podName := pods.Items[0].GetName()
 
-	// Go inside the pod the pod for Consume service and check values are set
+	// go inside the pod the pod for Consume service and check values are set
 	out, err := exec.Command("kubectl", "exec", "-n", ns, "-it", podName, "--", "ls", "../"+mount+"/"+ns+"/"+olProvider).Output()
 	err = util.CommandError(t, err, out)
 	if err != nil {
@@ -216,7 +203,7 @@ func mountingTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, 
 	directories := strings.Split(string(out), "\n")
 	t.Log(directories)
 
-	// Set values to check
+	// set values to check
 	valuePairs := map[string]string{
 		"context":  con,
 		"hostname": olProvider + "." + ns + ".svc.cluster.local",
@@ -231,14 +218,14 @@ func mountingTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, 
 		checkSecret(t, f, ns, podName, directories[i], valuePairs, true)
 	}
 
-	// Get consumer pod
+	// get consumer pod
 	pods, err = util.GetPods(f, ctx, olConsumer2, ns)
 	if err != nil {
 		util.FailureCleanup(t, f, ns, err)
 	}
 	podName = pods.Items[0].GetName()
 
-	// Go inside the pod the pod for Consume service and check values are set
+	// go inside the pod the pod for Consume service and check values are set
 	out, err = exec.Command("kubectl", "exec", "-n", ns, "-it", podName, "--", "ls", "../"+mount+"/"+olProvider).Output()
 	err = util.CommandError(t, err, out)
 	if err != nil {
@@ -255,12 +242,11 @@ func mountingTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, 
 }
 
 func checkSecret(t *testing.T, f *framework.Framework, ns string, podName string, directory string, valuePairs map[string]string, setNamespace bool) {
-	out, err := []byte(""), errors.New("")
-
-	for i := 0; i < 20; i++ {
-		if setNamespace == true {
+	waitErr := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
+		out, err := []byte(""), errors.New("")
+		if setNamespace {
 			out, err = exec.Command("kubectl", "exec", "-n", ns, "-it", podName, "--", "cat", "../"+mount+"/"+ns+"/"+olProvider+"/"+directory).Output()
-		} else if setNamespace == false {
+		} else {
 			out, err = exec.Command("kubectl", "exec", "-n", ns, "-it", podName, "--", "cat", "../"+mount+"/"+olProvider+"/"+directory).Output()
 		}
 		err = util.CommandError(t, err, out)
@@ -270,14 +256,15 @@ func checkSecret(t *testing.T, f *framework.Framework, ns string, podName string
 
 		if valuePairs[directory] != string(out) {
 			t.Logf("The value is not set correctly. Expected: %s. Actual: %s", valuePairs[directory], string(out))
-		} else {
-			t.Logf("The value is set correctly. %s", string(out))
-			return
+			return false, nil
 		}
-		// Wait for updates
-		time.Sleep(5000 * time.Millisecond)
+		t.Logf("The value is set correctly. %s", string(out))
+		return true, nil
+	})
+
+	if errors.Is(waitErr, wait.ErrWaitTimeout) {
+		t.Fatal("The values were not set correctly.")
 	}
-	t.Fatal("The values were not set correctly.")
 }
 
 func createConsumeServiceEnv(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, ns string, n string, appName string) error {
@@ -298,29 +285,25 @@ func createConsumeServiceEnv(t *testing.T, f *framework.Framework, ctx *framewor
 	}
 
 	err = e2eutil.WaitForDeployment(t, f.KubeClient, ns, appName, 1, retryInterval, timeout)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err // implicitly return nil if no error
 }
 
 func envTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, ns string) error {
 
-	// Create service with namespace under consumes
+	// create service with namespace under consumes
 	err := createConsumeServiceEnv(t, f, ctx, ns, olProvider, olConsumerEnv)
 	if err != nil {
 		util.FailureCleanup(t, f, ns, err)
 	}
 
-	// Get consumer pod
+	// get consumer pod
 	pods, err := util.GetPods(f, ctx, olConsumerEnv, ns)
 	if err != nil {
 		util.FailureCleanup(t, f, ns, err)
 	}
 	podEnv := pods.Items[0].Spec.Containers[0].Env
 
-	// Check the values are set correctly
+	// check the values are set correctly
 	err = searchValues(t, ns, podEnv)
 	if err != nil {
 		util.FailureCleanup(t, f, ns, err)
@@ -355,7 +338,7 @@ func updateProviderTest(t *testing.T, f *framework.Framework, ctx *framework.Tes
 		util.FailureCleanup(t, f, ns, err)
 	}
 
-	// Update provider application
+	// update provider application
 	target := types.NamespacedName{Name: olProvider, Namespace: ns}
 	err = util.UpdateApplication(f, target, func(r *openlibertyv1beta1.OpenLibertyApplication) {
 		r.Spec.Service.Provides = &v1beta1.ServiceBindingProvides{

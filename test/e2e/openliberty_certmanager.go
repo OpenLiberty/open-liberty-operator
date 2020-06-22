@@ -12,11 +12,12 @@ import (
 	v1 "github.com/openshift/api/route/v1"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// OpenLibertyCertManagerTest ...
+// OpenLibertyCertManagerTest consists three Cert Manager related E2E tests.
 func OpenLibertyCertManagerTest(t *testing.T) {
 	ctx, err := util.InitializeContext(t, cleanupTimeout, retryInterval)
 	if err != nil {
@@ -63,10 +64,10 @@ func libertyPodCertificateTest(t *testing.T, f *framework.Framework, ctx *framew
 	openLibertyApplication := util.MakeBasicOpenLibertyApplication(t, f, name, ns, 1)
 	serviceType := corev1.ServiceTypeClusterIP
 	openLibertyApplication.Spec.Service = &v1beta1.OpenLibertyApplicationService{
-			Port: 3000,
-			Type: &serviceType,
-			Certificate: &v1beta1.Certificate{},
-		}
+		Port:        3000,
+		Type:        &serviceType,
+		Certificate: &v1beta1.Certificate{},
+	}
 
 	timestamp := time.Now().UTC()
 	t.Logf("%s - Creating cert-manager pod test...", timestamp)
@@ -82,11 +83,7 @@ func libertyPodCertificateTest(t *testing.T, f *framework.Framework, ctx *framew
 	}
 
 	err = util.WaitForCertificate(t, f, ns, fmt.Sprintf("%s-svc-crt", name), retryInterval, timeout)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err // implicitly return nil if no error
 }
 
 func libertyRouteCertificateTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
@@ -122,11 +119,7 @@ func libertyRouteCertificateTest(t *testing.T, f *framework.Framework, ctx *fram
 	}
 
 	err = util.WaitForCertificate(t, f, ns, fmt.Sprintf("%s-route-crt", name), retryInterval, timeout)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err // implicitly return nil if no error
 }
 
 func libertyAdvancedCertificateTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
@@ -172,9 +165,5 @@ func libertyAdvancedCertificateTest(t *testing.T, f *framework.Framework, ctx *f
 	}
 
 	err = util.WaitForCertificate(t, f, ns, fmt.Sprintf("%s-route-crt", name), retryInterval, timeout)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err // implicitly return nil if no error
 }

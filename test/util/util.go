@@ -13,6 +13,7 @@ import (
 	certmngrv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -69,7 +70,7 @@ func MakeBasicOpenLibertyApplication(t *testing.T, f *framework.Framework, n str
 	}
 }
 
-// Make BasicOpenLibertyTrace
+// MakeBasicOpenLibertyTrace : Returns a pointer to a simple OpenLibertyTrace object.
 func MakeBasicOpenLibertyTrace(n, ns, pod string) *openlibertyv1beta1.OpenLibertyTrace {
 	maxFiles := int32(5)
 	maxFileSize := int32(20)
@@ -239,6 +240,7 @@ func IsKnativeServiceDeployed(t *testing.T, f *framework.Framework, ns, n string
 	return true, nil
 }
 
+// IsCertManagerInstalled : Check if a cert manager issuer exists in the cluster.
 func IsCertManagerInstalled(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) bool {
 	certmngrv1alpha2.AddToScheme(f.Scheme)
 
@@ -364,7 +366,7 @@ func CheckEnvVarValue(t *testing.T, encodedValue []byte, envVar *corev1.EnvVar, 
 		"--",
 		"env",
 	}
-	// time.Sleep(time.Minute * 3)
+	// time.Sleep(time.Minute * 3)u
 	// setup command to get environment of pod
 	envCmd := exec.Command("kubectl", args...)
 	envPipe, err := envCmd.StdoutPipe()
@@ -534,10 +536,10 @@ func GetPods(f *framework.Framework, ctx *framework.TestCtx, target string, ns s
 func CreateSecretForSSO(f *framework.Framework, ctx *framework.TestCtx, target types.NamespacedName, data map[string]string) error {
 	secret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: target.Name,
+			Name:      target.Name,
 			Namespace: target.Namespace,
 		},
-		Type: corev1.SecretTypeOpaque,
+		Type:       corev1.SecretTypeOpaque,
 		StringData: data,
 	}
 
@@ -643,7 +645,7 @@ func CreateApplicationTarget(f *framework.Framework, ctx *framework.TestCtx, tar
 
 	application := &applicationsv1beta1.Application{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: target.Name,
+			Name:      target.Name,
 			Namespace: target.Namespace,
 			Annotations: map[string]string{
 				"kappnav.component.namespaces": ns,

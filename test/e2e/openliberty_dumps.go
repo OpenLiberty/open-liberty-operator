@@ -2,6 +2,7 @@ package e2e
 
 import (
 	goctx "context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -12,11 +13,13 @@ import (
 	"github.com/OpenLiberty/open-liberty-operator/test/util"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	e2eutil "github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-// OpenLibertyDumpsTest ... Check dumps
+// OpenLibertyDumpsTest tests functionalities related to dumps.
 func OpenLibertyDumpsTest(t *testing.T) {
 	ctx, err := util.InitializeContext(t, cleanupTimeout, retryInterval)
 	if err != nil {
@@ -32,7 +35,7 @@ func OpenLibertyDumpsTest(t *testing.T) {
 
 	t.Logf("Namespace: %s", namespace)
 
-	// Wait for the operator
+	// wait for the operator
 	err = e2eutil.WaitForOperatorDeployment(t, f.KubeClient, namespace, "open-liberty-operator", 1, retryInterval, operatorTimeout)
 	if err != nil {
 		util.FailureCleanup(t, f, namespace, err)
@@ -47,15 +50,15 @@ func OpenLibertyDumpsTest(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Set up OL to get dump from
+	// set up OL to get dump from
 	app := "example-liberty-dumps"
-	// Make basic open liberty application with 1 replica
+	// make basic open liberty application with 1 replica
 	replicas := 1
 	if err := createApp(t, f, ctx, app, replicas); err != nil {
 		util.FailureCleanup(t, f, namespace, err)
 	}
 
-	// Get the pods for the above app
+	// get the pods for the above app
 	podList, err := util.GetPods(f, ctx, app, namespace)
 	if err != nil {
 		util.FailureCleanup(t, f, namespace, err)
@@ -110,28 +113,24 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 		util.FailureCleanup(t, f, ns, err)
 	}
 
-	// Wait for the dump to be created
-	counter := 0
-	for {
+	// wait for the dump to be created
+	wait.Poll(retryInterval, timeout, func() (done bool, err error) {
 		err = f.Client.Get(goctx.TODO(), types.NamespacedName{Name: "test-dump", Namespace: ns}, dump)
 		if err != nil {
 			t.Fatal(err)
 		}
-		time.Sleep(time.Second * 2)
-		counter++
 
 		for i := 0; i < len(dump.Status.Conditions); i++ {
 			if dump.Status.Conditions[i].Type == "Completed" && dump.Status.Conditions[i].Status == "True" {
-				break
+				return true, nil
 			}
 		}
-		if counter == 100 {
-			break
-		}
-	}
 
-	// Checks the dump has started and completed with the correct status
-	// Checks the dump file is generated
+		return false, nil
+	})
+
+	// checks the dump has started and completed with the correct status
+	// checks the dump file is generated
 	for i := 0; i < len(dump.Status.Conditions); i++ {
 		if dump.Status.Conditions[i].Type == "Started" {
 			if dump.Status.Conditions[i].Status != "True" {
@@ -145,21 +144,20 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 	}
 
 	t.Logf("The dumps status condition: %s", dump.Status.Conditions)
-	// Wait for file to be generated
-	for j := 0; j < 10; j++ {
-		time.Sleep(time.Second * 2)
-		if dump.Status.DumpFile != "" {
-			break
+	// wait for file to be generated
+	err = wait.Poll(retryInterval, timeout, func() (done bool, err error) {
+		if dump.Status.DumpFile == "" {
+			return false, nil
 		}
-	}
-	if dump.Status.DumpFile == "" {
+		return true, nil
+	})
+	if errors.Is(err, wait.ErrWaitTimeout) {
 		t.Log(dump.Status)
 		t.Fatal("Dump file not created")
 	}
 
+	// get the dumps
 	dir := "serviceability/" + ns
-
-	// Get the dumps
 	out, err := exec.Command("kubectl", "exec", "-n", ns, "-it", podName, "--", "ls", dir, "-1t").Output()
 	err = util.CommandError(t, err, out)
 	if err != nil {
@@ -167,7 +165,7 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 	}
 	result := strings.Split(string(out), "\n")
 
-	// Get the zip file
+	// get the zip file
 	out, err = exec.Command("kubectl", "exec", "-n", ns, "-it", podName, "--", "ls", dir+"/"+result[0], "-1t").Output()
 	err = util.CommandError(t, err, out)
 	if err != nil {
@@ -176,14 +174,14 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 	zip := strings.Split(string(out), "\n")
 	zipFile := zip[0]
 
-	// Copy the file to local machine
+	// copy the file to local machine
 	out, err = exec.Command("kubectl", "cp", ns+"/"+podName+":"+"serviceability/"+ns+"/"+podName+"/"+zipFile, ".").Output()
 	err = util.CommandError(t, err, out)
 	if err != nil {
 		t.Fatal("kubectl cp command failed")
 	}
 
-	// Check if the zip file exists on local machine
+	// check if the zip file exists on local machine
 	cmd := "ls | grep " + zipFile
 	out, err = exec.Command("bash", "-c", cmd).Output()
 	err = util.CommandError(t, err, out)
@@ -194,14 +192,14 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 		t.Fatal("The zip file was not copied to the local machine")
 	}
 
-	// List all the files in the zip folder
+	// list all the files in the zip folder
 	out, err = exec.Command("unzip", "-l", zipFile).Output()
 	err = util.CommandError(t, err, out)
 	if err != nil {
 		t.Fatal("unzip command failed")
 	}
 
-	// Check if heap file is created
+	// check if heap file is created
 	cmdHeap := "unzip -l " + zipFile + " | grep heapdump"
 	heap, err := exec.Command("bash", "-c", cmdHeap).Output()
 	err = util.CommandError(t, err, heap)
@@ -214,7 +212,7 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 		t.Fatal("Heap file not found")
 	}
 
-	// Check if thread file is created
+	// check if thread file is created
 	cmdThread := "unzip -l " + zipFile + " | grep javacore"
 	thread, err := exec.Command("bash", "-c", cmdThread).Output()
 	err = util.CommandError(t, err, thread)
@@ -229,7 +227,7 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 
 	t.Log("Dump found!")
 
-	// Remove zip file
+	// remove zip file
 	clean, err := exec.Command("rm", zipFile).Output()
 	if err != nil {
 		t.Fatalf("Unable to rm zip file: %s", clean)
