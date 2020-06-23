@@ -1,6 +1,6 @@
 = Observability with Open Liberty
 
-The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in the OpenShift cluster. This document has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2 and 4.3.
+The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in the OpenShift cluster. This document has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2, 4.3, and 4.4.
 
 == How to deploy Kibana dashboards to monitor Open Liberty logging events
 
@@ -41,11 +41,23 @@ The following steps outline how to manually create and modify a `server.xml` to 
        <feature>mpMetrics-2.2</feature>
        <feature>monitor-1.0</feature>
    </featureManager>
-   <quickStartSecurity userName="admin" userPassword="adminPwd"/>
+   <quickStartSecurity userName="${env.username}" userPassword="${env.password}"/>
 </server>
 ----
 +
-The above `server.xml` configuration secures access to the server with basic authentication using the `<quickStartSecurity>` element. The `<quickStartSecurity>` is used in the above example for simplicity. When configuring your server you may wish to use a link:++https://www.ibm.com/support/knowledgecenter/en/SSEQTP_liberty/com.ibm.websphere.wlp.doc/ae/twlp_sec_basic_registry.html++[basic registry] or an link:++https://www.ibm.com/support/knowledgecenter/en/SSEQTP_liberty/com.ibm.websphere.wlp.doc/ae/twlp_sec_ldap.html++[LDAP registry] for securing authenticated access to your server. When using Prometheus to scrape data from the `/metrics` endpoint only the _Service Monitor_ approach can be configured to negotiate authentication with the Open Liberty server.
+The above `server.xml` configuration secures access to the server with basic authentication using the `<quickStartSecurity>` element. The `username` and `password` environment variables used in the `<quickStartSecurity>` element are set in the application container via a configuration in the OpenLibertyApplication CR that will be explained in the next step. The `<quickStartSecurity>` is used in the above example for simplicity. When configuring your server you may wish to use a link:++https://www.ibm.com/support/knowledgecenter/en/SSEQTP_liberty/com.ibm.websphere.wlp.doc/ae/twlp_sec_basic_registry.html++[basic registry] or an link:++https://www.ibm.com/support/knowledgecenter/en/SSEQTP_liberty/com.ibm.websphere.wlp.doc/ae/twlp_sec_ldap.html++[LDAP registry] for securing authenticated access to your server. When using Prometheus to scrape data from the `/metrics` endpoint only the _Service Monitor_ approach can be configured to negotiate authentication with the Open Liberty server.
+
+. In order to avoid hardcoding basic authentication credentials with clear text in the server.xml, utilizing a secret (which is automatically encrypted when created in Openshift) to send the credentials as environment variables into the application container is recommended. Add the `envFrom` definition in your OpenLibertyApplication Custom Resource (CR) as follows: 
++
+[source,yaml]
+----
+spec:
+    envFrom:
+    - secretRef:
+        name: basic-auth
+----
++
+The referenced secret `basic-auth` is the secret you will create in Openshift with your desired credentials. This secret should also be the same one used in your ServiceMonitor when you configure the `basicAuth` definition there. 
 
 . In your DockerFile, add the following line to copy the `server_mpMetrics.xml` file into the `configDropins/overrides` directory:
 +
