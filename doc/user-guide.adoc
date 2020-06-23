@@ -320,7 +320,7 @@ spec:
 
 ==== Using automatic registration with OIDC providers
 
-The operator can request a client Id and client Secret from providers, rather than requiring them in advance. This can simplify deployment, as the provider's administrator can supply the information needed for registration once, instead of supplying clientIds and secrets repetitively.  Additional attributes named `<provider_name>-autoreg-<field_name>` are added to the secret shown above.  First the operator will make an https request to the `sso.oidc[].discoveryEndpoint` to obtain URLs for subsequent REST calls.  Next it will make additional REST calls to the provider and obtain a client Id and client Secret. The secret will be updated with the obtained values. This is tested with Red Hat Single Sign-on (RHSSO). See the following example. 
+The operator can request a client Id and client Secret from providers, rather than requiring them in advance. This can simplify deployment, as the provider's administrator can supply the information needed for registration once, instead of supplying clientIds and secrets repetitively.  The callback URL from provider to client is supplied by the operator, so doesn't need to be known in advance. Additional attributes named `<provider_name>-autoreg-<field_name>` are added to the Kubernetes secret shown below.  First the operator will make an https request to the `sso.oidc[].discoveryEndpoint` to obtain URLs for subsequent REST calls.  Next it will make additional REST calls to the provider and obtain a client Id and client Secret. The Kubernetes secret will be updated with the obtained values. This is tested on OpenShift with Red Hat Single Sign-on (RHSSO) and IBM Security Verify. See the following example. 
 
 [source,yaml]
 ----
@@ -339,8 +339,8 @@ data:
   # oidc-clientId
   # oidc-clientSecret
   #
-  # Reserved: <provider>-autoreg-registeredClientId and registeredClientSecret 
-  # are used by the operator to store a copy of the clientId abd clientSecret values.
+  # Reserved: <provider>-autoreg-RegisteredClientId and RegisteredClientSecret 
+  # are used by the operator to store a copy of the clientId and clientSecret values.
   # 
   # Automatic registration attributes have -autoreg- after the provider name.
   #
@@ -350,6 +350,7 @@ data:
   # IBM Security Verify requires a special clientId and clientSecret for registration.
   # oidc-autoreg-initialClientId: bW9vb29vb28=
   # oidc-autoreg-initialClientSecret: dGhlbGF1Z2hpbmdjb3c=  
+  #
   # Optional: Grant types are the types of OAuth flows the resulting clients will allow
   # Default is authorization_code,refresh_token.  Specify a comma separated list.
   # oidc-autoreg-grantTypes: base64 data goes here
