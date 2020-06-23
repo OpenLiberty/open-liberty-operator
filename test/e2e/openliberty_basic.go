@@ -51,14 +51,15 @@ func OpenLibertyBasicTest(t *testing.T) {
 }
 
 func openLibertyBasicScaleTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
-	namespace, err := ctx.GetNamespace()
+	const name = "example-open-liberty"
+	ns, err := ctx.GetNamespace()
 	if err != nil {
 		return fmt.Errorf("could not get namespace: %v", err)
 	}
 
 	helper := int32(1)
 
-	exampleOpenLiberty := util.MakeBasicOpenLibertyApplication(t, f, "example-liberty", namespace, helper)
+	exampleOpenLiberty := util.MakeBasicOpenLibertyApplication(t, f, name, ns, helper)
 
 	timestamp := time.Now().UTC()
 	t.Logf("%s - Creating basic liberty application for scaling test...", timestamp)
@@ -68,22 +69,15 @@ func openLibertyBasicScaleTest(t *testing.T, f *framework.Framework, ctx *framew
 		return err
 	}
 
-	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, "example-liberty", 1, retryInterval, timeout)
+	err = e2eutil.WaitForDeployment(t, f.KubeClient, ns, name, 1, retryInterval, timeout)
 	if err != nil {
 		return err
 	}
 	// -- Run all scaling tests below based on the above example deployment of 1 pods ---
 	// update the number of replicas and return if failure occurs
-	if err = openLibertyUpdateScaleTest(t, f, namespace, exampleOpenLiberty); err != nil {
-		return err
-	}
-	timestamp = time.Now().UTC()
-	t.Logf("%s - Completed basic openLiberty scale test", timestamp)
-	return err
-}
-
-func openLibertyUpdateScaleTest(t *testing.T, f *framework.Framework, namespace string, exampleOpenLiberty *openlibertyv1beta1.OpenLibertyApplication) error {
-	err := f.Client.Get(goctx.TODO(), types.NamespacedName{Name: "example-liberty", Namespace: namespace}, exampleOpenLiberty)
+	exampleOpenLiberty = &openlibertyv1beta1.OpenLibertyApplication{}
+	target := types.NamespacedName{Name: name, Namespace: ns}
+	err = f.Client.Get(goctx.TODO(), target, exampleOpenLiberty)
 	if err != nil {
 		return err
 	}
@@ -96,6 +90,8 @@ func openLibertyUpdateScaleTest(t *testing.T, f *framework.Framework, namespace 
 	}
 
 	// wait for example-memcached to reach 2 replicas
-	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, "example-liberty", 2, retryInterval, timeout)
-	return err // implicitly return nil if no error
+	err = e2eutil.WaitForDeployment(t, f.KubeClient, target.Namespace, target.Name, 2, retryInterval, timeout)
+	timestamp = time.Now().UTC()
+	t.Logf("%s - Completed basic openLiberty scale test", timestamp)
+	return err
 }

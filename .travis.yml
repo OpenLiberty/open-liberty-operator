@@ -36,6 +36,9 @@ jobs:
     script: make test-minikube
   - name: E2E testing on OCP 3.11
     script: make test-e2e
+    env:
+      - LIBERTY_IMAGE="openliberty/open-liberty:kernel-java8-openj9-ubi"
+      - LIBERTY_IMAGE="ibmcom/websphere-liberty:kernel-java8-ibmjava-ubi"
     if: fork = false
   ## if master branch build and push image for amd64,ppc64le,s390 to DH
   - name: Build image on amd64
