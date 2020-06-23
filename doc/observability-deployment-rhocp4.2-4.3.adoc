@@ -57,7 +57,7 @@ spec:
         name: basic-auth
 ----
 +
-The referenced secret `basic-auth` is the secret you will create in Openshift with your desired credentials. This secret should also be the same one used in your ServiceMonitor when you configure the `basicAuth` definition there. 
+The referenced secret `basic-auth` is the secret you will create in Openshift with your desired credentials. This secret should also be the same one used in your ServiceMonitor when you configure the `basicAuth` definition there. The `envFrom` configuration will send the secret's username and password into the application container as environment variables under the variable names `username` and `password` respectively.
 
 . In your DockerFile, add the following line to copy the `server_mpMetrics.xml` file into the `configDropins/overrides` directory:
 +
