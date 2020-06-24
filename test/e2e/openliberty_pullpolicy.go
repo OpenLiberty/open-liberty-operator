@@ -122,7 +122,7 @@ func testPullPolicyNever(t *testing.T, f *framework.Framework, namespace string,
 
 	openLibertyApplication := util.MakeBasicOpenLibertyApplication(t, f, applicationName, namespace, replicas)
 	openLibertyApplication.Spec.PullPolicy = &policy
-	openLibertyApplication.Spec.ApplicationImage = "openliberty/open-liberty-fake"
+	openLibertyApplication.Spec.ApplicationImage = getImageTarget() + "-fake"
 
 	// use TestCtx's create helper to create the object and add a cleanup function for the new object
 	err := f.Client.Create(goctx.TODO(), openLibertyApplication,
@@ -143,10 +143,6 @@ func searchEventMessages(t *testing.T, f *framework.Framework, policy corev1.Pul
 	options := &dynclient.ListOptions{
 		Namespace: namespace,
 	}
-	image, exists := os.LookupEnv("LIBERTY_IMAGE")
-	if !exists {
-		image = "openliberty/open-liberty:kernel-java8-openj9-ubi"
-	}
 
 	eventlist := &corev1.EventList{}
 	err := f.Client.List(goctx.TODO(), eventlist, options)
@@ -155,7 +151,9 @@ func searchEventMessages(t *testing.T, f *framework.Framework, policy corev1.Pul
 	}
 
 	t.Logf("***** Logging events in namespace: %s", namespace)
-	message := fmt.Sprintf(messages[string(policy)], image)
+	message := fmt.Sprintf(messages[string(policy)], getImageTarget())
+	t.Log(message)
+	t.Log("****")
 	lowerKey := strings.ToLower(message)
 	for i := len(eventlist.Items) - 1; i >= 0; i-- {
 		lowerMessage := strings.ToLower(eventlist.Items[i].Message)
@@ -166,5 +164,13 @@ func searchEventMessages(t *testing.T, f *framework.Framework, policy corev1.Pul
 		t.Log(eventlist.Items[i].Message)
 	}
 
-	return errors.New("The pull policy was not correctly set")
+	return errors.New(fmt.Sprintf("The pull policy of %s was not correctly set", string(policy)))
+}
+
+func getImageTarget() string {
+	image, exists := os.LookupEnv("LIBERTY_IMAGE")
+	if !exists {
+		image = "openliberty/open-liberty:kernel-java8-openj9-ubi"
+	}
+	return image
 }
