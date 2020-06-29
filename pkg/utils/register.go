@@ -51,8 +51,9 @@ func doRegister(rdata RegisterData) (string, string, error) {
 	// ICI: if we don't have initial token, use client and secret to go get one.
 	var token = rdata.InitialAccessToken
 	if token == "" && (rdata.InitialClientId == "" || rdata.InitialClientSecret == "") {
-		return "", "", gherrors.New("Provider " + rdata.ProviderId + ": registration data for Single sign-on (SSO) is missing required fields," +
-			" one or more of initialAccessToken, initialClientId, or initialClientSecret.")
+	    id := rdata.ProviderId
+		return "", "", gherrors.New("Provider " + id + ": registration data for Single sign-on (SSO) is missing required fields," +
+			" one or more of " + id + "-autoreg-initialAccessToken, " + id + "-autoreg-initialClientId, or " + id + "-autoreg-initialClientSecret.")
 	}
 	if token == "" {
 		rtoken, err := requestAccessToken(rdata, tokenURL)
