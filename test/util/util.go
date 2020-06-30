@@ -4,6 +4,7 @@ import (
 	goctx "context"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -37,6 +38,11 @@ func MakeBasicOpenLibertyApplication(t *testing.T, f *framework.Framework, n str
 		},
 	}
 	expose := false
+	image, exists := os.LookupEnv("LIBERTY_IMAGE")
+	if !exists {
+		image = "openliberty/open-liberty:kernel-java8-openj9-ubi"
+	}
+
 	return &openlibertyv1beta1.OpenLibertyApplication{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "OpenLibertyApplication",
@@ -47,7 +53,7 @@ func MakeBasicOpenLibertyApplication(t *testing.T, f *framework.Framework, n str
 			Namespace: ns,
 		},
 		Spec: openlibertyv1beta1.OpenLibertyApplicationSpec{
-			ApplicationImage: "openliberty/open-liberty:kernel-java8-openj9-ubi",
+			ApplicationImage: image,
 			Replicas:         &replicas,
 			Expose:           &expose,
 			ReadinessProbe: &corev1.Probe{

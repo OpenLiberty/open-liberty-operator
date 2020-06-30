@@ -3,6 +3,8 @@ package e2e
 import (
 	goctx "context"
 	"errors"
+	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -15,11 +17,17 @@ import (
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	ifNotPresentMessage = "Container image \"openliberty/open-liberty:kernel-java8-openj9-ubi\" already present on machine"
-	alwaysMessage       = "Pulling image \"openliberty/open-liberty:kernel-java8-openj9-ubi\""
-	neverMessage        = "Container image \"openliberty/open-liberty-fake\" is not present with pull policy of Never"
+
+var (
+	messages = map[string]string{
+		"IfNotPresent": "Container image \"%s\" already present on machine",
+		"Always": "Pulling image \"%s\"",
+		"Never": "Container image \"%s-fake\" is not present with pull policy of Never",
+	}
+	olAppName = "example-liberty-pullpolicy"
 )
+
+
 
 // OpenLibertyPullPolicyTest checks that the configured pull policy is applied to deployment
 func OpenLibertyPullPolicyTest(t *testing.T) {
@@ -54,8 +62,9 @@ func OpenLibertyPullPolicyTest(t *testing.T) {
 		util.FailureCleanup(t, f, namespace, err)
 	}
 }
+
 func testPullPolicyAlways(t *testing.T, f *framework.Framework, namespace string, ctx *framework.TestCtx) error {
-	applicationName := "example-liberty-pullpolicy"
+	applicationName := olAppName + "-always"
 	replicas := int32(1)
 	policy := corev1.PullAlways
 
@@ -78,11 +87,11 @@ func testPullPolicyAlways(t *testing.T, f *framework.Framework, namespace string
 	timestamp := time.Now().UTC()
 	t.Logf("%s - Deployment created, verifying pull policy...", timestamp)
 
-	return searchEventMessages(t, f, alwaysMessage, namespace)
+	return searchEventMessages(t, f, policy, namespace)
 }
 
 func testPullPolicyIfNotPresent(t *testing.T, f *framework.Framework, namespace string, ctx *framework.TestCtx) error {
-	applicationName := "example-liberty-pullpolicy-ifnotpresent"
+	applicationName := olAppName + "-ifnotpresent"
 	replicas := int32(1)
 
 	openLibertyApplication := util.MakeBasicOpenLibertyApplication(t, f, applicationName, namespace, replicas)
@@ -103,41 +112,17 @@ func testPullPolicyIfNotPresent(t *testing.T, f *framework.Framework, namespace 
 	timestamp := time.Now().UTC()
 	t.Logf("%s - Deployment created, verifying pull policy...", timestamp)
 
-	return searchEventMessages(t, f, ifNotPresentMessage, namespace)
-}
-
-func searchEventMessages(t *testing.T, f *framework.Framework, key string, namespace string) error {
-	options := &dynclient.ListOptions{
-		Namespace: namespace,
-	}
-
-	eventlist := &corev1.EventList{}
-	err := f.Client.List(goctx.TODO(), eventlist, options)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	t.Logf("***** Logging events in namespace: %s", namespace)
-	lowerKey := strings.ToLower(key)
-	for i := len(eventlist.Items) - 1; i >= 0; i-- {
-		lowerMessage := strings.ToLower(eventlist.Items[i].Message)
-		if lowerMessage == lowerKey {
-			return nil
-		}
-		t.Log("------------------------------------------------------------")
-		t.Log(eventlist.Items[i].Message)
-	}
-
-	return errors.New("The pull policy was not correctly set")
+	return searchEventMessages(t, f, corev1.PullIfNotPresent, namespace)
 }
 
 func testPullPolicyNever(t *testing.T, f *framework.Framework, namespace string, ctx *framework.TestCtx) error {
+	applicationName := olAppName + "-never"
 	replicas := int32(1)
 	policy := corev1.PullNever
 
-	openLibertyApplication := util.MakeBasicOpenLibertyApplication(t, f, "example-runtime-pullpolicy-never", namespace, replicas)
+	openLibertyApplication := util.MakeBasicOpenLibertyApplication(t, f, applicationName, namespace, replicas)
 	openLibertyApplication.Spec.PullPolicy = &policy
-	openLibertyApplication.Spec.ApplicationImage = "openliberty/open-liberty-fake"
+	openLibertyApplication.Spec.ApplicationImage = getImageTarget() + "-fake"
 
 	// use TestCtx's create helper to create the object and add a cleanup function for the new object
 	err := f.Client.Create(goctx.TODO(), openLibertyApplication,
@@ -151,5 +136,41 @@ func testPullPolicyNever(t *testing.T, f *framework.Framework, namespace string,
 	timestamp := time.Now().UTC()
 	t.Logf("%s - Deployment created, verifying pull policy...", timestamp)
 
-	return searchEventMessages(t, f, neverMessage, namespace)
+	return searchEventMessages(t, f, policy, namespace)
+}
+
+func searchEventMessages(t *testing.T, f *framework.Framework, policy corev1.PullPolicy, namespace string) error {
+	options := &dynclient.ListOptions{
+		Namespace: namespace,
+	}
+
+	eventlist := &corev1.EventList{}
+	err := f.Client.List(goctx.TODO(), eventlist, options)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("***** Logging events in namespace: %s", namespace)
+	message := fmt.Sprintf(messages[string(policy)], getImageTarget())
+	t.Log(message)
+	t.Log("****")
+	lowerKey := strings.ToLower(message)
+	for i := len(eventlist.Items) - 1; i >= 0; i-- {
+		lowerMessage := strings.ToLower(eventlist.Items[i].Message)
+		if lowerMessage == lowerKey {
+			return nil
+		}
+		t.Log("------------------------------------------------------------")
+		t.Log(eventlist.Items[i].Message)
+	}
+
+	return errors.New(fmt.Sprintf("The pull policy of %s was not correctly set", string(policy)))
+}
+
+func getImageTarget() string {
+	image, exists := os.LookupEnv("LIBERTY_IMAGE")
+	if !exists {
+		image = "openliberty/open-liberty:kernel-java8-openj9-ubi"
+	}
+	return image
 }
