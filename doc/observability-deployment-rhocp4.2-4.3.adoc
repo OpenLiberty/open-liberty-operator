@@ -27,9 +27,9 @@ oc logs -f pod_name -n namespace | \
 
 A MicroProfile Metrics enabled Open Liberty runtime is capable of tracking and observing metrics from the JVM and Open Liberty server as well as tracking MicroProfile Metrics instrumented within a deployed application. The tracked metrics can then be scraped by Prometheus and visualized with Grafana.
 
-=== MicroProfile Metrics 1.x and 2.x
+=== MicroProfile Metrics
 
-The following steps outline how to manually create and modify a `server.xml` to add the `mpMetrics-2.3` feature and `monitor-1.0` feature that will be built as part of your Open Liberty image.  If you intend to configure with MicroProfile Metrics 1.1 you can use the `mpMetrics-1.1` feature in place of `mpMetrics-2.3`.
+The following steps outline how to manually create and modify a server.xml to add the MicroProfile Metrics feature that will be built as part of your Open Liberty image. You can use any version of the MicroProfile Metrics feature. If you use a version below mpMetrics-2.3, you should also include the monitor-1.0 feature to add Liberty server metrics. MicroProfile Metrics feature versions starting from mpMetrics-2.3 automatically load monitor-1.0 as a dependency.
 
 . Create an XML file named `server_mpMetrics.xml` with the following contents and place it in the same directory as your Dockerfile:
 +
@@ -39,7 +39,9 @@ The following steps outline how to manually create and modify a `server.xml` to 
 <server>
    <featureManager>
        <feature>mpMetrics-2.3</feature>
-       <feature>monitor-1.0</feature>
+       <!-- include the monitor-1.0 feature below if you are using an mpMetrics version below 2.3
+       <feature>monitor-1.0</feature> 
+       --> 
    </featureManager>
    <quickStartSecurity userName="${env.username}" userPassword="${env.password}"/>
 </server>
