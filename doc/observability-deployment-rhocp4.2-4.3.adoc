@@ -29,7 +29,7 @@ A MicroProfile Metrics enabled Open Liberty runtime is capable of tracking and o
 
 === MicroProfile Metrics 1.x and 2.x
 
-The following steps outline how to manually create and modify a `server.xml` to add the `mpMetrics-2.2` feature and `monitor-1.0` feature that will be built as part of your Open Liberty image.  If you intend to configure with MicroProfile Metrics 1.1 you can use the `mpMetrics-1.1` feature in place of `mpMetrics-2.2`.
+The following steps outline how to manually create and modify a `server.xml` to add the `mpMetrics-2.3` feature and `monitor-1.0` feature that will be built as part of your Open Liberty image.  If you intend to configure with MicroProfile Metrics 1.1 you can use the `mpMetrics-1.1` feature in place of `mpMetrics-2.3`.
 
 . Create an XML file named `server_mpMetrics.xml` with the following contents and place it in the same directory as your Dockerfile:
 +
@@ -38,7 +38,7 @@ The following steps outline how to manually create and modify a `server.xml` to 
 <?xml version="1.0" encoding="UTF-8"?>
 <server>
    <featureManager>
-       <feature>mpMetrics-2.2</feature>
+       <feature>mpMetrics-2.3</feature>
        <feature>monitor-1.0</feature>
    </featureManager>
    <quickStartSecurity userName="${env.username}" userPassword="${env.password}"/>
