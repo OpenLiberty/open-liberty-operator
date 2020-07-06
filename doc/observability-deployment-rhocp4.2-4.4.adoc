@@ -1,6 +1,6 @@
 = Observability with Open Liberty
 
-The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in the OpenShift cluster. This document has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2 and 4.3.
+The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in the OpenShift cluster. This document has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2, 4.3, and 4.4.
 
 == How to deploy Kibana dashboards to monitor Open Liberty logging events
 
@@ -27,9 +27,9 @@ oc logs -f pod_name -n namespace | \
 
 A MicroProfile Metrics enabled Open Liberty runtime is capable of tracking and observing metrics from the JVM and Open Liberty server as well as tracking MicroProfile Metrics instrumented within a deployed application. The tracked metrics can then be scraped by Prometheus and visualized with Grafana.
 
-=== MicroProfile Metrics 1.x and 2.x
+=== MicroProfile Metrics
 
-The following steps outline how to manually create and modify a `server.xml` to add the `mpMetrics-2.2` feature and `monitor-1.0` feature that will be built as part of your Open Liberty image.  If you intend to configure with MicroProfile Metrics 1.1 you can use the `mpMetrics-1.1` feature in place of `mpMetrics-2.2`.
+The following steps outline how to manually create and modify a server.xml to add the MicroProfile Metrics feature that will be built as part of your Open Liberty image. You can use any version of the MicroProfile Metrics feature. If you use a version below mpMetrics-2.3, you should also include the monitor-1.0 feature to add Liberty server metrics. MicroProfile Metrics feature versions starting from mpMetrics-2.3 automatically load monitor-1.0 as a dependency.
 
 . Create an XML file named `server_mpMetrics.xml` with the following contents and place it in the same directory as your Dockerfile:
 +
@@ -38,14 +38,19 @@ The following steps outline how to manually create and modify a `server.xml` to 
 <?xml version="1.0" encoding="UTF-8"?>
 <server>
    <featureManager>
-       <feature>mpMetrics-2.2</feature>
-       <feature>monitor-1.0</feature>
+       <feature>mpMetrics-2.3</feature>
+       <!-- include the monitor-1.0 feature below if you are using an mpMetrics version below 2.3
+       <feature>monitor-1.0</feature> 
+       --> 
    </featureManager>
-   <quickStartSecurity userName="admin" userPassword="adminPwd"/>
+   <quickStartSecurity userName="${env.username}" userPassword="${env.password}"/>
 </server>
 ----
 +
 The above `server.xml` configuration secures access to the server with basic authentication using the `<quickStartSecurity>` element. The `<quickStartSecurity>` is used in the above example for simplicity. When configuring your server you may wish to use a link:++https://www.ibm.com/support/knowledgecenter/en/SSEQTP_liberty/com.ibm.websphere.wlp.doc/ae/twlp_sec_basic_registry.html++[basic registry] or an link:++https://www.ibm.com/support/knowledgecenter/en/SSEQTP_liberty/com.ibm.websphere.wlp.doc/ae/twlp_sec_ldap.html++[LDAP registry] for securing authenticated access to your server. When using Prometheus to scrape data from the `/metrics` endpoint only the _Service Monitor_ approach can be configured to negotiate authentication with the Open Liberty server.
+
++
+The two environment variables in the `<quickStartSecurity>` element, `username` and `password`, are used to avoid hardcoded, clear text authentication credentials in the `server.xml`. Follow the steps in the following section, <<Using environment variables for basic authentication credentials>>, to set up these two environment variables with your username and password of choice.
 
 . In your DockerFile, add the following line to copy the `server_mpMetrics.xml` file into the `configDropins/overrides` directory:
 +
@@ -54,10 +59,46 @@ The above `server.xml` configuration secures access to the server with basic aut
 COPY --chown=1001:0 server_mpMetrics.xml /config/configDropins/overrides/
 ----
 
+==== Using environment variables for basic authentication credentials
+
+The following steps outline how to set up two environment variables that are used in the `<quickStartSecurity>` element for basic authentication, `username` and `password`, with your username and password of choice after your Open Liberty image is deployed onto OpenShift. 
+
+. Create a secret in OpenShift with your desired username and password in the same namespace as your application.
+. Modify your OpenLibertyApplication Custom Resource (CR) to add the `envFrom` definition with your secret referenced; in the following example, replace `basic-auth` with your secret:
++
+[source,yaml]
+----
+spec:
+  envFrom:
+   - secretRef:
+      name: basic-auth
+----
++
+This `envFrom` configuration sets two environment variables for your application container, `username` and `password`,  using your secret's respective username and password values. 
+
+
 === Enabling Prometheus to scrape data
 
 
 You will need to deploy Prometheus using the Prometheus Operator which will then utilize Service Monitors to monitor and scrape logs from target services. Details regarding how to deploy and configure Prometheus are link:++https://kabanero.io/guides/app-monitoring-ocp4.2/#deploy-prometheus-prometheus-operator++[here].
+
+
+After deploying Prometheus, you must configure your application's Service Monitor to use the basic authentication credentials specified in your `server.xml` when accessing the `/metrics` endpoint. Use the Service Monitor's `basicAuth` definition with a secret that contains those credentials; this should be the same secret you created earlier in Step 1 of <<Using environment variables for basic authentication credentials>>.
+
+Add the following `basicAuth` section to your ServiceMonitor YAML, and replace `basic-auth` with your secret:
+[source,yaml]
+----
+spec:
+  endpoints:
+  - basicAuth:
+      password:
+        name: basic-auth
+        key: password
+      username:
+        name: basic-auth
+        key: username
+----
+
 
 === Visualizing your data with Grafana
 
