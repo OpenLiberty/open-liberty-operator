@@ -76,7 +76,7 @@ func testSocialLogin(t *testing.T, f *framework.Framework, ctx *framework.TestCt
 	}
 	// set up certificates for route, see: cert-manager test in RC
 	expose := true
-	clusterIp := corev1.ServiceTypeClusterIP
+	clusterIP := corev1.ServiceTypeClusterIP
 	githubLogin := v1beta1.GithubLogin{Hostname: "github.com"}
 	openliberty := util.MakeBasicOpenLibertyApplication(t, f, name, ns, 1)
 	openliberty.Spec.ApplicationImage = "openliberty/open-liberty:full-java8-openj9-ubi"
@@ -86,7 +86,7 @@ func testSocialLogin(t *testing.T, f *framework.Framework, ctx *framework.TestCt
 		{Name: "SEC_IMPORTS_K8S_CERTS", Value: "true"},
 	}
 	openliberty.Spec.Service = &v1beta1.OpenLibertyApplicationService{
-		Type:        &clusterIp,
+		Type:        &clusterIP,
 		Port:        9080,
 		Certificate: &v1beta1.Certificate{},
 	}
@@ -233,7 +233,7 @@ func testProviderLogins(t *testing.T, f *framework.Framework, ctx *framework.Tes
 	// set up certificates for route, see: cert-manager test in RC
 	// terminationPolicy := v1.TLSTerminationReencrypt
 	expose := true
-	clusterIp := corev1.ServiceTypeClusterIP
+	clusterIP := corev1.ServiceTypeClusterIP
 	githubLogin := v1beta1.GithubLogin{Hostname: "github.com"}
 	openliberty := util.MakeBasicOpenLibertyApplication(t, f, name, ns, 1)
 	openliberty.Spec.ApplicationImage = "openliberty/open-liberty:full-java8-openj9-ubi"
@@ -243,7 +243,7 @@ func testProviderLogins(t *testing.T, f *framework.Framework, ctx *framework.Tes
 		{Name: "SEC_IMPORTS_K8S_CERTS", Value: "true"},
 	}
 	openliberty.Spec.Service = &v1beta1.OpenLibertyApplicationService{
-		Type:        &clusterIp,
+		Type:        &clusterIP,
 		Port:        9080,
 		Certificate: &v1beta1.Certificate{},
 	}
@@ -334,14 +334,14 @@ func verifyEnvVariables(t *testing.T, ctx *framework.TestCtx, f *framework.Frame
 	for key, val := range secret.Data {
 		e := findEnvFromWithKey(key, env)
 		if e == nil {
-			return errors.New(fmt.Sprintf("could not find key %s in pod envfrom", key))
+			return fmt.Errorf("could not find key %s in pod envfrom", key)
 		}
 
 		ok, err := util.CheckEnvVarValue(t, val, e, &pod)
 		if err != nil {
 			return err
 		} else if !ok {
-			return errors.New(fmt.Sprintf("env var %s not set correctly", e.Name))
+			return fmt.Errorf("env var %s not set correctly", e.Name)
 		}
 	}
 
@@ -366,13 +366,13 @@ func verifyConfiguredSSOFields(env []corev1.EnvVar, spec v1beta1.OpenLibertyAppl
 	for _, e := range spec.SSO.OIDC {
 		envName := fmt.Sprintf("SEC_SSO_%s_DISCOVERYENDPOINT", strings.ToUpper(e.ID))
 		if !findEnvFromWithName(envName, env) {
-			return errors.New(fmt.Sprintf("failed to find oidc provider %s's env var", e.ID))
+			return fmt.Errorf("failed to find oidc provider %s's env var", e.ID)
 		}
 	}
 	for _, e := range spec.SSO.Oauth2 {
 		envName := fmt.Sprintf("SEC_SSO_%s_AUTHORIZATIONENDPOINT", strings.ToUpper(e.ID))
 		if !findEnvFromWithName(envName, env) {
-			return errors.New(fmt.Sprintf("failed to find oauth2 provider %s's env var", e.ID))
+			return fmt.Errorf("failed to find oauth2 provider %s's env var", e.ID)
 		}
 	}
 

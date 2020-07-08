@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/OpenLiberty/open-liberty-operator/pkg/apis"
@@ -9,6 +10,36 @@ import (
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+type Test struct {
+	Name string
+	Test func(*testing.T)
+}
+
+var (
+	basicTests = []Test{
+		{"OpenLibertyPullPolicyTest", OpenLibertyPullPolicyTest},
+		{"OpenLibertyBasicTest", OpenLibertyBasicTest},
+		{"OpenLibertyProbeTest", OpenLibertyProbeTest},
+		{"OpenLibertyAutoScalingTest", OpenLibertyAutoScalingTest},
+		{"OpenLibertyStorageTest", OpenLibertyBasicStorageTest},
+		{"OpenLibertyPersistenceTest", OpenLibertyPersistenceTest},
+		{"OpenLibertyTraceTest", OpenLibertyTraceTest},
+	}
+	advancedTests = []Test{
+		{"OpenLibertyServiceMonitorTest", OpenLibertyServiceMonitorTest},
+		{"OpenLibertyKnativeTest", OpenLibertyKnativeTest},
+		{"OpenLibertyServiceBindingTest", OpenLibertyServiceBindingTest},
+		{"OpenLibertyCertManagerTest", OpenLibertyCertManagerTest},
+		{"OpenLibertyDumpsTest", OpenLibertyDumpsTest},
+		{"OpenLibertyKappNavTest", OpenLibertyKappNavTest},
+		{"OpenLibertySSOTest", OpenLibertySSOTest},
+	}
+	ocpTests = []Test{
+		{"OpenLibertyImageStreamTest", OpenLibertyImageStreamTest},
+	}
+	independantTests = []Test{}
 )
 
 func TestOpenLibertyApplication(t *testing.T) {
@@ -35,30 +66,42 @@ func TestOpenLibertyApplication(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to add Trace scheme to framework: %v", err)
 	}
+
+	var wg sync.WaitGroup
+
 	// basic tests that are runnable locally in minishift/kube
-	t.Run("OpenLibertyPullPolicyTest", OpenLibertyPullPolicyTest)
-	t.Run("OpenLibertyBasicTest", OpenLibertyBasicTest)
-	t.Run("OpenLibertyProbeTest", OpenLibertyProbeTest)
-	t.Run("OpenLibertyAutoScalingTest", OpenLibertyAutoScalingTest)
-	t.Run("OpenLibertyStorageTest", OpenLibertyBasicStorageTest)
-	t.Run("OpenLibertyPersistenceTest", OpenLibertyPersistenceTest)
-	t.Run("OpenLibertyTraceTest", OpenLibertyTraceTest)
+	for _, test := range basicTests {
+		wg.Add(1)
+		RuntimeTestRunner(&wg, t, test)
+	}
 
-	if cluster != "local" {
-		// only test non-OCP features on minikube
-		if cluster == "minikube" {
-			testIndependantFeatures(t)
-			return
-		}
-
-		// test all features that require some configuration
-		testAdvancedFeatures(t)
-
-		// test features that require OCP
-		if cluster == "ocp" {
-			testOCPFeatures(t)
+	// tests for features that will require cluster configuration
+	// i.e. knative requires installations
+	if cluster != "minikube" {
+		for _, test := range advancedTests {
+			wg.Add(1)
+			go RuntimeTestRunner(&wg, t, test)
 		}
 	}
+
+	// tests for features NOT expected to run in OpenShift
+	// i.e. Ingress
+	if cluster == "minikube" || cluster == "kubernetes" {
+		for _, test := range independantTests {
+			wg.Add(1)
+			go RuntimeTestRunner(&wg, t, test)
+		}
+	}
+
+	// tests for features that ONLY exist in OpenShift
+	// i.e. image streams are only in OpenShift
+	if cluster == "ocp" {
+		for _, test := range ocpTests {
+			wg.Add(1)
+			go RuntimeTestRunner(&wg, t, test)
+		}
+	}
+	wg.Wait()
 }
 
 func testAdvancedFeatures(t *testing.T) {
@@ -81,4 +124,9 @@ func testOCPFeatures(t *testing.T) {
 // Verify functionality that is not expected to run on OCP
 func testIndependantFeatures(t *testing.T) {
 	// TODO: implement test for ingress
+}
+
+func RuntimeTestRunner(wg *sync.WaitGroup, t *testing.T, test Test) {
+	defer wg.Done()
+	t.Run(test.Name, test.Test)
 }

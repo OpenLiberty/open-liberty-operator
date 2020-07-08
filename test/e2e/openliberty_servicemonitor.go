@@ -20,9 +20,9 @@ import (
 	k "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Test is a struct for testing purpose, which contains a test description,
+// ServiceTest is a struct for testing purpose, which contains a test description,
 // expected result, and actual result.
-type Test struct {
+type ServiceTest struct {
 	test     string
 	expected interface{}
 	actual   interface{}
@@ -120,7 +120,7 @@ func OpenLibertyServiceMonitorTest(t *testing.T) {
 
 	// gets the service monitor
 	sm := smList.Items[0]
-	err = verifyTests([]Test{
+	err = verifyTests([]ServiceTest{
 		{"service monitor should be connected to the liberty application",
 			"example-liberty-sm", sm.Spec.Selector.MatchLabels["app.kubernetes.io/instance"]},
 		{"service monitor path",
@@ -210,8 +210,8 @@ func testSettingOpenLibertyServiceMonitor(t *testing.T, f *framework.Framework, 
 
 	// gets the service monitor
 	sm := smList.Items[0]
-	t.Logf("IMPORTANT%v",sm.Spec.Endpoints[0].Params)
-	err = verifyTests([]Test{
+	t.Logf("IMPORTANT%v", sm.Spec.Endpoints[0].Params)
+	err = verifyTests([]ServiceTest{
 		{"service monitor should be connected to the liberty application",
 			"example-liberty-sm", sm.Spec.Selector.MatchLabels["app.kubernetes.io/instance"]},
 		{"service monitor path",
@@ -238,7 +238,7 @@ func testSettingOpenLibertyServiceMonitor(t *testing.T, f *framework.Framework, 
 	}
 }
 
-func verifyTests(tests []Test) error {
+func verifyTests(tests []ServiceTest) error {
 	for _, tt := range tests {
 		if !reflect.DeepEqual(tt.actual, tt.expected) {
 			return fmt.Errorf("%s test expected: (%v) actual: (%v)", tt.test, tt.expected, tt.actual)

@@ -105,20 +105,20 @@ func OpenLibertyPersistenceTest(t *testing.T) {
 	exampleOpenLiberty := util.MakeBasicOpenLibertyApplication(t, f, "example-liberty-persistence", namespace, 1)
 	exampleOpenLiberty.Spec.Storage = &openlibertyv1beta1.OpenLibertyApplicationStorage{
 		VolumeClaimTemplate: &corev1.PersistentVolumeClaim{
-			metav1.TypeMeta{},
-			metav1.ObjectMeta{
+			TypeMeta: metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "pvc",
 			},
-			corev1.PersistentVolumeClaimSpec{
+			Spec: corev1.PersistentVolumeClaimSpec{
 				AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 				Resources: corev1.ResourceRequirements{
 					Requests: RequestLimits,
 				},
 			},
-			corev1.PersistentVolumeClaimStatus{},
+			Status: corev1.PersistentVolumeClaimStatus{},
 		},
 	}
-	exampleOpenLiberty.Spec.VolumeMounts = []corev1.VolumeMount{corev1.VolumeMount{
+	exampleOpenLiberty.Spec.VolumeMounts = []corev1.VolumeMount{{
 		Name:      "pvc",
 		MountPath: "/data",
 	}}
