@@ -145,6 +145,8 @@ func CreateServiceabilityPVC(instance *openlibertyv1beta1.OpenLibertyApplication
 					corev1.ResourceStorage: resource.MustParse(instance.GetServiceability().GetSize()),
 				},
 			},
+			StorageClassName: instance.GetServiceability().GetStorageClassName(),
+			// StorageClassName: &instance.GetServiceability().StorageClassName,
 			AccessModes: []corev1.PersistentVolumeAccessMode{
 				corev1.ReadWriteMany,
 				corev1.ReadWriteOnce,
@@ -223,14 +225,14 @@ func createEnvVarSSO(loginID string, envSuffix string, value interface{}) *corev
 }
 
 func writeSSOSecretIfNeeded(client client.Client, ssoSecret *corev1.Secret, ssoSecretUpdates map[string][]byte) error {
-    var err error = nil
-	if len(ssoSecretUpdates) > 0 { 
-    	_, err = controllerutil.CreateOrUpdate(context.TODO(), client, ssoSecret, func() error {
-    		for key, value := range ssoSecretUpdates {
-    			ssoSecret.Data[key] = value
-    		}
-    		return nil
-    	})
+	var err error = nil
+	if len(ssoSecretUpdates) > 0 {
+		_, err = controllerutil.CreateOrUpdate(context.TODO(), client, ssoSecret, func() error {
+			for key, value := range ssoSecretUpdates {
+				ssoSecret.Data[key] = value
+			}
+			return nil
+		})
 	}
 	return err
 }
@@ -319,17 +321,17 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 		if oidcClient.HostNameVerificationEnabled != nil {
 			ssoEnv = append(ssoEnv, *createEnvVarSSO(id, "_HOSTNAMEVERIFICATIONENABLED", *oidcClient.HostNameVerificationEnabled))
 		}
-		
+
 		clientName := oidcClient.ID
 		if clientName == "" {
 			clientName = "oidc"
 		}
 		// if no clientId specified for this provider, try auto-registration
-		clientId := string(ssoSecret.Data[clientName + "-clientId"])
-		clientSecret := string(ssoSecret.Data[clientName + "-clientSecret"])
+		clientId := string(ssoSecret.Data[clientName+"-clientId"])
+		clientSecret := string(ssoSecret.Data[clientName+"-clientSecret"])
 
 		if isOpenShift && clientId == "" {
-		    logf.Log.WithName("utils").Info("Processing OIDC registration for id :"+ clientName)	
+			logf.Log.WithName("utils").Info("Processing OIDC registration for id :" + clientName)
 			theRoute := &routev1.Route{}
 			err = client.Get(context.TODO(), types.NamespacedName{Name: instance.GetName(), Namespace: instance.GetNamespace()}, theRoute)
 			if err != nil {
@@ -342,8 +344,8 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 			}
 
 			// route available, we don't have a client id and secret yet, go get one
-			prefix := clientName + autoregFragment  
-			buf := string(ssoSecret.Data[prefix + "insecureTLS"])
+			prefix := clientName + autoregFragment
+			buf := string(ssoSecret.Data[prefix+"insecureTLS"])
 			insecure := strings.ToUpper(buf) == "TRUE"
 			regData := RegisterData{
 				DiscoveryURL:            oidcClient.DiscoveryEndpoint,
@@ -360,21 +362,21 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta1.O
 
 			clientId, clientSecret, err = RegisterWithOidcProvider(regData)
 			if err != nil {
-			    writeSSOSecretIfNeeded(client, ssoSecret, ssoSecretUpdates) // preserve any registrations that succeeded
-			    return errors.Wrapf(err, "Error occured during registration with OIDC for provider " + clientName)
+				writeSSOSecretIfNeeded(client, ssoSecret, ssoSecretUpdates) // preserve any registrations that succeeded
+				return errors.Wrapf(err, "Error occured during registration with OIDC for provider "+clientName)
 			}
-			logf.Log.WithName("utils").Info("OIDC registration for id: "+ clientName + " successful, obtained clientId: " + clientId)            
-			ssoSecretUpdates[clientName + autoregFragment + "RegisteredOidcClientId"] = []byte(clientId)
-			ssoSecretUpdates[clientName + autoregFragment + "RegisteredOidcSecret"] = []byte(clientSecret)
-			ssoSecretUpdates[clientName + "-clientId"] = []byte(clientId)
-			ssoSecretUpdates[clientName + "-clientSecret"] = []byte(clientSecret)
+			logf.Log.WithName("utils").Info("OIDC registration for id: " + clientName + " successful, obtained clientId: " + clientId)
+			ssoSecretUpdates[clientName+autoregFragment+"RegisteredOidcClientId"] = []byte(clientId)
+			ssoSecretUpdates[clientName+autoregFragment+"RegisteredOidcSecret"] = []byte(clientSecret)
+			ssoSecretUpdates[clientName+"-clientId"] = []byte(clientId)
+			ssoSecretUpdates[clientName+"-clientSecret"] = []byte(clientSecret)
 
 			b := true
 			instance.Status.RouteAvailable = &b
 		} // end auto-reg
 	} // end for
-    err = writeSSOSecretIfNeeded(client, ssoSecret, ssoSecretUpdates)
-    
+	err = writeSSOSecretIfNeeded(client, ssoSecret, ssoSecretUpdates)
+
 	if err != nil {
 		return errors.Wrapf(err, "Error occured when updating SSO secret")
 	}
