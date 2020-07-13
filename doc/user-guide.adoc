@@ -1,6 +1,6 @@
 = Open Liberty Operator
 
-The Open Liberty Operator can be used to deploy and manage applications running on Open Liberty into link:++https://www.okd.io/++[OKD] or link:++https://www.openshift.com/++[OpenShift] clusters. You can also perform link:++#day-2-operations++[Day-2 operations] such as gathering traces and dumps using the operator.
+The Open Liberty Operator can be used to deploy and manage applications running on Open Liberty into Kubernetes clusters. You can also perform link:++#day-2-operations++[Day-2 operations] such as gathering traces and dumps using the operator.
 
 This documentation refers to the current master branch.  For documentation and samples of older releases, please check out the link:++https://github.com/OpenLiberty/open-liberty-operator/releases++[main releases] page and navigate the corresponding tag.
 
