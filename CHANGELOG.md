@@ -11,6 +11,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.0]
+
+### Added
+
+- Added support for automatic registration with OIDC providers. Tested with Red Hat Single Sign-on (RH-SSO) and IBM Security Verify. ([#152](https://github.com/OpenLiberty/open-liberty-operator/pull/152)
+
 ## [0.6.0]
 
 ### Added
@@ -79,7 +85,8 @@ All notable changes to this project will be documented in this file.
 
 The initial release of the helm-based Open Liberty Operator.
 
-[Unreleased]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.4.0...v0.5.0
