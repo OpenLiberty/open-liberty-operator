@@ -679,6 +679,13 @@ spec:
                   type: boolean
                 embedded:
                   type: object
+                expose:
+                  description: OpenLibertyApplicationBindingExpose encapsulates information
+                    exposed by the application
+                  properties:
+                    enabled:
+                      type: boolean
+                  type: object
                 resourceRef:
                   type: string
               type: object
@@ -5419,6 +5426,15 @@ spec:
           description: OpenLibertyApplicationStatus defines the observed state of
             OpenLibertyApplication
           properties:
+            binding:
+              description: LocalObjectReference contains enough information to let
+                you locate the referenced object inside the same namespace.
+              properties:
+                name:
+                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    TODO: Add other useful fields. apiVersion, kind, uid?'
+                  type: string
+              type: object
             conditions:
               items:
                 description: StatusCondition ...
@@ -5453,6 +5469,8 @@ spec:
               items:
                 type: string
               type: array
+            routeAvailable:
+              type: boolean
           type: object
   version: v1beta1
   versions:

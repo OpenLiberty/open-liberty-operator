@@ -177,9 +177,15 @@ type ServiceBindingAuth struct {
 
 // OpenLibertyApplicationBindings represents service binding related parameters
 type OpenLibertyApplicationBindings struct {
-	AutoDetect  *bool                 `json:"autoDetect,omitempty"`
-	ResourceRef string                `json:"resourceRef,omitempty"`
-	Embedded    *runtime.RawExtension `json:"embedded,omitempty"`
+	AutoDetect  *bool                                `json:"autoDetect,omitempty"`
+	ResourceRef string                               `json:"resourceRef,omitempty"`
+	Embedded    *runtime.RawExtension                `json:"embedded,omitempty"`
+	Expose      *OpenLibertyApplicationBindingExpose `json:"expose,omitempty"`
+}
+
+// OpenLibertyApplicationBindingExpose encapsulates information exposed by the application
+type OpenLibertyApplicationBindingExpose struct {
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 // OpenLibertyApplicationStatus defines the observed state of OpenLibertyApplication
@@ -187,12 +193,13 @@ type OpenLibertyApplicationBindings struct {
 type OpenLibertyApplicationStatus struct {
 	// +listType=map
 	// +listMapKey=type
-	Conditions                 []StatusCondition       `json:"conditions,omitempty"`
-	ConsumedServices           common.ConsumedServices `json:"consumedServices,omitempty"`
-	ImageReference             string                  `json:"imageReference,omitempty"`
-	RouteAvailable             *bool                   `json:"routeAvailable,omitempty"`
+	Conditions       []StatusCondition       `json:"conditions,omitempty"`
+	ConsumedServices common.ConsumedServices `json:"consumedServices,omitempty"`
+	RouteAvailable   *bool                   `json:"routeAvailable,omitempty"`
 	// +listType=set
-	ResolvedBindings []string                          `json:"resolvedBindings,omitempty"`
+	ResolvedBindings []string                     `json:"resolvedBindings,omitempty"`
+	ImageReference   string                       `json:"imageReference,omitempty"`
+	Binding          *corev1.LocalObjectReference `json:"binding,omitempty"`
 }
 
 // StatusCondition ...
@@ -458,7 +465,7 @@ func (cr *OpenLibertyApplication) GetRoute() common.BaseComponentRoute {
 	return cr.Spec.Route
 }
 
-// GetBindings returns route configuration for OpenLibertyApplication
+// GetBindings returns binding configuration for OpenLibertyApplication
 func (cr *OpenLibertyApplication) GetBindings() common.BaseComponentBindings {
 	if cr.Spec.Bindings == nil {
 		return nil
@@ -505,6 +512,16 @@ func (s *OpenLibertyApplicationStatus) GetImageReference() string {
 // SetImageReference sets Docker image reference on the status portion of the CR
 func (s *OpenLibertyApplicationStatus) SetImageReference(imageReference string) {
 	s.ImageReference = imageReference
+}
+
+// GetBinding returns BindingStatus representing binding status
+func (s *OpenLibertyApplicationStatus) GetBinding() *corev1.LocalObjectReference {
+	return s.Binding
+}
+
+// SetBinding sets BindingStatus representing binding status
+func (s *OpenLibertyApplicationStatus) SetBinding(r *corev1.LocalObjectReference) {
+	s.Binding = r
 }
 
 // GetMinReplicas returns minimum replicas
@@ -737,6 +754,19 @@ func (r *OpenLibertyApplicationBindings) GetResourceRef() string {
 // GetEmbedded returns the embedded underlying Service Binding resource
 func (r *OpenLibertyApplicationBindings) GetEmbedded() *runtime.RawExtension {
 	return r.Embedded
+}
+
+// GetExpose returns the map used making this application a bindable service
+func (r *OpenLibertyApplicationBindings) GetExpose() common.BaseComponentExpose {
+	if r.Expose == nil {
+		return nil
+	}
+	return r.Expose
+}
+
+// GetEnabled returns whether the application should be exposable as a service
+func (e *OpenLibertyApplicationBindingExpose) GetEnabled() *bool {
+	return e.Enabled
 }
 
 // GetNodeAffinity returns node affinity
