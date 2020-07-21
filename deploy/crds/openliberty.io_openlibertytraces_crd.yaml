@@ -1,29 +1,10 @@
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
     day2operation.openliberty.io/targetKinds: Pod
   name: openlibertytraces.openliberty.io
 spec:
-  additionalPrinterColumns:
-  - JSONPath: .status.operatedResource.resourceName
-    description: Name of the last operated pod
-    name: PodName
-    type: string
-  - JSONPath: .status.conditions[?(@.type=='Enabled')].status
-    description: Status of the trace condition
-    name: Tracing
-    type: string
-  - JSONPath: .status.conditions[?(@.type=='Enabled')].reason
-    description: Reason for the failure of trace condition
-    name: Reason
-    priority: 1
-    type: string
-  - JSONPath: .status.conditions[?(@.type=='Enabled')].message
-    description: Failure message from trace condition
-    name: Message
-    priority: 1
-    type: string
   group: openliberty.io
   names:
     kind: OpenLibertyTrace
@@ -34,78 +15,98 @@ spec:
     - oltraces
     singular: openlibertytrace
   scope: Namespaced
-  subresources:
-    status: {}
-  validation:
-    openAPIV3Schema:
-      description: OpenLibertyTrace is the schema for the openlibertytraces API
-      properties:
-        apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation
-            of an object. Servers should convert recognized schemas to the latest
-            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-          type: string
-        kind:
-          description: 'Kind is a string value representing the REST resource this
-            object represents. Servers may infer this from the endpoint the client
-            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-          type: string
-        metadata:
-          type: object
-        spec:
-          description: OpenLibertyTraceSpec defines the desired state of OpenLibertyTrace
-          properties:
-            disable:
-              type: boolean
-            maxFileSize:
-              format: int32
-              type: integer
-            maxFiles:
-              format: int32
-              type: integer
-            podName:
-              type: string
-            traceSpecification:
-              type: string
-          required:
-          - podName
-          - traceSpecification
-          type: object
-        status:
-          description: OpenLibertyTraceStatus defines the observed state of OpenLibertyTrace
-            operation
-          properties:
-            conditions:
-              items:
-                description: OperationStatusCondition ...
+  versions:
+  - additionalPrinterColumns:
+    - description: Name of the last operated pod
+      jsonPath: .status.operatedResource.resourceName
+      name: PodName
+      type: string
+    - description: Status of the trace condition
+      jsonPath: .status.conditions[?(@.type=='Enabled')].status
+      name: Tracing
+      type: string
+    - description: Reason for the failure of trace condition
+      jsonPath: .status.conditions[?(@.type=='Enabled')].reason
+      name: Reason
+      priority: 1
+      type: string
+    - description: Failure message from trace condition
+      jsonPath: .status.conditions[?(@.type=='Enabled')].message
+      name: Message
+      priority: 1
+      type: string
+    name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: OpenLibertyTrace is the schema for the openlibertytraces API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: OpenLibertyTraceSpec defines the desired state of OpenLibertyTrace
+            properties:
+              disable:
+                type: boolean
+              maxFileSize:
+                format: int32
+                type: integer
+              maxFiles:
+                format: int32
+                type: integer
+              podName:
+                type: string
+              traceSpecification:
+                type: string
+            required:
+            - podName
+            - traceSpecification
+            type: object
+          status:
+            description: OpenLibertyTraceStatus defines the observed state of OpenLibertyTrace
+              operation
+            properties:
+              conditions:
+                items:
+                  description: OperationStatusCondition ...
+                  properties:
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    lastUpdateTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      description: OperationStatusConditionType ...
+                      type: string
+                  type: object
+                type: array
+                x-kubernetes-list-type: atomic
+              operatedResource:
+                description: OperatedResource ...
                 properties:
-                  lastTransitionTime:
-                    format: date-time
+                  resourceName:
                     type: string
-                  lastUpdateTime:
-                    format: date-time
-                    type: string
-                  message:
-                    type: string
-                  reason:
-                    type: string
-                  status:
-                    type: string
-                  type:
-                    description: OperationStatusConditionType ...
+                  resourceType:
                     type: string
                 type: object
-              type: array
-            operatedResource:
-              description: OperatedResource ...
-              properties:
-                resourceName:
-                  type: string
-                resourceType:
-                  type: string
-              type: object
-  version: v1beta1
-  versions:
-  - name: v1beta1
+            type: object
     served: true
     storage: true
+    subresources:
+      status: {}
