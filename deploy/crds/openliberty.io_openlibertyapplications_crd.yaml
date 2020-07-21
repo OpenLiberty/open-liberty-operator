@@ -2876,6 +2876,8 @@ spec:
                 size:
                   pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                   type: string
+                storageClassName:
+                  type: string
                 volumeClaimName:
                   pattern: .+
                   type: string

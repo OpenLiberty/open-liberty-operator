@@ -153,7 +153,8 @@ type OpenLibertyApplicationServiceability struct {
 	// +kubebuilder:validation:Pattern=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
 	Size string `json:"size,omitempty"`
 	// +kubebuilder:validation:Pattern=.+
-	VolumeClaimName string `json:"volumeClaimName,omitempty"`
+	VolumeClaimName  string `json:"volumeClaimName,omitempty"`
+	StorageClassName string `json:"storageClassName,omitempty"`
 }
 
 // +k8s:openapi-gen=true
@@ -187,12 +188,12 @@ type OpenLibertyApplicationBindings struct {
 type OpenLibertyApplicationStatus struct {
 	// +listType=map
 	// +listMapKey=type
-	Conditions                 []StatusCondition       `json:"conditions,omitempty"`
-	ConsumedServices           common.ConsumedServices `json:"consumedServices,omitempty"`
-	ImageReference             string                  `json:"imageReference,omitempty"`
-	RouteAvailable             *bool                   `json:"routeAvailable,omitempty"`
+	Conditions       []StatusCondition       `json:"conditions,omitempty"`
+	ConsumedServices common.ConsumedServices `json:"consumedServices,omitempty"`
+	ImageReference   string                  `json:"imageReference,omitempty"`
+	RouteAvailable   *bool                   `json:"routeAvailable,omitempty"`
 	// +listType=set
-	ResolvedBindings []string                          `json:"resolvedBindings,omitempty"`
+	ResolvedBindings []string `json:"resolvedBindings,omitempty"`
 }
 
 // StatusCondition ...
@@ -555,6 +556,11 @@ func (s *OpenLibertyApplicationServiceability) GetSize() string {
 // GetVolumeClaimName returns the name of custom PersistentVolumeClaim (PVC) for Serviceability. Must be in the same namespace as the OpenLibertyApplication.
 func (s *OpenLibertyApplicationServiceability) GetVolumeClaimName() string {
 	return s.VolumeClaimName
+}
+
+// GetStorageClassName returns the name of custom StorageClassName for Serviceability.
+func (s *OpenLibertyApplicationServiceability) GetStorageClassName() *string {
+	return &s.StorageClassName
 }
 
 // GetPort returns service port
