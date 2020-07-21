@@ -25,12 +25,12 @@ func (in *Certificate) DeepCopyInto(out *Certificate) {
 	if in.Duration != nil {
 		in, out := &in.Duration, &out.Duration
 		*out = new(v1.Duration)
-		**out = **in
+		(*in).DeepCopyInto(*out)
 	}
 	if in.RenewBefore != nil {
 		in, out := &in.RenewBefore, &out.RenewBefore
 		*out = new(v1.Duration)
-		**out = **in
+		(*in).DeepCopyInto(*out)
 	}
 	if in.DNSNames != nil {
 		in, out := &in.DNSNames, &out.DNSNames

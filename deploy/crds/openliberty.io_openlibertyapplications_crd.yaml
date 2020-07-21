@@ -1220,7 +1220,7 @@ spec:
                       failureThreshold:
                         description: Minimum consecutive failures for the probe to
                           be considered failed after having succeeded. Defaults to
-                          3. Minimum value is 1.
+value
                         format: int32
                         type: integer
                       httpGet:
@@ -1279,8 +1279,8 @@ spec:
                       successThreshold:
                         description: Minimum consecutive successes for the probe to
                           be considered successful after having failed. Defaults to
-                          1. Must be 1 for liveness and startup. Minimum value is
-                          1.
+1.
+1.
                         format: int32
                         type: integer
                       tcpSocket:
@@ -1380,7 +1380,7 @@ spec:
                       failureThreshold:
                         description: Minimum consecutive failures for the probe to
                           be considered failed after having succeeded. Defaults to
-                          3. Minimum value is 1.
+value
                         format: int32
                         type: integer
                       httpGet:
@@ -1439,8 +1439,8 @@ spec:
                       successThreshold:
                         description: Minimum consecutive successes for the probe to
                           be considered successful after having failed. Defaults to
-                          1. Must be 1 for liveness and startup. Minimum value is
-                          1.
+1.
+1.
                         format: int32
                         type: integer
                       tcpSocket:
@@ -1499,7 +1499,7 @@ spec:
                           This bool directly controls if the no_new_privs flag will
                           be set on the container process. AllowPrivilegeEscalation
                           is true always when the container is: 1) run as Privileged
-                          2) has CAP_SYS_ADMIN'
+has
                         type: boolean
                       capabilities:
                         description: The capabilities to add/drop when running containers.
@@ -1650,7 +1650,7 @@ spec:
                       failureThreshold:
                         description: Minimum consecutive failures for the probe to
                           be considered failed after having succeeded. Defaults to
-                          3. Minimum value is 1.
+value
                         format: int32
                         type: integer
                       httpGet:
@@ -1709,8 +1709,8 @@ spec:
                       successThreshold:
                         description: Minimum consecutive successes for the probe to
                           be considered successful after having failed. Defaults to
-                          1. Must be 1 for liveness and startup. Minimum value is
-                          1.
+1.
+1.
                         format: int32
                         type: integer
                       tcpSocket:
@@ -1871,7 +1871,7 @@ spec:
                 failureThreshold:
                   description: Minimum consecutive failures for the probe to be considered
                     failed after having succeeded. Defaults to 3. Minimum value is
-                    1.
+1.
                   format: int32
                   type: integer
                 httpGet:
@@ -2334,7 +2334,7 @@ spec:
                 failureThreshold:
                   description: Minimum consecutive failures for the probe to be considered
                     failed after having succeeded. Defaults to 3. Minimum value is
-                    1.
+1.
                   format: int32
                   type: integer
                 httpGet:
@@ -2800,7 +2800,7 @@ spec:
                         - type: string
                         description: 'Number or name of the port to access on the
                           pods targeted by the service. Number must be in the range
-                          1 to 65535. Name must be an IANA_SVC_NAME. If this is a
+1
                           string, it will be looked up as a named port in the target
                           Pod''s container ports. If this is not specified, the value
                           of the ''port'' field is used (an identity map). This field
@@ -3283,7 +3283,7 @@ spec:
                       failureThreshold:
                         description: Minimum consecutive failures for the probe to
                           be considered failed after having succeeded. Defaults to
-                          3. Minimum value is 1.
+value
                         format: int32
                         type: integer
                       httpGet:
@@ -3342,8 +3342,8 @@ spec:
                       successThreshold:
                         description: Minimum consecutive successes for the probe to
                           be considered successful after having failed. Defaults to
-                          1. Must be 1 for liveness and startup. Minimum value is
-                          1.
+1.
+1.
                         format: int32
                         type: integer
                       tcpSocket:
@@ -3443,7 +3443,7 @@ spec:
                       failureThreshold:
                         description: Minimum consecutive failures for the probe to
                           be considered failed after having succeeded. Defaults to
-                          3. Minimum value is 1.
+value
                         format: int32
                         type: integer
                       httpGet:
@@ -3502,8 +3502,8 @@ spec:
                       successThreshold:
                         description: Minimum consecutive successes for the probe to
                           be considered successful after having failed. Defaults to
-                          1. Must be 1 for liveness and startup. Minimum value is
-                          1.
+1.
+1.
                         format: int32
                         type: integer
                       tcpSocket:
@@ -3562,7 +3562,7 @@ spec:
                           This bool directly controls if the no_new_privs flag will
                           be set on the container process. AllowPrivilegeEscalation
                           is true always when the container is: 1) run as Privileged
-                          2) has CAP_SYS_ADMIN'
+has
                         type: boolean
                       capabilities:
                         description: The capabilities to add/drop when running containers.
@@ -3713,7 +3713,7 @@ spec:
                       failureThreshold:
                         description: Minimum consecutive failures for the probe to
                           be considered failed after having succeeded. Defaults to
-                          3. Minimum value is 1.
+value
                         format: int32
                         type: integer
                       httpGet:
@@ -3772,8 +3772,8 @@ spec:
                       successThreshold:
                         description: Minimum consecutive successes for the probe to
                           be considered successful after having failed. Defaults to
-                          1. Must be 1 for liveness and startup. Minimum value is
-                          1.
+1.
+1.
                         format: int32
                         type: integer
                       tcpSocket:
@@ -4966,7 +4966,7 @@ spec:
                                       mode:
                                         description: 'Optional: mode bits to use on
                                           this file, must be a value between 0 and
-                                          0777. If not specified, the volume defaultMode
+
                                           will be used. This might be in conflict
                                           with other options that affect the file
                                           mode, like fsGroup, and the result can be
@@ -5026,7 +5026,7 @@ spec:
                                       mode:
                                         description: 'Optional: mode bits to use on
                                           this file, must be a value between 0 and
-                                          0777. If not specified, the volume defaultMode
+
                                           will be used. This might be in conflict
                                           with other options that affect the file
                                           mode, like fsGroup, and the result can be
@@ -5091,7 +5091,7 @@ spec:
                                       mode:
                                         description: 'Optional: mode bits to use on
                                           this file, must be a value between 0 and
-                                          0777. If not specified, the volume defaultMode
+
                                           will be used. This might be in conflict
                                           with other options that affect the file
                                           mode, like fsGroup, and the result can be
@@ -5471,7 +5471,6 @@ spec:
               type: array
             routeAvailable:
               type: boolean
-          type: object
   version: v1beta1
   versions:
   - name: v1beta1
