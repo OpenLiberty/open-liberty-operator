@@ -111,7 +111,7 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `monitoring.labels` | Labels to set on link:++https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitor++[ServiceMonitor].
 | `monitoring.endpoints` | A YAML snippet representing an array of link:++https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint++[Endpoint] component from ServiceMonitor.
 | `serviceability.size` | A convenient field to request the size of the persisted storage to use for serviceability. Can be overridden by the `serviceability.volumeClaimName` property. See link:++#storage-for-serviceability++[Storage for serviceability] for more information.
-| `serviceability.StorageClassName` | A convenient field to request the StorageClassName of the persisted storage to use for serviceability. Can be overridden by the `serviceability.volumeClaimName` property. See link:++#storage-for-serviceability++[Storage for serviceability] for more information.
+| `serviceability.storageClassName` | A convenient field to request the StorageClassName of the persisted storage to use for serviceability. Can be overridden by the `serviceability.volumeClaimName` property. See link:++#storage-for-serviceability++[Storage for serviceability] for more information.
 | `serviceability.volumeClaimName` | The name of the link:++https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims++[PersistentVolumeClaim] resource you created to be used for serviceability. Must be in the same namespace.
 | `route.annotations` | Annotations to be added to the Route.
 | `route.host`   | Hostname to be used for the Route.
@@ -417,7 +417,7 @@ data:
 
 The operator makes it easy to use a single storage for serviceability related operations, such as gatherig server traces or dumps (see link:++#day-2-operations++[Day-2 Operations]). The single storage will be shared by all Pods of an `OpenLibertyApplication` instance. This way you don't need to mount a separate storage for each Pod. Your cluster must be configured to automatically bind the `PersistentVolumeClaim` (PVC) to a `PersistentVolume` or you must bind it manually.
 
-You can specify the size of the persisted storage to request using `serviceability.size` parameter. You can also specify which storageClassName to use if you don't want to use the default storageClass. The operator will automatically create a `PersistentVolumeClaim` with the specified size and access modes `ReadWriteMany` and `ReadWriteOnce`. It will be mounted at `/serviceability` inside all Pods of the `OpenLibertyApplication` instance.
+You can specify the size of the persisted storage to request using `serviceability.size` parameter. You can also specify which storage class to request using `serviceability.storageClassName` parameter if you don't want to use the default storage class. The operator will automatically create a `PersistentVolumeClaim` with the specified size and access modes `ReadWriteMany` and `ReadWriteOnce`. It will be mounted at `/serviceability` inside all Pods of the `OpenLibertyApplication` instance.
 
 [source,yaml]
 ----
