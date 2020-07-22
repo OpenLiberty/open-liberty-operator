@@ -132,7 +132,7 @@ func findEnvVar(name string, envList []corev1.EnvVar) (*corev1.EnvVar, bool) {
 
 // CreateServiceabilityPVC creates PersistentVolumeClaim for Serviceability
 func CreateServiceabilityPVC(instance *openlibertyv1beta1.OpenLibertyApplication) *corev1.PersistentVolumeClaim {
-	return &corev1.PersistentVolumeClaim{
+	persistentVolume := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        instance.Name + "-serviceability",
 			Namespace:   instance.Namespace,
@@ -151,6 +151,10 @@ func CreateServiceabilityPVC(instance *openlibertyv1beta1.OpenLibertyApplication
 			},
 		},
 	}
+	if instance.GetServiceability().GetStorageClassName() != nil {
+		persistentVolume.Spec.StorageClassName = &instance.GetServiceability().StorageClassName
+	}
+	return persistentVolume
 }
 
 // ConfigureServiceability setups the shared-storage for serviceability

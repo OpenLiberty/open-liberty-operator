@@ -154,6 +154,8 @@ type OpenLibertyApplicationServiceability struct {
 	Size string `json:"size,omitempty"`
 	// +kubebuilder:validation:Pattern=.+
 	VolumeClaimName string `json:"volumeClaimName,omitempty"`
+	// +kubebuilder:validation:Pattern=.+
+	StorageClassName string `json:"storageClassName,omitempty"`
 }
 
 // +k8s:openapi-gen=true
@@ -572,6 +574,11 @@ func (s *OpenLibertyApplicationServiceability) GetSize() string {
 // GetVolumeClaimName returns the name of custom PersistentVolumeClaim (PVC) for Serviceability. Must be in the same namespace as the OpenLibertyApplication.
 func (s *OpenLibertyApplicationServiceability) GetVolumeClaimName() string {
 	return s.VolumeClaimName
+}
+
+// GetStorageClassName returns the name of custom StorageClassName to be used for Serviceability.
+func (s *OpenLibertyApplicationServiceability) GetStorageClassName() *string {
+	return &s.StorageClassName
 }
 
 // GetPort returns service port
