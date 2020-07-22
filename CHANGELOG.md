@@ -16,8 +16,9 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Added support for automatic registration with OIDC providers. Tested with Red Hat Single Sign-on (RH-SSO) and IBM Security Verify. ([#152](https://github.com/OpenLiberty/open-liberty-operator/pull/152))
-
 - Added support to use application as a backing service ([#192](https://github.com/OpenLiberty/open-liberty-operator/pull/192), [#148](https://github.com/application-stacks/runtime-component-operator/pull/148))
+- Added support to specify storage class name for the `PersistentVolumeClaim` created for serviceability. ([#188](https://github.com/OpenLiberty/open-liberty-operator/pull/188))
+
 
 ## [0.6.0]
 

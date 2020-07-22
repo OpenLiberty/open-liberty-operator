@@ -576,11 +576,6 @@ func (s *OpenLibertyApplicationServiceability) GetVolumeClaimName() string {
 	return s.VolumeClaimName
 }
 
-// GetStorageClassName returns the name of custom StorageClassName to be used for Serviceability.
-func (s *OpenLibertyApplicationServiceability) GetStorageClassName() *string {
-	return &s.StorageClassName
-}
-
 // GetPort returns service port
 func (s *OpenLibertyApplicationService) GetPort() int32 {
 	if s != nil && s.Port != 0 {
