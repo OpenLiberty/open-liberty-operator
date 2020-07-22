@@ -25,7 +25,6 @@ var (
 		{"OpenLibertyAutoScalingTest", OpenLibertyAutoScalingTest},
 		{"OpenLibertyStorageTest", OpenLibertyBasicStorageTest},
 		{"OpenLibertyPersistenceTest", OpenLibertyPersistenceTest},
-		{"OpenLibertyTraceTest", OpenLibertyTraceTest},
 	}
 	advancedTests = []Test{
 		{"OpenLibertyServiceMonitorTest", OpenLibertyServiceMonitorTest},
@@ -35,6 +34,7 @@ var (
 		{"OpenLibertyDumpsTest", OpenLibertyDumpsTest},
 		{"OpenLibertyKappNavTest", OpenLibertyKappNavTest},
 		{"OpenLibertySSOTest", OpenLibertySSOTest},
+		{"OpenLibertyTraceTest", OpenLibertyTraceTest},
 	}
 	ocpTests = []Test{
 		{"OpenLibertyImageStreamTest", OpenLibertyImageStreamTest},
