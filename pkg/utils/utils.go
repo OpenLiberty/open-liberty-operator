@@ -132,16 +132,14 @@ func findEnvVar(name string, envList []corev1.EnvVar) (*corev1.EnvVar, bool) {
 
 // CreateServiceabilityPVC creates PersistentVolumeClaim for Serviceability
 func CreateServiceabilityPVC(instance *openlibertyv1beta1.OpenLibertyApplication) *corev1.PersistentVolumeClaim {
-	persistentvolume := &corev1.PersistentVolumeClaim{}
-	persistentvolume.ObjectMeta = metav1.ObjectMeta{
-		Name:        instance.Name + "-serviceability",
-		Namespace:   instance.Namespace,
-		Labels:      instance.GetLabels(),
-		Annotations: instance.GetAnnotations(),
-	}
-
-	if len(instance.Spec.Serviceability.StorageClassName) == 0 {
-		persistentvolume.Spec = corev1.PersistentVolumeClaimSpec{
+	persistentVolume := &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        instance.Name + "-serviceability",
+			Namespace:   instance.Namespace,
+			Labels:      instance.GetLabels(),
+			Annotations: instance.GetAnnotations(),
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceStorage: resource.MustParse(instance.GetServiceability().GetSize()),
@@ -151,22 +149,12 @@ func CreateServiceabilityPVC(instance *openlibertyv1beta1.OpenLibertyApplication
 				corev1.ReadWriteMany,
 				corev1.ReadWriteOnce,
 			},
-		}
-	} else {
-		persistentvolume.Spec = corev1.PersistentVolumeClaimSpec{
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceStorage: resource.MustParse(instance.GetServiceability().GetSize()),
-				},
-			},
-			StorageClassName: &instance.Spec.Serviceability.StorageClassName,
-			AccessModes: []corev1.PersistentVolumeAccessMode{
-				corev1.ReadWriteMany,
-				corev1.ReadWriteOnce,
-			},
-		}
+		},
 	}
-	return persistentvolume
+	if instance.GetServiceability().GetStorageClassName() != nil {
+		persistentVolume.Spec.StorageClassName = &instance.GetServiceability().StorageClassName
+	}
+	return persistentVolume
 }
 
 // ConfigureServiceability setups the shared-storage for serviceability
