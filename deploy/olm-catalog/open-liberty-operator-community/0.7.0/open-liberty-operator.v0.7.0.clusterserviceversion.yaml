@@ -14,6 +14,47 @@ metadata:
     support: IBM
     capabilities: Auto Pilot
     repository: https://github.com/OpenLiberty/open-liberty-operator
+    owned.crd.extensions: |-
+      - name: openlibertyapplications.openliberty.io
+        operations:
+          - openlibertytraces.openliberty.io
+          - openlibertydumps.openliberty.io
+      - name: openlibertytraces.openliberty.io
+        actionName: Liberty Trace
+        targetKinds:
+          - Deployment
+          - Pod
+        specDescriptors:
+          - path: podName
+            v-descriptors:
+            - urn:alm:descriptor:io.operations.value:target-resource:kind=Pod:metadata.name
+            - urn:alm:descriptor:io.operations.value:target-resource:kind=Deployment:PodList
+            x-descriptors:
+            - urn:alm:descriptor:com.tectonic.ui:MultiSelectList:target-resource:kind=Deployment
+          - path: disable
+            displayName: Disable tracing
+          - path: maxFileSize
+            displayName: Maximum file size
+          - path: maxFiles
+            displayName: Maximum number of files
+          - path: traceSpecification
+            displayName: Trace specification string
+      - name: openlibertydumps.openliberty.io
+        actionName: Liberty Dump
+        targetKinds:
+          - Deployment
+          - Pod
+        specDescriptors:
+          - path: podName
+            v-descriptors:
+            - urn:alm:descriptor:io.operations.value:target-resource:kind=Pod:metadata.name
+            - urn:alm:descriptor:io.operations.value:target-resource:kind=Deployment:PodList
+            x-descriptors:
+            - urn:alm:descriptor:com.tectonic.ui:MultiSelectList:target-resource:kind=Deployment
+          - path: include
+            displayName: Dump types
+            x-descriptors:
+            - urn:alm:descriptor:com.tectonic.ui:MultiSelectList:target-resource:kind=Deployment
 spec:
   displayName: Open Liberty Operator
   description: 'This advanced Operator can be used to deploy and manage Open Liberty applications with 
