@@ -2,7 +2,6 @@ package e2e
 
 import (
 	"os"
-	"sync"
 	"testing"
 
 	"github.com/OpenLiberty/open-liberty-operator/pkg/apis"
@@ -25,7 +24,6 @@ var (
 		{"OpenLibertyAutoScalingTest", OpenLibertyAutoScalingTest},
 		{"OpenLibertyStorageTest", OpenLibertyBasicStorageTest},
 		{"OpenLibertyPersistenceTest", OpenLibertyPersistenceTest},
-		{"OpenLibertyTraceTest", OpenLibertyTraceTest},
 	}
 	advancedTests = []Test{
 		{"OpenLibertyServiceMonitorTest", OpenLibertyServiceMonitorTest},
@@ -33,8 +31,8 @@ var (
 		{"OpenLibertyServiceBindingTest", OpenLibertyServiceBindingTest},
 		{"OpenLibertyCertManagerTest", OpenLibertyCertManagerTest},
 		{"OpenLibertyDumpsTest", OpenLibertyDumpsTest},
+		{"OpenLibertyTraceTest", OpenLibertyTraceTest},
 		{"OpenLibertyKappNavTest", OpenLibertyKappNavTest},
-		{"OpenLibertySSOTest", OpenLibertySSOTest},
 	}
 	ocpTests = []Test{
 		{"OpenLibertyImageStreamTest", OpenLibertyImageStreamTest},
@@ -67,20 +65,20 @@ func TestOpenLibertyApplication(t *testing.T) {
 		t.Fatalf("Failed to add Trace scheme to framework: %v", err)
 	}
 
-	var wg sync.WaitGroup
+	if cluster != "minikube" {
+		t.Run("OpenLibertySSOTest", OpenLibertySSOTest)
+	}
 
 	// basic tests that are runnable locally in minishift/kube
 	for _, test := range basicTests {
-		wg.Add(1)
-		RuntimeTestRunner(&wg, t, test)
+		RuntimeTestRunner(t, test)
 	}
 
 	// tests for features that will require cluster configuration
 	// i.e. knative requires installations
 	if cluster != "minikube" {
 		for _, test := range advancedTests {
-			wg.Add(1)
-			go RuntimeTestRunner(&wg, t, test)
+			RuntimeTestRunner(t, test)
 		}
 	}
 
@@ -88,8 +86,7 @@ func TestOpenLibertyApplication(t *testing.T) {
 	// i.e. Ingress
 	if cluster == "minikube" || cluster == "kubernetes" {
 		for _, test := range independantTests {
-			wg.Add(1)
-			go RuntimeTestRunner(&wg, t, test)
+			RuntimeTestRunner(t, test)
 		}
 	}
 
@@ -97,11 +94,9 @@ func TestOpenLibertyApplication(t *testing.T) {
 	// i.e. image streams are only in OpenShift
 	if cluster == "ocp" {
 		for _, test := range ocpTests {
-			wg.Add(1)
-			go RuntimeTestRunner(&wg, t, test)
+			RuntimeTestRunner(t, test)
 		}
 	}
-	wg.Wait()
 }
 
 func testAdvancedFeatures(t *testing.T) {
@@ -126,7 +121,6 @@ func testIndependantFeatures(t *testing.T) {
 	// TODO: implement test for ingress
 }
 
-func RuntimeTestRunner(wg *sync.WaitGroup, t *testing.T, test Test) {
-	defer wg.Done()
+func RuntimeTestRunner(t *testing.T, test Test) {
 	t.Run(test.Name, test.Test)
 }

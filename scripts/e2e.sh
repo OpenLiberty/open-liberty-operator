@@ -44,7 +44,7 @@ main() {
     fi
 
     echo "****** Starting e2e tests..."
-    CLUSTER_ENV="ocp" operator-sdk test local github.com/OpenLiberty/open-liberty-operator/test/e2e --go-test-flags "-timeout 35m" --image $(oc registry info)/openshift/operator:$TRAVIS_BUILD_NUMBER --verbose
+    CLUSTER_ENV="minikube" operator-sdk test local github.com/OpenLiberty/open-liberty-operator/test/e2e --go-test-flags "-timeout 35m" --image $(oc registry info)/openshift/operator:$TRAVIS_BUILD_NUMBER --verbose
     result=$?
     echo "****** Cleaning up tests..."
     cleanup
