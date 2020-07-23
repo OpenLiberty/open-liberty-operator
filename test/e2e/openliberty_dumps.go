@@ -81,6 +81,7 @@ func createApp(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, tar
 	// set up serviceability, prereq to dumps
 	openLibertyApplication.Spec.Serviceability = &openlibertyv1beta1.OpenLibertyApplicationServiceability{
 		Size: "1Gi",
+		StorageClassName: "ibmc-block-bronze",
 	}
 
 	// use TestCtx's create helper to create the object and add a cleanup function for the new object
