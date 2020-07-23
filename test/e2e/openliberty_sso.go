@@ -58,7 +58,7 @@ func testSocialLogin(t *testing.T, f *framework.Framework, ctx *framework.TestCt
 		return err
 	}
 
-	const name string = "openliberty-sso"
+	const name string = "ol-sso"
 
 	// create Secret for Github Login
 	secretTarget := types.NamespacedName{Name: name + "-olapp-sso", Namespace: ns}
@@ -211,7 +211,7 @@ func testProviderLogins(t *testing.T, f *framework.Framework, ctx *framework.Tes
 		return err
 	}
 
-	const name string = "openliberty-sso-1"
+	const name string = "ol-sso-1"
 
 	// create Secret for Github Login
 	secretTarget := types.NamespacedName{Name: name + "-olapp-sso", Namespace: ns}

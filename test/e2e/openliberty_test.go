@@ -23,18 +23,18 @@ var (
 		{"OpenLibertyBasicTest", OpenLibertyBasicTest},
 		{"OpenLibertyProbeTest", OpenLibertyProbeTest},
 		{"OpenLibertyAutoScalingTest", OpenLibertyAutoScalingTest},
-		{"OpenLibertyStorageTest", OpenLibertyBasicStorageTest},
-		{"OpenLibertyPersistenceTest", OpenLibertyPersistenceTest},
-		{"OpenLibertyTraceTest", OpenLibertyTraceTest},
 	}
 	advancedTests = []Test{
 		{"OpenLibertyServiceMonitorTest", OpenLibertyServiceMonitorTest},
 		{"OpenLibertyKnativeTest", OpenLibertyKnativeTest},
-		{"OpenLibertyServiceBindingTest", OpenLibertyServiceBindingTest},
-		{"OpenLibertyCertManagerTest", OpenLibertyCertManagerTest},
+		{"OpenLibertyStorageTest", OpenLibertyBasicStorageTest},
+		{"OpenLibertyPersistenceTest", OpenLibertyPersistenceTest},
+		{"OpenLibertyTraceTest", OpenLibertyTraceTest},
 		{"OpenLibertyDumpsTest", OpenLibertyDumpsTest},
 		{"OpenLibertyKappNavTest", OpenLibertyKappNavTest},
-		{"OpenLibertySSOTest", OpenLibertySSOTest},
+		{"OpenLibertyServiceBindingTest", OpenLibertyServiceBindingTest},
+		// {"OpenLibertySSOTest", OpenLibertySSOTest},
+		{"OpenLibertyCertManagerTest", OpenLibertyCertManagerTest},
 	}
 	ocpTests = []Test{
 		{"OpenLibertyImageStreamTest", OpenLibertyImageStreamTest},
@@ -69,10 +69,14 @@ func TestOpenLibertyApplication(t *testing.T) {
 
 	var wg sync.WaitGroup
 
+	if cluster != "minikube" {
+		t.Run("OpenLibertySSOTest", OpenLibertySSOTest)
+	}
+
 	// basic tests that are runnable locally in minishift/kube
 	for _, test := range basicTests {
 		wg.Add(1)
-		RuntimeTestRunner(&wg, t, test)
+		go RuntimeTestRunner(&wg, t, test)
 	}
 
 	// tests for features that will require cluster configuration
@@ -80,7 +84,7 @@ func TestOpenLibertyApplication(t *testing.T) {
 	if cluster != "minikube" {
 		for _, test := range advancedTests {
 			wg.Add(1)
-			go RuntimeTestRunner(&wg, t, test)
+			RuntimeTestRunner(&wg, t, test)
 		}
 	}
 
@@ -89,7 +93,7 @@ func TestOpenLibertyApplication(t *testing.T) {
 	if cluster == "minikube" || cluster == "kubernetes" {
 		for _, test := range independantTests {
 			wg.Add(1)
-			go RuntimeTestRunner(&wg, t, test)
+			RuntimeTestRunner(&wg, t, test)
 		}
 	}
 
@@ -102,28 +106,6 @@ func TestOpenLibertyApplication(t *testing.T) {
 		}
 	}
 	wg.Wait()
-}
-
-func testAdvancedFeatures(t *testing.T) {
-	// These features require a bit of configuration
-	// which makes them less ideal for quick minikube tests
-	t.Run("OpenLibertyServiceMonitorTest", OpenLibertyServiceMonitorTest)
-	t.Run("OpenLibertyKnativeTest", OpenLibertyKnativeTest)
-	t.Run("OpenLibertyServiceBindingTest", OpenLibertyServiceBindingTest)
-	t.Run("OpenLibertyCertManagerTest", OpenLibertyCertManagerTest)
-	t.Run("OpenLibertyDumpsTest", OpenLibertyDumpsTest)
-	t.Run("OpenLibertyKappNavTest", OpenLibertyKappNavTest)
-	t.Run("OpenLibertySSOTest", OpenLibertySSOTest)
-}
-
-// Verify functionality that is tied to OCP
-func testOCPFeatures(t *testing.T) {
-	t.Run("OpenLibertyImageStreamTest", OpenLibertyImageStreamTest)
-}
-
-// Verify functionality that is not expected to run on OCP
-func testIndependantFeatures(t *testing.T) {
-	// TODO: implement test for ingress
 }
 
 func RuntimeTestRunner(wg *sync.WaitGroup, t *testing.T, test Test) {

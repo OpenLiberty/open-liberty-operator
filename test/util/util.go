@@ -559,9 +559,9 @@ func CreateSecretForSSO(f *framework.Framework, ctx *framework.TestCtx, target t
 
 func WaitForPodUpdates(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, target types.NamespacedName, replicas int) error {
 	retryInterval := time.Second * 2
-	timeout := time.Second * 30
+	timeout := time.Second * 80
 	// give operator a moment to kick off NEW pod
-	time.Sleep(time.Second * 4)
+	time.Sleep(time.Second * 6)
 	// wait for only the new pod to be running
 	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
 		podList, err := GetPods(f, ctx, target.Name, target.Namespace)
@@ -668,6 +668,23 @@ func CreateApplicationTarget(f *framework.Framework, ctx *framework.TestCtx, tar
 
 	err = f.Client.Create(goctx.TODO(), application, &framework.CleanupOptions{TestContext: ctx, Timeout: timeout, RetryInterval: retryInterval})
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// IsKnativeInstalled : check for knative support before running the e2e test
+func IsKnativeInstalled(t *testing.T, f *framework.Framework) error {
+	ksvc := servingv1alpha1.Service{}
+	err := servingv1alpha1.AddToScheme(f.Scheme)
+	if err != nil {
+		return err
+	}
+
+	err = f.Client.List(goctx.TODO(), &ksvc)
+	if err != nil {
+		t.Log(err)
 		return err
 	}
 
