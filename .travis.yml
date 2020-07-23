@@ -34,11 +34,11 @@ jobs:
     if: branch != master OR fork = true OR type = pull_request
   - name: E2E testing on Minikube
     script: make test-minikube
-  - name: E2E testing on OCP 3.11 with Open Liberty
+  - name: E2E testing on OCP 4.3 with Open Liberty
     script: make test-e2e
     env: LIBERTY_IMAGE="openliberty/open-liberty:kernel-java8-openj9-ubi"
     if: fork = false
-  - name: E2E testing on OCP 3.11 with WebSphere Liberty
+  - name: E2E testing on OCP 4.3 with WebSphere Liberty
     script: make test-e2e
     env: LIBERTY_IMAGE="ibmcom/websphere-liberty:full-java8-ibmjava-ubi"
     if: fork = false

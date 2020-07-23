@@ -12,7 +12,6 @@ import (
 	e2eutil "github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
 
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -37,7 +36,7 @@ func OpenLibertyKnativeTest(t *testing.T) {
 	f := framework.Global
 
 	// catch cases where running tests locally with a cluster that does not have knative
-	if !isKnativeInstalled(t, f) {
+	if util.IsKnativeInstalled(t, f) != nil {
 		t.Log("Knative is not installed on this cluster, skipping RuntimeKnativeTest...")
 		return
 	}
@@ -51,20 +50,6 @@ func OpenLibertyKnativeTest(t *testing.T) {
 	// start the two cases
 	testKnIsFalse(t, f, ctx, namespace)
 	testKnIsTrueAndTurnOff(t, f, ctx, namespace)
-}
-
-func isKnativeInstalled(t *testing.T, f *framework.Framework) bool {
-	ns := &corev1.NamespaceList{}
-	err := f.Client.List(goctx.TODO(), ns)
-	if err != nil {
-		t.Fatalf("Error occurred while trying to find knative-serving %v", err)
-	}
-	for _, val := range ns.Items {
-		if val.Name == "knative-serving" {
-			return true
-		}
-	}
-	return false
 }
 
 func testKnIsFalse(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, namespace string) {

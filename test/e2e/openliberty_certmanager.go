@@ -54,7 +54,7 @@ func OpenLibertyCertManagerTest(t *testing.T) {
 }
 
 func libertyPodCertificateTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
-	const name = "example-liberty-pod-cert"
+	const name = "l-pod-cert"
 
 	ns, err := ctx.GetNamespace()
 	if err != nil {
@@ -87,7 +87,7 @@ func libertyPodCertificateTest(t *testing.T, f *framework.Framework, ctx *framew
 }
 
 func libertyRouteCertificateTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
-	const name = "example-liberty-route-cert"
+	const name = "l-route-cert"
 
 	ns, err := ctx.GetNamespace()
 	if err != nil {
@@ -123,7 +123,7 @@ func libertyRouteCertificateTest(t *testing.T, f *framework.Framework, ctx *fram
 }
 
 func libertyAdvancedCertificateTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
-	const name = "example-liberty-advanced-cert"
+	const name = "l-advanced-cert"
 	ns, err := ctx.GetNamespace()
 	if err != nil {
 		return fmt.Errorf("could not get namespace %v", err)

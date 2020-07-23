@@ -673,3 +673,20 @@ func CreateApplicationTarget(f *framework.Framework, ctx *framework.TestCtx, tar
 
 	return nil
 }
+
+// IsKnativeInstalled : check for knative support before running the e2e test
+func IsKnativeInstalled(t *testing.T, f *framework.Framework) error {
+	ksvc := servingv1alpha1.Service{}
+	err := servingv1alpha1.AddToScheme(f.Scheme)
+	if err != nil {
+		return err
+	}
+
+	err = f.Client.List(goctx.TODO(), &ksvc)
+	if err != nil {
+		t.Log(err)
+		return err
+	}
+
+	return nil
+}
