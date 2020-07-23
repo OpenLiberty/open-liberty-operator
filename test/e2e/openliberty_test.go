@@ -29,11 +29,9 @@ var (
 		{"OpenLibertyKnativeTest", OpenLibertyKnativeTest},
 		{"OpenLibertyStorageTest", OpenLibertyBasicStorageTest},
 		{"OpenLibertyPersistenceTest", OpenLibertyPersistenceTest},
-		// {"OpenLibertyTraceTest", OpenLibertyTraceTest},
-		// {"OpenLibertyDumpsTest", OpenLibertyDumpsTest},
+		{"OpenLibertyTraceTest", OpenLibertyTraceTest},
+		{"OpenLibertyDumpsTest", OpenLibertyDumpsTest},
 		{"OpenLibertyKappNavTest", OpenLibertyKappNavTest},
-	}
-	advancedLongTests = []Test{
 		{"OpenLibertyServiceBindingTest", OpenLibertyServiceBindingTest},
 		{"OpenLibertySSOTest", OpenLibertySSOTest},
 		{"OpenLibertyCertManagerTest", OpenLibertyCertManagerTest},
@@ -84,11 +82,6 @@ func TestOpenLibertyApplication(t *testing.T) {
 			wg.Add(1)
 			RuntimeTestRunner(&wg, t, test)
 		}
-
-		for _, test := range advancedLongTests {
-			wg.Add(1)
-			go RuntimeTestRunner(&wg, t, test)
-		}
 	}
 
 	// tests for features NOT expected to run in OpenShift
@@ -96,7 +89,7 @@ func TestOpenLibertyApplication(t *testing.T) {
 	if cluster == "minikube" || cluster == "kubernetes" {
 		for _, test := range independantTests {
 			wg.Add(1)
-			go RuntimeTestRunner(&wg, t, test)
+			RuntimeTestRunner(&wg, t, test)
 		}
 	}
 
