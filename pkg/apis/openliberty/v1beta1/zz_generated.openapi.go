@@ -11,31 +11,31 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"./pkg/apis/openliberty/v1beta1.GithubLogin":                          schema_pkg_apis_openliberty_v1beta1_GithubLogin(ref),
-		"./pkg/apis/openliberty/v1beta1.OAuth2Client":                         schema_pkg_apis_openliberty_v1beta1_OAuth2Client(ref),
-		"./pkg/apis/openliberty/v1beta1.OidcClient":                           schema_pkg_apis_openliberty_v1beta1_OidcClient(ref),
-		"./pkg/apis/openliberty/v1beta1.OpenLibertyApplication":               schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplication(ref),
-		"./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAffinity":       schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationAffinity(ref),
-		"./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAutoScaling":    schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationAutoScaling(ref),
-		"./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationMonitoring":     schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationMonitoring(ref),
-		"./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationRoute":          schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationRoute(ref),
-		"./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationSSO":            schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSSO(ref),
-		"./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationService":        schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationService(ref),
-		"./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationServiceability": schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationServiceability(ref),
-		"./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationSpec":           schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSpec(ref),
-		"./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationStatus":         schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationStatus(ref),
-		"./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationStorage":        schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationStorage(ref),
-		"./pkg/apis/openliberty/v1beta1.OpenLibertyDump":                      schema_pkg_apis_openliberty_v1beta1_OpenLibertyDump(ref),
-		"./pkg/apis/openliberty/v1beta1.OpenLibertyDumpSpec":                  schema_pkg_apis_openliberty_v1beta1_OpenLibertyDumpSpec(ref),
-		"./pkg/apis/openliberty/v1beta1.OpenLibertyDumpStatus":                schema_pkg_apis_openliberty_v1beta1_OpenLibertyDumpStatus(ref),
-		"./pkg/apis/openliberty/v1beta1.OpenLibertyTrace":                     schema_pkg_apis_openliberty_v1beta1_OpenLibertyTrace(ref),
-		"./pkg/apis/openliberty/v1beta1.OpenLibertyTraceSpec":                 schema_pkg_apis_openliberty_v1beta1_OpenLibertyTraceSpec(ref),
-		"./pkg/apis/openliberty/v1beta1.OpenLibertyTraceStatus":               schema_pkg_apis_openliberty_v1beta1_OpenLibertyTraceStatus(ref),
-		"./pkg/apis/openliberty/v1beta1.OperatedResource":                     schema_pkg_apis_openliberty_v1beta1_OperatedResource(ref),
-		"./pkg/apis/openliberty/v1beta1.OperationStatusCondition":             schema_pkg_apis_openliberty_v1beta1_OperationStatusCondition(ref),
-		"./pkg/apis/openliberty/v1beta1.ServiceBindingConsumes":               schema_pkg_apis_openliberty_v1beta1_ServiceBindingConsumes(ref),
-		"./pkg/apis/openliberty/v1beta1.ServiceBindingProvides":               schema_pkg_apis_openliberty_v1beta1_ServiceBindingProvides(ref),
-		"./pkg/apis/openliberty/v1beta1.StatusCondition":                      schema_pkg_apis_openliberty_v1beta1_StatusCondition(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.GithubLogin":                          schema_pkg_apis_openliberty_v1beta1_GithubLogin(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OAuth2Client":                         schema_pkg_apis_openliberty_v1beta1_OAuth2Client(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OidcClient":                           schema_pkg_apis_openliberty_v1beta1_OidcClient(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplication":               schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplication(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAffinity":       schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationAffinity(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAutoScaling":    schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationAutoScaling(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationMonitoring":     schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationMonitoring(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationRoute":          schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationRoute(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationSSO":            schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSSO(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationService":        schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationService(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationServiceability": schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationServiceability(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationSpec":           schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSpec(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationStatus":         schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationStatus(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationStorage":        schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationStorage(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyDump":                      schema_pkg_apis_openliberty_v1beta1_OpenLibertyDump(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyDumpSpec":                  schema_pkg_apis_openliberty_v1beta1_OpenLibertyDumpSpec(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyDumpStatus":                schema_pkg_apis_openliberty_v1beta1_OpenLibertyDumpStatus(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyTrace":                     schema_pkg_apis_openliberty_v1beta1_OpenLibertyTrace(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyTraceSpec":                 schema_pkg_apis_openliberty_v1beta1_OpenLibertyTraceSpec(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyTraceStatus":               schema_pkg_apis_openliberty_v1beta1_OpenLibertyTraceStatus(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OperatedResource":                     schema_pkg_apis_openliberty_v1beta1_OperatedResource(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OperationStatusCondition":             schema_pkg_apis_openliberty_v1beta1_OperationStatusCondition(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.ServiceBindingConsumes":               schema_pkg_apis_openliberty_v1beta1_ServiceBindingConsumes(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.ServiceBindingProvides":               schema_pkg_apis_openliberty_v1beta1_ServiceBindingProvides(ref),
+		"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.StatusCondition":                      schema_pkg_apis_openliberty_v1beta1_StatusCondition(ref),
 	}
 }
 
@@ -264,19 +264,19 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplication(ref common.Refer
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationSpec"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationStatus"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationSpec", "./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationSpec", "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -453,7 +453,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationRoute(ref common.
 					},
 					"certificate": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.Certificate"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.Certificate"),
 						},
 					},
 					"certificateSecretRef": {
@@ -478,7 +478,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationRoute(ref common.
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/openliberty/v1beta1.Certificate"},
+			"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.Certificate"},
 	}
 }
 
@@ -500,7 +500,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSSO(ref common.Re
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("./pkg/apis/openliberty/v1beta1.OidcClient"),
+										Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OidcClient"),
 									},
 								},
 							},
@@ -517,7 +517,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSSO(ref common.Re
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("./pkg/apis/openliberty/v1beta1.OAuth2Client"),
+										Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OAuth2Client"),
 									},
 								},
 							},
@@ -525,7 +525,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSSO(ref common.Re
 					},
 					"github": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.GithubLogin"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.GithubLogin"),
 						},
 					},
 					"redirectToRPHostAndPort": {
@@ -545,7 +545,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSSO(ref common.Re
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/openliberty/v1beta1.GithubLogin", "./pkg/apis/openliberty/v1beta1.OAuth2Client", "./pkg/apis/openliberty/v1beta1.OidcClient"},
+			"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.GithubLogin", "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OAuth2Client", "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OidcClient"},
 	}
 }
 
@@ -623,7 +623,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationService(ref commo
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("./pkg/apis/openliberty/v1beta1.ServiceBindingConsumes"),
+										Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.ServiceBindingConsumes"),
 									},
 								},
 							},
@@ -631,12 +631,12 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationService(ref commo
 					},
 					"provides": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.ServiceBindingProvides"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.ServiceBindingProvides"),
 						},
 					},
 					"certificate": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.Certificate"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.Certificate"),
 						},
 					},
 					"certificateSecretRef": {
@@ -649,7 +649,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationService(ref commo
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/openliberty/v1beta1.Certificate", "./pkg/apis/openliberty/v1beta1.ServiceBindingConsumes", "./pkg/apis/openliberty/v1beta1.ServiceBindingProvides", "k8s.io/api/core/v1.ServicePort"},
+			"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.Certificate", "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.ServiceBindingConsumes", "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.ServiceBindingProvides", "k8s.io/api/core/v1.ServicePort"},
 	}
 }
 
@@ -711,7 +711,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSpec(ref common.R
 					},
 					"autoscaling": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAutoScaling"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAutoScaling"),
 						},
 					},
 					"pullPolicy": {
@@ -778,7 +778,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSpec(ref common.R
 					},
 					"service": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationService"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationService"),
 						},
 					},
 					"expose": {
@@ -848,7 +848,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSpec(ref common.R
 					},
 					"storage": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationStorage"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationStorage"),
 						},
 					},
 					"createKnativeService": {
@@ -859,7 +859,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSpec(ref common.R
 					},
 					"monitoring": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationMonitoring"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationMonitoring"),
 						},
 					},
 					"createAppDefinition": {
@@ -912,27 +912,27 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSpec(ref common.R
 					},
 					"route": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationRoute"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationRoute"),
 						},
 					},
 					"bindings": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationBindings"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationBindings"),
 						},
 					},
 					"affinity": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAffinity"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAffinity"),
 						},
 					},
 					"serviceability": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationServiceability"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationServiceability"),
 						},
 					},
 					"sso": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationSSO"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationSSO"),
 						},
 					},
 				},
@@ -940,7 +940,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationSpec(ref common.R
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAffinity", "./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAutoScaling", "./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationBindings", "./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationMonitoring", "./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationRoute", "./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationSSO", "./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationService", "./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationServiceability", "./pkg/apis/openliberty/v1beta1.OpenLibertyApplicationStorage", "k8s.io/api/core/v1.Container", "k8s.io/api/core/v1.EnvFromSource", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.Probe", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Volume", "k8s.io/api/core/v1.VolumeMount"},
+			"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAffinity", "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationAutoScaling", "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationBindings", "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationMonitoring", "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationRoute", "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationSSO", "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationService", "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationServiceability", "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyApplicationStorage", "k8s.io/api/core/v1.Container", "k8s.io/api/core/v1.EnvFromSource", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.Probe", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Volume", "k8s.io/api/core/v1.VolumeMount"},
 	}
 }
 
@@ -963,7 +963,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationStatus(ref common
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("./pkg/apis/openliberty/v1beta1.StatusCondition"),
+										Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.StatusCondition"),
 									},
 								},
 							},
@@ -1029,7 +1029,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyApplicationStatus(ref common
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/openliberty/v1beta1.StatusCondition", "k8s.io/api/core/v1.LocalObjectReference"},
+			"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.StatusCondition", "k8s.io/api/core/v1.LocalObjectReference"},
 	}
 }
 
@@ -1093,19 +1093,19 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyDump(ref common.ReferenceCal
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.OpenLibertyDumpSpec"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyDumpSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.OpenLibertyDumpStatus"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyDumpStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/openliberty/v1beta1.OpenLibertyDumpSpec", "./pkg/apis/openliberty/v1beta1.OpenLibertyDumpStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyDumpSpec", "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyDumpStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -1165,7 +1165,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyDumpStatus(ref common.Refere
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("./pkg/apis/openliberty/v1beta1.OperationStatusCondition"),
+										Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OperationStatusCondition"),
 									},
 								},
 							},
@@ -1181,7 +1181,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyDumpStatus(ref common.Refere
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/openliberty/v1beta1.OperationStatusCondition"},
+			"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OperationStatusCondition"},
 	}
 }
 
@@ -1213,19 +1213,19 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyTrace(ref common.ReferenceCa
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.OpenLibertyTraceSpec"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyTraceSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.OpenLibertyTraceStatus"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyTraceStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/openliberty/v1beta1.OpenLibertyTraceSpec", "./pkg/apis/openliberty/v1beta1.OpenLibertyTraceStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyTraceSpec", "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OpenLibertyTraceStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -1291,7 +1291,7 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyTraceStatus(ref common.Refer
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("./pkg/apis/openliberty/v1beta1.OperationStatusCondition"),
+										Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OperationStatusCondition"),
 									},
 								},
 							},
@@ -1299,14 +1299,14 @@ func schema_pkg_apis_openliberty_v1beta1_OpenLibertyTraceStatus(ref common.Refer
 					},
 					"operatedResource": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.OperatedResource"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OperatedResource"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/openliberty/v1beta1.OperatedResource", "./pkg/apis/openliberty/v1beta1.OperationStatusCondition"},
+			"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OperatedResource", "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.OperationStatusCondition"},
 	}
 }
 
@@ -1449,7 +1449,7 @@ func schema_pkg_apis_openliberty_v1beta1_ServiceBindingProvides(ref common.Refer
 					},
 					"auth": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/openliberty/v1beta1.ServiceBindingAuth"),
+							Ref: ref("github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.ServiceBindingAuth"),
 						},
 					},
 				},
@@ -1457,7 +1457,7 @@ func schema_pkg_apis_openliberty_v1beta1_ServiceBindingProvides(ref common.Refer
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/openliberty/v1beta1.ServiceBindingAuth"},
+			"github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1.ServiceBindingAuth"},
 	}
 }
 
