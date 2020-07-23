@@ -81,7 +81,7 @@ func createApp(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, tar
 	// set up serviceability, prereq to dumps
 	openLibertyApplication.Spec.Serviceability = &openlibertyv1beta1.OpenLibertyApplicationServiceability{
 		Size: "1Gi",
-		StorageClassName: "ibmc-block-bronze",
+		StorageClassName: "",
 	}
 
 	// use TestCtx's create helper to create the object and add a cleanup function for the new object
@@ -90,6 +90,8 @@ func createApp(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, tar
 		util.FailureCleanup(t, f, ns, err)
 	}
 
+	t.Log("************ WAITING NOW")
+	time.Sleep(time.Minute * 2)
 	// wait for example-liberty-dumps to reach 1 replicas
 	err = e2eutil.WaitForDeployment(t, f.KubeClient, ns, target, replicas, retryInterval, timeout)
 	if err != nil {

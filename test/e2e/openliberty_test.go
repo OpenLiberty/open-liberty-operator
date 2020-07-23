@@ -19,25 +19,25 @@ type Test struct {
 
 var (
 	basicTests = []Test{
-		// {"OpenLibertyPullPolicyTest", OpenLibertyPullPolicyTest},
-		// {"OpenLibertyBasicTest", OpenLibertyBasicTest},
-		// {"OpenLibertyProbeTest", OpenLibertyProbeTest},
-		// {"OpenLibertyAutoScalingTest", OpenLibertyAutoScalingTest},
-		// {"OpenLibertyStorageTest", OpenLibertyBasicStorageTest},
-		// {"OpenLibertyPersistenceTest", OpenLibertyPersistenceTest},
+		{"OpenLibertyPullPolicyTest", OpenLibertyPullPolicyTest},
+		{"OpenLibertyBasicTest", OpenLibertyBasicTest},
+		{"OpenLibertyProbeTest", OpenLibertyProbeTest},
+		{"OpenLibertyAutoScalingTest", OpenLibertyAutoScalingTest},
+		{"OpenLibertyStorageTest", OpenLibertyBasicStorageTest},
+		{"OpenLibertyPersistenceTest", OpenLibertyPersistenceTest},
 	}
 	advancedTests = []Test{
-		// {"OpenLibertyServiceMonitorTest", OpenLibertyServiceMonitorTest},
-		// {"OpenLibertyKnativeTest", OpenLibertyKnativeTest},
-		// {"OpenLibertyServiceBindingTest", OpenLibertyServiceBindingTest},
-		// {"OpenLibertyCertManagerTest", OpenLibertyCertManagerTest},
-		{"OpenLibertyTraceTest", OpenLibertyTraceTest},
-		{"OpenLibertyDumpsTest", OpenLibertyDumpsTest},
-		// {"OpenLibertyKappNavTest", OpenLibertyKappNavTest},
+		{"OpenLibertyServiceMonitorTest", OpenLibertyServiceMonitorTest},
+		{"OpenLibertyKnativeTest", OpenLibertyKnativeTest},
+		{"OpenLibertyServiceBindingTest", OpenLibertyServiceBindingTest},
+		{"OpenLibertyCertManagerTest", OpenLibertyCertManagerTest},
+		// {"OpenLibertyTraceTest", OpenLibertyTraceTest},
+		// {"OpenLibertyDumpsTest", OpenLibertyDumpsTest},
+		{"OpenLibertyKappNavTest", OpenLibertyKappNavTest},
 		{"OpenLibertySSOTest", OpenLibertySSOTest},
 	}
 	ocpTests = []Test{
-		// {"OpenLibertyImageStreamTest", OpenLibertyImageStreamTest},
+		{"OpenLibertyImageStreamTest", OpenLibertyImageStreamTest},
 	}
 	independantTests = []Test{}
 )
@@ -72,7 +72,7 @@ func TestOpenLibertyApplication(t *testing.T) {
 	// basic tests that are runnable locally in minishift/kube
 	for _, test := range basicTests {
 		wg.Add(1)
-		RuntimeTestRunner(&wg, t, test)
+		go RuntimeTestRunner(&wg, t, test)
 	}
 
 	// tests for features that will require cluster configuration
