@@ -23,18 +23,20 @@ var (
 		{"OpenLibertyBasicTest", OpenLibertyBasicTest},
 		{"OpenLibertyProbeTest", OpenLibertyProbeTest},
 		{"OpenLibertyAutoScalingTest", OpenLibertyAutoScalingTest},
-		{"OpenLibertyStorageTest", OpenLibertyBasicStorageTest},
-		{"OpenLibertyPersistenceTest", OpenLibertyPersistenceTest},
 	}
 	advancedTests = []Test{
 		{"OpenLibertyServiceMonitorTest", OpenLibertyServiceMonitorTest},
 		{"OpenLibertyKnativeTest", OpenLibertyKnativeTest},
-		{"OpenLibertyServiceBindingTest", OpenLibertyServiceBindingTest},
-		{"OpenLibertyCertManagerTest", OpenLibertyCertManagerTest},
+		{"OpenLibertyStorageTest", OpenLibertyBasicStorageTest},
+		{"OpenLibertyPersistenceTest", OpenLibertyPersistenceTest},
 		// {"OpenLibertyTraceTest", OpenLibertyTraceTest},
 		// {"OpenLibertyDumpsTest", OpenLibertyDumpsTest},
 		{"OpenLibertyKappNavTest", OpenLibertyKappNavTest},
+	}
+	advancedLongTests = []Test{
+		{"OpenLibertyServiceBindingTest", OpenLibertyServiceBindingTest},
 		{"OpenLibertySSOTest", OpenLibertySSOTest},
+		{"OpenLibertyCertManagerTest", OpenLibertyCertManagerTest},
 	}
 	ocpTests = []Test{
 		{"OpenLibertyImageStreamTest", OpenLibertyImageStreamTest},
@@ -72,13 +74,18 @@ func TestOpenLibertyApplication(t *testing.T) {
 	// basic tests that are runnable locally in minishift/kube
 	for _, test := range basicTests {
 		wg.Add(1)
-		RuntimeTestRunner(&wg, t, test)
+		go RuntimeTestRunner(&wg, t, test)
 	}
 
 	// tests for features that will require cluster configuration
 	// i.e. knative requires installations
 	if cluster != "minikube" {
 		for _, test := range advancedTests {
+			wg.Add(1)
+			RuntimeTestRunner(&wg, t, test)
+		}
+
+		for _, test := range advancedLongTests {
 			wg.Add(1)
 			go RuntimeTestRunner(&wg, t, test)
 		}
