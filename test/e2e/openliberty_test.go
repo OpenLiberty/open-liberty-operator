@@ -102,7 +102,7 @@ func TestOpenLibertyApplication(t *testing.T) {
 	if cluster == "ocp" {
 		for _, test := range ocpTests {
 			wg.Add(1)
-			go RuntimeTestRunner(&wg, t, test)
+			RuntimeTestRunner(&wg, t, test)
 		}
 	}
 	wg.Wait()
