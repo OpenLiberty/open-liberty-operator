@@ -86,21 +86,21 @@ func TestOpenLibertyApplication(t *testing.T) {
 
 	// tests for features that will require cluster configuration
 	// i.e. knative requires installations
-	if cluster != "minikube" {
-		for _, test := range advancedTests {
-			wg.Add(1)
-			RuntimeTestRunner(&wg, t, test)
-		}
-	}
+	// if cluster != "minikube" {
+	// 	for _, test := range advancedTests {
+	// 		wg.Add(1)
+	// 		RuntimeTestRunner(&wg, t, test)
+	// 	}
+	// }
 
 	// tests for features NOT expected to run in OpenShift
 	// i.e. Ingress
-	if cluster == "minikube" || cluster == "kubernetes" {
-		for _, test := range independantTests {
-			wg.Add(1)
-			RuntimeTestRunner(&wg, t, test)
-		}
-	}
+	// if cluster == "minikube" || cluster == "kubernetes" {
+	// 	for _, test := range independantTests {
+	// 		wg.Add(1)
+	// 		RuntimeTestRunner(&wg, t, test)
+	// 	}
+	// }
 
 	// tests for features that ONLY exist in OpenShift
 	// i.e. image streams are only in OpenShift
