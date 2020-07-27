@@ -76,7 +76,12 @@ func TestOpenLibertyApplication(t *testing.T) {
 	// basic tests that are runnable locally in minishift/kube
 	for _, test := range basicTests {
 		wg.Add(1)
-		go RuntimeTestRunner(&wg, t, test)
+		// minikube can't support the goroutine approach
+		if cluster == "minikube" {
+			RuntimeTestRunner(&wg, t, test)
+		} else {
+			go RuntimeTestRunner(&wg, t, test)
+		}
 	}
 
 	// tests for features that will require cluster configuration
