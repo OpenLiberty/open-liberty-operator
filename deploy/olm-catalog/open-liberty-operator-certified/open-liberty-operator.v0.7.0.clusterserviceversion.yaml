@@ -10,7 +10,7 @@ metadata:
     certified: 'true'
     createdAt: 2020-07-22 09:00:00
     description: Deploy and manage applications running on Open Liberty
-    containerImage: registry.connect.redhat.com/ibm/open-liberty-operator@sha256:REPLACE_WITH_ACTUAL_VALUE
+    containerImage: registry.connect.redhat.com/ibm/open-liberty-operator@sha256:7e439b96d0ab5cbf38bdbd39feffd80370fed748430807a7fd1c1ba7d1e17d38
     support: IBM
     capabilities: Auto Pilot
     repository: https://github.com/OpenLiberty/open-liberty-operator
@@ -417,7 +417,7 @@ spec:
                 serviceAccountName: open-liberty-operator
                 containers:
                   - name: open-liberty-operator
-                    image: registry.connect.redhat.com/ibm/open-liberty-operator@sha256:REPLACE_WITH_ACTUAL_VALUE
+                    image: registry.connect.redhat.com/ibm/open-liberty-operator@sha256:7e439b96d0ab5cbf38bdbd39feffd80370fed748430807a7fd1c1ba7d1e17d38
                     command:
                       - open-liberty-operator
                     imagePullPolicy: Always
