@@ -6,7 +6,7 @@ The following document covers various topics for configuring and integrating you
 
 Kibana dashboards are provided for visualizing events from the Open Liberty runtime.
 
-To leverage these dashboards the logging events must be emitted in JSON format to standard-out. For information regarding how to configure an Open Liberty image with JSON logging please see link:++https://github.com/OpenLiberty/ci.docker#logging++[here].
+To leverage these dashboards the logging events must be emitted in JSON format to standard-out. For Open Liberty Operator, JSON logging is enabled by default. For information regarding how to configure an Open Liberty image with JSON logging please see link:++https://github.com/OpenLiberty/ci.docker#logging++[here].
 
 Retrieve available Kibana dashboards tuned for Open Liberty logging events link:++https://github.com/OpenLiberty/open-liberty-operator/tree/master/deploy/dashboards/logging++[here].
 
@@ -14,13 +14,14 @@ For information regarding how to import Kibana dashboards see the official docum
 
 For effective management of logs emitted from applications, deploy your own Elasticsearch, Fluentd and Kibana (EFK) stack. For more information see the following link:++https://kabanero.io/guides/app-logging-ocp-4-2/++[guide].
 
-Command-line JSON parsers, like JSON Query tool (jq), can be used to create human-readable views of JSON-formatted logs. In the following example, the logs are piped through grep to ensure that the message field is there before jq parses the line:
+Command-line JSON parsers, like JSON Query tool (jq), can be used to create human-readable views of JSON-formatted logs. You can create an alias for your jq command in the format you like. In the following example, the logs are piped through grep to ensure that the message field is there before jq parses the line:
 
 [source,sh]
 ----
+alias prettylog="jq .message -r"
 oc logs -f pod_name -n namespace | \
   grep --line-buffered message | \
-  jq .message -r
+  prettylog
 ----
 
 == How to monitor your Liberty runtimes
@@ -152,7 +153,6 @@ Configure mpHealth-2.x feature in server.xml:
    <featureManager>
        <feature>mpHealth-2.1</feature>
    </featureManager>
-   <quickStartSecurity userName="admin" userPassword="adminPwd"/>
 </server>
 ----
 
@@ -175,7 +175,7 @@ Configure the readiness and liveness probe's fields to point to the MicroProfile
 === For mpHealth-2.x
 
 
-Modify the readiness and liveness probe's fields to point to the MicroProfile Health REST endpoints, in the OpenLibertyApplication Custom Resource (CR):
+Modify the readiness and liveness probe's fields, if not configured, to point to the MicroProfile Health REST endpoints, in the OpenLibertyApplication Custom Resource (CR):
 
 
 [source,yaml]
