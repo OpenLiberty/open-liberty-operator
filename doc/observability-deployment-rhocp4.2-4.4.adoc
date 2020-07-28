@@ -18,9 +18,10 @@ Command-line JSON parsers, like JSON Query tool (jq), can be used to create huma
 
 [source,sh]
 ----
-alias prettylog="jq .message -r"
+alias grepcmd="grep --line-buffered message"
+alias prettylog="jq '.ibm_datetime + \"  \" + .loglevel + \"\\t\" + \" \" + .message' -r"
 oc logs -f pod_name -n namespace | \
-  grep --line-buffered message | \
+  grepcmd | \
   prettylog
 ----
 
