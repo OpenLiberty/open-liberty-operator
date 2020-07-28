@@ -80,7 +80,7 @@ func TestOpenLibertyApplication(t *testing.T) {
 		if cluster == "minikube" {
 			RuntimeTestRunner(&wg, t, test)
 		} else {
-			RuntimeTestRunner(&wg, t, test)
+			go RuntimeTestRunner(&wg, t, test)
 		}
 	}
 

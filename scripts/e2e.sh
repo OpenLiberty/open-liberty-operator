@@ -45,7 +45,13 @@ main() {
     fi
 
     echo "****** Starting e2e tests..."
-    CLUSTER_ENV="ocp" operator-sdk test local github.com/OpenLiberty/open-liberty-operator/test/e2e --go-test-flags "-timeout 35m" --image $(oc registry info)/openshift/operator:$TRAVIS_BUILD_NUMBER --verbose
+    ## just run basic tests for websphere for performance issues
+    if [[ "${LIBERTY_IMAGE}" =~ "websphere" ]]; then
+      CLUSTER_ENV="minikube" operator-sdk test local github.com/OpenLiberty/open-liberty-operator/test/e2e --go-test-flags "-timeout 35m" --image $(oc registry info)/openshift/operator:$TRAVIS_BUILD_NUMBER --verbose
+    else
+      CLUSTER_ENV="ocp" operator-sdk test local github.com/OpenLiberty/open-liberty-operator/test/e2e --go-test-flags "-timeout 35m" --image $(oc registry info)/openshift/operator:$TRAVIS_BUILD_NUMBER --verbose
+    fi
+
     result=$?
     echo "****** Cleaning up tests..."
     cleanup
