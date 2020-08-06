@@ -1,7 +1,7 @@
 # Sample Kibana dashboards for Open Liberty
 Here you can find Kibana dashboards to use with JSON logs from Liberty servers.
 
-# open-liberty-kibana\<version\>-traffic
+## open-liberty-kibana\<version\>-traffic
 
 Prior to Open Liberty 20.0.0.8, access logs that were included in the JSON logs used a fixed set of fields. Open Liberty 20.0.0.8 adds the option for you to use the fields specified in the `accessLogging` `logFormat` attribute in the JSON logs.
 
