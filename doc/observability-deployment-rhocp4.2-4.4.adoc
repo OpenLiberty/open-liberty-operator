@@ -1,6 +1,6 @@
 = Observability with Open Liberty
 
-The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in the OpenShift cluster. This document has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2, 4.3, and 4.4.
+The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in the OpenShift cluster. This document has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2, 4.3, 4.4, and 4.5.
 
 == How to deploy Kibana dashboards to monitor Open Liberty logging events
 
@@ -12,7 +12,7 @@ Retrieve available Kibana dashboards tuned for Open Liberty logging events link:
 
 For information regarding how to import Kibana dashboards see the official documentation link:++https://www.elastic.co/guide/en/kibana/5.6/loading-a-saved-dashboard.html++[here].
 
-For effective management of logs emitted from applications, deploy your own Elasticsearch, Fluentd and Kibana (EFK) stack. For more information see the following link:++https://kabanero.io/guides/app-logging-ocp-4-2/++[guide].
+For effective management of logs emitted from applications, deploy your own Elasticsearch, Fluentd and Kibana (EFK) stack. For more information see the following link:++https://www.ibm.com/support/knowledgecenter/en/SSCSJL_4.2.x/guides/guide-app-logging-ocp-4.2/app-logging-ocp-4.2.html++[guide].
 
 Command-line JSON parsers, like JSON Query tool (jq), can be used to create human-readable views of JSON-formatted logs. You can create an alias for your jq command in the format you like. In the following example, the logs are piped through grep to ensure that the message field is there before jq parses the line:
 
@@ -79,7 +79,7 @@ This `envFrom` configuration sets two environment variables for your application
 === Enabling Prometheus to scrape data
 
 
-You will need to deploy Prometheus using the Prometheus Operator which will then utilize Service Monitors to monitor and scrape logs from target services. Details regarding how to deploy and configure Prometheus are link:++https://kabanero.io/guides/app-monitoring-ocp4.2/#deploy-prometheus-prometheus-operator++[here].
+You will need to deploy Prometheus using the Prometheus Operator which will then utilize Service Monitors to monitor and scrape logs from target services. Details regarding how to deploy and configure Prometheus are link:++https://www.ibm.com/support/knowledgecenter/en/SSCSJL_4.2.x/guides/guide-app-monitoring-ocp4.2/guide-app-monitoring-ocp4.2.html#deploy-prometheus-prometheus-operator++[here].
 
 
 After deploying Prometheus, you must configure your application's Service Monitor to use the basic authentication credentials specified in your `server.xml` when accessing the `/metrics` endpoint. Use the Service Monitor's `basicAuth` definition with a secret that contains those credentials; this should be the same secret you created earlier in Step 1 of <<Using environment variables for basic authentication credentials>>.
@@ -102,7 +102,7 @@ spec:
 === Visualizing your data with Grafana
 
 
-There are IBM provided Grafana dashboards that leverage metrics from the JVM as well as from the Open Liberty runtime.  Details regarding how to deploy and configure Grafana are covered link:++https://kabanero.io/guides/app-monitoring-ocp4.2/#deploy-grafana++[here].
+There are IBM provided Grafana dashboards that leverage metrics from the JVM as well as from the Open Liberty runtime.  Details regarding how to deploy and configure Grafana are covered link:++https://www.ibm.com/support/knowledgecenter/en/SSCSJL_4.2.x/guides/guide-app-monitoring-ocp4.2/guide-app-monitoring-ocp4.2.html#deploy-grafana++[here].
 
 
 You can find the access point of Grafana by running the following:
@@ -149,7 +149,7 @@ Configure mpHealth-2.x feature in server.xml:
 <?xml version="1.0" encoding="UTF-8"?>
 <server>
    <featureManager>
-       <feature>mpHealth-2.1</feature>
+       <feature>mpHealth-2.2</feature>
    </featureManager>
 </server>
 ----
