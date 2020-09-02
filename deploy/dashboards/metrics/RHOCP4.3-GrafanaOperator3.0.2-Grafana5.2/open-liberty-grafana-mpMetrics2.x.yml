@@ -3250,7 +3250,7 @@ spec:
             "options": [],
             "query": "base_cpu_processCpuLoad_percent",
             "refresh": 1,
-            "regex": "/base_cpu_processCpuLoad_percent{.*pod=\"(.*)\",service=.*/",
+            "regex": "/base_cpu_processCpuLoad_percent{.*pod=\"(.*?)\".*/",
             "skipUrlSync": false,
             "sort": 1,
             "tagValuesQuery": "",

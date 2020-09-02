@@ -2053,7 +2053,7 @@ spec:
             "options": [],
             "query": "base:cpu_available_processors",
             "refresh": 1,
-            "regex": "/base:cpu_available_processors{.*pod=\"(.*)\",service=.*/",
+            "regex": "/base:cpu_available_processors{.*pod=\"(.*?)\".*/",
             "skipUrlSync": false,
             "sort": 1,
             "tagValuesQuery": "",
