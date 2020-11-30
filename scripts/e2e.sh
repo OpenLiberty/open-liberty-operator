@@ -2,7 +2,7 @@
 
 readonly SERVICE_ACCOUNT="travis-tests"
 
-# login_cluster : Download oc cli and use it to log into our persistent cluster
+# login_cluster : Download oc CLI and use it to log into our persistent cluster
 login_cluster(){
     # Install kubectl and oc
     curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-4.3/openshift-client-linux.tar.gz | tar xvz
