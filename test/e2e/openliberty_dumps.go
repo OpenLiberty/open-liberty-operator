@@ -175,14 +175,15 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 	zipFile := zip[0]
 
 	// copy the file to local machine
-	out, err = exec.Command("kubectl", "cp", ns+"/"+podName+":"+"serviceability/"+ns+"/"+podName+"/"+zipFile, ".").Output()
+	localZipFile := strings.ReplaceAll(zipFile, ":", "")
+	out, err = exec.Command("kubectl", "cp", ns+"/"+podName+":"+"serviceability/"+ns+"/"+podName+"/"+zipFile, localZipFile).Output()
 	err = util.CommandError(t, err, out)
 	if err != nil {
 		t.Fatal("kubectl cp command failed")
 	}
 
 	// check if the zip file exists on local machine
-	cmd := "ls | grep " + zipFile
+	cmd := "ls | grep " + localZipFile
 	out, err = exec.Command("bash", "-c", cmd).Output()
 	err = util.CommandError(t, err, out)
 	if err != nil {
@@ -193,14 +194,14 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 	}
 
 	// list all the files in the zip folder
-	out, err = exec.Command("unzip", "-l", zipFile).Output()
+	out, err = exec.Command("unzip", "-l", localZipFile).Output()
 	err = util.CommandError(t, err, out)
 	if err != nil {
 		t.Fatal("unzip command failed")
 	}
 
 	// check if heap file is created
-	cmdHeap := "unzip -l " + zipFile + " | grep heapdump"
+	cmdHeap := "unzip -l " + localZipFile + " | grep heapdump"
 	heap, err := exec.Command("bash", "-c", cmdHeap).Output()
 	err = util.CommandError(t, err, heap)
 	if err != nil {
@@ -213,7 +214,7 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 	}
 
 	// check if thread file is created
-	cmdThread := "unzip -l " + zipFile + " | grep javacore"
+	cmdThread := "unzip -l " + localZipFile + " | grep javacore"
 	thread, err := exec.Command("bash", "-c", cmdThread).Output()
 	err = util.CommandError(t, err, thread)
 	if err != nil {
@@ -228,7 +229,7 @@ func createDump(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, po
 	t.Log("Dump found!")
 
 	// remove zip file
-	clean, err := exec.Command("rm", zipFile).Output()
+	clean, err := exec.Command("rm", localZipFile).Output()
 	if err != nil {
 		t.Fatalf("Unable to rm zip file: %s", clean)
 	} else {
