@@ -177,7 +177,7 @@ image::images/template_grafana_dashboard.png[Template Dashboard]
 
 By default, the Prometheus Operator only watches the namespace it currently resides in, so in order to get the Prometheus Operator to detect service monitors created in other namespaces, you must apply the following configuration changes.
 
-1. In your monitoring namespace - in this case, the monitoring namespace is `prometheus-operator` - edit the OperatorGroup to add your application's namespace, for example, `myapp`, to the list of targeted namesaces to be watched. This will change the *olm.targetNamespaces* variable that the Prometheus Operator uses for detecting namespaces to include your `myapp` namespace.
+. In your monitoring namespace - in this case, the monitoring namespace is `prometheus-operator` - edit the OperatorGroup to add your application's namespace, for example, `myapp`, to the list of targeted namesaces to be watched. This will change the *olm.targetNamespaces* variable that the Prometheus Operator uses for detecting namespaces to include your `myapp` namespace.
 +
 [source,sh]
 ----
