@@ -1,0 +1,151 @@
+apiVersion: integreatly.org/v1alpha1
+kind: GrafanaDashboard
+metadata:
+  labels:
+    app: grafana
+  name: template-dashboard
+  namespace: prometheus-operator
+spec:
+  json: |
+    {
+      "__inputs": [
+         {
+           "name": "Prometheus",
+           "label": "Prometheus",
+           "description": "",
+           "type": "datasource",
+           "pluginId": "prometheus",
+           "pluginName": "Prometheus"
+         }
+       ],
+      "__requires": [
+         {
+           "type": "grafana",
+           "id": "grafana",
+           "name": "Grafana",
+           "version": "5.2.0"
+         },
+         {
+           "type": "panel",
+           "id": "graph",
+           "name": "Graph",
+           "version": "5.0.0"
+         },
+         {
+           "type": "datasource",
+           "id": "prometheus",
+           "name": "Prometheus",
+           "version": "5.0.0"
+         },
+         {
+           "type": "panel",
+           "id": "table",
+           "name": "Table",
+           "version": "5.0.0"
+         }
+       ],
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": "-- Grafana --",
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "editable": true,
+      "gnetId": null,
+      "graphTooltip": 0,
+      "id": 1,
+      "iteration": 1569353980677,
+      "links": [],
+      "panels": [
+        {
+          "columns": [],
+          "datasource": "Prometheus",
+          "fontSize": "100%",
+          "gridPos": {
+            "h": 6,
+            "w": 24,
+            "x": 0,
+            "y": 2
+          },
+          "id": 26,
+          "links": [],
+          "options": {},
+          "pageSize": null,
+          "scroll": true,
+          "showHeader": true,
+          "sort": {
+            "col": 0,
+            "desc": true
+          },
+          "styles": [
+            {
+              "alias": "Time",
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "pattern": "Time",
+              "type": "date"
+            },
+            {
+              "alias": "Namespace",
+              "pattern": "namespace",
+              "type": "custom"
+            },
+            {
+              "alias": "Service",
+              "pattern": "service",
+              "type": "custom"
+            },
+            {
+              "alias": "Endpoint",
+              "pattern": "endpoint",
+              "type": "custom"
+            },
+            {
+              "alias": "",
+              "mappingType": 1,
+              "pattern": "Value",
+              "type": "hidden",
+              "unit": "short"
+            }
+          ],
+          "targets": [
+            {
+              "expr": "count(up) by (namespace, service, endpoint)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "refId": "A"
+            }
+          ],
+          "title": "Endpoints",
+          "transform": "table",
+          "type": "table"
+        }
+      ],
+      "refresh": "10s",
+      "schemaVersion": 19,
+      "style": "dark",
+      "tags": [],
+      "time": {
+        "from": "now-15m",
+        "to": "now"
+      },
+      "timepicker": {
+        "refresh_intervals": [
+          "1m",
+          "5m",
+          "15m",
+          "1h",
+          "1d"
+        ]
+      },
+      "title": "Template-Dashboard",
+      "uid": "Template-Dashboard"
+    }
+  name: template-dashboard.json
