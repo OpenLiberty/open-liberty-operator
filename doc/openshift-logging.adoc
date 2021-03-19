@@ -1,4 +1,4 @@
-# Application Logging with Elasticsearch, Fluentd, and Kibana
+# Application Logging with Elasticsearch, Fluentd, and Kibana on Red Hat OpenShift Container Platform
 
 The following guide has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2, 4.3, 4.4, 4.5, and 4.6.
 
