@@ -120,7 +120,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	reconciler := r.(*ReconcileOpenLiberty)
 
-	c, err := controller.New("openliberty-controller", mgr, controller.Options{Reconciler: r, MaxConcurrentReconciles: 10})
+	c, err := controller.New("openliberty-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -651,7 +651,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 				err = lutils.CustomizeEnvSSO(&statefulSet.Spec.Template, instance, r.GetClient(), r.IsOpenShift())
 				if err != nil {
 					reqLogger.Error(err, "Failed to reconcile Single sign-on configuration")
-					return err		
+					return err
 				}
 			}
 			lutils.ConfigureServiceability(&statefulSet.Spec.Template, instance)
@@ -665,7 +665,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			reqLogger.Error(err, "Failed to reconcile StatefulSet")
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
-		
+
 	} else {
 		// Delete StatefulSet if exists
 		statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
@@ -689,11 +689,11 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			oputils.CustomizePodSpec(&deploy.Spec.Template, instance)
 			oputils.CustomizeServiceBinding(resolvedBindingSecret, &deploy.Spec.Template.Spec, instance)
 			lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance)
-			if instance.Spec.SSO != nil  {
+			if instance.Spec.SSO != nil {
 				err = lutils.CustomizeEnvSSO(&deploy.Spec.Template, instance, r.GetClient(), r.IsOpenShift())
 				if err != nil {
 					reqLogger.Error(err, "Failed to reconcile Single sign-on configuration")
-					return err		
+					return err
 				}
 			}
 
@@ -813,7 +813,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		reqLogger.V(1).Info(fmt.Sprintf("%s is not supported", prometheusv1.SchemeGroupVersion.String()))
 	}
 
-    reqLogger.Info("Reconcile OpenLibertyApplication - completed")
+	reqLogger.Info("Reconcile OpenLibertyApplication - completed")
 	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
 }
 
