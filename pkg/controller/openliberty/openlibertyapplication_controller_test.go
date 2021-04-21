@@ -101,8 +101,9 @@ func TestOpenLibertyController(t *testing.T) {
 
 	// Create a fake client to mock API calls.
 	cl := fakeclient.NewFakeClient(objs...)
+	rcl := fakeclient.NewFakeClient(objs...)
 
-	rb := oputils.NewReconcilerBase(cl, s, &rest.Config{}, record.NewFakeRecorder(10))
+	rb := oputils.NewReconcilerBase(rcl, cl, s, &rest.Config{}, record.NewFakeRecorder(10))
 
 	// Create a ReconcileOpenLiberty object
 	r := &ReconcileOpenLiberty{ReconcilerBase: rb}

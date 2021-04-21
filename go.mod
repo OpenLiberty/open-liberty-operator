@@ -3,7 +3,7 @@ module github.com/OpenLiberty/open-liberty-operator
 go 1.13
 
 require (
-	github.com/application-stacks/runtime-component-operator v0.7.0
+	github.com/application-stacks/runtime-component-operator v0.7.1
 	github.com/coreos/prometheus-operator v0.34.0
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.4
@@ -48,7 +48,7 @@ replace (
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.0.0-20191016112829-06bb3c9d77c9
 )
 
-//To resolve license issue with bou.ke/monkey - https://github.com/operator-framework/operator-registry/issues/190
+//To resolve license issue - https://github.com/operator-framework/operator-registry/issues/190
 replace (
 	github.com/otiai10/copy => github.com/otiai10/copy v1.0.2
 	github.com/otiai10/mint => github.com/otiai10/mint v1.3.0
