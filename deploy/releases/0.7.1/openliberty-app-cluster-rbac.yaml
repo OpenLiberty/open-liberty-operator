@@ -1,7 +1,8 @@
+--- 
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
-  name: open-liberty-operator
+  name: open-liberty-operator-OPEN_LIBERTY_OPERATOR_NAMESPACE
 rules:
 - apiGroups:
   - ""
@@ -15,6 +16,7 @@ rules:
   - configmaps
   - secrets
   - serviceaccounts
+  - namespaces
   - pods/exec
   verbs:
   - '*'
@@ -100,3 +102,16 @@ rules:
   - ingresses
   verbs:
   - '*'
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: open-liberty-operator-OPEN_LIBERTY_OPERATOR_NAMESPACE
+subjects:
+- kind: ServiceAccount
+  name: open-liberty-operator
+  namespace: OPEN_LIBERTY_OPERATOR_NAMESPACE
+roleRef:
+  kind: ClusterRole
+  name: open-liberty-operator-OPEN_LIBERTY_OPERATOR_NAMESPACE
+  apiGroup: rbac.authorization.k8s.io
