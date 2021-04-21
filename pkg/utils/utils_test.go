@@ -105,8 +105,9 @@ func TestCustomizeEnvSSO(t *testing.T) {
 	s.AddKnownTypes(openlibertyv1beta1.SchemeGroupVersion, liberty)
 
 	cl := fakeclient.NewFakeClient(objs...)
+	rcl := fakeclient.NewFakeClient(objs...)
 
-	rb := oputils.NewReconcilerBase(cl, s, &rest.Config{}, record.NewFakeRecorder(10))
+	rb := oputils.NewReconcilerBase(rcl, cl, s, &rest.Config{}, record.NewFakeRecorder(10))
 
 	terminationPolicy := v1.TLSTerminationReencrypt
 	expose := true

@@ -2,7 +2,6 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   name: open-liberty-operator-OPEN_LIBERTY_OPERATOR_NAMESPACE
 rules:
 - apiGroups:
@@ -61,7 +60,8 @@ rules:
 - apiGroups:
   - image.openshift.io
   resources:
-  - '*'
+  - imagestreams
+  - imagestreamtags
   verbs:
   - '*'
 - apiGroups:

@@ -60,7 +60,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	reconciler := &ReconcileOpenLiberty{ReconcilerBase: oputils.NewReconcilerBase(mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor(("open-liberty-operator")))}
+	reconciler := &ReconcileOpenLiberty{ReconcilerBase: oputils.NewReconcilerBase(mgr.GetAPIReader(), mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor(("open-liberty-operator")))}
 
 	watchNamespaces, err := oputils.GetWatchNamespaces()
 	if err != nil {
@@ -450,18 +450,23 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 	if r.IsOpenShift() {
 		image, err := imageutil.ParseDockerImageReference(instance.Spec.ApplicationImage)
 		if err == nil {
-			imageStream := &imagev1.ImageStream{}
-			imageNamespace := image.Namespace
-			if imageNamespace == "" {
-				imageNamespace = instance.Namespace
+			isTag := &imagev1.ImageStreamTag{}
+			isTagName := imageutil.JoinImageStreamTag(image.Name, image.Tag)
+			isTagNamespace := image.Namespace
+			if isTagNamespace == "" {
+				isTagNamespace = instance.Namespace
 			}
-			err = r.GetClient().Get(context.Background(), types.NamespacedName{Name: image.Name, Namespace: imageNamespace}, imageStream)
+			key := types.NamespacedName{Name: isTagName, Namespace: isTagNamespace}
+			err = r.GetAPIReader().Get(context.Background(), key, isTag)
+			// Call ManageError only if the error type is not found or is not forbidden. Forbidden could happen
+			// when the operator tries to call GET for ImageStreamTags on a namespace that doesn't exists (e.g.
+			// cannot get imagestreamtags.image.openshift.io in the namespace "navidsh": no RBAC policy matched)
 			if err == nil {
-				image := imageutil.LatestTaggedImage(imageStream, image.Tag)
-				if image != nil {
+				image := isTag.Image
+				if image.DockerImageReference != "" {
 					instance.Status.ImageReference = image.DockerImageReference
 				}
-			} else if err != nil && !kerrors.IsNotFound(err) {
+			} else if err != nil && !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) {
 				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 			}
 		}
