@@ -9,7 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.7.1]
+
+### Fixed
+
+- Updated Image Stream lookup logic to query for Image Stream Tags. ([#229](https://github.com/OpenLiberty/open-liberty-operator/pull/229)), [#156](https://github.com/application-stacks/runtime-component-operator/pull/156))
+- Concurrency issue. ([#226](https://github.com/OpenLiberty/open-liberty-operator/pull/226))
 
 ## [0.7.0]
 
@@ -88,7 +93,8 @@ All notable changes to this project will be documented in this file.
 
 The initial release of the helm-based Open Liberty Operator.
 
-[Unreleased]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.6.0...v0.7.1
 [0.7.0]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.5.0...v0.5.1
