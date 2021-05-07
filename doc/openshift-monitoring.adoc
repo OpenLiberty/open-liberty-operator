@@ -28,16 +28,16 @@ kind: ServiceMonitor
 metadata:
     name: myapp-monitor
     labels:
-    k8s-app: myapp-monitor
+        k8s-app: myapp-monitor
     namespace: myapp
 spec:
     selector:
-    matchLabels:
-        app: example-app
+        matchLabels:
+            app: example-app
     endpoints:
-    - interval: 30s
-      path: /metrics
-      port: 9080-tcp
+        - interval: 30s
+          path: /metrics
+          port: 9080-tcp
 ----
 +
 
