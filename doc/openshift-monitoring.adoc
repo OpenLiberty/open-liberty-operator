@@ -1,6 +1,6 @@
 # Application Monitoring on Red Hat OpenShift Container Platform (RHOCP) with Prometheus and Grafana
 
-The following guide has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2, 4.3, 4.4, 4.5, 4.6 and 4.7.
+The following guide has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2, 4.3, 4.4, 4.5, and 4.6.
 
 ## Prerequisites
 
@@ -8,15 +8,15 @@ Prior to installing application monitoring on RHOCP, ensure that there is a runn
 
 It is assumed such a running application has been deployed to the RHOCP cluster inside a project/namespace called `myapp`, and that the Prometheus metrics endpoint is exposed on path `/metrics`.
 
-# Application Monitoring on RHOCP 4.6+
+# Application Monitoring on RHOCP 4.6
 
-In RHOCP 4.6+, application monitoring can be set up by enabling monitoring for user-defined projects without the need to install an additional monitoring solution. This solution will deploy a second Prometheus Operator instance inside the `openshift-user-workload-monitoring` namespace that is configured to monitor all namespaces excluding the `openshift-` prefixed namespaces already monitored by the cluster's default platform monitoring.
+In RHOCP 4.6, application monitoring can be set up by enabling monitoring for user-defined projects without the need to install an additional monitoring solution. This solution will deploy a second Prometheus Operator instance inside the `openshift-user-workload-monitoring` namespace that is configured to monitor all namespaces excluding the `openshift-` prefixed namespaces already monitored by the cluster's default platform monitoring.
 
 There is no separate Grafana deployment that comes with enabling user-defined monitoring and the existing Grafana instance provided with the default monitoring stack is read-only, so a community-powered Grafana Operator must be installed later to create custom dashboards for viewing your metrics.
 
-. To configure the monitoring stack, follow this OpenShift guide link:++https://docs.openshift.com/container-platform/4.7/monitoring/configuring-the-monitoring-stack.html#preparing-to-configure-the-monitoring-stack++[Configuring the monitoring stack]. Here, you will create two config maps, `cluster-monitoring` and `user-workload-monitoring-config`, that will allow you to enable monitoring for user-defined projects in the next step. After creating the `user-workload-monitoring-config` config map, return to this guide to continue setting up monitoring for user-defined projects.
+. To configure the monitoring stack, follow this OpenShift guide link:++https://docs.openshift.com/container-platform/4.6/monitoring/configuring-the-monitoring-stack.html#preparing-to-configure-the-monitoring-stack++[Configuring the monitoring stack]. Here, you will create two config maps, `cluster-monitoring` and `user-workload-monitoring-config`, that will allow you to enable monitoring for user-defined projects in the next step. After creating the `user-workload-monitoring-config` config map, return to this guide to continue setting up monitoring for user-defined projects.
 
-. To enable monitoring for user-defined projects, follow the OpenShift guide link:++https://docs.openshift.com/container-platform/4.7/monitoring/enabling-monitoring-for-user-defined-projects.html++[Enabling monitoring for user-defined projects].
+. To enable monitoring for user-defined projects, follow the OpenShift guide link:++https://docs.openshift.com/container-platform/4.6/monitoring/enabling-monitoring-for-user-defined-projects.html++[Enabling monitoring for user-defined projects].
 
 . Deploy a Service Monitor inside the `myapp` namespace to define the service endpoint that will be monitored by the Prometheus instance using the following YAML:
 
@@ -28,16 +28,16 @@ kind: ServiceMonitor
 metadata:
     name: myapp-monitor
     labels:
-        k8s-app: myapp-monitor
+    k8s-app: myapp-monitor
     namespace: myapp
 spec:
     selector:
-        matchLabels:
-            app: example-app
+    matchLabels:
+        app: example-app
     endpoints:
-        - interval: 30s
-          path: /metrics
-          port: 9080-tcp
+    - interval: 30s
+        path: /metrics
+        port: 9080-tcp
 ----
 +
 
@@ -45,7 +45,7 @@ spec:
 
 . To deploy an additional Grafana instance for creating custom dashboards, follow this RedHat blog link:++https://www.redhat.com/en/blog/custom-grafana-dashboards-red-hat-openshift-container-platform-4++[Custom Grafana dashboards for Red Hat OpenShift Container Platform 4]. This Grafana instance will be connected to OpenShift monitoring in the `openshift-monitoring` namespace and additional Grafana dashboards will increase the load on the Prometheus service, so pay attention to Prometheus' CPU and memory usage when deploying dashboards.  
 
-. Deploy the following template Grafana Dashboard link:++https://github.com/OpenLiberty/open-liberty-operator/blob/master/doc/guides-code/grafana_dashboard.yaml.txt++[grafana_dashboard.yaml.txt] to see all the services currently being monitored. Please ensure that the namespace in this yaml is configured to the namespace already deployed
+. Deploy the following template Grafana Dashboard [grafana_dashboard-4.6.yaml](code/grafana_datasource-4.6.yaml.txt) to see all the services currently being monitored.
 
 . Under Networking > Routes, visit Grafana to see the template dashboard. You can now consume all the application metrics gathered by Prometheus on the Grafana dashboard.
 
