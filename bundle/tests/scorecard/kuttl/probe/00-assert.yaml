@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: probes-liberty
+status:
+  readyReplicas: 1
+---
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+    - readinessProbe:
+        initialDelaySeconds: 1
+      livenessProbe:
+        initialDelaySeconds: 8
