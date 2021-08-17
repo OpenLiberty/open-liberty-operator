@@ -1,0 +1,11 @@
+# Adding a label should be sufficient to cause the operator
+# to create the monitor
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyApplication
+metadata:
+  name: service-monitor-liberty
+spec:
+  monitoring:
+    labels:
+      apps-prometheus: ''
+

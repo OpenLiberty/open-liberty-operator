@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-monitor-liberty
+status:
+  readyReplicas: 1
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: service-monitor-liberty
+spec:
+  endpoints:
+  - port: 9080-tcp
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: service-monitor-liberty
