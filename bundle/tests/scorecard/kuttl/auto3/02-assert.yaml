@@ -1,0 +1,7 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: autoscaling3-liberty
+status:
+  readyReplicas: 1
+
