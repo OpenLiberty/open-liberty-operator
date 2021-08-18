@@ -12,6 +12,17 @@ SRC_FILES := $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
 .DEFAULT_GOAL := help
 
+
+# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
+ifeq (,$(shell go env GOBIN))
+GOBIN=$(shell go env GOPATH)/bin
+else
+GOBIN=$(shell go env GOBIN)
+endif
+
+CRD_OPTIONS ?= "crd:crdVersions=v1,trivialVersions=true,preserveUnknownFields=false"
+
+
 .PHONY: help setup setup-cluster tidy build unit-test test-e2e generate build-image push-image gofmt golint clean install-crd install-rbac install-operator install-all uninstall-all
 
 help:
@@ -48,21 +59,22 @@ test-e2e-locally: setup
 	kubectl apply -f scripts/servicemonitor.crd.yaml
 	CLUSTER_ENV=local operator-sdk test local github.com/OpenLiberty/open-liberty-operator/test/e2e --verbose --debug --up-local --namespace ${WATCH_NAMESPACE}
 
-generate: setup ## Invoke `k8s` and `openapi` generators
-	operator-sdk generate k8s
-	operator-sdk generate openapi
 
-	# Remove `x-kubernetes-int-or-string: true` from CRD. Causing issues on cluster with older k8s
-	sed -i '' '/x\-kubernetes\-int\-or\-string\: true/d' deploy/crds/openliberty.io_openlibertyapplications_crd.yaml
-	sed -i '' '/x\-kubernetes\-int\-or\-string\: true/d' deploy/crds/openliberty.io_openlibertytraces_crd.yaml
-	sed -i '' '/x\-kubernetes\-int\-or\-string\: true/d' deploy/crds/openliberty.io_openlibertydumps_crd.yaml
+#generate: setup ## Invoke `k8s` and `openapi` generators
+#	operator-sdk generate k8s
+#	operator-sdk generate openapi
+#
+#	# Remove `x-kubernetes-int-or-string: true` from CRD. Causing issues on cluster with older k8s
+#	sed -i '' '/x\-kubernetes\-int\-or\-string\: true/d' deploy/crds/openliberty.io_openlibertyapplications_crd.yaml
+#	sed -i '' '/x\-kubernetes\-int\-or\-string\: true/d' deploy/crds/openliberty.io_openlibertytraces_crd.yaml
+#	sed -i '' '/x\-kubernetes\-int\-or\-string\: true/d' deploy/crds/openliberty.io_openlibertydumps_crd.yaml
 
-	kubectl annotate -f deploy/crds/openliberty.io_openlibertyapplications_crd.yaml --local=true openliberty.io/day2operations='OpenLibertyTrace,OpenLibertyDump' --overwrite -o yaml | sed '/namespace: ""/d' | awk '/type: object/ {max=NR} {a[NR]=$$0} END{for (i=1;i<=NR;i++) {if (i!=max) print a[i]}}' > deploy/crds/openliberty.io_openlibertyapplications_crd.yaml.tmp
-	kubectl annotate -f deploy/crds/openliberty.io_openlibertytraces_crd.yaml --local=true day2operation.openliberty.io/targetKinds='Pod' --overwrite -o yaml | sed '/namespace: ""/d' | awk '/type: object/ {max=NR} {a[NR]=$$0} END{for (i=1;i<=NR;i++) {if (i!=max) print a[i]}}' > deploy/crds/openliberty.io_openlibertytraces_crd.yaml.tmp
-	kubectl annotate -f deploy/crds/openliberty.io_openlibertydumps_crd.yaml --local=true day2operation.openliberty.io/targetKinds='Pod' --overwrite -o yaml | sed '/namespace: ""/d' | awk '/type: object/ {max=NR} {a[NR]=$$0} END{for (i=1;i<=NR;i++) {if (i!=max) print a[i]}}' > deploy/crds/openliberty.io_openlibertydumps_crd.yaml.tmp
-	mv deploy/crds/openliberty.io_openlibertyapplications_crd.yaml.tmp deploy/crds/openliberty.io_openlibertyapplications_crd.yaml 
-	mv deploy/crds/openliberty.io_openlibertytraces_crd.yaml.tmp deploy/crds/openliberty.io_openlibertytraces_crd.yaml 
-	mv deploy/crds/openliberty.io_openlibertydumps_crd.yaml.tmp deploy/crds/openliberty.io_openlibertydumps_crd.yaml 
+#	kubectl annotate -f deploy/crds/openliberty.io_openlibertyapplications_crd.yaml --local=true openliberty.io/day2operations='OpenLibertyTrace,OpenLibertyDump' --overwrite -o yaml | sed '/namespace: ""/d' | awk '/type: object/ {max=NR} {a[NR]=$$0} END{for (i=1;i<=NR;i++) {if (i!=max) print a[i]}}' > deploy/crds/openliberty.io_openlibertyapplications_crd.yaml.tmp
+#	kubectl annotate -f deploy/crds/openliberty.io_openlibertytraces_crd.yaml --local=true day2operation.openliberty.io/targetKinds='Pod' --overwrite -o yaml | sed '/namespace: ""/d' | awk '/type: object/ {max=NR} {a[NR]=$$0} END{for (i=1;i<=NR;i++) {if (i!=max) print a[i]}}' > deploy/crds/openliberty.io_openlibertytraces_crd.yaml.tmp
+#	kubectl annotate -f deploy/crds/openliberty.io_openlibertydumps_crd.yaml --local=true day2operation.openliberty.io/targetKinds='Pod' --overwrite -o yaml | sed '/namespace: ""/d' | awk '/type: object/ {max=NR} {a[NR]=$$0} END{for (i=1;i<=NR;i++) {if (i!=max) print a[i]}}' > deploy/crds/openliberty.io_openlibertydumps_crd.yaml.tmp
+#	mv deploy/crds/openliberty.io_openlibertyapplications_crd.yaml.tmp deploy/crds/openliberty.io_openlibertyapplications_crd.yaml 
+#	mv deploy/crds/openliberty.io_openlibertytraces_crd.yaml.tmp deploy/crds/openliberty.io_openlibertytraces_crd.yaml 
+#	mv deploy/crds/openliberty.io_openlibertydumps_crd.yaml.tmp deploy/crds/openliberty.io_openlibertydumps_crd.yaml 
 
 build-image: setup ## Build operator Docker image and tag with "${OPERATOR_IMAGE}:${OPERATOR_IMAGE_TAG}"
 	operator-sdk build ${OPERATOR_IMAGE}:${OPERATOR_IMAGE_TAG}
@@ -110,3 +122,41 @@ uninstall-all:
 	kubectl delete -n ${OPERATOR_NAMESPACE} -f deploy/releases/daily/openliberty-app-operator.yaml
 	kubectl delete -f deploy/releases/daily/openliberty-app-cluster-rbac.yaml
 	kubectl delete -f deploy/releases/daily/openliberty-app-crd.yaml
+
+
+# find or download controller-gen
+# download controller-gen if necessary
+controller-gen:
+ifeq (, $(shell which controller-gen))
+	@{ \
+	set -e ;\
+	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
+	cd $$CONTROLLER_GEN_TMP_DIR ;\
+	go mod init tmp ;\
+	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.4.1 ;\
+	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
+	}
+CONTROLLER_GEN=$(GOBIN)/controller-gen
+else
+CONTROLLER_GEN=$(shell which controller-gen)
+endif
+
+# Generate code
+generate: controller-gen
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+
+# Generate manifests e.g. CRD, RBAC etc.
+manifests: controller-gen
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+
+# Run go fmt against code
+fmt:
+	go fmt ./...
+
+# Run go vet against code
+vet:
+	go vet ./...
+
+# Run against the configured Kubernetes cluster in ~/.kube/config
+run: generate fmt vet manifests
+	go run ./main.go
