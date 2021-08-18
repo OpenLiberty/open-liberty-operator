@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: imagestream-liberty-app
+status:
+  readyReplicas: 1
+---
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - image: openliberty/open-liberty@sha256:ad76a227da61fc63f1b9ea8af328091527cc556d357754d818624cb1aaceb053
+status:
+  containerStatuses:
+  - ready: true
