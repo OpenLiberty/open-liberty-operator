@@ -1,0 +1,25 @@
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyApplication
+metadata:
+  name: provider-liberty
+spec:
+  applicationImage: openliberty/open-liberty:full-java8-openj9-ubi
+  sso:
+    github:
+      hostname: "github.com"
+    oidc:
+      - discoveryEndpoint: specify-required-value
+        id: provider1
+      - discoveryEndpoint: specify-required-value
+        id: provider2
+    oauth2:
+      - authorizationEndpoint: specify-required-value
+        tokenEndpoint: specify-required-value
+        id: custom1
+      - authorizationEndpoint: specify-required-value
+        tokenEndpoint: specify-required-value
+        id: custom2
+      - authorizationEndpoint: specify-required-value
+        tokenEndpoint: specify-required-value
+        id: custom3
+
