@@ -35,11 +35,15 @@ type ReconcileOpenLibertyDump struct {
 	Log        logr.Logger
 }
 
+// +kubebuilder:rbac:groups=openliberty.io,resources=openlibertydumps;openlibertydumps/status;openlibertydumps/finalizers,verbs=*
+// +kubebuilder:rbac:groups=core,resources=pods;pods/exec,verbs=*
+
 // Reconcile reads that state of the cluster for a OpenLibertyDump object and makes changes based on the state read
 // and what is in the OpenLibertyDump.Spec
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
+
 func (r *ReconcileOpenLibertyDump) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling OpenLibertyDump")

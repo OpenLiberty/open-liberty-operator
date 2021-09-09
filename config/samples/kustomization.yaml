@@ -1,0 +1,6 @@
+## Append samples you want in your CSV to this file as resources ##
+resources:
+- openliberty.io_v1beta1_openlibertyapplications.yaml
+- openliberty.io_v1beta1_openlibertydumps.yaml
+- openliberty.io_v1beta1_openlibertytraces.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

@@ -53,6 +53,17 @@ type ReconcileOpenLiberty struct {
 	Log logr.Logger
 }
 
+// +kubebuilder:rbac:groups=openliberty.io,resources=openlibertyapplications;openlibertyapplications/status;openlibertyapplications/finalizers,verbs=*
+// +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=*
+// +kubebuilder:rbac:groups=apps,resources=deployments/finalizers;statefulsets,verbs=update
+// +kubebuilder:rbac:groups=core,resources=services;secrets;serviceaccounts;configmaps,verbs=*
+// +kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=*
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=*
+// +kubebuilder:rbac:groups=route.openshift.io,resources=routes;routes/custom-host,verbs=*
+// +kubebuilder:rbac:groups=image.openshift.io,resources=imagestreams;imagestreamtags,verbs=get;list;watch
+// +kubebuilder:rbac:groups=serving.knative.dev,resources=services,verbs=*
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=*
+
 // Reconcile reads that state of the cluster for a OpenLiberty object and makes changes based on the state read
 // and what is in the OpenLiberty.Spec
 // Note:
