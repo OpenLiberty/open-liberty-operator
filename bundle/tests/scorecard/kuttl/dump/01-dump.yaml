@@ -1,0 +1,9 @@
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyDump
+metadata:
+  name: test-dump
+spec:
+  podName: my-liberty-app-0
+  include:
+    - thread
+    - heap

@@ -1,0 +1,7 @@
+#the application can be left behind so manually delete to ensure a clean environment
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+delete:
+  - apiVersion: openliberty.io/v1beta1
+    kind: OpenLibertyApplication
+    name: my-liberty-app
