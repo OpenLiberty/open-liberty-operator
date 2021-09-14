@@ -6,7 +6,6 @@ spec:
   applicationImage: liberty-imagestream
   replicas: 1
   expose: false
-  pullSecret: regcred
   readinessProbe:
     httpGet:
       path: /

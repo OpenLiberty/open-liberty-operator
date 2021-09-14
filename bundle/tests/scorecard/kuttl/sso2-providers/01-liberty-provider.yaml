@@ -6,7 +6,6 @@ spec:
   applicationImage: openliberty/open-liberty:full-java8-openj9-ubi
   replicas: 1
   expose: true
-  pullSecret: regcred
   env:
     - name: "SEC_TLS_TRUSTDEFAULTCERTS"
       value: "true"

@@ -6,7 +6,6 @@ spec:
   applicationImage: openliberty/open-liberty:kernel-java8-openj9-ubi
   replicas: 1
   expose: false
-  pullSecret: regcred
   readinessProbe:
     httpGet:
       path: /
