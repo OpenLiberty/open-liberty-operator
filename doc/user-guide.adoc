@@ -120,7 +120,7 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `route.termination`   | TLS termination policy. Can be one of `edge`, `reencrypt` and `passthrough`.
 | `route.insecureEdgeTerminationPolicy`   | HTTP traffic policy with TLS enabled. Can be one of `Allow`, `Redirect` and `None`.
 | `route.certificate`  | A YAML object representing a link:++https://cert-manager.io/docs/reference/api-docs/#cert-manager.io/v1alpha2.CertificateSpec++[Certificate].
-| `route.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be used in the route. Also can contain destination CA certificate.
+| `route.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be used in the route. Also can contain destination CA certificate. The following keys are valid in the secret: `ca.crt`, `destCA.crt`, `tls.crt`, and `tls.key`.
 | `sso`   | Specifies the configuration for single sign-on providers to authenticate with. Specify sensitive fields, such as _clientId_ and _clientSecret_, for the selected providers by using the `Secret`. For more information, see link:++#single-sign-on-sso++[Single Sign-On (SSO)].
 | `sso.mapToUserRegistry`   | Specifies whether to map a user identifier to a registry user. This parameter applies to all providers.
 | `sso.redirectToRPHostAndPort`   | Specifies a callback protocol, host and port number, such as https://myfrontend.mycompany.com. This parameter applies to all providers. 
