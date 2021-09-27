@@ -334,6 +334,20 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 			}
 		}
+	} else {
+	    reqLogger.Info("Entering NEW code")
+	    pvcName := instance.Name + "-serviceability"
+	    pvc := &corev1.PersistentVolumeClaim{}
+	    err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: pvcName, Namespace: instance.Namespace}, pvc)
+	    if err == nil {
+            if pvc.Status.Phase == "Pending" {
+                reqLogger.Info("Deleting dangling PVC that is still in Pending state")
+                err = r.DeleteResource(pvc)
+                if err != nil {
+                    reqLogger.Error(err, "Failed to delete dangling PersistentVolumeClaim for Serviceability")
+                }
+            }
+	    }
 	}
 
 	if instance.Spec.Storage != nil {
