@@ -335,7 +335,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			}
 		}
 	} else {
-	    reqLogger.Info("Entering NEW code")
 	    pvcName := instance.Name + "-serviceability"
 	    pvc := &corev1.PersistentVolumeClaim{}
 	    err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: pvcName, Namespace: instance.Namespace}, pvc)
