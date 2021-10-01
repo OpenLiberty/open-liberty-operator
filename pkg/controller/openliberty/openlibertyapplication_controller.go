@@ -13,6 +13,7 @@ import (
 
 	lutils "github.com/OpenLiberty/open-liberty-operator/pkg/utils"
 	oputils "github.com/application-stacks/runtime-component-operator/pkg/utils"
+	"github.com/go-logr/logr"
 
 	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/pkg/apis/openliberty/v1beta1"
 
@@ -333,6 +334,8 @@ type ReconcileOpenLiberty struct {
 	oputils.ReconcilerBase
 }
 
+const applicationFinalizer = "finalizer.openlibertycontroller.openliberty.io"
+
 // Reconcile reads that state of the cluster for a OpenLiberty object and makes changes based on the state read
 // and what is in the OpenLiberty.Spec
 // Note:
@@ -391,7 +394,33 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+	// Check if the OpenLibertyApplication instance is marked to be deleted, which is
+	// indicated by the deletion timestamp being set.
+	isInstanceMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
+	if isInstanceMarkedToBeDeleted {
+		if lutils.Contains(instance.GetFinalizers(), applicationFinalizer) {
+			// Run finalization logic for applicationFinalizer. If the finalization logic fails, don't remove the
+			// finalizer so that we can retry during the next reconciliation.
+			if err := r.finalizeOpenLibertyApplication(reqLogger, instance, instance.Name + "-serviceability", instance.Namespace); err != nil {
+				return reconcile.Result{}, err
+			}
 
+			// Remove applicationFinalizer. Once all finalizers have been removed, the object will be deleted.
+			instance.SetFinalizers(lutils.Remove(instance.GetFinalizers(), applicationFinalizer))
+			err := r.GetClient().Update(context.TODO(), instance)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+		}
+		return reconcile.Result{}, nil
+	}
+
+	// Add finalizer for this CR
+	if !lutils.Contains(instance.GetFinalizers(), applicationFinalizer) {
+		if err := r.addFinalizer(reqLogger, instance); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
 	instance.Initialize()
 
 	_, err = oputils.Validate(instance)
@@ -623,18 +652,7 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 			}
 		}
 	} else {
-	    pvcName := instance.Name + "-serviceability"
-	    pvc := &corev1.PersistentVolumeClaim{}
-	    err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: pvcName, Namespace: instance.Namespace}, pvc)
-	    if err == nil {
-            if pvc.Status.Phase == "Pending" {
-                reqLogger.Info("Deleting dangling PVC that is still in Pending state")
-                err = r.DeleteResource(pvc)
-                if err != nil {
-                    reqLogger.Error(err, "Failed to delete dangling PersistentVolumeClaim for Serviceability")
-                }
-            }
-	    }
+	    r.deletePVC(reqLogger, instance.Name + "-serviceability", instance.Namespace)
 	}
 
 	if instance.Spec.Storage != nil {
@@ -837,4 +855,37 @@ func (r *ReconcileOpenLiberty) Reconcile(request reconcile.Request) (reconcile.R
 
 func getMonitoringEnabledLabelName(ba common.BaseComponent) string {
 	return "monitor." + ba.GetGroupName() + "/enabled"
+}
+
+func (r *ReconcileOpenLiberty) finalizeOpenLibertyApplication(reqLogger logr.Logger, olapp *openlibertyv1beta1.OpenLibertyApplication, pvcName string, pvcNamespace string) error {
+    r.deletePVC(reqLogger, pvcName, pvcNamespace)
+	return nil
+}
+
+func (r *ReconcileOpenLiberty) addFinalizer(reqLogger logr.Logger, olapp *openlibertyv1beta1.OpenLibertyApplication) error {
+	reqLogger.Info("Adding Finalizer for OpenLibertyApplication")
+	olapp.SetFinalizers(append(olapp.GetFinalizers(), applicationFinalizer))
+
+	// Update CR
+	err := r.GetClient().Update(context.TODO(), olapp)
+	if err != nil {
+		reqLogger.Error(err, "Failed to update OpenLibertyApplication with finalizer")
+		return err
+	}
+
+	return nil
+}
+
+func (r *ReconcileOpenLiberty) deletePVC(reqLogger logr.Logger, pvcName string, pvcNamespace string) {
+    pvc := &corev1.PersistentVolumeClaim{}
+    err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: pvcName, Namespace: pvcNamespace}, pvc)
+    if err == nil {
+        if pvc.Status.Phase == "Pending" {
+            reqLogger.Info("Deleting dangling PVC that is still in Pending state")
+            err = r.DeleteResource(pvc)
+            if err != nil {
+                reqLogger.Error(err, "Failed to delete dangling PersistentVolumeClaim for Serviceability")
+            }
+        }
+    }
 }
