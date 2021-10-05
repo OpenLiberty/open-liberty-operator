@@ -44,7 +44,7 @@ Starting from RHOCP 4.7, the ability to parse these nested JSON application cont
 
 In order to avoid the possibility of conflicting JSON fields, where different products or applications may use the same JSON field names to represent different data types, the Cluster Log Forwarder instance requires JSON container logs from different application/product types to be separated into unique indices. In the following instructions, the ClusterLogForwarder Custom Resource (CR) will create these unique indices using a label attached to the service of your application.
 
-First, add the label `logFormat: liberty` to the Service of your OpenLibertyApplication. The Cluster Log Forwarder instance will use this label later to create a unique index for the container's application logs.
+First, add the label `logFormat: liberty` to your OpenLibertyApplication Custom Resource. The Cluster Log Forwarder instance will use this label later to create a unique index for the container's application logs.
 
 [source,yaml]
 ----
@@ -52,12 +52,12 @@ kind: Service
 apiVersion: v1
 metadata:
   name: <your-liberty-app>
-
+  labels:
+    logFormat: liberty
 ....
-
-labels:
-  logFormat: liberty
 ----
+
+Restart your application deployment to include the updated label in your application's service and pod.
 
 Create the following YAML file `cluster-logging-forwarder.yaml` to configure a Cluster Log Forwarder instance that will parse your JSON container logs.
 
@@ -115,7 +115,7 @@ Expand an individual log entry to see the `structured.*` formatted individual fi
 
 image::images/app-logging-ocp-expand-entry.png[Kibana 7 page with the application log entries]
 
-To import the dashboard and its associated objects, navigate back to the **Management** page and click **Saved Objects**. Click **Import** and select the dashboard file. When prompted, click the **Yes, overwrite all** option
+Kibana dashboards created for Open Liberty logging events can be found link:++https://github.com/OpenLiberty/open-liberty-operator/tree/master/deploy/dashboards/logging++[here]. To import a dashboard and its associated objects, navigate back to the **Management** page and click **Saved Objects**. Click **Import** and select the dashboard file. When prompted, click the **Yes, overwrite all** option.
 
 Head back to the **Dashboard** page and enjoy navigating logs on the newly imported dashboard.
 
