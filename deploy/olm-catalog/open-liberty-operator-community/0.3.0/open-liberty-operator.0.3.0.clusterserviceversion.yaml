@@ -44,7 +44,7 @@ spec:
         #### Serviceability
 
 
-        Easily use a single storage for serviceability related operations, such as gatherig server traces or dumps.
+        Easily use a single storage for serviceability related operations, such as gathering server traces or dumps.
 
 
         #### Service Binding

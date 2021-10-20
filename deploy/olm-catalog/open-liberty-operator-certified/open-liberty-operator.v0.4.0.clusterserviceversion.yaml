@@ -69,7 +69,7 @@ spec:
     many details of the persistent volume, such as its storage class and access mode.
 
     You can also easily configure and use a single storage for serviceability related Day-2 operations, 
-    such as gatherig server traces and dumps.
+    such as gathering server traces and dumps.
 
 
     #### Service Binding
