@@ -1,0 +1,7 @@
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyApplication
+metadata:
+  name: openliberty-app-sample
+spec:
+  # Add fields here
+  applicationImage: registry.connect.redhat.com/ibm/open-liberty-samples:springPetClinic
