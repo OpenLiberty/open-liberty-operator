@@ -175,6 +175,13 @@ func (s *OpenLibertyTraceStatus) SetOperatedResource(or OperatedResource) {
 	s.OperatedResource = or
 }
 
+func (cr *OpenLibertyTrace) Initialize() {
+	if cr.Spec.Disable == nil {
+		disable := false
+		cr.Spec.Disable = &disable
+	}
+}
+
 func init() {
 	SchemeBuilder.Register(&OpenLibertyTrace{}, &OpenLibertyTraceList{})
 }
