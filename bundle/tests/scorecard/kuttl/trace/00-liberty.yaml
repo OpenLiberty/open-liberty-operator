@@ -4,7 +4,7 @@ metadata:
   name: my-liberty-app
 spec:
   applicationImage: openliberty/open-liberty:kernel-java8-openj9-ubi
-  replicas: 1
+  replicas: 2
   expose: false
   readinessProbe:
     httpGet:

@@ -3,7 +3,8 @@ kind: OpenLibertyTrace
 metadata:
   name: example-trace
 spec:
-  podName: my-liberty-app-0
+  podName: my-liberty-app-1
   traceSpecification: "*=info:com.ibm.ws.webcontainer*=all"
   maxFileSize: 20
   maxFiles: 5
+  disable: true
