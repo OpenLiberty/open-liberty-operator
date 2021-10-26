@@ -6,6 +6,7 @@ import (
 	"github.com/application-stacks/runtime-component-operator/common"
 	prometheusv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	routev1 "github.com/openshift/api/route/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -42,7 +43,6 @@ type OpenLibertyApplicationSpec struct {
 	ServiceAccountName *string         `json:"serviceAccountName,omitempty"`
 	// +listType=set
 	Architecture         []string                          `json:"architecture,omitempty"`
-	Storage              *OpenLibertyApplicationStorage    `json:"storage,omitempty"`
 	CreateKnativeService *bool                             `json:"createKnativeService,omitempty"`
 	Monitoring           *OpenLibertyApplicationMonitoring `json:"monitoring,omitempty"`
 	CreateAppDefinition  *bool                             `json:"createAppDefinition,omitempty"`
@@ -61,6 +61,9 @@ type OpenLibertyApplicationSpec struct {
 
 	Serviceability *OpenLibertyApplicationServiceability `json:"serviceability,omitempty"`
 	SSO            *OpenLibertyApplicationSSO            `json:"sso,omitempty"`
+
+	Deployment  *OpenLibertyApplicationDeployment  `json:"deployment,omitempty"`
+	StatefulSet *OpenLibertyApplicationStatefulSet `json:"statefulSet,omitempty"`
 }
 
 // OpenLibertyApplicationAffinity deployment affinity settings
@@ -110,6 +113,24 @@ type OpenLibertyApplicationService struct {
 	Provides *ServiceBindingProvides  `json:"provides,omitempty"`
 	// +k8s:openapi-gen=true
 	CertificateSecretRef *string `json:"certificateSecretRef,omitempty"`
+}
+
+// Defines the desired state and cycle of applications.
+type OpenLibertyApplicationDeployment struct {
+	UpdateStrategy *appsv1.DeploymentStrategy `json:"updateStrategy,omitempty"`
+
+	// Annotations to be added only to the Deployment and resources owned by the Deployment
+	Annotations map[string]string `json:"annotations,omitempty"`
+}
+
+// Defines the desired state and cycle of stateful applications.
+type OpenLibertyApplicationStatefulSet struct {
+	UpdateStrategy *appsv1.StatefulSetUpdateStrategy `json:"updateStrategy,omitempty"`
+
+	Storage *OpenLibertyApplicationStorage `json:"storage,omitempty"`
+
+	// Annotations to be added only to the StatefulSet and resources owned by the StatefulSet
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // ServiceBindingProvides represents information about
@@ -403,14 +424,6 @@ func (cr *OpenLibertyApplication) GetAutoscaling() common.BaseComponentAutoscali
 	return cr.Spec.Autoscaling
 }
 
-// GetStorage returns storage settings
-func (cr *OpenLibertyApplication) GetStorage() common.BaseComponentStorage {
-	if cr.Spec.Storage == nil {
-		return nil
-	}
-	return cr.Spec.Storage
-}
-
 // GetService returns service settings
 func (cr *OpenLibertyApplication) GetService() common.BaseComponentService {
 	if cr.Spec.Service == nil {
@@ -484,6 +497,50 @@ func (cr *OpenLibertyApplication) GetAffinity() common.BaseComponentAffinity {
 		return nil
 	}
 	return cr.Spec.Affinity
+}
+
+// GetDeployment returns deployment settings
+func (cr *OpenLibertyApplication) GetDeployment() common.BaseComponentDeployment {
+	if cr.Spec.Deployment == nil {
+		return nil
+	}
+	return cr.Spec.Deployment
+}
+
+// GetDeploymentStrategy returns deployment strategy struct
+func (cr *OpenLibertyApplicationDeployment) GetDeploymentUpdateStrategy() *appsv1.DeploymentStrategy {
+	return cr.UpdateStrategy
+}
+
+// GetAnnotations returns annotations to be added only to the Deployment and its child resources
+func (rcd *OpenLibertyApplicationDeployment) GetAnnotations() map[string]string {
+	return rcd.Annotations
+}
+
+// GetStatefulSet returns statefulSet settings
+func (cr *OpenLibertyApplication) GetStatefulSet() common.BaseComponentStatefulSet {
+	if cr.Spec.StatefulSet == nil {
+		return nil
+	}
+	return cr.Spec.StatefulSet
+}
+
+// GetStatefulSetUpdateStrategy returns statefulSet strategy struct
+func (cr *OpenLibertyApplicationStatefulSet) GetStatefulSetUpdateStrategy() *appsv1.StatefulSetUpdateStrategy {
+	return cr.UpdateStrategy
+}
+
+// GetStorage returns storage settings
+func (ss *OpenLibertyApplicationStatefulSet) GetStorage() common.BaseComponentStorage {
+	if ss.Storage == nil {
+		return nil
+	}
+	return ss.Storage
+}
+
+// GetAnnotations returns annotations to be added only to the StatefulSet and its child resources
+func (rcss *OpenLibertyApplicationStatefulSet) GetAnnotations() map[string]string {
+	return rcss.Annotations
 }
 
 // GetResolvedBindings returns a map of all the service names to be consumed by the application

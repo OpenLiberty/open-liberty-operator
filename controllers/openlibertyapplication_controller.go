@@ -336,7 +336,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 	}
 
-	if instance.Spec.Storage != nil {
+	if instance.Spec.StatefulSet != nil {
 		// Delete Deployment if exists
 		deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
 		err = r.DeleteResource(deploy)
