@@ -5,3 +5,12 @@ metadata:
 spec:
   # Add fields here
   applicationImage: registry.connect.redhat.com/ibm/open-liberty-samples:springPetClinic
+# MicroProfile Health Probes
+#  readinessProbe:
+#    httpGet:
+#      path: /health/ready
+#      port: 9080
+#  livenessProbe:
+#    httpGet:
+#      path: /health/live
+#      port: 9080
