@@ -416,7 +416,7 @@ data:
 
 === Storage for serviceability
 
-The operator makes it easy to use a single storage for serviceability related operations, such as gatherig server traces or dumps (see link:++#day-2-operations++[Day-2 Operations]). The single storage will be shared by all Pods of an `OpenLibertyApplication` instance. This way you don't need to mount a separate storage for each Pod. Your cluster must be configured to automatically bind the `PersistentVolumeClaim` (PVC) to a `PersistentVolume` or you must bind it manually.
+The operator makes it easy to use a single storage for serviceability related operations, such as gathering server traces or dumps (see link:++#day-2-operations++[Day-2 Operations]). The single storage will be shared by all Pods of an `OpenLibertyApplication` instance. This way you don't need to mount a separate storage for each Pod. Your cluster must be configured to automatically bind the `PersistentVolumeClaim` (PVC) to a `PersistentVolume` or you must bind it manually.
 
 You can specify the size of the persisted storage to request using `serviceability.size` parameter. You can also specify which storage class to request using `serviceability.storageClassName` parameter if you don't want to use the default storage class. The operator will automatically create a `PersistentVolumeClaim` with the specified size and access modes `ReadWriteMany` and `ReadWriteOnce`. It will be mounted at `/serviceability` inside all Pods of the `OpenLibertyApplication` instance.
 
