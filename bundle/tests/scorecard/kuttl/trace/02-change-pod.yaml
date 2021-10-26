@@ -1,0 +1,9 @@
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyTrace
+metadata:
+  name: example-trace
+spec:
+  podName: my-liberty-app-1
+  traceSpecification: "*=info:com.ibm.ws.webcontainer*=all"
+  maxFileSize: 20
+  maxFiles: 5

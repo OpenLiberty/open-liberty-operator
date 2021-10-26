@@ -1,0 +1,16 @@
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: liberty-imagestream
+spec:
+  tags:
+  - from:
+      kind: DockerImage
+      name: openliberty/open-liberty:kernel-java8-openj9-ubi
+    name: latest
+status:
+  tags:
+  - tag: latest
+    items:
+    - image: sha256:ca5f5b211bc0d26ecdc586c72605712c30a365b77e3d0428ed492b03adc61b63
+

@@ -1,0 +1,10 @@
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyApplication
+metadata:
+  name: autoscaling1-liberty
+spec:
+  autoscaling:
+    maxReplicas: 1
+    minReplicas: 6
+    targetCPUUtilizationPercentage: 10
+

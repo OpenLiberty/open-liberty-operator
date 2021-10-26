@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: imagestream-liberty-app
+spec:
+  template:
+    spec:
+      containers:
+      - image: openliberty/open-liberty:kernel-java8-openj9-ubi
+status:
+  readyReplicas: 1
+---
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - image: openliberty/open-liberty:kernel-java8-openj9-ubi
+status:
+  containerStatuses:
+  - ready: true
+

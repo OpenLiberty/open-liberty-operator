@@ -1,0 +1,26 @@
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyApplication
+metadata:
+  name: autoscaling1-liberty
+spec:
+  applicationImage: openliberty/open-liberty:kernel-java8-openj9-ubi
+  replicas: 1
+  expose: false
+  readinessProbe:
+    httpGet:
+      path: /
+      port: 9080
+    initialDelaySeconds: 1
+    timeoutSeconds: 1
+    periodSeconds: 5
+    successThreshold: 1
+    failureThreshold: 24
+  livenessProbe:
+    httpGet:
+      path: /
+      port: 9080
+    initialDelaySeconds: 8
+    timeoutSeconds: 1
+    periodSeconds: 5
+    successThreshold: 1
+    failureThreshold: 12

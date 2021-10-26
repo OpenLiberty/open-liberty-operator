@@ -1,0 +1,10 @@
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyApplication
+metadata:
+  name: probes-liberty
+spec:
+  livenessProbe:
+    initialDelaySeconds: 6
+  readinessProbe:
+    initialDelaySeconds: 3
+

@@ -1,0 +1,14 @@
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyDump
+metadata:
+  name: test-dump
+spec:
+  include:
+    - thread
+    - heap
+status:
+  conditions:
+      - status: "True"
+        type: Started
+      - status: "True"
+        type: Completed

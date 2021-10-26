@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: autoscaling1-liberty
+status:
+  readyReplicas: 2
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: autoscaling1-liberty
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  targetCPUUtilizationPercentage: 30

@@ -1,0 +1,8 @@
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyApplication
+metadata:
+  name: probes-liberty
+spec:
+  # Add fields here
+  livenessProbe: null
+  readinessProbe: null

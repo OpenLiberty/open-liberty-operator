@@ -1,0 +1,6 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: my-liberty-app
+status:
+  readyReplicas: 1
