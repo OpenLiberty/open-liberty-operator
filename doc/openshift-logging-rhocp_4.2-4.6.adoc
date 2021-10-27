@@ -1,14 +1,14 @@
 # Application Logging on Red Hat OpenShift Container Platform (RHOCP) with Elasticsearch, Fluentd, and Kibana 
 
-The following guide has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2, 4.3, 4.4, 4.5, 4.6 and 4.7.
+The following guide has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2, 4.3, 4.4, 4.5, and 4.6.
 
 Pod processes running in Kubernetes frequently produce logs. To effectively manage this log data and ensure no loss of log data occurs when a pod terminates, a log aggregation tool should be deployed on the Kubernetes cluster. Log aggregation tools help users persist, search, and visualize the log data that is gathered from the pods across the cluster. Log aggregation tools in the market today include:  EFK, LogDNA, Splunk, Datadog, IBM Operations Analytics, etc.  When considering log aggregation tools, enterprises make choices that are inclusive of their journey to cloud, both new cloud-native applications running in Kubernetes and their existing traditional IT choices.
 
-One choice for application logging with log aggregation, based on open source, is **EFK (Elasticsearch, Fluentd, and Kibana)**. This guide describes the process of deploying EFK using the Elasticsearch Operator and the OpenShift Logging Operator. Use this preconfigured EFK stack to aggregate all container logs. After a successful installation, the EFK pods should reside inside the *openshift-logging* namespace of the cluster.
+One choice for application logging with log aggregation, based on open source, is **EFK (Elasticsearch, Fluentd, and Kibana)**. This guide describes the process of deploying EFK using the Elasticsearch Operator and the Cluster Logging Operator. Use this preconfigured EFK stack to aggregate all container logs. After a successful installation, the EFK pods should reside inside the *openshift-logging* namespace of the cluster.
 
-## Install OpenShift Logging
+## Install Cluster Logging
 
-To install the OpenShift Logging component, follow the OpenShift guide  link:++https://docs.openshift.com/container-platform/4.7/logging/cluster-logging-deploying.html++[Installing OpenShift Logging]. Ensure you set up valid storage for Elasticsearch via Persistent Volumes. When the example OpenShift Logging instance YAML from the guide is deployed, the Elasticsearch pods that are created automatically search for Persistent Volumes to bind to; if there are none available for binding, the Elasticsearch pods are stuck in a pending state. Using in-memory storage is also possible by removing the `storage` definition from the OpenShift Logging instance YAML, but this is not suitable for production.
+To install the Cluster Logging component, follow the OpenShift guide  link:++https://docs.openshift.com/container-platform/4.6/logging/cluster-logging-deploying.html++[Installing Cluster Logging]. Ensure you set up valid storage for Elasticsearch via Persistent Volumes. When the example Cluster Logging instance YAML from the guide is deployed, the Elasticsearch pods that are created automatically search for Persistent Volumes to bind to; if there are none available for binding, the Elasticsearch pods are stuck in a pending state. Using in-memory storage is also possible by removing the `storage` definition from the Cluster Logging instance YAML, but this is not suitable for production.
 
 After the installation completes without any error, you can see the following pods that are running in the *openshift-logging* namespace. The exact number of pods running for each of the EFK components can vary depending on the configuration specified in the ClusterLogging Custom Resource (CR).
 
@@ -26,7 +26,7 @@ fluentd-vtk48                                   1/1     Running     0          9
 kibana-756fcdb7f-rw8k8                          2/2     Running     0          9m6s
 ----
 
-The OpenShift Logging also exposes a route for external access to the Kibana console.
+The Cluster Logging instance also exposes a route for external access to the Kibana console.
 
 [source,sh]
 ----
@@ -38,9 +38,9 @@ kibana   kibana-openshift-logging.apps.host.kabanero.com                kibana  
 
 ## Configure Fluentd to merge JSON log message body
 
-In OpenShift, the OpenShift Logging Fluentd collectors capture the container logs and set each log into a message field of a Fluentd JSON document. This JSON is sent to their destination log consumer. To properly use JSON log data in a dashboard, you must configure the Fluentd collectors to merge nested JSON data to the parent JSON payload. Enabling Fluentd to merge JSON logs can cause problems if JSON fields from different products or applications use the same JSON field names to represent different data types. These problems occur because Elasticsearch uses the first occurrence of a field to determine the data types corresponding to that field name. If multiple deployments generate JSON logs with the same fields, but are of different data types, merging the JSON data can potentially lead to data loss in your Elasticsearch index. Review your OpenShift configuration to determine whether the potential impact poses a risk to your environment. The following steps are required to enable merging of nested JSON fields.
+In OpenShift, the Cluster Logging Fluentd collectors capture the container logs and set each log into a message field of a Fluentd JSON document. This JSON is sent to their destination log consumer. To properly use JSON log data in a dashboard, you must configure the Fluentd collectors to merge nested JSON data to the parent JSON payload. Enabling Fluentd to merge JSON logs can cause problems if JSON fields from different products or applications use the same JSON field names to represent different data types. These problems occur because Elasticsearch uses the first occurrence of a field to determine the data types corresponding to that field name. If multiple deployments generate JSON logs with the same fields, but are of different data types, merging the JSON data can potentially lead to data loss in your Elasticsearch index. Review your OpenShift configuration to determine whether the potential impact poses a risk to your environment. The following steps are required to enable merging of nested JSON fields.
 
-First, set the OpenShift Logging instance's **managementState** field from **"Managed"** to **"Unmanaged"**. Setting the OpenShift Logging instance to unmanaged state gives the administrator full control of the components managed by the OpenShift Logging Operator, and is the prerequisite for many OpenShift Logging configurations.
+First, set the Cluster Logging instance's **managementState** field from **"Managed"** to **"Unmanaged"**. Setting the Cluster Logging instance to unmanaged state gives the administrator full control of the components managed by the Cluster Logging Operator, and is the prerequisite for many Cluster Logging configurations.
 
 [source,yaml]
 ----
@@ -65,7 +65,7 @@ If you are using **RHOCP 4.2-4.5**, this can be done using the environment varia
 ----
 [root@rhel7-ocp ~]# oc set env ds/fluentd MERGE_JSON_LOG=true
 ----
-In **RHOCP 4.6+**, the environment variable **MERGE_JSON_LOG** has been disabled, so you must manually edit the fluentd configmap to set **merge_json_log** to **true**.
+In **RHOCP 4.6**, the environment variable **MERGE_JSON_LOG** has been disabled, so you must manually edit the fluentd configmap to set **merge_json_log** to **true**.
 
 Edit the fluentd configmap with the following command:
 
@@ -121,12 +121,12 @@ Click **Index Pattern**, and find the **project.*** index pattern if you are usi
 
 image::images/app-logging-ocp-refresh-index-K5.png[Index refresh button on Kibana 5]
 
-To import the dashboard and its associated objects, navigate back to the **Management** page and click **Saved Objects**. Click **Import** and select the dashboard file. When prompted, click the **Yes, overwrite all** option
+Kibana dashboards created for Open Liberty logging events can be found link:++https://github.com/OpenLiberty/open-liberty-operator/tree/master/deploy/dashboards/logging++[here]. To import a dashboard and its associated objects, navigate back to the **Management** page and click **Saved Objects**. Click **Import** and select the dashboard file. When prompted, click the **Yes, overwrite all** option.
 
 Head back to the **Dashboard** page and enjoy navigating logs on the newly imported dashboard.
 
 image::images/app-logging-ocp-open-liberty-dashboard.png[Kibana dashboard for Open Liberty application logs]
 
-## Configuring and uninstalling OpenShift Logging
+## Configuring and uninstalling Cluster Logging
 
-If changes must be made for the installed EFK stack, edit the ClusterLogging Custom Resource (CR) of the deployed OpenShift Logging instance. Make sure to set the managementState to **"Unmanaged"** first before making any changes to the existing configuration. If the EFK stack is no longer needed, remove the OpenShift Logging instance from OpenShift Logging Operator Details page.
+If changes must be made for the installed EFK stack, edit the ClusterLogging Custom Resource (CR) of the deployed Cluster Logging instance. Make sure to set the managementState to **"Unmanaged"** first before making any changes to the existing configuration. If the EFK stack is no longer needed, remove the Cluster Logging instance from Cluster Logging Operator Details page.
