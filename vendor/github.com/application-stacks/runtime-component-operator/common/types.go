@@ -3,6 +3,7 @@ package common
 import (
 	prometheusv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	routev1 "github.com/openshift/api/route/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -155,6 +156,19 @@ type BaseComponentAffinity interface {
 	GetNodeAffinityLabels() map[string]string
 }
 
+// BaseComponentDeployment describes deployment
+type BaseComponentDeployment interface {
+	GetDeploymentUpdateStrategy() *appsv1.DeploymentStrategy
+	GetAnnotations() map[string]string
+}
+
+// BaseComponentStatefulSet describes deployment
+type BaseComponentStatefulSet interface {
+	GetStatefulSetUpdateStrategy() *appsv1.StatefulSetUpdateStrategy
+	GetStorage() BaseComponentStorage
+	GetAnnotations() map[string]string
+}
+
 // BaseComponent represents basic kubernetes application
 type BaseComponent interface {
 	GetApplicationImage() string
@@ -174,8 +188,9 @@ type BaseComponent interface {
 	GetCreateKnativeService() *bool
 	GetArchitecture() []string
 	GetAutoscaling() BaseComponentAutoscaling
-	GetStorage() BaseComponentStorage
 	GetService() BaseComponentService
+	GetDeployment() BaseComponentDeployment
+	GetStatefulSet() BaseComponentStatefulSet
 	GetVersion() string
 	GetApplicationName() string
 	GetMonitoring() BaseComponentMonitoring

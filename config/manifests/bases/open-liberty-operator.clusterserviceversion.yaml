@@ -11,7 +11,23 @@ metadata:
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
-  customresourcedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: OpenLibertyApplication is the Schema for the OpenLibertyApplications API
+      displayName: Open Liberty Application
+      kind: OpenLibertyApplication
+      name: openlibertyapplications.openliberty.io
+      version: v1beta1
+    - description: OpenLibertyDump is the Schema for the openlibertydumps API
+      displayName: Open Liberty Dump
+      kind: OpenLibertyDump
+      name: openlibertydumps.openliberty.io
+      version: v1beta1
+    - description: OpenLibertyTrace is the schema for the openlibertytraces API
+      displayName: Open Liberty Trace
+      kind: OpenLibertyTrace
+      name: openlibertytraces.openliberty.io
+      version: v1beta1
   description: |-
     This advanced Operator can be used to deploy and manage Open Liberty applications with consistent, production-grade QoS. This operator is based on the [Runtime Component Operator](https://github.com/application-stacks/runtime-component-operator) and provides all of its capabilities in addition to Open Liberty specific features such as gathering traces and dumps (Day-2 operations) and easily configuring and managing the single sign-on information for your Open Liberty applications.
     Open Liberty Operator enables enterprise architects to govern the way their applications get deployed & managed in the cluster, while dramatically reducing the learning curve for developers to deploy into Kubernetes - allowing them to focus on writing the code! Here are some key features: #### Application Lifecyle

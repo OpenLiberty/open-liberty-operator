@@ -6,4 +6,14 @@ plugins:
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: open-liberty-operator
 repo: github.com/OpenLiberty/open-liberty-operator
+resources:
+- group: openliberty.io
+  kind: OpenLibertyApplication
+  version: v1beta1
+- group: openliberty.io
+  kind: OpenLibertyDump
+  version: v1beta1
+- group: openliberty.io
+  kind: OpenLibertyTrace
+  version: v1beta1
 version: "3"
