@@ -709,8 +709,8 @@ func (r *ReconcileOpenLiberty) deletePVC(reqLogger logr.Logger, pvcName string, 
 	pvc := &corev1.PersistentVolumeClaim{}
 	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: pvcName, Namespace: pvcNamespace}, pvc)
 	if err == nil {
-		if pvc.Status.Phase == "Pending" {
-			reqLogger.Info("Deleting dangling PVC that is still in Pending state")
+		if pvc.Status.Phase != "Bound" {
+			reqLogger.Info("Deleting dangling PVC that is not in Bound state")
 			err = r.DeleteResource(pvc)
 			if err != nil {
 				reqLogger.Error(err, "Failed to delete dangling PersistentVolumeClaim for Serviceability")

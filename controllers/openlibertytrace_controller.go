@@ -241,24 +241,6 @@ func (r *ReconcileOpenLibertyTrace) addFinalizer(reqLogger logr.Logger, olt *ope
 	return nil
 }
 
-func contains(list []string, s string) bool {
-	for _, v := range list {
-		if v == s {
-			return true
-		}
-	}
-	return false
-}
-
-func remove(list []string, s string) []string {
-	for i, v := range list {
-		if v == s {
-			list = append(list[:i], list[i+1:]...)
-		}
-	}
-	return list
-}
-
 func (r *ReconcileOpenLibertyTrace) SetupWithManager(mgr ctrl.Manager) error {
 
 	watchNamespaces, err := oputils.GetWatchNamespaces()
