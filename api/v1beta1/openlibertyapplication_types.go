@@ -660,14 +660,6 @@ func (cr *OpenLibertyApplication) GetAutoscaling() common.BaseComponentAutoscali
 	return cr.Spec.Autoscaling
 }
 
-// GetStorage returns storage settings
-func (cr *OpenLibertyApplication) GetStorage() common.BaseComponentStorage {
-	if cr.Spec.Storage == nil {
-		return nil
-	}
-	return cr.Spec.Storage
-}
-
 // GetService returns service settings
 func (cr *OpenLibertyApplication) GetService() common.BaseComponentService {
 	if cr.Spec.Service == nil {

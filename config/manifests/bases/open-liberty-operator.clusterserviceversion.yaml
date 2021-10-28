@@ -297,7 +297,7 @@ spec:
 
     Open Liberty Operator enables enterprise architects to govern the way their applications get deployed & managed in the cluster, while dramatically reducing the learning curve for developers to deploy into Kubernetes - allowing them to focus on writing the code! Here are some key features:
 
-    ####Application Lifecyle
+    #### Application Lifecyle
     You can deploy your Open Liberty application container by either pointing to a container image, or an OpenShift ImageStream. When using an ImageStream the Operator will watch for any updates and will re-deploy the modified image.
 
     #### Custom RBAC
