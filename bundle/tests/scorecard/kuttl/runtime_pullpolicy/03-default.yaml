@@ -1,0 +1,8 @@
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyApplication
+metadata:
+  name: example-openliberty-applicaion
+spec:
+  applicationImage: openliberty/open-liberty:kernel-java8-openj9-ubi
+  replicas: 1
+  pullPolicy: null

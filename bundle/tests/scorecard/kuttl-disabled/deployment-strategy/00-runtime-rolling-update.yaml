@@ -1,0 +1,14 @@
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyApplication
+metadata:
+  name: deployment-strategy-lib-app
+spec:
+  # Add fields here
+  applicationImage: openliberty/open-liberty:kernel-java8-openj9-ubi
+  replicas: 3
+  deployment:
+    updateStrategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 2

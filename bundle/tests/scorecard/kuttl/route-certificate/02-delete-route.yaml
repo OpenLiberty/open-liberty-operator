@@ -1,0 +1,11 @@
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyApplication
+metadata:
+  name: route-with-cert-lib-app
+spec:
+  # Add fields here
+  applicationImage: openliberty/open-liberty:kernel-java8-openj9-ubi
+  replicas: 1
+  expose: true
+  route:
+

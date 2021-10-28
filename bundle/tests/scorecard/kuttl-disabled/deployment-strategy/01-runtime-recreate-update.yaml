@@ -1,0 +1,11 @@
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyApplication
+metadata:
+  name: deployment-strategy-lib-app
+spec:
+  # Add fields here
+  replicas: 3
+  deployment:
+    updateStrategy:
+      rollingUpdate: null
+      type: Recreate
