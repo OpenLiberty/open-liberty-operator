@@ -7,17 +7,26 @@ import (
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// OpenLibertyTraceSpec defines the desired state of OpenLibertyTrace
+// Defines the desired state of OpenLibertyTrace
 // +k8s:openapi-gen=true
 type OpenLibertyTraceSpec struct {
-	PodName            string `json:"podName"`
+	// The name of the Pod, which must be in the same namespace as the OpenLibertyTrace CR.
+	PodName string `json:"podName"`
+
+	// The trace string to be used to selectively enable trace. The default is *=info.
 	TraceSpecification string `json:"traceSpecification"`
-	MaxFileSize        *int32 `json:"maxFileSize,omitempty"`
-	MaxFiles           *int32 `json:"maxFiles,omitempty"`
-	Disable            *bool  `json:"disable,omitempty"`
+
+	// The maximum size (in MB) that a log file can reach before it is rolled. To disable this attribute, set the value to 0.
+	MaxFileSize *int32 `json:"maxFileSize,omitempty"`
+
+	// If an enforced maximum file size exists, this setting is used to determine how many of each of the logs files are kept.
+	MaxFiles *int32 `json:"maxFiles,omitempty"`
+
+	// Set to true to stop tracing.
+	Disable *bool `json:"disable,omitempty"`
 }
 
-// OpenLibertyTraceStatus defines the observed state of OpenLibertyTrace operation
+// Defines the observed state of OpenLibertyTrace operation
 // +k8s:openapi-gen=true
 type OpenLibertyTraceStatus struct {
 	// +listType=atomic

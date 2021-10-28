@@ -14,110 +14,225 @@ import (
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// OpenLibertyApplicationSpec defines the desired state of OpenLibertyApplication
+// Defines the desired state of OpenLibertyApplication.
 // +k8s:openapi-gen=true
 type OpenLibertyApplicationSpec struct {
-	Version          string                             `json:"version,omitempty"`
-	ApplicationImage string                             `json:"applicationImage"`
-	Replicas         *int32                             `json:"replicas,omitempty"`
-	Autoscaling      *OpenLibertyApplicationAutoScaling `json:"autoscaling,omitempty"`
-	PullPolicy       *corev1.PullPolicy                 `json:"pullPolicy,omitempty"`
-	PullSecret       *string                            `json:"pullSecret,omitempty"`
+	// The name of the application this resource is part of. If not specified, it defaults to the name of the CR.
+	// +operator-sdk:csv:customresourcedefinitions:order=1,type=spec,displayName="Application Name",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	ApplicationName string `json:"applicationName,omitempty"`
 
+	// Application image to be installed.
+	// +operator-sdk:csv:customresourcedefinitions:order=2,type=spec,displayName="Application Image",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	ApplicationImage string `json:"applicationImage"`
+
+	// +operator-sdk:csv:customresourcedefinitions:order=3,type=spec,displayName="Application Version",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	Version string `json:"version,omitempty"`
+
+	// Policy for pulling container images. Defaults to IfNotPresent. Parameters spec.autoscaling.maxReplicas and spec.resourceConstraints.requests.cpu must be specified.
+	// +operator-sdk:csv:customresourcedefinitions:order=4,type=spec,displayName="Pull Policy",xDescriptors="urn:alm:descriptor:com.tectonic.ui:imagePullPolicy"
+	PullPolicy *corev1.PullPolicy `json:"pullPolicy,omitempty"`
+
+	// Number of pods to create.
+	// +operator-sdk:csv:customresourcedefinitions:order=5,type=spec,displayName="Replicas",xDescriptors="urn:alm:descriptor:com.tectonic.ui:podCount"
+	Replicas *int32 `json:"replicas,omitempty"`
+
+	// A boolean that toggles the external exposure of this deployment via a Route or a Knative Route resource.
+	// +operator-sdk:csv:customresourcedefinitions:order=6,type=spec,displayName="Expose",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	Expose *bool `json:"expose,omitempty"`
+
+	// Limits the amount of required resources.
+	// +operator-sdk:csv:customresourcedefinitions:order=7,type=spec,displayName="Resource Requirements",xDescriptors="urn:alm:descriptor:com.tectonic.ui:resourceRequirements"
+	ResourceConstraints *corev1.ResourceRequirements `json:"resourceConstraints,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:order=8,type=spec,displayName="Service"
+	Service *OpenLibertyApplicationService `json:"service,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:order=16,type=spec,displayName="Auto Scaling"
+	Autoscaling *OpenLibertyApplicationAutoScaling `json:"autoscaling,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:order=20,type=spec,displayName="Deployment"
+	Deployment *OpenLibertyApplicationDeployment `json:"deployment,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:order=22,type=spec,displayName="StatefulSet"
+	StatefulSet *OpenLibertyApplicationStatefulSet `json:"statefulSet,omitempty"`
+
+	// The name of the OpenShift service account to be used during deployment.
+	// +operator-sdk:csv:customresourcedefinitions:order=28,type=spec,displayName="Service Account Name",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	ServiceAccountName *string `json:"serviceAccountName,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:order=31,type=spec,displayName="Create App Definition",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	CreateAppDefinition *bool `json:"createAppDefinition,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:order=33,type=spec,displayName="Monitoring"
+	Monitoring *OpenLibertyApplicationMonitoring `json:"monitoring,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:order=36,type=spec,displayName="Affinity"
+	Affinity *OpenLibertyApplicationAffinity `json:"affinity,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:order=41,type=spec,displayName="Route"
+	Route *OpenLibertyApplicationRoute `json:"route,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:order=48,type=spec,displayName="Bindings"
+	Bindings *OpenLibertyApplicationBindings `json:"bindings,omitempty"`
+
+	// A boolean to toggle the creation of Knative resources and usage of Knative serving.
+	// +operator-sdk:csv:customresourcedefinitions:order=52,type=spec,displayName="Create Knative Service",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	CreateKnativeService *bool `json:"createKnativeService,omitempty"`
+
+	// Detects if the services need to be restarted.
+	// +operator-sdk:csv:customresourcedefinitions:order=53,type=spec,displayName="Liveness Probe"
+	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
+
+	// Detects if the services are ready to serve.
+	// +operator-sdk:csv:customresourcedefinitions:order=54,type=spec,displayName="Readiness Probe"
+	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
+
+	// Protects slow starting containers from livenessProbe.
+	// +operator-sdk:csv:customresourcedefinitions:order=55,type=spec,displayName="StartupProbe Probe"
+	StartupProbe *corev1.Probe `json:"startupProbe,omitempty"`
+
+	// Name of the Secret to use to pull images from the specified repository. It is not required if the cluster is configured with a global image pull secret.
+	// +operator-sdk:csv:customresourcedefinitions:order=56,type=spec,displayName="Pull Secret",xDescriptors="urn:alm:descriptor:io.kubernetes:Secret"
+	PullSecret *string `json:"pullSecret,omitempty"`
+
+	// Represents a pod volume with data that is accessible to the containers.
 	// +listType=map
 	// +listMapKey=name
+	// +operator-sdk:csv:customresourcedefinitions:order=57,type=spec,displayName="Volume"
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
+
+	// Represents where to mount the volumes into containers.
 	// +listType=atomic
-	VolumeMounts        []corev1.VolumeMount           `json:"volumeMounts,omitempty"`
-	ResourceConstraints *corev1.ResourceRequirements   `json:"resourceConstraints,omitempty"`
-	ReadinessProbe      *corev1.Probe                  `json:"readinessProbe,omitempty"`
-	LivenessProbe       *corev1.Probe                  `json:"livenessProbe,omitempty"`
-	StartupProbe        *corev1.Probe                  `json:"startupProbe,omitempty"`
-	Service             *OpenLibertyApplicationService `json:"service,omitempty"`
-	Expose              *bool                          `json:"expose,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:order=58,type=spec,displayName="Volume Mounts"
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
+
+	// An array of environment variables following the format of {name, value}, where value is a simple string.
+	// +listType=map
+	// +listMapKey=name
+	// +operator-sdk:csv:customresourcedefinitions:order=59,type=spec,displayName="Env Var"
+	Env []corev1.EnvVar `json:"env,omitempty"`
+
+	// An array of references to ConfigMap or Secret resources containing environment variables.
 	// +listType=atomic
+	// +operator-sdk:csv:customresourcedefinitions:order=60,type=spec,displayName="Env From"
 	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
-	// +listType=map
-	// +listMapKey=name
-	Env                []corev1.EnvVar `json:"env,omitempty"`
-	ServiceAccountName *string         `json:"serviceAccountName,omitempty"`
+
+	// An array of architectures to be considered for deployment. Their position in the array indicates preference.
 	// +listType=set
-	Architecture         []string                          `json:"architecture,omitempty"`
-	Storage              *OpenLibertyApplicationStorage    `json:"storage,omitempty"`
-	CreateKnativeService *bool                             `json:"createKnativeService,omitempty"`
-	Monitoring           *OpenLibertyApplicationMonitoring `json:"monitoring,omitempty"`
-	CreateAppDefinition  *bool                             `json:"createAppDefinition,omitempty"`
-	ApplicationName      string                            `json:"applicationName,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:order=61,type=spec,displayName="Architecture"
+	Architecture []string `json:"architecture,omitempty"`
+
+	// List of containers that run before other containers in a pod.
 	// +listType=map
 	// +listMapKey=name
+	// +operator-sdk:csv:customresourcedefinitions:order=62,type=spec,displayName="Init Containers"
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`
+
+	// The list of sidecar containers. These are additional containers to be added to the pods.
 	// +listType=map
 	// +listMapKey=name
-	SidecarContainers []corev1.Container              `json:"sidecarContainers,omitempty"`
-	Route             *OpenLibertyApplicationRoute    `json:"route,omitempty"`
-	Bindings          *OpenLibertyApplicationBindings `json:"bindings,omitempty"`
-	Affinity          *OpenLibertyApplicationAffinity `json:"affinity,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:order=63,type=spec,displayName="Sidecar Containers"
+	SidecarContainers []corev1.Container `json:"sidecarContainers,omitempty"`
 
 	// Open Liberty specific capabilities
 
+	// +operator-sdk:csv:customresourcedefinitions:order=29,type=spec,displayName="Serviceability"
 	Serviceability *OpenLibertyApplicationServiceability `json:"serviceability,omitempty"`
-	SSO            *OpenLibertyApplicationSSO            `json:"sso,omitempty"`
 
-	Deployment  *OpenLibertyApplicationDeployment  `json:"deployment,omitempty"`
-	StatefulSet *OpenLibertyApplicationStatefulSet `json:"statefulSet,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:order=30,type=spec,displayName="Single sign-on"
+	SSO *OpenLibertyApplicationSSO `json:"sso,omitempty"`
 }
 
-// OpenLibertyApplicationAffinity deployment affinity settings
+// Configures a Pod to run on particular Nodes.
 // +k8s:openapi-gen=true
 type OpenLibertyApplicationAffinity struct {
-	NodeAffinity    *corev1.NodeAffinity    `json:"nodeAffinity,omitempty"`
-	PodAffinity     *corev1.PodAffinity     `json:"podAffinity,omitempty"`
+	// Controls which nodes the pod are scheduled to run on, based on labels on the node.
+	// +operator-sdk:csv:customresourcedefinitions:order=37,type=spec,displayName="Node Affinity",xDescriptors="urn:alm:descriptor:com.tectonic.ui:nodeAffinity"
+	NodeAffinity *corev1.NodeAffinity `json:"nodeAffinity,omitempty"`
+
+	// Controls the nodes the pod are scheduled to run on, based on labels on the pods that are already running on the node.
+	// +operator-sdk:csv:customresourcedefinitions:order=38,type=spec,displayName="Pod Affinity",xDescriptors="urn:alm:descriptor:com.tectonic.ui:podAffinity"
+	PodAffinity *corev1.PodAffinity `json:"podAffinity,omitempty"`
+
+	// Enables the ability to prevent running a pod on the same node as another pod.
+	// +operator-sdk:csv:customresourcedefinitions:order=39,type=spec,displayName="Pod Anti Affinity",xDescriptors="urn:alm:descriptor:com.tectonic.ui:podAntiAffinity"
 	PodAntiAffinity *corev1.PodAntiAffinity `json:"podAntiAffinity,omitempty"`
-	// +listType=set
-	Architecture       []string          `json:"architecture,omitempty"`
+
+	// A YAML object that contains a set of required labels and their values.
+	// +operator-sdk:csv:customresourcedefinitions:order=40,type=spec,displayName="Node Affinity Labels",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	NodeAffinityLabels map[string]string `json:"nodeAffinityLabels,omitempty"`
+
+	// An array of architectures to be considered for deployment. Their position in the array indicates preference.
+	// +listType=set
+	Architecture []string `json:"architecture,omitempty"`
 }
 
-// OpenLibertyApplicationAutoScaling ...
+// Configures the desired resource consumption of pods.
 // +k8s:openapi-gen=true
 type OpenLibertyApplicationAutoScaling struct {
-	TargetCPUUtilizationPercentage *int32 `json:"targetCPUUtilizationPercentage,omitempty"`
-	MinReplicas                    *int32 `json:"minReplicas,omitempty"`
-
+	// Required field for autoscaling. Upper limit for the number of pods that can be set by the autoscaler.
 	// +kubebuilder:validation:Minimum=1
+	// +operator-sdk:csv:customresourcedefinitions:order=17,type=spec,displayName="Max Replicas",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
 	MaxReplicas int32 `json:"maxReplicas,omitempty"`
+
+	// Lower limit for the number of pods that can be set by the autoscaler.
+	// +operator-sdk:csv:customresourcedefinitions:order=18,type=spec,displayName="Min Replicas",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
+	MinReplicas *int32 `json:"minReplicas,omitempty"`
+
+	// Target average CPU utilization (represented as a percentage of requested CPU) over all the pods.
+	// +operator-sdk:csv:customresourcedefinitions:order=19,type=spec,displayName="Target CPU Utilization Percentage",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
+	TargetCPUUtilizationPercentage *int32 `json:"targetCPUUtilizationPercentage,omitempty"`
 }
 
-// OpenLibertyApplicationService ...
+// Configures parameters for the network service of pods.
 // +k8s:openapi-gen=true
 type OpenLibertyApplicationService struct {
+	// The port exposed by the container.
+	// +kubebuilder:validation:Maximum=65535
+	// +kubebuilder:validation:Minimum=1
+	// +operator-sdk:csv:customresourcedefinitions:order=9,type=spec,displayName="Service Port",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
+	Port int32 `json:"port,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:order=10,type=spec,displayName="Service Type",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	Type *corev1.ServiceType `json:"type,omitempty"`
 
-	// +kubebuilder:validation:Maximum=65535
-	// +kubebuilder:validation:Minimum=1
-	Port int32 `json:"port,omitempty"`
-	// +kubebuilder:validation:Maximum=65535
-	// +kubebuilder:validation:Minimum=1
-	TargetPort *int32 `json:"targetPort,omitempty"`
-
+	// Node proxies this port into your service.
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:validation:Minimum=0
+	// +operator-sdk:csv:customresourcedefinitions:order=11,type=spec,displayName="Node Port",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
 	NodePort *int32 `json:"nodePort,omitempty"`
 
+	// The name for the port exposed by the container.
+	// +operator-sdk:csv:customresourcedefinitions:order=12,type=spec,displayName="Port Name",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	PortName string `json:"portName,omitempty"`
 
+	// Annotations to be added to the service.
+	// +operator-sdk:csv:customresourcedefinitions:order=13,type=spec,displayName="Service Annotations",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	Annotations map[string]string `json:"annotations,omitempty"`
+
+	// The port that the operator assigns to containers inside pods. Defaults to the value of spec.service.port.
+	// +kubebuilder:validation:Maximum=65535
+	// +kubebuilder:validation:Minimum=1
+	// +operator-sdk:csv:customresourcedefinitions:order=14,type=spec,displayName="Target Port",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
+	TargetPort *int32 `json:"targetPort,omitempty"`
+
+	// 	A name of a secret that already contains TLS key, certificate and CA to be mounted in the pod.
+	// +k8s:openapi-gen=true
+	// +operator-sdk:csv:customresourcedefinitions:order=15,type=spec,displayName="Certificate Secret Reference",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	CertificateSecretRef *string `json:"certificateSecretRef,omitempty"`
+
+	// An array consisting of service ports.
 	Ports []corev1.ServicePort `json:"ports,omitempty"`
 
-	Annotations map[string]string `json:"annotations,omitempty"`
 	// +listType=atomic
 	Consumes []ServiceBindingConsumes `json:"consumes,omitempty"`
 	Provides *ServiceBindingProvides  `json:"provides,omitempty"`
-	// +k8s:openapi-gen=true
-	CertificateSecretRef *string `json:"certificateSecretRef,omitempty"`
 }
 
 // Defines the desired state and cycle of applications.
 type OpenLibertyApplicationDeployment struct {
+	// Specifies the strategy to replace old deployment pods with new pods.
+	// +operator-sdk:csv:customresourcedefinitions:order=21,type=spec,displayName="Deployment Update Strategy",xDescriptors="urn:alm:descriptor:com.tectonic.ui:updateStrategy"
 	UpdateStrategy *appsv1.DeploymentStrategy `json:"updateStrategy,omitempty"`
 
 	// Annotations to be added only to the Deployment and resources owned by the Deployment
@@ -126,105 +241,172 @@ type OpenLibertyApplicationDeployment struct {
 
 // Defines the desired state and cycle of stateful applications.
 type OpenLibertyApplicationStatefulSet struct {
+	// Specifies the strategy to replace old StatefulSet pods with new pods.
+	// +operator-sdk:csv:customresourcedefinitions:order=23,type=spec,displayName="StatefulSet Update Strategy",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	UpdateStrategy *appsv1.StatefulSetUpdateStrategy `json:"updateStrategy,omitempty"`
 
+	// +operator-sdk:csv:customresourcedefinitions:order=24,type=spec,displayName="Storage"
 	Storage *OpenLibertyApplicationStorage `json:"storage,omitempty"`
 
 	// Annotations to be added only to the StatefulSet and resources owned by the StatefulSet
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
-// ServiceBindingProvides represents information about
-// +k8s:openapi-gen=true
+// Configures the OpenAPI information to expose.
 type ServiceBindingProvides struct {
+	// Service binding type to be provided by this CR. At this time, the only allowed value is openapi.
 	Category common.ServiceBindingCategory `json:"category"`
-	Context  string                        `json:"context,omitempty"`
-	Protocol string                        `json:"protocol,omitempty"`
-	Auth     *ServiceBindingAuth           `json:"auth,omitempty"`
+
+	// Specifies context root of the service.
+	Context string `json:"context,omitempty"`
+
+	// Protocol of the provided service. Defauts to http.
+	Protocol string `json:"protocol,omitempty"`
+
+	Auth *ServiceBindingAuth `json:"auth,omitempty"`
 }
 
-// ServiceBindingConsumes represents a service to be consumed
+// Represents a service to be consumed.
 // +k8s:openapi-gen=true
 type ServiceBindingConsumes struct {
-	Name      string                        `json:"name"`
-	Namespace string                        `json:"namespace,omitempty"`
-	Category  common.ServiceBindingCategory `json:"category"`
-	MountPath string                        `json:"mountPath,omitempty"`
+	// The name of the service to be consumed. If binding to an OpenLibertyApplication, then this would be the provider’s CR name.
+	Name string `json:"name"`
+
+	// The namespace of the service to be consumed. If binding to an OpenLibertyApplication, then this would be the provider’s CR namespace.
+	Namespace string `json:"namespace,omitempty"`
+
+	// The type of service binding to be consumed. At this time, the only allowed value is openapi.
+	Category common.ServiceBindingCategory `json:"category"`
+
+	// Optional field to specify which location in the pod, service binding secret should be mounted.
+	MountPath string `json:"mountPath,omitempty"`
 }
 
-// OpenLibertyApplicationStorage ...
+// Defines settings of persisted storage for StatefulSets.
 // +k8s:openapi-gen=true
 type OpenLibertyApplicationStorage struct {
+	// A convenient field to set the size of the persisted storage.
 	// +kubebuilder:validation:Pattern=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-	Size                string                        `json:"size,omitempty"`
-	MountPath           string                        `json:"mountPath,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:order=25,type=spec,displayName="Storage Size",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	Size string `json:"size,omitempty"`
+
+	// The directory inside the container where this persisted storage will be bound to.
+	// +operator-sdk:csv:customresourcedefinitions:order=26,type=spec,displayName="Storage Mount Path",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	MountPath string `json:"mountPath,omitempty"`
+
+	// A YAML object that represents a volumeClaimTemplate component of a StatefulSet.
+	// +operator-sdk:csv:customresourcedefinitions:order=27,type=spec,displayName="Storage Volume Claim Template",xDescriptors="urn:alm:descriptor:com.tectonic.ui:PersistentVolumeClaim"
 	VolumeClaimTemplate *corev1.PersistentVolumeClaim `json:"volumeClaimTemplate,omitempty"`
 }
 
-// OpenLibertyApplicationMonitoring ...
+// Specifies parameters for Service Monitor.
 // +k8s:openapi-gen=true
 type OpenLibertyApplicationMonitoring struct {
+	// Labels to set on ServiceMonitor.
+	// +operator-sdk:csv:customresourcedefinitions:order=34,type=spec,displayName="Monitoring Labels",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	Labels map[string]string `json:"labels,omitempty"`
+
+	// A YAML snippet representing an array of Endpoint component from ServiceMonitor.
 	// +listType=atomic
+	// +operator-sdk:csv:customresourcedefinitions:order=35,type=spec,displayName="Monitoring Endpoints",xDescriptors="urn:alm:descriptor:com.tectonic.ui:endpointList"
 	Endpoints []prometheusv1.Endpoint `json:"endpoints,omitempty"`
 }
 
-// OpenLibertyApplicationServiceability ...
+// Specifies serviceability-related operations, such as gathering server memory dumps and server traces.
 // +k8s:openapi-gen=true
 type OpenLibertyApplicationServiceability struct {
+	// A convenient field to request the size of the persisted storage to use for serviceability.
 	// +kubebuilder:validation:Pattern=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
 	Size string `json:"size,omitempty"`
+
+	// The name of the PersistentVolumeClaim resource you created to be used for serviceability.
 	// +kubebuilder:validation:Pattern=.+
 	VolumeClaimName string `json:"volumeClaimName,omitempty"`
+
+	// A convenient field to request the StorageClassName of the persisted storage to use for serviceability.
 	// +kubebuilder:validation:Pattern=.+
 	StorageClassName string `json:"storageClassName,omitempty"`
 }
 
+// Configures the ingress resource.
 // +k8s:openapi-gen=true
 type OpenLibertyApplicationRoute struct {
-	Annotations                   map[string]string                          `json:"annotations,omitempty"`
-	Termination                   *routev1.TLSTerminationType                `json:"termination,omitempty"`
+
+	// Annotations to be added to the Route.
+	// +operator-sdk:csv:customresourcedefinitions:order=42,type=spec,displayName="Route Annotations",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	Annotations map[string]string `json:"annotations,omitempty"`
+
+	// Hostname to be used for the Route.
+	// +operator-sdk:csv:customresourcedefinitions:order=43,type=spec,displayName="Route Host",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	Host string `json:"host,omitempty"`
+
+	// Path to be used for Route.
+	// +operator-sdk:csv:customresourcedefinitions:order=44,type=spec,displayName="Route Path",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	Path string `json:"path,omitempty"`
+
+	// A name of a secret that already contains TLS key, certificate and CA to be used in the route. Also can contain destination CA certificate.
+	// +operator-sdk:csv:customresourcedefinitions:order=45,type=spec,displayName="Certificate Secret Reference",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	CertificateSecretRef *string `json:"certificateSecretRef,omitempty"`
+
+	// TLS termination policy. Can be one of edge, reencrypt and passthrough.
+	// +operator-sdk:csv:customresourcedefinitions:order=46,type=spec,displayName="Termination",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	Termination *routev1.TLSTerminationType `json:"termination,omitempty"`
+
+	// HTTP traffic policy with TLS enabled. Can be one of Allow, Redirect and None.
+	// +operator-sdk:csv:customresourcedefinitions:order=47,type=spec,displayName="Insecure Edge Termination Policy",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	InsecureEdgeTerminationPolicy *routev1.InsecureEdgeTerminationPolicyType `json:"insecureEdgeTerminationPolicy,omitempty"`
-	CertificateSecretRef          *string                                    `json:"certificateSecretRef,omitempty"`
-	Host                          string                                     `json:"host,omitempty"`
-	Path                          string                                     `json:"path,omitempty"`
 }
 
-// ServiceBindingAuth allows a service to provide authentication information
+// Allows a service to provide authentication information.
 type ServiceBindingAuth struct {
-	// The secret that contains the username for authenticating
+	// The secret that contains the username for authenticating.
 	Username corev1.SecretKeySelector `json:"username,omitempty"`
-	// The secret that contains the password for authenticating
+	// The secret that contains the password for authenticating.
 	Password corev1.SecretKeySelector `json:"password,omitempty"`
 }
 
-// OpenLibertyApplicationBindings represents service binding related parameters
+// Represents service binding related parameters.
 type OpenLibertyApplicationBindings struct {
-	AutoDetect  *bool                                `json:"autoDetect,omitempty"`
-	ResourceRef string                               `json:"resourceRef,omitempty"`
-	Embedded    *runtime.RawExtension                `json:"embedded,omitempty"`
-	Expose      *OpenLibertyApplicationBindingExpose `json:"expose,omitempty"`
+
+	// A boolean to toggle whether the operator should automatically detect and use a ServiceBindingRequest resource with <CR_NAME>-binding naming format.
+	// +operator-sdk:csv:customresourcedefinitions:order=49,type=spec,displayName="Bindings Autodetect",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	AutoDetect *bool `json:"autoDetect,omitempty"`
+
+	// The name of a ServiceBindingRequest custom resource created manually in the same namespace as the application.
+	// +operator-sdk:csv:customresourcedefinitions:order=50,type=spec,displayName="Bindings Resource Ref",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	ResourceRef string `json:"resourceRef,omitempty"`
+
+	// A boolean to toggle whether the operator expose the application as a bindable service.
+	// +operator-sdk:csv:customresourcedefinitions:order=51,type=spec,displayName="Bindings Expose Enabled",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	Expose *OpenLibertyApplicationBindingExpose `json:"expose,omitempty"`
+
+	// A YAML object that represents a ServiceBindingRequest custom resource.
+	Embedded *runtime.RawExtension `json:"embedded,omitempty"`
 }
 
-// OpenLibertyApplicationBindingExpose encapsulates information exposed by the application
+// Encapsulates information exposed by the application.
 type OpenLibertyApplicationBindingExpose struct {
+	// A boolean to toggle whether the operator expose the application as a bindable service. The default value for this parameter is false.
 	Enabled *bool `json:"enabled,omitempty"`
 }
 
-// OpenLibertyApplicationStatus defines the observed state of OpenLibertyApplication
+// Defines the observed state of OpenLibertyApplication.
 // +k8s:openapi-gen=true
 type OpenLibertyApplicationStatus struct {
 	// +listType=atomic
+	// +operator-sdk:csv:customresourcedefinitions:type=status,displayName="Status Conditions",xDescriptors="urn:alm:descriptor:io.kubernetes.conditions"
 	Conditions       []StatusCondition       `json:"conditions,omitempty"`
 	ConsumedServices common.ConsumedServices `json:"consumedServices,omitempty"`
 	RouteAvailable   *bool                   `json:"routeAvailable,omitempty"`
 	// +listType=set
-	ResolvedBindings []string                     `json:"resolvedBindings,omitempty"`
-	ImageReference   string                       `json:"imageReference,omitempty"`
-	Binding          *corev1.LocalObjectReference `json:"binding,omitempty"`
+	ResolvedBindings []string `json:"resolvedBindings,omitempty"`
+	ImageReference   string   `json:"imageReference,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:type=status,displayName="Service Binding Secret",xDescriptors="urn:alm:descriptor:io.kubernetes:Secret"
+	Binding *corev1.LocalObjectReference `json:"binding,omitempty"`
 }
 
-// StatusCondition ...
+// Defines possible status conditions.
 // +k8s:openapi-gen=true
 type StatusCondition struct {
 	LastTransitionTime *metav1.Time           `json:"lastTransitionTime,omitempty"`
@@ -235,7 +417,7 @@ type StatusCondition struct {
 	Type               StatusConditionType    `json:"type,omitempty"`
 }
 
-// StatusConditionType ...
+// Defines the type of status condition.
 type StatusConditionType string
 
 const (
@@ -276,7 +458,7 @@ type OpenLibertyApplicationList struct {
 	Items           []OpenLibertyApplication `json:"items"`
 }
 
-// OpenLibertyApplicationSSO represents Single sign-on (SSO) configuration for an OpenLibertyApplication
+// Specifies the configuration for Single sign-on (SSO) providers to authenticate with.
 // +k8s:openapi-gen=true
 type OpenLibertyApplicationSSO struct {
 	// +listType=atomic
@@ -288,48 +470,101 @@ type OpenLibertyApplicationSSO struct {
 	Github *GithubLogin `json:"github,omitempty"`
 
 	// Common parameters for all SSO providers
+
+	// Specifies a callback protocol, host and port number.
 	RedirectToRPHostAndPort string `json:"redirectToRPHostAndPort,omitempty"`
-	MapToUserRegistry       *bool  `json:"mapToUserRegistry,omitempty"`
+
+	// Specifies whether to map a user identifier to a registry user. This parameter applies to all providers.
+	MapToUserRegistry *bool `json:"mapToUserRegistry,omitempty"`
 }
 
-// OidcClient represents configuration for an OpenID Connect (OIDC) client
+// Represents configuration for an OpenID Connect (OIDC) client.
 // +k8s:openapi-gen=true
 type OidcClient struct {
-	ID                          string `json:"id,omitempty"`
-	DiscoveryEndpoint           string `json:"discoveryEndpoint"`
-	GroupNameAttribute          string `json:"groupNameAttribute,omitempty"`
-	UserNameAttribute           string `json:"userNameAttribute,omitempty"`
-	DisplayName                 string `json:"displayName,omitempty"`
-	UserInfoEndpointEnabled     *bool  `json:"userInfoEndpointEnabled,omitempty"`
-	RealmNameAttribute          string `json:"realmNameAttribute,omitempty"`
-	Scope                       string `json:"scope,omitempty"`
-	TokenEndpointAuthMethod     string `json:"tokenEndpointAuthMethod,omitempty"`
-	HostNameVerificationEnabled *bool  `json:"hostNameVerificationEnabled,omitempty"`
+	// The unique ID for the provider. Default value is oidc.
+	ID string `json:"id,omitempty"`
+
+	// Specifies a discovery endpoint URL for the OpenID Connect provider. Required field.
+	DiscoveryEndpoint string `json:"discoveryEndpoint"`
+
+	// Specifies the name of the claim. Use its value as the user group membership.
+	GroupNameAttribute string `json:"groupNameAttribute,omitempty"`
+
+	// Specifies the name of the claim. Use its value as the authenticated user principal.
+	UserNameAttribute string `json:"userNameAttribute,omitempty"`
+
+	// The name of the social login configuration for display.
+	DisplayName string `json:"displayName,omitempty"`
+
+	// Specifies whether the UserInfo endpoint is contacted.
+	UserInfoEndpointEnabled *bool `json:"userInfoEndpointEnabled,omitempty"`
+
+	// Specifies the name of the claim. Use its value as the subject realm.
+	RealmNameAttribute string `json:"realmNameAttribute,omitempty"`
+
+	// Specifies one or more scopes to request.
+	Scope string `json:"scope,omitempty"`
+
+	// Specifies the required authentication method.
+	TokenEndpointAuthMethod string `json:"tokenEndpointAuthMethod,omitempty"`
+
+	// Specifies whether to enable host name verification when the client contacts the provider.
+	HostNameVerificationEnabled *bool `json:"hostNameVerificationEnabled,omitempty"`
 }
 
-// OAuth2Client represents configuration for an OAuth2 client
+// Represents configuration for an OAuth2 client.
 // +k8s:openapi-gen=true
 type OAuth2Client struct {
-	ID                      string `json:"id,omitempty"`
-	TokenEndpoint           string `json:"tokenEndpoint"`
-	AuthorizationEndpoint   string `json:"authorizationEndpoint"`
-	GroupNameAttribute      string `json:"groupNameAttribute,omitempty"`
-	UserNameAttribute       string `json:"userNameAttribute,omitempty"`
-	DisplayName             string `json:"displayName,omitempty"`
-	RealmNameAttribute      string `json:"realmNameAttribute,omitempty"`
-	RealmName               string `json:"realmName,omitempty"`
-	Scope                   string `json:"scope,omitempty"`
+	// Specifies the unique ID for the provider. The default value is oauth2.
+	ID string `json:"id,omitempty"`
+
+	// Specifies a token endpoint URL for the OAuth 2.0 provider. Required field.
+	TokenEndpoint string `json:"tokenEndpoint"`
+
+	// Specifies an authorization endpoint URL for the OAuth 2.0 provider. Required field.
+	AuthorizationEndpoint string `json:"authorizationEndpoint"`
+
+	// Specifies the name of the claim. Use its value as the user group membership
+	GroupNameAttribute string `json:"groupNameAttribute,omitempty"`
+
+	// Specifies the name of the claim. Use its value as the authenticated user principal.
+	UserNameAttribute string `json:"userNameAttribute,omitempty"`
+
+	// The name of the social login configuration for display.
+	DisplayName string `json:"displayName,omitempty"`
+
+	// Specifies the name of the claim. Use its value as the subject realm.
+	RealmNameAttribute string `json:"realmNameAttribute,omitempty"`
+
+	// Specifies the realm name for this social media.
+	RealmName string `json:"realmName,omitempty"`
+
+	// Specifies one or more scopes to request.
+	Scope string `json:"scope,omitempty"`
+
+	// Specifies the required authentication method.
 	TokenEndpointAuthMethod string `json:"tokenEndpointAuthMethod,omitempty"`
-	AccessTokenHeaderName   string `json:"accessTokenHeaderName,omitempty"`
-	AccessTokenRequired     *bool  `json:"accessTokenRequired,omitempty"`
-	AccessTokenSupported    *bool  `json:"accessTokenSupported,omitempty"`
-	UserApiType             string `json:"userApiType,omitempty"`
-	UserApi                 string `json:"userApi,omitempty"`
+
+	// Name of the header to use when an OAuth access token is forwarded.
+	AccessTokenHeaderName string `json:"accessTokenHeaderName,omitempty"`
+
+	// Determines whether the access token that is provided in the request is used for authentication.
+	AccessTokenRequired *bool `json:"accessTokenRequired,omitempty"`
+
+	// Determines whether to support access token authentication if an access token is provided in the request.
+	AccessTokenSupported *bool `json:"accessTokenSupported,omitempty"`
+
+	// Indicates which specification to use for the user API.
+	UserApiType string `json:"userApiType,omitempty"`
+
+	// The URL for retrieving the user information.
+	UserApi string `json:"userApi,omitempty"`
 }
 
-// GithubLogin represents configuration for social login using GitHub.
+// Represents configuration for social login using GitHub.
 // +k8s:openapi-gen=true
 type GithubLogin struct {
+	// Specifies the host name of your enterprise GitHub.
 	Hostname string `json:"hostname,omitempty"`
 }
 
@@ -423,14 +658,6 @@ func (cr *OpenLibertyApplication) GetAutoscaling() common.BaseComponentAutoscali
 		return nil
 	}
 	return cr.Spec.Autoscaling
-}
-
-// GetStorage returns storage settings
-func (cr *OpenLibertyApplication) GetStorage() common.BaseComponentStorage {
-	if cr.Spec.Storage == nil {
-		return nil
-	}
-	return cr.Spec.Storage
 }
 
 // GetService returns service settings

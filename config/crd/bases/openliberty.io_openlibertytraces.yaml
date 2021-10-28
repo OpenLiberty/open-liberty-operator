@@ -56,27 +56,35 @@ spec:
           metadata:
             type: object
           spec:
-            description: OpenLibertyTraceSpec defines the desired state of OpenLibertyTrace
+            description: Defines the desired state of OpenLibertyTrace
             properties:
               disable:
+                description: Set to true to stop tracing.
                 type: boolean
               maxFileSize:
+                description: The maximum size (in MB) that a log file can reach before
+                  it is rolled. To disable this attribute, set the value to 0.
                 format: int32
                 type: integer
               maxFiles:
+                description: If an enforced maximum file size exists, this setting
+                  is used to determine how many of each of the logs files are kept.
                 format: int32
                 type: integer
               podName:
+                description: The name of the Pod, which must be in the same namespace
+                  as the OpenLibertyTrace CR.
                 type: string
               traceSpecification:
+                description: The trace string to be used to selectively enable trace.
+                  The default is *=info.
                 type: string
             required:
             - podName
             - traceSpecification
             type: object
           status:
-            description: OpenLibertyTraceStatus defines the observed state of OpenLibertyTrace
-              operation
+            description: Defines the observed state of OpenLibertyTrace operation
             properties:
               conditions:
                 items:
