@@ -45,9 +45,10 @@ spec:
     type: ClusterIP
     port: 9080
   expose: true
-  storage:
-    size: 2Gi
-    mountPath: "/logs"
+  statefulSet:
+    storage:
+      size: 2Gi
+      mountPath: "/logs"
 ----
 
 The following table lists configurable parameters of the `OpenLibertyApplication` CRD. For complete OpenAPI v3 representation of these values please see link:++../deploy/crds/openliberty.io_openlibertyapplications_crd.yaml++[`OpenLibertyApplication` CRD].
@@ -92,6 +93,12 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `service.consumes[].mountPath` | Optional field to specify which location in the pod, service binding secret should be mounted. If not specified, the secret keys would be injected as environment variables.
 | `createKnativeService`   | A boolean to toggle the creation of Knative resources and usage of Knative serving.
 | `expose`   | A boolean that toggles the external exposure of this deployment via a Route or a Knative Route resource.
+| `deployment.updateStrategy`   | A field to specify the update strategy of the deployment. For more information, see link:++https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy++[updateStrategy]
+| `deployment.updateStrategy.type`   | The type of update strategy of the deployment. The type can be set to `RollingUpdate` or `Recreate`, where `RollingUpdate` is the default update strategy.
+| `deployment.annotations`   | Annotations to be added only to the deployment and resources owned by the deployment.
+| `statefulSet.updateStrategy`   | A field to specify the update strategy of the StatefulSet. For more information, see link:++https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies++[updateStrategy]
+| `statefulSet.updateStrategy.type`   | The type of update strategy of the StatefulSet. The type can be set to `RollingUpdate` or `OnDelete`, where `RollingUpdate` is the default update strategy.
+| `statefulSet.annotations`   | Annotations to be added only to the StatefulSet and resources owned by the StatefulSet.
 | `replicas` | The static number of desired replica pods that run simultaneously.
 | `autoscaling.maxReplicas` | Required field for autoscaling. Upper limit for the number of pods that can be set by the autoscaler. It cannot be lower than the minimum number of replicas.
 | `autoscaling.minReplicas`   | Lower limit for the number of pods that can be set by the autoscaler.
@@ -107,9 +114,9 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `startupProbe` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes++[Kubernetes startup probe] that controls when Kubernetes needs to startup the pod on its first initialization.
 | `volumes` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/storage/volumes++[pod volume].
 | `volumeMounts` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/storage/volumes/++[pod volumeMount].
-| `storage.size` | A convenient field to set the size of the persisted storage. Can be overridden by the `storage.volumeClaimTemplate` property. Operator will create a `StatefulSet` instead of a `Deployment` when `storage` is configured. See link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Persistence++[Persistence] for more information.
-| `storage.mountPath` | The directory inside the container where this persisted storage will be bound to.
-| `storage.volumeClaimTemplate` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#components++[volumeClaimTemplate] component of a `StatefulSet`.
+| `statefulSet.storage.size` | A convenient field to set the size of the persisted storage. Can be overridden by the `storage.volumeClaimTemplate` property. Operator will create a `StatefulSet` instead of a `Deployment` when `storage` is configured. See link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Persistence++[Persistence] for more information.
+| `statefulSet.storage.mountPath` | The directory inside the container where this persisted storage will be bound to.
+| `statefulSet.storage.volumeClaimTemplate` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#components++[volumeClaimTemplate] component of a `StatefulSet`.
 | `monitoring.labels` | Labels to set on link:++https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitor++[ServiceMonitor].
 | `monitoring.endpoints` | A YAML snippet representing an array of link:++https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint++[Endpoint] component from ServiceMonitor.
 | `serviceability.size` | A convenient field to request the size of the persisted storage to use for serviceability. Can be overridden by the `serviceability.volumeClaimName` property. See link:++#storage-for-serviceability++[Storage for serviceability] for more information.

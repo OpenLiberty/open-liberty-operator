@@ -29,6 +29,7 @@ spec:
     size: "1Gi"
 #storage is set so that a statefulset is created which then generates a known podName which is required
 #in order to generate the dump
-  storage:
-    size: "10Mi"
-    mountPath: "/mnt/data"
+  statefulSet:
+    storage:
+      size: "10Mi"
+      mountPath: "/mnt/data"

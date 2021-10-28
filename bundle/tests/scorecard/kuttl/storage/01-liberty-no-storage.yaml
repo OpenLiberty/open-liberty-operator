@@ -7,4 +7,4 @@ spec:
   replicas: 1
   expose: false
   pullSecret: regcred
-  storage:
+  statefulSet:
