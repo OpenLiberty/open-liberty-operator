@@ -73,9 +73,10 @@ spec:
             description: OpenLibertyDumpSpec defines the desired state of OpenLibertyDump
             properties:
               include:
+                description: 'Optional. List of memory dump types to request: thread,
+                  heap, system.'
                 items:
-                  description: OpenLibertyDumpInclude defines the possible values
-                    for dump types
+                  description: Defines the possible values for dump types
                   enum:
                   - thread
                   - heap
@@ -84,12 +85,14 @@ spec:
                 type: array
                 x-kubernetes-list-type: set
               podName:
+                description: The name of the Pod, which must be in the same namespace
+                  as the OpenLibertyDump CR.
                 type: string
             required:
             - podName
             type: object
           status:
-            description: OpenLibertyDumpStatus defines the observed state of OpenLibertyDump
+            description: Defines the observed state of OpenLibertyDump
             properties:
               conditions:
                 items:

@@ -71,19 +71,21 @@ spec:
           metadata:
             type: object
           spec:
-            description: OpenLibertyApplicationSpec defines the desired state of OpenLibertyApplication
+            description: Defines the desired state of OpenLibertyApplication.
             properties:
               affinity:
-                description: OpenLibertyApplicationAffinity deployment affinity settings
+                description: Configures a Pod to run on particular Nodes.
                 properties:
                   architecture:
+                    description: An array of architectures to be considered for deployment.
+                      Their position in the array indicates preference.
                     items:
                       type: string
                     type: array
                     x-kubernetes-list-type: set
                   nodeAffinity:
-                    description: Node affinity is a group of node affinity scheduling
-                      rules.
+                    description: Controls which nodes the pod are scheduled to run
+                      on, based on labels on the node.
                     properties:
                       preferredDuringSchedulingIgnoredDuringExecution:
                         description: The scheduler will prefer to schedule pods to
@@ -288,10 +290,13 @@ spec:
                   nodeAffinityLabels:
                     additionalProperties:
                       type: string
+                    description: A YAML object that contains a set of required labels
+                      and their values.
                     type: object
                   podAffinity:
-                    description: Pod affinity is a group of inter pod affinity scheduling
-                      rules.
+                    description: Controls the nodes the pod are scheduled to run on,
+                      based on labels on the pods that are already running on the
+                      node.
                     properties:
                       preferredDuringSchedulingIgnoredDuringExecution:
                         description: The scheduler will prefer to schedule pods to
@@ -481,8 +486,8 @@ spec:
                         type: array
                     type: object
                   podAntiAffinity:
-                    description: Pod anti affinity is a group of inter pod anti affinity
-                      scheduling rules.
+                    description: Enables the ability to prevent running a pod on the
+                      same node as another pod.
                     properties:
                       preferredDuringSchedulingIgnoredDuringExecution:
                         description: The scheduler will prefer to schedule pods to
@@ -673,49 +678,71 @@ spec:
                     type: object
                 type: object
               applicationImage:
+                description: Application image to be installed.
                 type: string
               applicationName:
+                description: The name of the application this resource is part of.
+                  If not specified, it defaults to the name of the CR.
                 type: string
               architecture:
+                description: An array of architectures to be considered for deployment.
+                  Their position in the array indicates preference.
                 items:
                   type: string
                 type: array
                 x-kubernetes-list-type: set
               autoscaling:
-                description: OpenLibertyApplicationAutoScaling ...
+                description: Configures the desired resource consumption of pods.
                 properties:
                   maxReplicas:
+                    description: Required field for autoscaling. Upper limit for the
+                      number of pods that can be set by the autoscaler.
                     format: int32
                     minimum: 1
                     type: integer
                   minReplicas:
+                    description: Lower limit for the number of pods that can be set
+                      by the autoscaler.
                     format: int32
                     type: integer
                   targetCPUUtilizationPercentage:
+                    description: Target average CPU utilization (represented as a
+                      percentage of requested CPU) over all the pods.
                     format: int32
                     type: integer
                 type: object
               bindings:
-                description: OpenLibertyApplicationBindings represents service binding
-                  related parameters
+                description: Represents service binding related parameters.
                 properties:
                   autoDetect:
+                    description: A boolean to toggle whether the operator should automatically
+                      detect and use a ServiceBindingRequest resource with <CR_NAME>-binding
+                      naming format.
                     type: boolean
                   embedded:
+                    description: A YAML object that represents a ServiceBindingRequest
+                      custom resource.
                     type: object
                   expose:
-                    description: OpenLibertyApplicationBindingExpose encapsulates
-                      information exposed by the application
+                    description: A boolean to toggle whether the operator expose the
+                      application as a bindable service.
                     properties:
                       enabled:
+                        description: A boolean to toggle whether the operator expose
+                          the application as a bindable service. The default value
+                          for this parameter is false.
                         type: boolean
                     type: object
                   resourceRef:
+                    description: The name of a ServiceBindingRequest custom resource
+                      created manually in the same namespace as the application.
                     type: string
                 type: object
               createAppDefinition:
                 type: boolean
               createKnativeService:
+                description: A boolean to toggle the creation of Knative resources
+                  and usage of Knative serving.
                 type: boolean
               deployment:
                 description: Defines the desired state and cycle of applications.
@@ -727,8 +754,8 @@ spec:
                       resources owned by the Deployment
                     type: object
                   updateStrategy:
-                    description: DeploymentStrategy describes how to replace existing
-                      pods with new ones.
+                    description: Specifies the strategy to replace old deployment
+                      pods with new pods.
                     properties:
                       rollingUpdate:
                         description: 'Rolling update config params. Present only if
@@ -779,6 +806,8 @@ spec:
                     type: object
                 type: object
               env:
+                description: An array of environment variables following the format
+                  of {name, value}, where value is a simple string.
                 items:
                   description: EnvVar represents an environment variable present in
                     a Container.
@@ -884,6 +913,8 @@ spec:
                 - name
                 x-kubernetes-list-type: map
               envFrom:
+                description: An array of references to ConfigMap or Secret resources
+                  containing environment variables.
                 items:
                   description: EnvFromSource represents the source of a set of ConfigMaps
                   properties:
@@ -917,8 +948,12 @@ spec:
                 type: array
                 x-kubernetes-list-type: atomic
               expose:
+                description: A boolean that toggles the external exposure of this
+                  deployment via a Route or a Knative Route resource.
                 type: boolean
               initContainers:
+                description: List of containers that run before other containers in
+                  a pod.
                 items:
                   description: A single application container that you want to run
                     within a pod.
@@ -2007,9 +2042,7 @@ spec:
                 - name
                 x-kubernetes-list-type: map
               livenessProbe:
-                description: Probe describes a health check to be performed against
-                  a container to determine whether it is alive or ready to receive
-                  traffic.
+                description: Detects if the services need to be restarted.
                 properties:
                   exec:
                     description: One and only one of the following should be specified.
@@ -2119,9 +2152,11 @@ spec:
                     type: integer
                 type: object
               monitoring:
-                description: OpenLibertyApplicationMonitoring ...
+                description: Specifies parameters for Service Monitor.
                 properties:
                   endpoints:
+                    description: A YAML snippet representing an array of Endpoint
+                      component from ServiceMonitor.
                     items:
                       description: Endpoint defines a scrapeable endpoint serving
                         Prometheus metrics.
@@ -2472,18 +2507,21 @@ spec:
                   labels:
                     additionalProperties:
                       type: string
+                    description: Labels to set on ServiceMonitor.
                     type: object
                 type: object
               pullPolicy:
-                description: PullPolicy describes a policy for if/when to pull a container
-                  image
+                description: Policy for pulling container images. Defaults to IfNotPresent.
+                  Parameters spec.autoscaling.maxReplicas and spec.resourceConstraints.requests.cpu
+                  must be specified.
                 type: string
               pullSecret:
+                description: Name of the Secret to use to pull images from the specified
+                  repository. It is not required if the cluster is configured with
+                  a global image pull secret.
                 type: string
               readinessProbe:
-                description: Probe describes a health check to be performed against
-                  a container to determine whether it is alive or ready to receive
-                  traffic.
+                description: Detects if the services are ready to serve.
                 properties:
                   exec:
                     description: One and only one of the following should be specified.
@@ -2593,10 +2631,11 @@ spec:
                     type: integer
                 type: object
               replicas:
+                description: Number of pods to create.
                 format: int32
                 type: integer
               resourceConstraints:
-                description: ResourceRequirements describes the compute resource requirements.
+                description: Limits the amount of required resources.
                 properties:
                   limits:
                     additionalProperties:
@@ -2622,48 +2661,66 @@ spec:
                     type: object
                 type: object
               route:
+                description: Configures the ingress resource.
                 properties:
                   annotations:
                     additionalProperties:
                       type: string
+                    description: Annotations to be added to the Route.
                     type: object
                   certificateSecretRef:
+                    description: A name of a secret that already contains TLS key,
+                      certificate and CA to be used in the route. Also can contain
+                      destination CA certificate.
                     type: string
                   host:
+                    description: Hostname to be used for the Route.
                     type: string
                   insecureEdgeTerminationPolicy:
-                    description: InsecureEdgeTerminationPolicyType dictates the behavior
-                      of insecure connections to an edge-terminated route.
+                    description: HTTP traffic policy with TLS enabled. Can be one
+                      of Allow, Redirect and None.
                     type: string
                   path:
+                    description: Path to be used for Route.
                     type: string
                   termination:
-                    description: 'TLSTerminationType dictates where the secure communication
-                      will stop TODO: Reconsider this type in v2'
+                    description: TLS termination policy. Can be one of edge, reencrypt
+                      and passthrough.
                     type: string
                 type: object
               service:
-                description: OpenLibertyApplicationService ...
+                description: Configures parameters for the network service of pods.
                 properties:
                   annotations:
                     additionalProperties:
                       type: string
+                    description: Annotations to be added to the service.
                     type: object
                   certificateSecretRef:
+                    description: "\tA name of a secret that already contains TLS key,
+                      certificate and CA to be mounted in the pod."
                     type: string
                   consumes:
                     items:
-                      description: ServiceBindingConsumes represents a service to
-                        be consumed
+                      description: Represents a service to be consumed.
                       properties:
                         category:
-                          description: ServiceBindingCategory ...
+                          description: The type of service binding to be consumed.
+                            At this time, the only allowed value is openapi.
                           type: string
                         mountPath:
+                          description: Optional field to specify which location in
+                            the pod, service binding secret should be mounted.
                           type: string
                         name:
+                          description: The name of the service to be consumed. If
+                            binding to an OpenLibertyApplication, then this would
+                            be the provider’s CR name.
                           type: string
                         namespace:
+                          description: The namespace of the service to be consumed.
+                            If binding to an OpenLibertyApplication, then this would
+                            be the provider’s CR namespace.
                           type: string
                       required:
                       - category
@@ -2672,18 +2729,22 @@ spec:
                     type: array
                     x-kubernetes-list-type: atomic
                   nodePort:
+                    description: Node proxies this port into your service.
                     format: int32
                     maximum: 65535
                     minimum: 0
                     type: integer
                   port:
+                    description: The port exposed by the container.
                     format: int32
                     maximum: 65535
                     minimum: 1
                     type: integer
                   portName:
+                    description: The name for the port exposed by the container.
                     type: string
                   ports:
+                    description: An array consisting of service ports.
                     items:
                       description: ServicePort contains information on service's port.
                       properties:
@@ -2741,15 +2802,14 @@ spec:
                       type: object
                     type: array
                   provides:
-                    description: ServiceBindingProvides represents information about
+                    description: Configures the OpenAPI information to expose.
                     properties:
                       auth:
-                        description: ServiceBindingAuth allows a service to provide
-                          authentication information
+                        description: Allows a service to provide authentication information.
                         properties:
                           password:
                             description: The secret that contains the password for
-                              authenticating
+                              authenticating.
                             properties:
                               key:
                                 description: The key of the secret to select from.  Must
@@ -2769,7 +2829,7 @@ spec:
                             type: object
                           username:
                             description: The secret that contains the username for
-                              authenticating
+                              authenticating.
                             properties:
                               key:
                                 description: The key of the secret to select from.  Must
@@ -2789,16 +2849,22 @@ spec:
                             type: object
                         type: object
                       category:
-                        description: ServiceBindingCategory ...
+                        description: Service binding type to be provided by this CR.
+                          At this time, the only allowed value is openapi.
                         type: string
                       context:
+                        description: Specifies context root of the service.
                         type: string
                       protocol:
+                        description: Protocol of the provided service. Defauts to
+                          http.
                         type: string
                     required:
                     - category
                     type: object
                   targetPort:
+                    description: The port that the operator assigns to containers
+                      inside pods. Defaults to the value of spec.service.port.
                     format: int32
                     maximum: 65535
                     minimum: 1
@@ -2809,21 +2875,32 @@ spec:
                     type: string
                 type: object
               serviceAccountName:
+                description: The name of the OpenShift service account to be used
+                  during deployment.
                 type: string
               serviceability:
-                description: OpenLibertyApplicationServiceability ...
+                description: Specifies serviceability-related operations, such as
+                  gathering server memory dumps and server traces.
                 properties:
                   size:
+                    description: A convenient field to request the size of the persisted
+                      storage to use for serviceability.
                     pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                     type: string
                   storageClassName:
+                    description: A convenient field to request the StorageClassName
+                      of the persisted storage to use for serviceability.
                     pattern: .+
                     type: string
                   volumeClaimName:
+                    description: The name of the PersistentVolumeClaim resource you
+                      created to be used for serviceability.
                     pattern: .+
                     type: string
                 type: object
               sidecarContainers:
+                description: The list of sidecar containers. These are additional
+                  containers to be added to the pods.
                 items:
                   description: A single application container that you want to run
                     within a pod.
@@ -3912,52 +3989,79 @@ spec:
                 - name
                 x-kubernetes-list-type: map
               sso:
-                description: OpenLibertyApplicationSSO represents Single sign-on (SSO)
-                  configuration for an OpenLibertyApplication
+                description: Specifies the configuration for Single sign-on (SSO)
+                  providers to authenticate with.
                 properties:
                   github:
-                    description: GithubLogin represents configuration for social login
-                      using GitHub.
+                    description: Represents configuration for social login using GitHub.
                     properties:
                       hostname:
+                        description: Specifies the host name of your enterprise GitHub.
                         type: string
                     type: object
                   mapToUserRegistry:
+                    description: Specifies whether to map a user identifier to a registry
+                      user. This parameter applies to all providers.
                     type: boolean
                   oauth2:
                     items:
-                      description: OAuth2Client represents configuration for an OAuth2
-                        client
+                      description: Represents configuration for an OAuth2 client.
                       properties:
                         accessTokenHeaderName:
+                          description: Name of the header to use when an OAuth access
+                            token is forwarded.
                           type: string
                         accessTokenRequired:
+                          description: Determines whether the access token that is
+                            provided in the request is used for authentication.
                           type: boolean
                         accessTokenSupported:
+                          description: Determines whether to support access token
+                            authentication if an access token is provided in the request.
                           type: boolean
                         authorizationEndpoint:
+                          description: Specifies an authorization endpoint URL for
+                            the OAuth 2.0 provider. Required field.
                           type: string
                         displayName:
+                          description: The name of the social login configuration
+                            for display.
                           type: string
                         groupNameAttribute:
+                          description: Specifies the name of the claim. Use its value
+                            as the user group membership
                           type: string
                         id:
+                          description: Specifies the unique ID for the provider. The
+                            default value is oauth2.
                           type: string
                         realmName:
+                          description: Specifies the realm name for this social media.
                           type: string
                         realmNameAttribute:
+                          description: Specifies the name of the claim. Use its value
+                            as the subject realm.
                           type: string
                         scope:
+                          description: Specifies one or more scopes to request.
                           type: string
                         tokenEndpoint:
+                          description: Specifies a token endpoint URL for the OAuth
+                            2.0 provider. Required field.
                           type: string
                         tokenEndpointAuthMethod:
+                          description: Specifies the required authentication method.
                           type: string
                         userApi:
+                          description: The URL for retrieving the user information.
                           type: string
                         userApiType:
+                          description: Indicates which specification to use for the
+                            user API.
                           type: string
                         userNameAttribute:
+                          description: Specifies the name of the claim. Use its value
+                            as the authenticated user principal.
                           type: string
                       required:
                       - authorizationEndpoint
@@ -3967,28 +4071,46 @@ spec:
                     x-kubernetes-list-type: atomic
                   oidc:
                     items:
-                      description: OidcClient represents configuration for an OpenID
-                        Connect (OIDC) client
+                      description: Represents configuration for an OpenID Connect
+                        (OIDC) client.
                       properties:
                         discoveryEndpoint:
+                          description: Specifies a discovery endpoint URL for the
+                            OpenID Connect provider. Required field.
                           type: string
                         displayName:
+                          description: The name of the social login configuration
+                            for display.
                           type: string
                         groupNameAttribute:
+                          description: Specifies the name of the claim. Use its value
+                            as the user group membership.
                           type: string
                         hostNameVerificationEnabled:
+                          description: Specifies whether to enable host name verification
+                            when the client contacts the provider.
                           type: boolean
                         id:
+                          description: The unique ID for the provider. Default value
+                            is oidc.
                           type: string
                         realmNameAttribute:
+                          description: Specifies the name of the claim. Use its value
+                            as the subject realm.
                           type: string
                         scope:
+                          description: Specifies one or more scopes to request.
                           type: string
                         tokenEndpointAuthMethod:
+                          description: Specifies the required authentication method.
                           type: string
                         userInfoEndpointEnabled:
+                          description: Specifies whether the UserInfo endpoint is
+                            contacted.
                           type: boolean
                         userNameAttribute:
+                          description: Specifies the name of the claim. Use its value
+                            as the authenticated user principal.
                           type: string
                       required:
                       - discoveryEndpoint
@@ -3996,13 +4118,11 @@ spec:
                     type: array
                     x-kubernetes-list-type: atomic
                   redirectToRPHostAndPort:
-                    description: Common parameters for all SSO providers
+                    description: Specifies a callback protocol, host and port number.
                     type: string
                 type: object
               startupProbe:
-                description: Probe describes a health check to be performed against
-                  a container to determine whether it is alive or ready to receive
-                  traffic.
+                description: Protects slow starting containers from livenessProbe.
                 properties:
                   exec:
                     description: One and only one of the following should be specified.
@@ -4121,16 +4241,20 @@ spec:
                       resources owned by the StatefulSet
                     type: object
                   storage:
-                    description: OpenLibertyApplicationStorage ...
+                    description: Defines settings of persisted storage for StatefulSets.
                     properties:
                       mountPath:
+                        description: The directory inside the container where this
+                          persisted storage will be bound to.
                         type: string
                       size:
+                        description: A convenient field to set the size of the persisted
+                          storage.
                         pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                         type: string
                       volumeClaimTemplate:
-                        description: PersistentVolumeClaim is a user's request for
-                          and claim to a persistent volume
+                        description: A YAML object that represents a volumeClaimTemplate
+                          component of a StatefulSet.
                         properties:
                           apiVersion:
                             description: 'APIVersion defines the versioned schema
@@ -4371,10 +4495,8 @@ spec:
                         type: object
                     type: object
                   updateStrategy:
-                    description: StatefulSetUpdateStrategy indicates the strategy
-                      that the StatefulSet controller will use to perform updates.
-                      It includes any additional parameters necessary to perform the
-                      update for the indicated strategy.
+                    description: Specifies the strategy to replace old StatefulSet
+                      pods with new pods.
                     properties:
                       rollingUpdate:
                         description: RollingUpdate is used to communicate parameters
@@ -4393,249 +4515,10 @@ spec:
                         type: string
                     type: object
                 type: object
-              storage:
-                description: OpenLibertyApplicationStorage ...
-                properties:
-                  mountPath:
-                    type: string
-                  size:
-                    pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                    type: string
-                  volumeClaimTemplate:
-                    description: PersistentVolumeClaim is a user's request for and
-                      claim to a persistent volume
-                    properties:
-                      apiVersion:
-                        description: 'APIVersion defines the versioned schema of this
-                          representation of an object. Servers should convert recognized
-                          schemas to the latest internal value, and may reject unrecognized
-                          values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-                        type: string
-                      kind:
-                        description: 'Kind is a string value representing the REST
-                          resource this object represents. Servers may infer this
-                          from the endpoint the client submits requests to. Cannot
-                          be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-                        type: string
-                      metadata:
-                        description: 'Standard object''s metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata'
-                        properties:
-                          annotations:
-                            additionalProperties:
-                              type: string
-                            type: object
-                          finalizers:
-                            items:
-                              type: string
-                            type: array
-                          labels:
-                            additionalProperties:
-                              type: string
-                            type: object
-                          name:
-                            type: string
-                          namespace:
-                            type: string
-                        type: object
-                      spec:
-                        description: 'Spec defines the desired characteristics of
-                          a volume requested by a pod author. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims'
-                        properties:
-                          accessModes:
-                            description: 'AccessModes contains the desired access
-                              modes the volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1'
-                            items:
-                              type: string
-                            type: array
-                          dataSource:
-                            description: 'This field can be used to specify either:
-                              * An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot
-                              - Beta) * An existing PVC (PersistentVolumeClaim) *
-                              An existing custom resource/object that implements data
-                              population (Alpha) In order to use VolumeSnapshot object
-                              types, the appropriate feature gate must be enabled
-                              (VolumeSnapshotDataSource or AnyVolumeDataSource) If
-                              the provisioner or an external controller can support
-                              the specified data source, it will create a new volume
-                              based on the contents of the specified data source.
-                              If the specified data source is not supported, the volume
-                              will not be created and the failure will be reported
-                              as an event. In the future, we plan to support more
-                              data source types and the behavior of the provisioner
-                              may change.'
-                            properties:
-                              apiGroup:
-                                description: APIGroup is the group for the resource
-                                  being referenced. If APIGroup is not specified,
-                                  the specified Kind must be in the core API group.
-                                  For any other third-party types, APIGroup is required.
-                                type: string
-                              kind:
-                                description: Kind is the type of resource being referenced
-                                type: string
-                              name:
-                                description: Name is the name of resource being referenced
-                                type: string
-                            required:
-                            - kind
-                            - name
-                            type: object
-                          resources:
-                            description: 'Resources represents the minimum resources
-                              the volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources'
-                            properties:
-                              limits:
-                                additionalProperties:
-                                  anyOf:
-                                  - type: integer
-                                  - type: string
-                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                  x-kubernetes-int-or-string: true
-                                description: 'Limits describes the maximum amount
-                                  of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
-                                type: object
-                              requests:
-                                additionalProperties:
-                                  anyOf:
-                                  - type: integer
-                                  - type: string
-                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                  x-kubernetes-int-or-string: true
-                                description: 'Requests describes the minimum amount
-                                  of compute resources required. If Requests is omitted
-                                  for a container, it defaults to Limits if that is
-                                  explicitly specified, otherwise to an implementation-defined
-                                  value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
-                                type: object
-                            type: object
-                          selector:
-                            description: A label query over volumes to consider for
-                              binding.
-                            properties:
-                              matchExpressions:
-                                description: matchExpressions is a list of label selector
-                                  requirements. The requirements are ANDed.
-                                items:
-                                  description: A label selector requirement is a selector
-                                    that contains values, a key, and an operator that
-                                    relates the key and values.
-                                  properties:
-                                    key:
-                                      description: key is the label key that the selector
-                                        applies to.
-                                      type: string
-                                    operator:
-                                      description: operator represents a key's relationship
-                                        to a set of values. Valid operators are In,
-                                        NotIn, Exists and DoesNotExist.
-                                      type: string
-                                    values:
-                                      description: values is an array of string values.
-                                        If the operator is In or NotIn, the values
-                                        array must be non-empty. If the operator is
-                                        Exists or DoesNotExist, the values array must
-                                        be empty. This array is replaced during a
-                                        strategic merge patch.
-                                      items:
-                                        type: string
-                                      type: array
-                                  required:
-                                  - key
-                                  - operator
-                                  type: object
-                                type: array
-                              matchLabels:
-                                additionalProperties:
-                                  type: string
-                                description: matchLabels is a map of {key,value} pairs.
-                                  A single {key,value} in the matchLabels map is equivalent
-                                  to an element of matchExpressions, whose key field
-                                  is "key", the operator is "In", and the values array
-                                  contains only "value". The requirements are ANDed.
-                                type: object
-                            type: object
-                          storageClassName:
-                            description: 'Name of the StorageClass required by the
-                              claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1'
-                            type: string
-                          volumeMode:
-                            description: volumeMode defines what type of volume is
-                              required by the claim. Value of Filesystem is implied
-                              when not included in claim spec.
-                            type: string
-                          volumeName:
-                            description: VolumeName is the binding reference to the
-                              PersistentVolume backing this claim.
-                            type: string
-                        type: object
-                      status:
-                        description: 'Status represents the current information/status
-                          of a persistent volume claim. Read-only. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims'
-                        properties:
-                          accessModes:
-                            description: 'AccessModes contains the actual access modes
-                              the volume backing the PVC has. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1'
-                            items:
-                              type: string
-                            type: array
-                          capacity:
-                            additionalProperties:
-                              anyOf:
-                              - type: integer
-                              - type: string
-                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                              x-kubernetes-int-or-string: true
-                            description: Represents the actual resources of the underlying
-                              volume.
-                            type: object
-                          conditions:
-                            description: Current Condition of persistent volume claim.
-                              If underlying persistent volume is being resized then
-                              the Condition will be set to 'ResizeStarted'.
-                            items:
-                              description: PersistentVolumeClaimCondition contails
-                                details about state of pvc
-                              properties:
-                                lastProbeTime:
-                                  description: Last time we probed the condition.
-                                  format: date-time
-                                  type: string
-                                lastTransitionTime:
-                                  description: Last time the condition transitioned
-                                    from one status to another.
-                                  format: date-time
-                                  type: string
-                                message:
-                                  description: Human-readable message indicating details
-                                    about last transition.
-                                  type: string
-                                reason:
-                                  description: Unique, this should be a short, machine
-                                    understandable string that gives the reason for
-                                    condition's last transition. If it reports "ResizeStarted"
-                                    that means the underlying persistent volume is
-                                    being resized.
-                                  type: string
-                                status:
-                                  type: string
-                                type:
-                                  description: PersistentVolumeClaimConditionType
-                                    is a valid value of PersistentVolumeClaimCondition.Type
-                                  type: string
-                              required:
-                              - status
-                              - type
-                              type: object
-                            type: array
-                          phase:
-                            description: Phase represents the current phase of PersistentVolumeClaim.
-                            type: string
-                        type: object
-                    type: object
-                type: object
               version:
                 type: string
               volumeMounts:
+                description: Represents where to mount the volumes into containers.
                 items:
                   description: VolumeMount describes a mounting of a Volume within
                     a container.
@@ -4675,6 +4558,8 @@ spec:
                 type: array
                 x-kubernetes-list-type: atomic
               volumes:
+                description: Represents a pod volume with data that is accessible
+                  to the containers.
                 items:
                   description: Volume represents a named volume in a pod that may
                     be accessed by any container in the pod.
@@ -6135,8 +6020,7 @@ spec:
             - applicationImage
             type: object
           status:
-            description: OpenLibertyApplicationStatus defines the observed state of
-              OpenLibertyApplication
+            description: Defines the observed state of OpenLibertyApplication.
             properties:
               binding:
                 description: LocalObjectReference contains enough information to let
@@ -6149,7 +6033,7 @@ spec:
                 type: object
               conditions:
                 items:
-                  description: StatusCondition ...
+                  description: Defines possible status conditions.
                   properties:
                     lastTransitionTime:
                       format: date-time
@@ -6164,7 +6048,7 @@ spec:
                     status:
                       type: string
                     type:
-                      description: StatusConditionType ...
+                      description: Defines the type of status condition.
                       type: string
                   type: object
                 type: array
