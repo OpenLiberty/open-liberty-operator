@@ -214,12 +214,8 @@ github.com/apex/logs v0.0.4/go.mod h1:XzxuLZ5myVHDy9SAmYpamKKRNApGj54PfYLcFrXqDw
 github.com/apex/logs v1.0.0/go.mod h1:XzxuLZ5myVHDy9SAmYpamKKRNApGj54PfYLcFrXqDwo=
 github.com/aphistic/golf v0.0.0-20180712155816-02c07f170c5a/go.mod h1:3NqKYiepwy8kCu4PNA+aP7WUV72eXWJeP9/r3/K9aLE=
 github.com/aphistic/sweet v0.2.0/go.mod h1:fWDlIh/isSE9n6EPsRmC0det+whmX6dJid3stzu0Xys=
-github.com/application-stacks/runtime-component-operator v0.7.2-0.20210817185009-cef01ea95fc9 h1:4PdBmcDpFHOfeK5ZXlORPc0fTtxnfVPoDIwXTpz6Pc0=
-github.com/application-stacks/runtime-component-operator v0.7.2-0.20210817185009-cef01ea95fc9/go.mod h1:+GjqzlzQHjae6msM090T03c+dlYk0Rbi4t48qqBedQI=
-github.com/application-stacks/runtime-component-operator v0.7.2-0.20211019213135-c9f702c22486 h1:Txrbiu1CnRB3E4/LKolbL+0TYj2eIQ72HRrj4zdALXQ=
-github.com/application-stacks/runtime-component-operator v0.7.2-0.20211019213135-c9f702c22486/go.mod h1:+GjqzlzQHjae6msM090T03c+dlYk0Rbi4t48qqBedQI=
-github.com/application-stacks/runtime-component-operator v0.7.2-0.20211021150529-84ffd6480157 h1:lp3++/9Xe9/r7ZAllJCulEReFRp/Sy37vHPfql12luI=
-github.com/application-stacks/runtime-component-operator v0.7.2-0.20211021150529-84ffd6480157/go.mod h1:+GjqzlzQHjae6msM090T03c+dlYk0Rbi4t48qqBedQI=
+github.com/application-stacks/runtime-component-operator v0.7.2-0.20211027150023-e8e2dfd2e260 h1:K4BouSTY5a/wJx8WltwnMdP2ymCwbzpbKjwUg7DpG2o=
+github.com/application-stacks/runtime-component-operator v0.7.2-0.20211027150023-e8e2dfd2e260/go.mod h1:+GjqzlzQHjae6msM090T03c+dlYk0Rbi4t48qqBedQI=
 github.com/armon/circbuf v0.0.0-20150827004946-bbbad097214e/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=
 github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6/go.mod h1:grANhF5doyWs3UAsr3K4I6qtAmlQcZDesFNEHPZAzj8=
 github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da/go.mod h1:Q73ZrmVTwzkszR9V5SSuryQ31EELlFMUz1kKyl939pY=
