@@ -64,7 +64,7 @@ type ReconcileOpenLiberty struct {
 // +kubebuilder:rbac:groups=serving.knative.dev,resources=services,verbs=*
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=*
 
-const applicationFinalizer = "finalizer.openlibertycontroller.openliberty.io"
+const applicationFinalizer = "finalizer.openlibertyapplications.openliberty.io"
 
 // Reconcile reads that state of the cluster for a OpenLiberty object and makes changes based on the state read
 // and what is in the OpenLiberty.Spec
