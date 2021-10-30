@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
 	oputils "github.com/application-stacks/runtime-component-operator/utils"
 	"github.com/go-logr/logr"
 
@@ -84,7 +85,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	// indicated by the deletion timestamp being set.
 	isInstanceMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
 	if isInstanceMarkedToBeDeleted {
-		if contains(instance.GetFinalizers(), traceFinalizer) {
+		if lutils.Contains(instance.GetFinalizers(), traceFinalizer) {
 			// Run finalization logic for traceFinalizer. If the finalization logic fails, don't remove the
 			// finalizer so that we can retry during the next reconciliation.
 			if err := r.finalizeOpenLibertyTrace(reqLogger, instance, prevTraceEnabled, prevPodName, podNamespace); err != nil {
@@ -92,7 +93,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 			}
 
 			// Remove traceFinalizer. Once all finalizers have been removed, the object will be deleted.
-			instance.SetFinalizers(remove(instance.GetFinalizers(), traceFinalizer))
+			instance.SetFinalizers(lutils.Remove(instance.GetFinalizers(), traceFinalizer))
 			err := r.Client.Update(context.TODO(), instance)
 			if err != nil {
 				return reconcile.Result{}, err
@@ -102,7 +103,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	}
 
 	// Add finalizer for this CR
-	if !contains(instance.GetFinalizers(), traceFinalizer) {
+	if !lutils.Contains(instance.GetFinalizers(), traceFinalizer) {
 		if err := r.addFinalizer(reqLogger, instance); err != nil {
 			return reconcile.Result{}, err
 		}
@@ -238,24 +239,6 @@ func (r *ReconcileOpenLibertyTrace) addFinalizer(reqLogger logr.Logger, olt *ope
 	}
 
 	return nil
-}
-
-func contains(list []string, s string) bool {
-	for _, v := range list {
-		if v == s {
-			return true
-		}
-	}
-	return false
-}
-
-func remove(list []string, s string) []string {
-	for i, v := range list {
-		if v == s {
-			list = append(list[:i], list[i+1:]...)
-		}
-	}
-	return list
 }
 
 func (r *ReconcileOpenLibertyTrace) SetupWithManager(mgr ctrl.Manager) error {
