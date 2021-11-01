@@ -97,12 +97,12 @@ main() {
     }
 
     # Wait for operator deployment to be ready
-    while [[ $(oc get deploy controller-manager -o jsonpath='{ .status.readyReplicas }') -ne "1" ]]; do
-        echo "****** Waiting for OLO controller-manager to be ready..."
+    while [[ $(oc get deploy open-liberty-operator-controller-manager -o jsonpath='{ .status.readyReplicas }') -ne "1" ]]; do
+        echo "****** Waiting for open-liberty-operator-controller-manager to be ready..."
         sleep 10
     done
 
-    echo "****** OLO controller-manager deployment is ready..."
+    echo "****** open-liberty-operator-controller-manager deployment is ready..."
 
     echo "****** Starting scorecard tests..."
     operator-sdk scorecard --verbose --selector=suite=kuttlsuite --namespace "${TEST_NAMESPACE}" --service-account scorecard-kuttl --wait-time 30m ./bundle || {
