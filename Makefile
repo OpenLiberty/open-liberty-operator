@@ -1,9 +1,14 @@
+OPERATOR_SDK_RELEASE_VERSION ?= v1.6.4
+
 # VERSION defines the project version for the bundle.
 # Update this value when you upgrade the version of your project.
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
 VERSION ?= 0.8.0
+
+OPERATOR_IMAGE ?= openliberty/operator
+OPERATOR_IMAGE_TAG ?= daily
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "preview,fast,stable")
@@ -29,14 +34,14 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
 # openliberty.io/op-test-bundle:$VERSION and openliberty.io/op-test-catalog:$VERSION.
-IMAGE_TAG_BASE ?= openliberty.io/op-test
+IMAGE_TAG_BASE ?= openliberty/operator
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= openliberty/operator:daily
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:crdVersions=v1,trivialVersions=true,preserveUnknownFields=false,generateEmbeddedObjectMeta=true"
 
@@ -92,6 +97,9 @@ build: generate fmt vet ## Build manager binary.
 
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
+
+docker-login:
+	docker login -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}"
 
 docker-build: test ## Build docker image with the manager.
 	docker build -t ${IMG} .
@@ -214,8 +222,22 @@ setup-manifest:
 setup-minikube:
 	./scripts/installers/install-minikube.sh
 
-build-multiarch-image: setup
+unit-test: ## Run unit tests
+	go test -v -mod=vendor -tags=unit github.com/OpenLiberty/open-liberty-operator/...
+
+build-image: ## Build operator Docker image and tag with "${OPERATOR_IMAGE}:${OPERATOR_IMAGE_TAG}"
+	docker build -t ${OPERATOR_IMAGE}:${OPERATOR_IMAGE_TAG} .
+
+build-multiarch-image: ## Build operator image
 	./scripts/build-releases.sh -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" --image "${OPERATOR_IMAGE}"
+
+push-multiarch-image: ## Push operator image
+	./scripts/build-releases.sh --push -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" --image "${OPERATOR_IMAGE}"
 
 build-manifest: setup-manifest
 	./scripts/build-manifest.sh -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" --image "${OPERATOR_IMAGE}"
+
+test-e2e:
+	./scripts/e2e.sh -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" \
+                     --cluster-url "${CLUSTER_URL}" --cluster-token "${CLUSTER_TOKEN}" \
+                     --registry-name default-route --registry-namespace openshift-image-registry

@@ -3,7 +3,8 @@
 #########################################################################################
 #
 #
-#           Script to build and push the multi arch images for operator
+#           Script to build the multi arch images for operator
+#           To push the image to DockerHub, provide the `--push` flag.
 #           Note: Assumed to run under <operator root>/scripts
 #
 #
@@ -14,7 +15,7 @@ set -Eeo pipefail
 readonly usage="Usage: build-release.sh -u <docker-username> -p <docker-password> --image repository/image"
 
 main() {
-  parse_args $@
+  parse_args "$@"
 
   if [[ -z "${USER}" || -z "${PASS}" ]]; then
     echo "****** Missing docker authentication information, see usage"
@@ -28,7 +29,7 @@ main() {
     exit 1
   fi
 
-  ## Define current arc variable
+  ## Define current arch variable
   case "$(uname -p)" in
   "ppc64le")
     readonly arch="ppc64le"
@@ -44,23 +45,23 @@ main() {
   ## login to docker
   echo "${PASS}" | docker login -u "${USER}" --password-stdin
 
-  ## build latest master branch
-  echo "****** Building release: daily"
-  build_release "daily"
-  echo "****** Pushing release: daily"
-  push_release "daily"
+  ## build or push latest master branch
+  if [[ "${IS_PUSH}" != true ]]; then
+    echo "****** Building release: daily"
+    build_release "daily"
+  else
+    echo "****** Pushing release: daily"
+    push_release "daily"
+  fi
+}
 
-  ## loop through tagged releases and build
-  git fetch origin
+
+build_previous_releases() {
+ ## loop through tagged releases and build
   local tags=$(git tag -l)
   while read -r tag; do
     if [[ -z "${tag}" ]]; then
       break
-    fi
-
-    if [[ "${tag}" = "v0.0.1" ]]; then
-      echo "****** Skipping Helm based operator..."
-      continue
     fi
 
     git checkout -q "${tag}"
@@ -70,39 +71,17 @@ main() {
     echo "****** Building release: ${dockerTag}"
     build_release "${dockerTag}"
     echo "****** Pushing release: ${dockerTag}"
-    push_release "${dockerTag}"
+    #push_release "${dockerTag}"
   done <<< "${tags}"
-
-  echo "****** Complete!"
-  git checkout "${TRAVIS_BRANCH}"
 }
 
 build_release() {
   local release="$1"
   local full_image="${IMAGE}:${release}-${arch}"
+  echo "*** Building ${full_image} for ${arch}"
+  docker build -t "${full_image}" .
+  return $?
 
-  if [[ ! "${arch}" = "s390x" ]]; then
-    echo "*** Building ${full_image} for ${arch}"
-    operator-sdk build "${full_image}"
-    return $?
-  else
-    ## build manually on zLinux as operator-sdk doesn't support
-    ## NOTE values below must be changed to build other operators
-    echo "*** Building binary of operator project"
-    go build -o "$(pwd)/build/_output/bin/open-liberty-operator" \
-      -gcflags all=-trimpath=$(pwd)/.. \
-      -asmflags all=-trimpath=$(pwd)/..\
-      -mod=vendor "github.com/OpenLiberty/open-liberty-operator/cmd/manager"
-
-    if [[ $? -ne 0 ]]; then
-      echo "Failed to build binary for zLinux, exiting"
-      return 1
-    fi
-
-    echo "*** Building image: ${full_image} for ${arch}"
-    docker build -f build/Dockerfile -t "${full_image}" .
-    return $?
-  fi
 }
 
 push_release() {
@@ -131,6 +110,9 @@ parse_args() {
       shift
       readonly IMAGE="${1}"
       ;;
+    --push)
+      readonly IS_PUSH=true
+      ;;
     *)
       echo "Error: Invalid argument - $1"
       echo "$usage"
@@ -141,4 +123,4 @@ parse_args() {
   done
 }
 
-main $@
+main "$@"

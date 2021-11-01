@@ -9,12 +9,12 @@
 #
 #########################################################################################
 
-set -Eeo
+set -Eeo pipefail
 
 readonly usage="Usage: build-manifest.sh -u <docker-username> -p <docker-password> --image repository/image"
 
 main() {
-  parse_args $@
+  parse_args "$@"
 
   if [[ -z "${USER}" || -z "${PASS}" ]]; then
     echo "****** Missing docker authentication information, see usage"
@@ -30,18 +30,20 @@ main() {
 
   echo "${PASS}" | docker login -u "${USER}" --password-stdin
 
+  if [[ "${TRAVIS}" != "true" ]] || [[ "${TRAVIS_PULL_REQUEST}" != "false" ]] || [[ "${TRAVIS_BRANCH}" != "master" ]]; then
+    echo "****** Skipping manifest for: daily"
+    exit 0
+  fi
+
   echo "****** Building manifest for: daily"
   build_manifest "daily"
+}
 
+build_manifests() {
   local tags=$(git tag -l)
   while read -r tag; do
     if [[ -z "${tag}" ]]; then
       break
-    fi
-
-    if [[ "${tag}" = "v0.0.1" ]]; then
-      echo "****** Skipping Helm based operator"
-      continue
     fi
 
     ## Remove potential leading 'v' from tags
@@ -89,4 +91,4 @@ parse_args() {
   done
 }
 
-main $@
+main "$@"
