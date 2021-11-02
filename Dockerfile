@@ -33,6 +33,6 @@ COPY LICENSE /licenses/
 WORKDIR /
 COPY --from=builder /workspace/manager .
 
-USER nonroot:nonroot
+USER 65532:65532
 
 ENTRYPOINT ["/manager"]
