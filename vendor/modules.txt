@@ -1,8 +1,8 @@
 # cloud.google.com/go v0.65.0
 cloud.google.com/go/compute/metadata
-# github.com/application-stacks/runtime-component-operator v0.7.2-0.20211027150023-e8e2dfd2e260
+# github.com/application-stacks/runtime-component-operator v0.7.2-0.20211029215919-3b9ed938a7c8
 ## explicit
-github.com/application-stacks/runtime-component-operator/api/v1beta1
+github.com/application-stacks/runtime-component-operator/api/v1beta2
 github.com/application-stacks/runtime-component-operator/common
 github.com/application-stacks/runtime-component-operator/utils
 # github.com/beorn7/perks v1.0.1
