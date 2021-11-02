@@ -47,6 +47,7 @@ rules:
   - statefulsets
   verbs:
   - get
+  - create
 - apiGroups:
   - autoscaling
   resources:

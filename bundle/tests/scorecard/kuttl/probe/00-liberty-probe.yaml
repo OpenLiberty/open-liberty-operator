@@ -6,6 +6,12 @@ spec:
   applicationImage: openliberty/open-liberty:kernel-java8-openj9-ubi
   replicas: 1
   expose: false
+  startupProbe:
+    failureThreshold: 10
+    periodSeconds: 5
+    httpGet:
+      path: /
+      port: 9080
   readinessProbe:
     httpGet:
       path: /

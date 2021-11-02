@@ -1,8 +1,9 @@
-apiVersion: kuttl.dev/v1beta1
-kind: TestStep
-delete:
-  - apiVersion: route.openshift.io/v1
-    kind: Route
-    metadata:
-      name: route
-
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyApplication
+metadata:
+  name: route
+spec:
+  # Add fields here
+  applicationImage: openliberty/open-liberty:kernel-java8-openj9-ubi
+  replicas: 1
+  expose: false

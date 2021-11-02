@@ -1,6 +1,6 @@
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
-  name: persistent-liberty
+  name: my-liberty-app
 status:
   readyReplicas: 1
