@@ -14,7 +14,7 @@ spec:
   customresourcedefinitions:
     owned:
     - description: OpenLibertyApplication is the Schema for the OpenLibertyApplications API
-      displayName: Open Liberty Application
+      displayName: OpenLibertyApplication
       kind: OpenLibertyApplication
       name: openlibertyapplications.openliberty.io
       resources:
@@ -27,7 +27,13 @@ spec:
       - kind: Route
         name: ""
         version: v1
+      - kind: Secret
+        name: ""
+        version: v1
       - kind: Service
+        name: ""
+        version: v1
+      - kind: ServiceAccount
         name: ""
         version: v1
       - kind: StatefulSet
@@ -299,12 +305,12 @@ spec:
         - urn:alm:descriptor:io.kubernetes.conditions
       version: v1beta1
     - description: OpenLibertyDump is the Schema for the openlibertydumps API
-      displayName: Open Liberty Dump
+      displayName: OpenLibertyDump
       kind: OpenLibertyDump
       name: openlibertydumps.openliberty.io
       version: v1beta1
     - description: OpenLibertyTrace is the schema for the openlibertytraces API
-      displayName: Open Liberty Trace
+      displayName: OpenLibertyTrace
       kind: OpenLibertyTrace
       name: openlibertytraces.openliberty.io
       version: v1beta1
