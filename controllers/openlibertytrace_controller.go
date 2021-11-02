@@ -42,8 +42,8 @@ const traceFinalizer = "finalizer.openlibertytraces.openliberty.io"
 const traceConfigFile = "/config/configDropins/overrides/add_trace.xml"
 const serviceabilityDir = "/serviceability"
 
-// +kubebuilder:rbac:groups=openliberty.io,resources=openlibertytraces;openlibertytraces/status;openlibertytraces/finalizers,verbs=*
-// +kubebuilder:rbac:groups=core,resources=pods;pods/exec,verbs=*
+// +kubebuilder:rbac:groups=openliberty.io,resources=openlibertytraces;openlibertytraces/status;openlibertytraces/finalizers,verbs=*,namespace=open-liberty-operator
+// +kubebuilder:rbac:groups=core,resources=pods;pods/exec,verbs=*,namespace=open-liberty-operator
 
 // Reconcile reads that state of the cluster for a OpenLibertyTrace object and makes changes based on the state read
 // and what is in the OpenLibertyTrace.Spec
