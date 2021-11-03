@@ -6,7 +6,7 @@ This documentation refers to the latest codebase.  For documentation and samples
 
 == Operator installation
 
-Use the instructions for one of the link:++../deploy/releases++[releases] to install the operator into a Kubernetes cluster.
+//Use the instructions for one of the link:++../deploy/releases++[releases] to install the operator into a Kubernetes cluster.
 
 The Open Liberty Operator can be installed to:
 
@@ -58,20 +58,16 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 .Custom Resource Definition
 |===
 | Parameter | Description
-| `version` | The current version of the application. Label `app.kubernetes.io/version` will be added to all resources when the version is defined.
+| `applicationVersion` | The current version of the application. Label `app.kubernetes.io/version` will be added to all resources when the version is defined.
 | `serviceAccountName` | The name of the OpenShift service account to be used during deployment.
 | `applicationImage` | The absolute name of the image to be deployed, containing the registry and the tag. On OpenShift, it can also be set to `<project name>/<image stream name>[:tag]` to reference an image from an image stream. If `<project name>` and `<tag>` values are not defined, they default to the namespace of the CR and the value of `latest`, respectively.
 | `applicationName` | The name of the application this resource is part of. If not specified, it defaults to the name of the CR.
-| `createAppDefinition`   | A boolean to toggle the automatic configuration of Kubernetes resources for the `OpenLibertyApplication` CR to allow creation of an application definition by link:++https://kappnav.io/++[kAppNav]. The default value is `true`. See link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#kubernetes-application-navigator-kappnav-support++[Application Navigator] for more information.
 | `pullPolicy` | The policy used when pulling the image.  One of: `Always`, `Never`, and `IfNotPresent`.
 | `pullSecret` | If using a registry that requires authentication, the name of the secret containing credentials.
 | `initContainers` | The list of link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#container-v1-core++[Init Container] definitions.
 | `sidecarContainers` | The list of `sidecar` containers. These are additional containers to be added to the pods. Note: Sidecar containers should not be named `app`.
 | `architecture` | An array of architectures to be considered for deployment. Their position in the array indicates preference.
-| `bindings.embedded` | A YAML object that represents a `ServiceBindingRequest` custom resource.
-| `bindings.autoDetect` | A boolean to toggle whether the operator should automatically detect and use a `ServiceBindingRequest` resource with `<CR_NAME>-binding` naming format. The default value for this parameter is `true`.
-| `bindings.resourceRef` | The name of a `ServiceBindingRequest` custom resource created manually in the same namespace as the application.
-| `bindings.expose.enabled` | A boolean to toggle whether the operator expose the application as a bindable service. The default value for this parameter is `false`.
+| `service.bindable` | A boolean to toggle whether the operator expose the application as a bindable service. Defaults to `false`.
 | `service.port` | The port exposed by the container.
 | `service.targetPort` | The port that the operator assigns to containers inside pods. Defaults to the value of `service.port`.
 | `service.portName` | The name for the port exposed by the container.
@@ -79,23 +75,15 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `service.type` | The Kubernetes link:++https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types++[Service Type].
 | `service.nodePort` | Node proxies this port into your service. Please note once this port is set to a non-zero value it cannot be reset to zero.
 | `service.annotations` | Annotations to be added to the service.
-| `service.certificate` | A YAML object representing a link:++https://cert-manager.io/docs/reference/api-docs/#cert-manager.io/v1alpha2.CertificateSpec++[Certificate].
 | `service.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be mounted in the pod.
-| `service.provides.category` | Service binding type to be provided by this CR. At this time, the only allowed value is `openapi`.
-| `service.provides.protocol` | Protocol of the provided service. Defauts to `http`.
-| `service.provides.context` | Specifies context root of the service.
-| `service.provides.auth.username` | Optional value to specify username as link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#secretkeyselector-v1-core++[SecretKeySelector].
-| `service.provides.auth.password` | Optional value to specify password as link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#secretkeyselector-v1-core++[SecretKeySelector].
-| `service.consumes` | An array consisting of services to be consumed by the `OpenLibertyApplication`.
-| `service.consumes[].category` | The type of service binding to be consumed. At this time, the only allowed value is `openapi`.
-| `service.consumes[].name` | The name of the service to be consumed. If binding to an `OpenLibertyApplication`, then this would be the provider's CR name.
-| `service.consumes[].namespace` | The namespace of the service to be consumed. If binding to an `OpenLibertyApplication`, then this would be the provider's CR namespace.
-| `service.consumes[].mountPath` | Optional field to specify which location in the pod, service binding secret should be mounted. If not specified, the secret keys would be injected as environment variables.
 | `createKnativeService`   | A boolean to toggle the creation of Knative resources and usage of Knative serving.
 | `expose`   | A boolean that toggles the external exposure of this deployment via a Route or a Knative Route resource.
 | `deployment.updateStrategy`   | A field to specify the update strategy of the deployment. For more information, see link:++https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy++[updateStrategy]
 | `deployment.updateStrategy.type`   | The type of update strategy of the deployment. The type can be set to `RollingUpdate` or `Recreate`, where `RollingUpdate` is the default update strategy.
 | `deployment.annotations`   | Annotations to be added only to the deployment and resources owned by the deployment.
+| `statefulSet.storage.size` | A convenient field to set the size of the persisted storage. Can be overridden by the `storage.volumeClaimTemplate` property. Operator will create a `StatefulSet` instead of a `Deployment` when `storage` is configured. See link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Persistence++[Persistence] for more information.
+| `statefulSet.storage.mountPath` | The directory inside the container where this persisted storage will be bound to.
+| `statefulSet.storage.volumeClaimTemplate` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#components++[volumeClaimTemplate] component of a `StatefulSet`.
 | `statefulSet.updateStrategy`   | A field to specify the update strategy of the StatefulSet. For more information, see link:++https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies++[updateStrategy]
 | `statefulSet.updateStrategy.type`   | The type of update strategy of the StatefulSet. The type can be set to `RollingUpdate` or `OnDelete`, where `RollingUpdate` is the default update strategy.
 | `statefulSet.annotations`   | Annotations to be added only to the StatefulSet and resources owned by the StatefulSet.
@@ -107,16 +95,13 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `resourceConstraints.requests.memory` | The minimum memory in bytes. Specify integers with one of these suffixes: E, P, T, G, M, K, or power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.
 | `resourceConstraints.limits.cpu` | The upper limit of CPU core. Specify integers, fractions (e.g. 0.5), or millicores values(e.g. 100m, where 100m is equivalent to .1 core).
 | `resourceConstraints.limits.memory` | The memory upper limit in bytes. Specify integers with suffixes: E, P, T, G, M, K, or power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.
-| `env`   | An array of environment variables following the format of `{name, value}`, where value is a simple string. It may also follow the format of `{name, valueFrom}`, where valueFrom refers to a value in a `ConfigMap` or `Secret` resource. See link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#environment-variables++[Environment variables] for more info.
-| `envFrom`   | An array of references to `ConfigMap` or `Secret` resources containing environment variables. Keys from `ConfigMap` or `Secret` resources become environment variable names in your container. See link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#environment-variables++[Environment variables] for more info.
+| `env`   | An array of environment variables following the format of `{name, value}`, where value is a simple string. It may also follow the format of `{name, valueFrom}`, where valueFrom refers to a value in a `ConfigMap` or `Secret` resource. See link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#environment-variables++[Environment variables] for more info.
+| `envFrom`   | An array of references to `ConfigMap` or `Secret` resources containing environment variables. Keys from `ConfigMap` or `Secret` resources become environment variable names in your container. See link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#environment-variables++[Environment variables] for more info.
 | `readinessProbe`   | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes++[Kubernetes readiness probe] that controls when the pod is ready to receive traffic.
 | `livenessProbe` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request++[Kubernetes liveness probe] that controls when Kubernetes needs to restart the pod.
 | `startupProbe` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes++[Kubernetes startup probe] that controls when Kubernetes needs to startup the pod on its first initialization.
 | `volumes` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/storage/volumes++[pod volume].
 | `volumeMounts` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/storage/volumes/++[pod volumeMount].
-| `statefulSet.storage.size` | A convenient field to set the size of the persisted storage. Can be overridden by the `storage.volumeClaimTemplate` property. Operator will create a `StatefulSet` instead of a `Deployment` when `storage` is configured. See link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Persistence++[Persistence] for more information.
-| `statefulSet.storage.mountPath` | The directory inside the container where this persisted storage will be bound to.
-| `statefulSet.storage.volumeClaimTemplate` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#components++[volumeClaimTemplate] component of a `StatefulSet`.
 | `monitoring.labels` | Labels to set on link:++https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitor++[ServiceMonitor].
 | `monitoring.endpoints` | A YAML snippet representing an array of link:++https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint++[Endpoint] component from ServiceMonitor.
 | `serviceability.size` | A convenient field to request the size of the persisted storage to use for serviceability. Can be overridden by the `serviceability.volumeClaimName` property. See link:++#storage-for-serviceability++[Storage for serviceability] for more information.
@@ -127,7 +112,6 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `route.path`   | Path to be used for Route.
 | `route.termination`   | TLS termination policy. Can be one of `edge`, `reencrypt` and `passthrough`.
 | `route.insecureEdgeTerminationPolicy`   | HTTP traffic policy with TLS enabled. Can be one of `Allow`, `Redirect` and `None`.
-| `route.certificate`  | A YAML object representing a link:++https://cert-manager.io/docs/reference/api-docs/#cert-manager.io/v1alpha2.CertificateSpec++[Certificate].
 | `route.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be used in the route. Also can contain destination CA certificate. The following keys are valid in the secret: `ca.crt`, `destCA.crt`, `tls.crt`, and `tls.key`.
 | `sso`   | Specifies the configuration for single sign-on providers to authenticate with. Specify sensitive fields, such as _clientId_ and _clientSecret_, for the selected providers by using the `Secret`. For more information, see link:++#single-sign-on-sso++[Single Sign-On (SSO)].
 | `sso.mapToUserRegistry`   | Specifies whether to map a user identifier to a registry user. This parameter applies to all providers.
@@ -195,20 +179,20 @@ Open Liberty Operator is based on the generic link:++https://github.com/applicat
 information on the usage of common functionality, see the Runtime Component Operator documentation below. Note that, in the samples from the links below, the instances of `Kind:
 RuntimeComponent` must be replaced with `Kind: OpenLibertyApplication`.
 
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Image-streams++[Image Streams]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Service-account++[Service Account]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Labels++[Labels]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Annotations++[Annotations]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Environment-variables++[Environment Variables]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#High-availability++[High Availability]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Service-ports++[Service Ports]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Persistence++[Persistence]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Service-binding++[Service Binding]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Monitoring++[Monitoring]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Knative-support++[Knative Support]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Exposing-service-externally++[Exposing Service]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#kubernetes-application-navigator-kappnav-support++[Kubernetes Application Navigator]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#certificate-manager-integration++[Certificate Manager]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Image-streams++[Image Streams]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Service-account++[Service Account]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Labels++[Labels]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Annotations++[Annotations]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Environment-variables++[Environment Variables]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#High-availability++[High Availability]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Service-ports++[Service Ports]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Persistence++[Persistence]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Service-binding++[Service Binding]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Monitoring++[Monitoring]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Knative-support++[Knative Support]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Exposing-service-externally++[Exposing Service]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#kubernetes-application-navigator-kappnav-support++[Kubernetes Application Navigator]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#certificate-manager-integration++[Certificate Manager]
 
 For functionality that is unique to the Open Liberty Operator, see the following sections.
 
@@ -280,7 +264,7 @@ data:
 
 Next, configure single sign-on in `OpenLibertyApplication` CR. At minimum, `sso: {}` should be set in order for the operator to pass the values from the above `Secret` to your application. Refer to the link:++#custom-resource-definition-crd++[parameters list] for additional configurations for `sso`.
 
-In addition, single sign-on requires secured Service and secured Route configured with necessary certificates. Refer to link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#certificate-manager-integration++[Certificate Manager Integration] for more information.
+In addition, single sign-on requires secured Service and secured Route configured with necessary certificates. Refer to link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#certificate-manager-integration++[Certificate Manager Integration] for more information.
 
 To automatically trust certificates from well known identity providers, including social login providers such as Google and Facebook, set environment variable `SEC_TLS_TRUSTDEFAULTCERTS` to `true`. To automatically trust certificates issued by the Kubernetes cluster, set environment variable `SEC_IMPORT_K8S_CERTS` to `true`. Alternatively, you could include the necessary certificates manually when building application image or mounting them using a volume when deploying your application.
 

@@ -51,7 +51,7 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
       - displayName: Application Version
-        path: version
+        path: applicationVersion
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
       - description: Policy for pulling container images. Defaults to IfNotPresent. Parameters spec.autoscaling.maxReplicas and spec.resourceConstraints.requests.cpu must be specified.
@@ -167,10 +167,6 @@ spec:
         path: serviceability
       - displayName: Single sign-on
         path: sso
-      - displayName: Create App Definition
-        path: createAppDefinition
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - displayName: Monitoring
         path: monitoring
       - description: Labels to set on ServiceMonitor.
@@ -237,23 +233,6 @@ spec:
         path: route.insecureEdgeTerminationPolicy
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
-      - displayName: Bindings
-        path: bindings
-      - description: A boolean to toggle whether the operator should automatically detect and use a ServiceBindingRequest resource with <CR_NAME>-binding naming format.
-        displayName: Bindings Autodetect
-        path: bindings.autoDetect
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: The name of a ServiceBindingRequest custom resource created manually in the same namespace as the application.
-        displayName: Bindings Resource Ref
-        path: bindings.resourceRef
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: A boolean to toggle whether the operator expose the application as a bindable service.
-        displayName: Bindings Expose Enabled
-        path: bindings.expose
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: A boolean to toggle the creation of Knative resources and usage of Knative serving.
         displayName: Create Knative Service
         path: createKnativeService
@@ -338,7 +317,7 @@ spec:
     Enable persistence for your application by specifying simple requirements: just tell us the size of the storage and where you would like it to be mounted and We will create and manage that storage for you. This toggles a StatefulSet resource instead of a Deployment resource, so your container can recover transactions and state upon a pod restart. We offer an advanced mode where the user specifies a built-in PersistentVolumeClaim, allowing them to configure many details of the persistent volume, such as its storage class and access mode. You can also easily configure and use a single storage for serviceability related Day-2 operations, such as gatherig server traces and dumps.
 
     #### Service Binding
-    Easily bind to available services in your cluster.  Your runtime components can expose and consume other services by simply specifying the target endpoinds: we take care of the heavy lifting such as creating k8s Secrets, injecting them into your container and watching for any changes in configuration!  This way your applications can dynamically reconnect to its required services without any intervention or interruption.
+    Your runtime components can expose services by a simple toggle. We take care of the heavy lifting such as creating kubernetes Secrets with information other services can use to bind. We also keep the bindable information synchronized, so your applications can dynamically reconnect to its required services without any intervention or interruption.
 
     #### Single Sign-On (SSO)
     Open Liberty provides capabilities to delegate authentication to external providers. Your application users can log in using their existing social media credentials from providers such as Google, Facebook, LinkedIn, Twitter, GitHub, and any OpenID Connect (OIDC) or OAuth 2.0 clients. Open Liberty Operator allows to easily configure and manage the single sign-on information for your applications.
@@ -355,9 +334,8 @@ spec:
     #### Integration with OpenShift Serverless
     Deploy your serverless runtime component using a single toggle.  The Operator will convert all of its generated resources into [Knative](https://knative.dev) resources, allowing your pod to automatically scale to 0 when it is idle.
 
-    #### Integration with Kubernetes Application Navigator (kAppNav) and OpenShift's Topology UI
-    Automatically configures the Kubernetes resources for integration with [kAppNav](https://kappnav.io/), allowing your runtime component to compose an umbrella [Application](https://github.com/kubernetes-sigs/application).  This integration allows users to monitor all constituents resources of the application and receive alerts when the health status of a component changes.  From an integrated panel users can also launch day-2-operations, such as viewing the Kibana / Grafana dashboards, and enabling trace for a component.
-    During this integration we also set the corresponding labels to support OpenShift's Developer Topology UI,which allows you to visualize your entire set of deployments and how they are connected.
+    #### Integration with OpenShift's Topology UI
+    We set the corresponding labels to support OpenShift's Developer Topology UI, which allows you to visualize your entire set of deployments and how they are connected.
 
     See our [**documentation**](https://github.com/OpenLiberty/open-liberty-operator/tree/master/doc/) for more information.
   displayName: Open Liberty Operator
@@ -373,7 +351,7 @@ spec:
     type: OwnNamespace
   - supported: true
     type: SingleNamespace
-  - supported: true
+  - supported: false
     type: MultiNamespace
   - supported: true
     type: AllNamespaces

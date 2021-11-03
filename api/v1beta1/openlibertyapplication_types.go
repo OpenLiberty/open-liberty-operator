@@ -9,7 +9,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
@@ -26,9 +25,9 @@ type OpenLibertyApplicationSpec struct {
 	ApplicationImage string `json:"applicationImage"`
 
 	// +operator-sdk:csv:customresourcedefinitions:order=3,type=spec,displayName="Application Version",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
-	Version string `json:"version,omitempty"`
+	ApplicationVersion string `json:"applicationVersion,omitempty"`
 
-	// Policy for pulling container images. Defaults to IfNotPresent. Parameters spec.autoscaling.maxReplicas and spec.resourceConstraints.requests.cpu must be specified.
+	// Policy for pulling container images. Defaults to IfNotPresent.
 	// +operator-sdk:csv:customresourcedefinitions:order=4,type=spec,displayName="Pull Policy",xDescriptors="urn:alm:descriptor:com.tectonic.ui:imagePullPolicy"
 	PullPolicy *corev1.PullPolicy `json:"pullPolicy,omitempty"`
 
@@ -60,9 +59,6 @@ type OpenLibertyApplicationSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=28,type=spec,displayName="Service Account Name",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	ServiceAccountName *string `json:"serviceAccountName,omitempty"`
 
-	// +operator-sdk:csv:customresourcedefinitions:order=31,type=spec,displayName="Create App Definition",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
-	CreateAppDefinition *bool `json:"createAppDefinition,omitempty"`
-
 	// +operator-sdk:csv:customresourcedefinitions:order=33,type=spec,displayName="Monitoring"
 	Monitoring *OpenLibertyApplicationMonitoring `json:"monitoring,omitempty"`
 
@@ -71,9 +67,6 @@ type OpenLibertyApplicationSpec struct {
 
 	// +operator-sdk:csv:customresourcedefinitions:order=41,type=spec,displayName="Route"
 	Route *OpenLibertyApplicationRoute `json:"route,omitempty"`
-
-	// +operator-sdk:csv:customresourcedefinitions:order=48,type=spec,displayName="Bindings"
-	Bindings *OpenLibertyApplicationBindings `json:"bindings,omitempty"`
 
 	// A boolean to toggle the creation of Knative resources and usage of Knative serving.
 	// +operator-sdk:csv:customresourcedefinitions:order=52,type=spec,displayName="Create Knative Service",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
@@ -170,7 +163,7 @@ type OpenLibertyApplicationAffinity struct {
 // Configures the desired resource consumption of pods.
 // +k8s:openapi-gen=true
 type OpenLibertyApplicationAutoScaling struct {
-	// Required field for autoscaling. Upper limit for the number of pods that can be set by the autoscaler.
+	// Required field for autoscaling. Upper limit for the number of pods that can be set by the autoscaler. Parameter spec.resourceConstraints.requests.cpu must also be specified.
 	// +kubebuilder:validation:Minimum=1
 	// +operator-sdk:csv:customresourcedefinitions:order=17,type=spec,displayName="Max Replicas",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
 	MaxReplicas int32 `json:"maxReplicas,omitempty"`
@@ -216,7 +209,7 @@ type OpenLibertyApplicationService struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=14,type=spec,displayName="Target Port",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
 	TargetPort *int32 `json:"targetPort,omitempty"`
 
-	// 	A name of a secret that already contains TLS key, certificate and CA to be mounted in the pod.
+	// A name of a secret that already contains TLS key, certificate and CA to be mounted in the pod.
 	// +k8s:openapi-gen=true
 	// +operator-sdk:csv:customresourcedefinitions:order=15,type=spec,displayName="Certificate Secret Reference",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	CertificateSecretRef *string `json:"certificateSecretRef,omitempty"`
@@ -224,9 +217,8 @@ type OpenLibertyApplicationService struct {
 	// An array consisting of service ports.
 	Ports []corev1.ServicePort `json:"ports,omitempty"`
 
-	// +listType=atomic
-	Consumes []ServiceBindingConsumes `json:"consumes,omitempty"`
-	Provides *ServiceBindingProvides  `json:"provides,omitempty"`
+	// Expose the application as a bindable service. Defaults to false.
+	Bindable *bool `json:"bindable,omitempty"`
 }
 
 // Defines the desired state and cycle of applications.
@@ -250,36 +242,6 @@ type OpenLibertyApplicationStatefulSet struct {
 
 	// Annotations to be added only to the StatefulSet and resources owned by the StatefulSet
 	Annotations map[string]string `json:"annotations,omitempty"`
-}
-
-// Configures the OpenAPI information to expose.
-type ServiceBindingProvides struct {
-	// Service binding type to be provided by this CR. At this time, the only allowed value is openapi.
-	Category common.ServiceBindingCategory `json:"category"`
-
-	// Specifies context root of the service.
-	Context string `json:"context,omitempty"`
-
-	// Protocol of the provided service. Defauts to http.
-	Protocol string `json:"protocol,omitempty"`
-
-	Auth *ServiceBindingAuth `json:"auth,omitempty"`
-}
-
-// Represents a service to be consumed.
-// +k8s:openapi-gen=true
-type ServiceBindingConsumes struct {
-	// The name of the service to be consumed. If binding to an OpenLibertyApplication, then this would be the provider’s CR name.
-	Name string `json:"name"`
-
-	// The namespace of the service to be consumed. If binding to an OpenLibertyApplication, then this would be the provider’s CR namespace.
-	Namespace string `json:"namespace,omitempty"`
-
-	// The type of service binding to be consumed. At this time, the only allowed value is openapi.
-	Category common.ServiceBindingCategory `json:"category"`
-
-	// Optional field to specify which location in the pod, service binding secret should be mounted.
-	MountPath string `json:"mountPath,omitempty"`
 }
 
 // Defines settings of persisted storage for StatefulSets.
@@ -357,50 +319,14 @@ type OpenLibertyApplicationRoute struct {
 	InsecureEdgeTerminationPolicy *routev1.InsecureEdgeTerminationPolicyType `json:"insecureEdgeTerminationPolicy,omitempty"`
 }
 
-// Allows a service to provide authentication information.
-type ServiceBindingAuth struct {
-	// The secret that contains the username for authenticating.
-	Username corev1.SecretKeySelector `json:"username,omitempty"`
-	// The secret that contains the password for authenticating.
-	Password corev1.SecretKeySelector `json:"password,omitempty"`
-}
-
-// Represents service binding related parameters.
-type OpenLibertyApplicationBindings struct {
-
-	// A boolean to toggle whether the operator should automatically detect and use a ServiceBindingRequest resource with <CR_NAME>-binding naming format.
-	// +operator-sdk:csv:customresourcedefinitions:order=49,type=spec,displayName="Bindings Autodetect",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
-	AutoDetect *bool `json:"autoDetect,omitempty"`
-
-	// The name of a ServiceBindingRequest custom resource created manually in the same namespace as the application.
-	// +operator-sdk:csv:customresourcedefinitions:order=50,type=spec,displayName="Bindings Resource Ref",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
-	ResourceRef string `json:"resourceRef,omitempty"`
-
-	// A boolean to toggle whether the operator expose the application as a bindable service.
-	// +operator-sdk:csv:customresourcedefinitions:order=51,type=spec,displayName="Bindings Expose Enabled",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
-	Expose *OpenLibertyApplicationBindingExpose `json:"expose,omitempty"`
-
-	// A YAML object that represents a ServiceBindingRequest custom resource.
-	Embedded *runtime.RawExtension `json:"embedded,omitempty"`
-}
-
-// Encapsulates information exposed by the application.
-type OpenLibertyApplicationBindingExpose struct {
-	// A boolean to toggle whether the operator expose the application as a bindable service. The default value for this parameter is false.
-	Enabled *bool `json:"enabled,omitempty"`
-}
-
 // Defines the observed state of OpenLibertyApplication.
 // +k8s:openapi-gen=true
 type OpenLibertyApplicationStatus struct {
 	// +listType=atomic
 	// +operator-sdk:csv:customresourcedefinitions:type=status,displayName="Status Conditions",xDescriptors="urn:alm:descriptor:io.kubernetes.conditions"
-	Conditions       []StatusCondition       `json:"conditions,omitempty"`
-	ConsumedServices common.ConsumedServices `json:"consumedServices,omitempty"`
-	RouteAvailable   *bool                   `json:"routeAvailable,omitempty"`
-	// +listType=set
-	ResolvedBindings []string `json:"resolvedBindings,omitempty"`
-	ImageReference   string   `json:"imageReference,omitempty"`
+	Conditions     []StatusCondition `json:"conditions,omitempty"`
+	RouteAvailable *bool             `json:"routeAvailable,omitempty"`
+	ImageReference string            `json:"imageReference,omitempty"`
 
 	// +operator-sdk:csv:customresourcedefinitions:type=status,displayName="Service Binding Secret",xDescriptors="urn:alm:descriptor:io.kubernetes:Secret"
 	Binding *corev1.LocalObjectReference `json:"binding,omitempty"`
@@ -410,7 +336,6 @@ type OpenLibertyApplicationStatus struct {
 // +k8s:openapi-gen=true
 type StatusCondition struct {
 	LastTransitionTime *metav1.Time           `json:"lastTransitionTime,omitempty"`
-	LastUpdateTime     metav1.Time            `json:"lastUpdateTime,omitempty"`
 	Reason             string                 `json:"reason,omitempty"`
 	Message            string                 `json:"message,omitempty"`
 	Status             corev1.ConditionStatus `json:"status,omitempty"`
@@ -423,14 +348,10 @@ type StatusConditionType string
 const (
 	// StatusConditionTypeReconciled ...
 	StatusConditionTypeReconciled StatusConditionType = "Reconciled"
-
-	// StatusConditionTypeDependenciesSatisfied ...
-	StatusConditionTypeDependenciesSatisfied StatusConditionType = "DependenciesSatisfied"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// OpenLibertyApplication is the Schema for the OpenLibertyApplications API
 // +k8s:openapi-gen=true
 // +kubebuilder:resource:path=openlibertyapplications,scope=Namespaced,shortName=olapp;olapps
 // +kubebuilder:subresource:status
@@ -439,9 +360,9 @@ const (
 // +kubebuilder:printcolumn:name="Reconciled",type="string",JSONPath=".status.conditions[?(@.type=='Reconciled')].status",priority=0,description="Status of the reconcile condition"
 // +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.type=='Reconciled')].reason",priority=1,description="Reason for the failure of reconcile condition"
 // +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Reconciled')].message",priority=1,description="Failure message from reconcile condition"
-// +kubebuilder:printcolumn:name="DependenciesSatisfied",type="string",JSONPath=".status.conditions[?(@.type=='DependenciesSatisfied')].status",priority=1,description="Status of the application dependencies"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",priority=0,description="Age of the resource"
 //+operator-sdk:csv:customresourcedefinitions:displayName="OpenLibertyApplication",resources={{Deployment,v1},{Service,v1},{StatefulSet,v1},{Route,v1},{HorizontalPodAutoscaler,v1},{ServiceAccount,v1},{Secret,v1}}
+// Represents an instance of Open Liberty Application.
 type OpenLibertyApplication struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -669,14 +590,9 @@ func (cr *OpenLibertyApplication) GetService() common.BaseComponentService {
 	return cr.Spec.Service
 }
 
-// GetVersion returns application version
-func (cr *OpenLibertyApplication) GetVersion() string {
-	return cr.Spec.Version
-}
-
-// GetCreateAppDefinition returns a toggle for integration with kAppNav
-func (cr *OpenLibertyApplication) GetCreateAppDefinition() *bool {
-	return cr.Spec.CreateAppDefinition
+// GetApplicationVersion returns application version
+func (cr *OpenLibertyApplication) GetApplicationVersion() string {
+	return cr.Spec.ApplicationVersion
 }
 
 // GetApplicationName returns Application name to be used for integration with kAppNav
@@ -718,14 +634,6 @@ func (cr *OpenLibertyApplication) GetRoute() common.BaseComponentRoute {
 		return nil
 	}
 	return cr.Spec.Route
-}
-
-// GetBindings returns binding configuration for OpenLibertyApplication
-func (cr *OpenLibertyApplication) GetBindings() common.BaseComponentBindings {
-	if cr.Spec.Bindings == nil {
-		return nil
-	}
-	return cr.Spec.Bindings
 }
 
 // GetAffinity returns deployment's node and pod affinity settings
@@ -778,29 +686,6 @@ func (ss *OpenLibertyApplicationStatefulSet) GetStorage() common.BaseComponentSt
 // GetAnnotations returns annotations to be added only to the StatefulSet and its child resources
 func (rcss *OpenLibertyApplicationStatefulSet) GetAnnotations() map[string]string {
 	return rcss.Annotations
-}
-
-// GetResolvedBindings returns a map of all the service names to be consumed by the application
-func (s *OpenLibertyApplicationStatus) GetResolvedBindings() []string {
-	return s.ResolvedBindings
-}
-
-// SetResolvedBindings sets ConsumedServices
-func (s *OpenLibertyApplicationStatus) SetResolvedBindings(rb []string) {
-	s.ResolvedBindings = rb
-}
-
-// GetConsumedServices returns a map of all the service names to be consumed by the application
-func (s *OpenLibertyApplicationStatus) GetConsumedServices() common.ConsumedServices {
-	if s.ConsumedServices == nil {
-		return nil
-	}
-	return s.ConsumedServices
-}
-
-// SetConsumedServices sets ConsumedServices
-func (s *OpenLibertyApplicationStatus) SetConsumedServices(c common.ConsumedServices) {
-	s.ConsumedServices = c
 }
 
 // GetImageReference returns Docker image reference to be deployed by the CR
@@ -909,79 +794,14 @@ func (s *OpenLibertyApplicationService) GetPorts() []corev1.ServicePort {
 	return s.Ports
 }
 
-// GetProvides returns service provider configuration
-func (s *OpenLibertyApplicationService) GetProvides() common.ServiceBindingProvides {
-	if s.Provides == nil {
-		return nil
-	}
-	return s.Provides
-}
-
 // GetCertificateSecretRef returns a secret reference with a certificate
 func (s *OpenLibertyApplicationService) GetCertificateSecretRef() *string {
 	return s.CertificateSecretRef
 }
 
-// GetCategory returns category of a service provider configuration
-func (p *ServiceBindingProvides) GetCategory() common.ServiceBindingCategory {
-	return p.Category
-}
-
-// GetContext returns context of a service provider configuration
-func (p *ServiceBindingProvides) GetContext() string {
-	return p.Context
-}
-
-// GetAuth returns secret of a service provider configuration
-func (p *ServiceBindingProvides) GetAuth() common.ServiceBindingAuth {
-	if p.Auth == nil {
-		return nil
-	}
-	return p.Auth
-}
-
-// GetProtocol returns protocol of a service provider configuration
-func (p *ServiceBindingProvides) GetProtocol() string {
-	return p.Protocol
-}
-
-// GetConsumes returns a list of service consumers' configuration
-func (s *OpenLibertyApplicationService) GetConsumes() []common.ServiceBindingConsumes {
-	consumes := make([]common.ServiceBindingConsumes, len(s.Consumes))
-	for i := range s.Consumes {
-		consumes[i] = &s.Consumes[i]
-	}
-	return consumes
-}
-
-// GetName returns service name of a service consumer configuration
-func (c *ServiceBindingConsumes) GetName() string {
-	return c.Name
-}
-
-// GetNamespace returns namespace of a service consumer configuration
-func (c *ServiceBindingConsumes) GetNamespace() string {
-	return c.Namespace
-}
-
-// GetCategory returns category of a service consumer configuration
-func (c *ServiceBindingConsumes) GetCategory() common.ServiceBindingCategory {
-	return common.ServiceBindingCategoryOpenAPI
-}
-
-// GetMountPath returns mount path of a service consumer configuration
-func (c *ServiceBindingConsumes) GetMountPath() string {
-	return c.MountPath
-}
-
-// GetUsername returns username of a service binding auth object
-func (a *ServiceBindingAuth) GetUsername() corev1.SecretKeySelector {
-	return a.Username
-}
-
-// GetPassword returns password of a service binding auth object
-func (a *ServiceBindingAuth) GetPassword() corev1.SecretKeySelector {
-	return a.Password
+// GetBindable returns whether the application should be exposable as a service
+func (s *OpenLibertyApplicationService) GetBindable() *bool {
+	return s.Bindable
 }
 
 // GetLabels returns labels to be added on ServiceMonitor
@@ -1022,34 +842,6 @@ func (r *OpenLibertyApplicationRoute) GetHost() string {
 // GetPath returns path to use for the route
 func (r *OpenLibertyApplicationRoute) GetPath() string {
 	return r.Path
-}
-
-// GetAutoDetect returns a boolean to specify if the operator should auto-detect ServiceBinding CRs with the same name as the OpenLibertyApplication CR
-func (r *OpenLibertyApplicationBindings) GetAutoDetect() *bool {
-	return r.AutoDetect
-}
-
-// GetResourceRef returns name of ServiceBinding CRs created manually in the same namespace as the OpenLibertyApplication CR
-func (r *OpenLibertyApplicationBindings) GetResourceRef() string {
-	return r.ResourceRef
-}
-
-// GetEmbedded returns the embedded underlying Service Binding resource
-func (r *OpenLibertyApplicationBindings) GetEmbedded() *runtime.RawExtension {
-	return r.Embedded
-}
-
-// GetExpose returns the map used making this application a bindable service
-func (r *OpenLibertyApplicationBindings) GetExpose() common.BaseComponentExpose {
-	if r.Expose == nil {
-		return nil
-	}
-	return r.Expose
-}
-
-// GetEnabled returns whether the application should be exposable as a service
-func (e *OpenLibertyApplicationBindingExpose) GetEnabled() *bool {
-	return e.Enabled
 }
 
 // GetNodeAffinity returns node affinity
@@ -1115,10 +907,6 @@ func (cr *OpenLibertyApplication) Initialize() {
 		cr.Spec.Service.Port = 9080
 	}
 
-	if cr.Spec.Service.Provides != nil && cr.Spec.Service.Provides.Protocol == "" {
-		cr.Spec.Service.Provides.Protocol = "http"
-	}
-
 }
 
 // GetLabels returns set of labels to be added to all resources
@@ -1131,18 +919,14 @@ func (cr *OpenLibertyApplication) GetLabels() map[string]string {
 		"app.kubernetes.io/part-of":    cr.Spec.ApplicationName,
 	}
 
-	if cr.Spec.Version != "" {
-		labels["app.kubernetes.io/version"] = cr.Spec.Version
+	if cr.Spec.ApplicationVersion != "" {
+		labels["app.kubernetes.io/version"] = cr.Spec.ApplicationVersion
 	}
 
 	for key, value := range cr.Labels {
 		if key != "app.kubernetes.io/instance" {
 			labels[key] = value
 		}
-	}
-
-	if cr.Spec.Service != nil && cr.Spec.Service.Provides != nil {
-		labels["service.app.stacks/bindable"] = "true"
 	}
 
 	return labels
@@ -1176,16 +960,6 @@ func (c *StatusCondition) GetLastTransitionTime() *metav1.Time {
 // SetLastTransitionTime sets time of last status change
 func (c *StatusCondition) SetLastTransitionTime(t *metav1.Time) {
 	c.LastTransitionTime = t
-}
-
-// GetLastUpdateTime return time of last status update
-func (c *StatusCondition) GetLastUpdateTime() metav1.Time {
-	return c.LastUpdateTime
-}
-
-// SetLastUpdateTime sets time of last status update
-func (c *StatusCondition) SetLastUpdateTime(t metav1.Time) {
-	c.LastUpdateTime = t
 }
 
 // GetMessage return condition's message
@@ -1257,7 +1031,6 @@ func (s *OpenLibertyApplicationStatus) SetCondition(c common.StatusCondition) {
 		condition.SetLastTransitionTime(&metav1.Time{Time: time.Now()})
 	}
 
-	condition.SetLastUpdateTime(metav1.Time{Time: time.Now()})
 	condition.SetReason(c.GetReason())
 	condition.SetMessage(c.GetMessage())
 	condition.SetStatus(c.GetStatus())
@@ -1271,8 +1044,6 @@ func convertToCommonStatusConditionType(c StatusConditionType) common.StatusCond
 	switch c {
 	case StatusConditionTypeReconciled:
 		return common.StatusConditionTypeReconciled
-	case StatusConditionTypeDependenciesSatisfied:
-		return common.StatusConditionTypeDependenciesSatisfied
 	default:
 		panic(c)
 	}
@@ -1282,8 +1053,6 @@ func convertFromCommonStatusConditionType(c common.StatusConditionType) StatusCo
 	switch c {
 	case common.StatusConditionTypeReconciled:
 		return StatusConditionTypeReconciled
-	case common.StatusConditionTypeDependenciesSatisfied:
-		return StatusConditionTypeDependenciesSatisfied
 	default:
 		panic(c)
 	}
