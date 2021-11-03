@@ -4,16 +4,16 @@ layout:
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
-projectName: open-liberty-operator
+projectName: open-liberty
 repo: github.com/OpenLiberty/open-liberty-operator
 resources:
-- group: openliberty.io
+- group: apps.openliberty.io
   kind: OpenLibertyApplication
-  version: v1beta1
-- group: openliberty.io
+  version: v1beta2
+- group: apps.openliberty.io
   kind: OpenLibertyDump
-  version: v1beta1
-- group: openliberty.io
+  version: v1beta2
+- group: apps.openliberty.io
   kind: OpenLibertyTrace
-  version: v1beta1
+  version: v1beta2
 version: "3"

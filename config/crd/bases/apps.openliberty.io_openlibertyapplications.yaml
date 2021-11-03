@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.6.0
   creationTimestamp: null
-  name: openlibertyapplications.openliberty.io
+  name: openlibertyapplications.apps.openliberty.io
 spec:
-  group: openliberty.io
+  group: apps.openliberty.io
   names:
     kind: OpenLibertyApplication
     listKind: OpenLibertyApplicationList
@@ -47,7 +47,7 @@ spec:
       jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
-    name: v1beta1
+    name: v1beta2
     schema:
       openAPIV3Schema:
         description: Represents an instance of Open Liberty Application.

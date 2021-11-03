@@ -84,7 +84,7 @@ rules:
   verbs:
   - get
 - apiGroups:
-  - openliberty.io
+  - apps.openliberty.io
   resources:
   - openlibertyapplications
   - openlibertydumps

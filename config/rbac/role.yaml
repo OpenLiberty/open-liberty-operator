@@ -22,6 +22,30 @@ rules:
   verbs:
   - update
 - apiGroups:
+  - apps.openliberty.io
+  resources:
+  - openlibertyapplications
+  - openlibertyapplications/finalizers
+  - openlibertyapplications/status
+  verbs:
+  - '*'
+- apiGroups:
+  - apps.openliberty.io
+  resources:
+  - openlibertydumps
+  - openlibertydumps/finalizers
+  - openlibertydumps/status
+  verbs:
+  - '*'
+- apiGroups:
+  - apps.openliberty.io
+  resources:
+  - openlibertytraces
+  - openlibertytraces/finalizers
+  - openlibertytraces/status
+  verbs:
+  - '*'
+- apiGroups:
   - autoscaling
   resources:
   - horizontalpodautoscalers
@@ -62,30 +86,6 @@ rules:
   - networking.k8s.io
   resources:
   - ingresses
-  verbs:
-  - '*'
-- apiGroups:
-  - openliberty.io
-  resources:
-  - openlibertyapplications
-  - openlibertyapplications/finalizers
-  - openlibertyapplications/status
-  verbs:
-  - '*'
-- apiGroups:
-  - openliberty.io
-  resources:
-  - openlibertydumps
-  - openlibertydumps/finalizers
-  - openlibertydumps/status
-  verbs:
-  - '*'
-- apiGroups:
-  - openliberty.io
-  resources:
-  - openlibertytraces
-  - openlibertytraces/finalizers
-  - openlibertytraces/status
   verbs:
   - '*'
 - apiGroups:

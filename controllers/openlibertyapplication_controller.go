@@ -14,7 +14,7 @@ import (
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
 	oputils "github.com/application-stacks/runtime-component-operator/utils"
 
-	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/api/v1beta1"
+	openlibertyv1beta2 "github.com/OpenLiberty/open-liberty-operator/api/v1beta2"
 
 	prometheusv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	imagev1 "github.com/openshift/api/image/v1"
@@ -53,7 +53,7 @@ type ReconcileOpenLiberty struct {
 	Log logr.Logger
 }
 
-// +kubebuilder:rbac:groups=openliberty.io,resources=openlibertyapplications;openlibertyapplications/status;openlibertyapplications/finalizers,verbs=*,namespace=open-liberty-operator
+// +kubebuilder:rbac:groups=apps.openliberty.io,resources=openlibertyapplications;openlibertyapplications/status;openlibertyapplications/finalizers,verbs=*,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=*,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=apps,resources=deployments/finalizers;statefulsets,verbs=update,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=core,resources=services;secrets;serviceaccounts;configmaps,verbs=*,namespace=open-liberty-operator
@@ -64,7 +64,7 @@ type ReconcileOpenLiberty struct {
 // +kubebuilder:rbac:groups=serving.knative.dev,resources=services,verbs=*,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=*,namespace=open-liberty-operator
 
-const applicationFinalizer = "finalizer.openlibertyapplications.openliberty.io"
+const applicationFinalizer = "finalizer.openlibertyapplications.apps.openliberty.io"
 
 // Reconcile reads that state of the cluster for a OpenLiberty object and makes changes based on the state read
 // and what is in the OpenLiberty.Spec
@@ -110,7 +110,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	// Fetch the OpenLiberty instance
-	instance := &openlibertyv1beta1.OpenLibertyApplication{}
+	instance := &openlibertyv1beta2.OpenLibertyApplication{}
 	var ba common.BaseComponent = instance
 	err = r.GetClient().Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
@@ -541,8 +541,8 @@ func getMonitoringEnabledLabelName(ba common.BaseComponent) string {
 
 func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 
-	mgr.GetFieldIndexer().IndexField(context.Background(), &openlibertyv1beta1.OpenLibertyApplication{}, indexFieldImageStreamName, func(obj client.Object) []string {
-		instance := obj.(*openlibertyv1beta1.OpenLibertyApplication)
+	mgr.GetFieldIndexer().IndexField(context.Background(), &openlibertyv1beta2.OpenLibertyApplication{}, indexFieldImageStreamName, func(obj client.Object) []string {
+		instance := obj.(*openlibertyv1beta2.OpenLibertyApplication)
 		image, err := imageutil.ParseDockerImageReference(instance.Spec.ApplicationImage)
 		if err == nil {
 			imageNamespace := image.Namespace
@@ -615,7 +615,7 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 		},
 	}
 
-	b := ctrl.NewControllerManagedBy(mgr).For(&openlibertyv1beta1.OpenLibertyApplication{}, builder.WithPredicates(pred)).
+	b := ctrl.NewControllerManagedBy(mgr).For(&openlibertyv1beta2.OpenLibertyApplication{}, builder.WithPredicates(pred)).
 		Owns(&corev1.Service{}, builder.WithPredicates(predSubResource)).
 		Owns(&corev1.Secret{}, builder.WithPredicates(predSubResource)).
 		Owns(&appsv1.Deployment{}, builder.WithPredicates(predSubResWithGenCheck)).
@@ -665,12 +665,12 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 	return b.Complete(r)
 }
 
-func (r *ReconcileOpenLiberty) finalizeOpenLibertyApplication(reqLogger logr.Logger, olapp *openlibertyv1beta1.OpenLibertyApplication, pvcName string, pvcNamespace string) error {
+func (r *ReconcileOpenLiberty) finalizeOpenLibertyApplication(reqLogger logr.Logger, olapp *openlibertyv1beta2.OpenLibertyApplication, pvcName string, pvcNamespace string) error {
 	r.deletePVC(reqLogger, pvcName, pvcNamespace)
 	return nil
 }
 
-func (r *ReconcileOpenLiberty) addFinalizer(reqLogger logr.Logger, olapp *openlibertyv1beta1.OpenLibertyApplication) error {
+func (r *ReconcileOpenLiberty) addFinalizer(reqLogger logr.Logger, olapp *openlibertyv1beta2.OpenLibertyApplication) error {
 	reqLogger.Info("Adding Finalizer for OpenLibertyApplication")
 	olapp.SetFinalizers(append(olapp.GetFinalizers(), applicationFinalizer))
 

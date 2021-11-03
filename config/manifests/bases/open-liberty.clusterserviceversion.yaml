@@ -7,16 +7,16 @@ metadata:
     categories: Application Runtime
     repository: https://github.com/OpenLiberty/open-liberty-operator
     support: IBM
-  name: open-liberty-operator.v0.0.0
+  name: open-liberty.v0.0.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - description: OpenLibertyApplication is the Schema for the OpenLibertyApplications API
+    - description: Represents an instance of Open Liberty Application.
       displayName: OpenLibertyApplication
       kind: OpenLibertyApplication
-      name: openlibertyapplications.openliberty.io
+      name: openlibertyapplications.apps.openliberty.io
       resources:
       - kind: Deployment
         name: ""
@@ -54,7 +54,7 @@ spec:
         path: applicationVersion
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Policy for pulling container images. Defaults to IfNotPresent. Parameters spec.autoscaling.maxReplicas and spec.resourceConstraints.requests.cpu must be specified.
+      - description: Policy for pulling container images. Defaults to IfNotPresent.
         displayName: Pull Policy
         path: pullPolicy
         x-descriptors:
@@ -105,14 +105,14 @@ spec:
         path: service.targetPort
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:number
-      - description: "\tA name of a secret that already contains TLS key, certificate and CA to be mounted in the pod."
+      - description: A name of a secret that already contains TLS key, certificate and CA to be mounted in the pod.
         displayName: Certificate Secret Reference
         path: service.certificateSecretRef
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
       - displayName: Auto Scaling
         path: autoscaling
-      - description: Required field for autoscaling. Upper limit for the number of pods that can be set by the autoscaler.
+      - description: Required field for autoscaling. Upper limit for the number of pods that can be set by the autoscaler. Parameter spec.resourceConstraints.requests.cpu must also be specified.
         displayName: Max Replicas
         path: autoscaling.maxReplicas
         x-descriptors:
@@ -282,17 +282,17 @@ spec:
         path: conditions
         x-descriptors:
         - urn:alm:descriptor:io.kubernetes.conditions
-      version: v1beta1
+      version: v1beta2
     - description: OpenLibertyDump is the Schema for the openlibertydumps API
       displayName: OpenLibertyDump
       kind: OpenLibertyDump
-      name: openlibertydumps.openliberty.io
-      version: v1beta1
+      name: openlibertydumps.apps.openliberty.io
+      version: v1beta2
     - description: OpenLibertyTrace is the schema for the openlibertytraces API
       displayName: OpenLibertyTrace
       kind: OpenLibertyTrace
-      name: openlibertytraces.openliberty.io
-      version: v1beta1
+      name: openlibertytraces.apps.openliberty.io
+      version: v1beta2
   description: |
     This advanced Operator can be used to deploy and manage Open Liberty applications with consistent, production-grade QoS. This operator is based on the [Runtime Component Operator](https://github.com/application-stacks/runtime-component-operator) and provides all of its capabilities in addition to Open Liberty specific features such as gathering traces and dumps (Day-2 operations) and easily configuring and managing the single sign-on information for your Open Liberty applications.
 

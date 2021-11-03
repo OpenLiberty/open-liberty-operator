@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.6.0
   creationTimestamp: null
-  name: openlibertydumps.openliberty.io
+  name: openlibertydumps.apps.openliberty.io
 spec:
-  group: openliberty.io
+  group: apps.openliberty.io
   names:
     kind: OpenLibertyDump
     listKind: OpenLibertyDumpList
@@ -52,7 +52,7 @@ spec:
       jsonPath: .status.dumpFile
       name: Dump file
       type: string
-    name: v1beta1
+    name: v1beta2
     schema:
       openAPIV3Schema:
         description: OpenLibertyDump is the Schema for the openlibertydumps API
