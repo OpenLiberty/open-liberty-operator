@@ -56,7 +56,7 @@ type ReconcileOpenLiberty struct {
 // +kubebuilder:rbac:groups=apps.openliberty.io,resources=openlibertyapplications;openlibertyapplications/status;openlibertyapplications/finalizers,verbs=*,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=*,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=apps,resources=deployments/finalizers;statefulsets,verbs=update,namespace=open-liberty-operator
-// +kubebuilder:rbac:groups=core,resources=services;secrets;serviceaccounts;configmaps,verbs=*,namespace=open-liberty-operator
+// +kubebuilder:rbac:groups=core,resources=services;secrets;serviceaccounts;configmaps;persistentvolumeclaims,verbs=*,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=*,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=*,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes;routes/custom-host,verbs=*,namespace=open-liberty-operator
