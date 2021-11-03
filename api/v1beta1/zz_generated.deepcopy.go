@@ -468,11 +468,6 @@ func (in *OpenLibertyApplicationSpec) DeepCopyInto(out *OpenLibertyApplicationSp
 		*out = new(string)
 		**out = **in
 	}
-	if in.CreateAppDefinition != nil {
-		in, out := &in.CreateAppDefinition, &out.CreateAppDefinition
-		*out = new(bool)
-		**out = **in
-	}
 	if in.Monitoring != nil {
 		in, out := &in.Monitoring, &out.Monitoring
 		*out = new(OpenLibertyApplicationMonitoring)

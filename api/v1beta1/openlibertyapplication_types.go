@@ -59,9 +59,6 @@ type OpenLibertyApplicationSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=28,type=spec,displayName="Service Account Name",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	ServiceAccountName *string `json:"serviceAccountName,omitempty"`
 
-	// +operator-sdk:csv:customresourcedefinitions:order=31,type=spec,displayName="Create App Definition",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
-	CreateAppDefinition *bool `json:"createAppDefinition,omitempty"`
-
 	// +operator-sdk:csv:customresourcedefinitions:order=33,type=spec,displayName="Monitoring"
 	Monitoring *OpenLibertyApplicationMonitoring `json:"monitoring,omitempty"`
 
@@ -596,11 +593,6 @@ func (cr *OpenLibertyApplication) GetService() common.BaseComponentService {
 // GetApplicationVersion returns application version
 func (cr *OpenLibertyApplication) GetApplicationVersion() string {
 	return cr.Spec.ApplicationVersion
-}
-
-// GetCreateAppDefinition returns a toggle for integration with kAppNav
-func (cr *OpenLibertyApplication) GetCreateAppDefinition() *bool {
-	return cr.Spec.CreateAppDefinition
 }
 
 // GetApplicationName returns Application name to be used for integration with kAppNav

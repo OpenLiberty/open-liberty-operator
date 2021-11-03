@@ -167,10 +167,6 @@ spec:
         path: serviceability
       - displayName: Single sign-on
         path: sso
-      - displayName: Create App Definition
-        path: createAppDefinition
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - displayName: Monitoring
         path: monitoring
       - description: Labels to set on ServiceMonitor.

@@ -708,8 +708,6 @@ spec:
                     format: int32
                     type: integer
                 type: object
-              createAppDefinition:
-                type: boolean
               createKnativeService:
                 description: A boolean to toggle the creation of Knative resources
                   and usage of Knative serving.
