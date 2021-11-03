@@ -29,10 +29,7 @@ rules:
   - list
   - create
   - delete
-<<<<<<< HEAD
   - patch
-=======
->>>>>>> eba3225 (Enable e2e tests)
 - apiGroups:
   - ""
   resources:
@@ -50,10 +47,7 @@ rules:
   - statefulsets
   verbs:
   - get
-<<<<<<< HEAD
   - create
-=======
->>>>>>> eba3225 (Enable e2e tests)
 - apiGroups:
   - autoscaling
   resources:
@@ -92,13 +86,9 @@ rules:
 - apiGroups:
   - apps.openliberty.io
   resources:
-<<<<<<< HEAD
   - openlibertyapplications
   - openlibertydumps
   - openlibertytraces
-=======
-  - openlibertyapplication
->>>>>>> eba3225 (Enable e2e tests)
   verbs:
   - get
   - list
