@@ -1,0 +1,8 @@
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyApplication
+metadata:
+  name: example-openliberty-applicaion
+spec:
+  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
+  replicas: 1
+  pullPolicy: "Never"

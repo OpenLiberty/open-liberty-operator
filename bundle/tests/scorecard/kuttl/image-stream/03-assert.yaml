@@ -6,7 +6,7 @@ spec:
   template:
     spec:
       containers:
-      - image: openliberty/open-liberty@sha256:ca5f5b211bc0d26ecdc586c72605712c30a365b77e3d0428ed492b03adc61b63
+      - image: icr.io/appcafe/open-liberty@sha256:4f2f2bda45596dbfc4406024c6b01a9d019e06f7aef3c6289dc05f354c5b9036
 status:
   readyReplicas: 1
 ---
@@ -14,7 +14,7 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
-  - image: openliberty/open-liberty@sha256:ca5f5b211bc0d26ecdc586c72605712c30a365b77e3d0428ed492b03adc61b63
+  - image: icr.io/appcafe/open-liberty@sha256:4f2f2bda45596dbfc4406024c6b01a9d019e06f7aef3c6289dc05f354c5b9036
 status:
   containerStatuses:
   - ready: true

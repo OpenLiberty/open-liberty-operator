@@ -3,8 +3,8 @@ kind: OpenLibertyApplication
 metadata:
   name: persistent-liberty
 spec:
-  applicationImage: openliberty/open-liberty:kernel-java8-openj9-ubi
+  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
   replicas: 1
   expose: false
-  statefulSet:
   volumeMounts:
+  statefulSet: {}

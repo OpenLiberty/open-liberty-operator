@@ -6,11 +6,11 @@ spec:
   tags:
   - from:
       kind: DockerImage
-      name: openliberty/open-liberty:kernel-java8-openj9-ubi
+      name: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
     name: latest
 status:
   tags:
   - tag: latest
     items:
-    - image: sha256:ca5f5b211bc0d26ecdc586c72605712c30a365b77e3d0428ed492b03adc61b63
+    - image: sha256:4f2f2bda45596dbfc4406024c6b01a9d019e06f7aef3c6289dc05f354c5b9036
 

@@ -1,0 +1,6 @@
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyApplication
+metadata:
+  name: service-monitor-liberty
+spec:
+  monitoring:

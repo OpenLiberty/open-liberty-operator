@@ -1,0 +1,6 @@
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyApplication
+metadata:
+  name: my-liberty-app
+spec:
+  replicas:

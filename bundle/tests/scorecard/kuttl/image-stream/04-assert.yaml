@@ -6,7 +6,7 @@ spec:
   template:
     spec:
       containers:
-      - image: openliberty/open-liberty:kernel-java8-openj9-ubi
+      - image: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
 status:
   readyReplicas: 1
 ---
@@ -14,7 +14,7 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
-  - image: openliberty/open-liberty:kernel-java8-openj9-ubi
+  - image: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
 status:
   containerStatuses:
   - ready: true

@@ -3,7 +3,7 @@ kind: OpenLibertyApplication
 metadata:
   name: provider-liberty
 spec:
-  applicationImage: openliberty/open-liberty:full-java8-openj9-ubi
+  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
   sso:
     github:
       hostname: "github.com"

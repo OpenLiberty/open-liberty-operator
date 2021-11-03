@@ -1,0 +1,13 @@
+apiVersion: openliberty.io/v1beta1
+kind: OpenLibertyApplication
+metadata:
+  name: route
+spec:
+  # Add fields here
+  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
+  replicas: 1
+  expose: true
+  route:
+    host: myapp.mycompany.com
+
+

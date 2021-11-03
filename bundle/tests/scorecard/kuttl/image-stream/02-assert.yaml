@@ -9,7 +9,7 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
-  - image: openliberty/open-liberty@sha256:ad76a227da61fc63f1b9ea8af328091527cc556d357754d818624cb1aaceb053
+  - image: icr.io/appcafe/open-liberty@sha256:df4cdd723c3a01dd308fb4e5be78119fa95e2f09aff19892d86f55ab6cb4c2fd
 status:
   containerStatuses:
   - ready: true
