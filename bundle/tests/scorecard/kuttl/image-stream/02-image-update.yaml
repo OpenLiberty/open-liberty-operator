@@ -6,6 +6,6 @@ spec:
   tags:
   - from:
       kind: DockerImage
-      name: openliberty/open-liberty:kernel-java11-openj9-ubi
+      name: icr.io/appcafe/open-liberty:full-java11-openj9-ubi
     name: latest
 

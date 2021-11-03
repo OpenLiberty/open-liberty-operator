@@ -13,3 +13,6 @@ spec:
         initialDelaySeconds: 1
       livenessProbe:
         initialDelaySeconds: 8
+      startupProbe:
+        failureThreshold: 10
+        periodSeconds: 5
