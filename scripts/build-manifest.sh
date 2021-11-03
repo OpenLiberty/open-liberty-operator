@@ -46,6 +46,11 @@ build_manifests() {
       break
     fi
 
+    if [[ "${tag}" = "v0.0.1" ]]; then
+      echo "****** Skipping Helm based operator"
+      continue
+    fi
+
     ## Remove potential leading 'v' from tags
     local dockerTag="${tag#*v}"
     echo "****** Building manifest list for: ${dockerTag}"

@@ -64,6 +64,11 @@ build_previous_releases() {
       break
     fi
 
+    if [[ "${tag}" = "v0.0.1" ]]; then
+      echo "****** Skipping Helm based operator..."
+      continue
+    fi
+
     git checkout -q "${tag}"
 
     ## Remove potential leading 'v' from tags
@@ -81,7 +86,6 @@ build_release() {
   echo "*** Building ${full_image} for ${arch}"
   docker build -t "${full_image}" .
   return $?
-
 }
 
 push_release() {
