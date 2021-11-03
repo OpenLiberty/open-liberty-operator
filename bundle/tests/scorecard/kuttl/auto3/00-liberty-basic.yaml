@@ -3,7 +3,7 @@ kind: OpenLibertyApplication
 metadata:
   name: autoscaling3-liberty
 spec:
-  applicationImage: openliberty/open-liberty:kernel-java8-openj9-ubi
+  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
   replicas: 1
   expose: false
   readinessProbe:
