@@ -174,16 +174,16 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		instance.Annotations = oputils.MergeMaps(instance.Annotations, oputils.GetOpenShiftAnnotations(instance))
 	}
 
-	currentGen := instance.Generation
+	// currentGen := instance.Generation
 	err = r.GetClient().Update(context.TODO(), instance)
 	if err != nil {
 		reqLogger.Error(err, "Error updating OpenLibertyApplication")
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
-	if currentGen == 1 {
-		return reconcile.Result{}, nil
-	}
+	// if currentGen == 1 {
+	// 	return reconcile.Result{}, nil
+	// }
 
 	defaultMeta := metav1.ObjectMeta{
 		Name:      instance.Name,
@@ -225,25 +225,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 	}
 
-	result, err := r.ReconcileProvides(instance)
-	if err != nil || result != (reconcile.Result{}) {
-		return result, err
-	}
-
-	result, err = r.ReconcileConsumes(instance)
-	if err != nil || result != (reconcile.Result{}) {
-		return result, err
-	}
-
-	if r.IsServiceBindingSupported() {
-		result, err = r.ReconcileBindings(instance)
-		if err != nil || result != (reconcile.Result{}) {
-			return result, err
-		}
-	} else if instance.Spec.Bindings != nil {
-		return r.ManageError(errors.New("failed to reconcile as the operator failed to find Service Binding CRDs"), common.StatusConditionTypeReconciled, instance)
-	}
-	resolvedBindingSecret, err := r.GetResolvedBindingSecret(ba)
+	err = r.ReconcileBindings(instance)
 	if err != nil {
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
@@ -305,7 +287,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			ksvc := &servingv1.Service{ObjectMeta: defaultMeta}
 			err = r.CreateOrUpdate(ksvc, instance, func() error {
 				oputils.CustomizeKnativeService(ksvc, instance)
-				oputils.CustomizeServiceBinding(resolvedBindingSecret, &ksvc.Spec.Template.Spec.PodSpec, instance)
 				return nil
 			})
 
@@ -392,7 +373,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			oputils.CustomizeStatefulSet(statefulSet, instance)
 			oputils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
 			oputils.CustomizePersistence(statefulSet, instance)
-			oputils.CustomizeServiceBinding(resolvedBindingSecret, &statefulSet.Spec.Template.Spec, instance)
 			lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance)
 			if instance.Spec.SSO != nil {
 				err = lutils.CustomizeEnvSSO(&statefulSet.Spec.Template, instance, r.GetClient(), r.IsOpenShift())
@@ -430,7 +410,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		err = r.CreateOrUpdate(deploy, instance, func() error {
 			oputils.CustomizeDeployment(deploy, instance)
 			oputils.CustomizePodSpec(&deploy.Spec.Template, instance)
-			oputils.CustomizeServiceBinding(resolvedBindingSecret, &deploy.Spec.Template.Spec, instance)
 			lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance)
 			if instance.Spec.SSO != nil {
 				err = lutils.CustomizeEnvSSO(&deploy.Spec.Template, instance, r.GetClient(), r.IsOpenShift())
