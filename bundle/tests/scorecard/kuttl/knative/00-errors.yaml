@@ -1,5 +1,5 @@
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: knative1-app
+  name: knative1-lib-app
 
