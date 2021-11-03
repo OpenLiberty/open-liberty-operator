@@ -3,7 +3,7 @@ package controllers
 import (
 	"context"
 
-	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/api/v1beta1"
+	openlibertyv1beta2 "github.com/OpenLiberty/open-liberty-operator/api/v1beta2"
 
 	appstacksutils "github.com/application-stacks/runtime-component-operator/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -64,7 +64,7 @@ func (e *EnqueueRequestsForCustomIndexField) handle(evtMeta metav1.Object, evtOb
 
 // CustomMatcher is an interface for matching apps that satisfy a custom logic
 type CustomMatcher interface {
-	Match(metav1.Object) ([]openlibertyv1beta1.OpenLibertyApplication, error)
+	Match(metav1.Object) ([]openlibertyv1beta2.OpenLibertyApplication, error)
 }
 
 // ImageStreamMatcher implements CustomMatcher for Image Streams
@@ -74,8 +74,8 @@ type ImageStreamMatcher struct {
 }
 
 // Match returns all applications using the input ImageStreamTag
-func (i *ImageStreamMatcher) Match(imageStreamTag metav1.Object) ([]openlibertyv1beta1.OpenLibertyApplication, error) {
-	apps := []openlibertyv1beta1.OpenLibertyApplication{}
+func (i *ImageStreamMatcher) Match(imageStreamTag metav1.Object) ([]openlibertyv1beta2.OpenLibertyApplication, error) {
+	apps := []openlibertyv1beta2.OpenLibertyApplication{}
 	var namespaces []string
 	if appstacksutils.IsClusterWide(i.WatchNamespaces) {
 		nsList := &corev1.NamespaceList{}
@@ -89,7 +89,7 @@ func (i *ImageStreamMatcher) Match(imageStreamTag metav1.Object) ([]openlibertyv
 		namespaces = i.WatchNamespaces
 	}
 	for _, ns := range namespaces {
-		appList := &openlibertyv1beta1.OpenLibertyApplicationList{}
+		appList := &openlibertyv1beta2.OpenLibertyApplicationList{}
 		err := i.Klient.List(context.Background(),
 			appList,
 			client.InNamespace(ns),

@@ -2,9 +2,9 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
-- bases/openliberty.io_openlibertyapplications.yaml
-- bases/openliberty.io_openlibertydumps.yaml
-- bases/openliberty.io_openlibertytraces.yaml
+- bases/apps.openliberty.io_openlibertyapplications.yaml
+- bases/apps.openliberty.io_openlibertydumps.yaml
+- bases/apps.openliberty.io_openlibertytraces.yaml
 
 # +kubebuilder:scaffold:crdkustomizeresource
 

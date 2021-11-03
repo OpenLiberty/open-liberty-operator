@@ -1,6 +1,6 @@
 # Check that when minReplicas is set to less that one that the update is rejected
 # There should be no change to the existing autoscale resource
-apiVersion: openliberty.io/v1beta1
+apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
   name: autoscaling1-liberty

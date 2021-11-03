@@ -28,7 +28,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/api/v1beta1"
+	openlibertyv1beta2 "github.com/OpenLiberty/open-liberty-operator/api/v1beta2"
 	"github.com/OpenLiberty/open-liberty-operator/controllers"
 
 	"github.com/application-stacks/runtime-component-operator/utils"
@@ -47,7 +47,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(openlibertyv1beta1.AddToScheme(scheme))
+	utilruntime.Must(openlibertyv1beta2.AddToScheme(scheme))
 
 	utilruntime.Must(routev1.AddToScheme(scheme))
 

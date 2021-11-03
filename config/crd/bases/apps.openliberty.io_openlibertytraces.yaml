@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.6.0
   creationTimestamp: null
-  name: openlibertytraces.openliberty.io
+  name: openlibertytraces.apps.openliberty.io
 spec:
-  group: openliberty.io
+  group: apps.openliberty.io
   names:
     kind: OpenLibertyTrace
     listKind: OpenLibertyTraceList
@@ -38,7 +38,7 @@ spec:
       name: Message
       priority: 1
       type: string
-    name: v1beta1
+    name: v1beta2
     schema:
       openAPIV3Schema:
         description: OpenLibertyTrace is the schema for the openlibertytraces API

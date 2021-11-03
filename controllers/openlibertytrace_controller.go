@@ -10,7 +10,7 @@ import (
 	oputils "github.com/application-stacks/runtime-component-operator/utils"
 	"github.com/go-logr/logr"
 
-	openlibertyv1beta1 "github.com/OpenLiberty/open-liberty-operator/api/v1beta1"
+	openlibertyv1beta2 "github.com/OpenLiberty/open-liberty-operator/api/v1beta2"
 	"github.com/OpenLiberty/open-liberty-operator/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -38,11 +38,11 @@ type ReconcileOpenLibertyTrace struct {
 	Log        logr.Logger
 }
 
-const traceFinalizer = "finalizer.openlibertytraces.openliberty.io"
+const traceFinalizer = "finalizer.openlibertytraces.apps.openliberty.io"
 const traceConfigFile = "/config/configDropins/overrides/add_trace.xml"
 const serviceabilityDir = "/serviceability"
 
-// +kubebuilder:rbac:groups=openliberty.io,resources=openlibertytraces;openlibertytraces/status;openlibertytraces/finalizers,verbs=*,namespace=open-liberty-operator
+// +kubebuilder:rbac:groups=apps.openliberty.io,resources=openlibertytraces;openlibertytraces/status;openlibertytraces/finalizers,verbs=*,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=core,resources=pods;pods/exec,verbs=*,namespace=open-liberty-operator
 
 // Reconcile reads that state of the cluster for a OpenLibertyTrace object and makes changes based on the state read
@@ -56,7 +56,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	reqLogger.Info("Reconciling OpenLibertyTrace")
 
 	// Fetch the OpenLibertyTrace instance
-	instance := &openlibertyv1beta1.OpenLibertyTrace{}
+	instance := &openlibertyv1beta2.OpenLibertyTrace{}
 	err := r.Client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -78,7 +78,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	podName := instance.Spec.PodName
 
 	prevPodName := instance.GetStatus().GetOperatedResource().GetOperatedResourceName()
-	prevTraceEnabled := instance.GetStatus().GetCondition(openlibertyv1beta1.OperationStatusConditionTypeEnabled).Status
+	prevTraceEnabled := instance.GetStatus().GetCondition(openlibertyv1beta2.OperationStatusConditionTypeEnabled).Status
 	podChanged := prevPodName != podName
 
 	// Check if the OpenLibertyTrace instance is marked to be deleted, which is
@@ -118,7 +118,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	if err != nil && errors.IsNotFound(err) {
 		//Pod is not found. Return and don't requeue
 		reqLogger.Error(err, "Pod "+podName+" was not found in namespace "+podNamespace)
-		return r.UpdateStatus(err, openlibertyv1beta1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
+		return r.UpdateStatus(err, openlibertyv1beta2.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
 	}
 
 	if instance.Spec.Disable != nil && *instance.Spec.Disable {
@@ -127,11 +127,11 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 			_, err = utils.ExecuteCommandInContainer(r.RestConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "rm -f " + traceConfigFile})
 			if err != nil {
 				reqLogger.Error(err, "Encountered error while disabling trace for pod "+podName+" in namespace "+podNamespace)
-				return r.UpdateStatus(err, openlibertyv1beta1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionTrue, podName, podChanged)
+				return r.UpdateStatus(err, openlibertyv1beta2.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionTrue, podName, podChanged)
 			}
 			reqLogger.Info("Disabled trace for pod " + podName + " in namespace " + podNamespace)
 		}
-		r.UpdateStatus(nil, openlibertyv1beta1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
+		r.UpdateStatus(nil, openlibertyv1beta2.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
 	} else {
 		traceOutputDir := serviceabilityDir + "/" + podNamespace + "/" + podName
 		traceConfig := "<server><logging traceSpecification=\"" + instance.Spec.TraceSpecification + "\" logDirectory=\"" + traceOutputDir + "\""
@@ -146,7 +146,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 		_, err = utils.ExecuteCommandInContainer(r.RestConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "mkdir -p " + traceOutputDir + " && echo '" + traceConfig + "' > " + traceConfigFile})
 		if err != nil {
 			reqLogger.Error(err, "Encountered error while setting up trace for pod "+podName+" in namespace "+podNamespace)
-			return r.UpdateStatus(err, openlibertyv1beta1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
+			return r.UpdateStatus(err, openlibertyv1beta2.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
 		}
 
 		if podChanged || prevTraceEnabled == corev1.ConditionFalse {
@@ -154,17 +154,17 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 		} else {
 			reqLogger.Info("Updated trace for pod " + podName + " in namespace " + podNamespace)
 		}
-		r.UpdateStatus(nil, openlibertyv1beta1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionTrue, podName, podChanged)
+		r.UpdateStatus(nil, openlibertyv1beta2.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionTrue, podName, podChanged)
 	}
 
 	return reconcile.Result{}, nil
 }
 
 // UpdateStatus updates the status
-func (r *ReconcileOpenLibertyTrace) UpdateStatus(issue error, conditionType openlibertyv1beta1.OperationStatusConditionType, instance openlibertyv1beta1.OpenLibertyTrace, newStatus corev1.ConditionStatus, podName string, podChanged bool) (reconcile.Result, error) {
+func (r *ReconcileOpenLibertyTrace) UpdateStatus(issue error, conditionType openlibertyv1beta2.OperationStatusConditionType, instance openlibertyv1beta2.OpenLibertyTrace, newStatus corev1.ConditionStatus, podName string, podChanged bool) (reconcile.Result, error) {
 	s := instance.GetStatus()
 
-	s.SetOperatedResource(openlibertyv1beta1.OperatedResource{ResourceName: podName, ResourceType: "pod"})
+	s.SetOperatedResource(openlibertyv1beta2.OperatedResource{ResourceName: podName, ResourceType: "pod"})
 
 	oldCondition := s.GetCondition(conditionType)
 	// Keep the old `LastTransitionTime` when pod and status have not changed
@@ -220,14 +220,14 @@ func (r *ReconcileOpenLibertyTrace) disableTraceOnPrevPod(reqLogger logr.Logger,
 	}
 }
 
-func (r *ReconcileOpenLibertyTrace) finalizeOpenLibertyTrace(reqLogger logr.Logger, olt *openlibertyv1beta1.OpenLibertyTrace, prevTraceEnabled corev1.ConditionStatus, prevPodName string, podNamespace string) error {
+func (r *ReconcileOpenLibertyTrace) finalizeOpenLibertyTrace(reqLogger logr.Logger, olt *openlibertyv1beta2.OpenLibertyTrace, prevTraceEnabled corev1.ConditionStatus, prevPodName string, podNamespace string) error {
 	if prevTraceEnabled == corev1.ConditionTrue {
 		r.disableTraceOnPrevPod(reqLogger, prevPodName, podNamespace)
 	}
 	return nil
 }
 
-func (r *ReconcileOpenLibertyTrace) addFinalizer(reqLogger logr.Logger, olt *openlibertyv1beta1.OpenLibertyTrace) error {
+func (r *ReconcileOpenLibertyTrace) addFinalizer(reqLogger logr.Logger, olt *openlibertyv1beta2.OpenLibertyTrace) error {
 	reqLogger.Info("Adding Finalizer for OpenLibertyTrace")
 	olt.SetFinalizers(append(olt.GetFinalizers(), traceFinalizer))
 
@@ -272,5 +272,5 @@ func (r *ReconcileOpenLibertyTrace) SetupWithManager(mgr ctrl.Manager) error {
 			return isClusterWide || watchNamespacesMap[e.Object.GetNamespace()]
 		},
 	}
-	return ctrl.NewControllerManagedBy(mgr).For(&openlibertyv1beta1.OpenLibertyTrace{}, builder.WithPredicates(pred)).Complete(r)
+	return ctrl.NewControllerManagedBy(mgr).For(&openlibertyv1beta2.OpenLibertyTrace{}, builder.WithPredicates(pred)).Complete(r)
 }

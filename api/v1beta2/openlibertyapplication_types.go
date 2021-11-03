@@ -1,4 +1,4 @@
-package v1beta1
+package v1beta2
 
 import (
 	"time"
@@ -625,7 +625,7 @@ func (cr *OpenLibertyApplication) GetSidecarContainers() []corev1.Container {
 
 // GetGroupName returns group name to be used in labels and annotation
 func (cr *OpenLibertyApplication) GetGroupName() string {
-	return "openliberty.io"
+	return "apps.openliberty.io"
 }
 
 // GetRoute returns route

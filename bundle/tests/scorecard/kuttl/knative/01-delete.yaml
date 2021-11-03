@@ -2,5 +2,5 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 delete:
 # Delete all OpenLibertyApplications in the test namespace
-- apiVersion: openliberty.io/v1beta1
+- apiVersion: apps.openliberty.io/v1beta2
   kind: OpenLibertyApplication
