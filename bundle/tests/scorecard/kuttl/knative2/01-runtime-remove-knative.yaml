@@ -6,7 +6,7 @@ metadata:
   name: knative2-lib-app
 spec:
   # Add fields here
-  applicationImage: icr.io/appcafe/open-liberty/open-liberty:full-java8-openj9-ubi
+  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
   replicas: 1
   createKnativeService: false
 
