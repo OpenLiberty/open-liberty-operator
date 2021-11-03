@@ -3,6 +3,7 @@
 readonly usage="Usage: e2e.sh -u <docker-username> -p <docker-password> --cluster-url <url> --cluster-token <token> --registry-name <name> --registry-namespace <namespace>"
 readonly SERVICE_ACCOUNT="travis-tests"
 readonly OC_CLIENT_VERSION="4.6.0"
+readonly CONTROLLER_MANAGER_NAME="olo-controller-manager"
 
 # setup_env: Download oc cli, log into our persistent cluster, and create a test project
 setup_env() {
@@ -97,12 +98,12 @@ main() {
     }
 
     # Wait for operator deployment to be ready
-    while [[ $(oc get deploy open-liberty-operator-controller-manager -o jsonpath='{ .status.readyReplicas }') -ne "1" ]]; do
-        echo "****** Waiting for open-liberty-operator-controller-manager to be ready..."
+    while [[ $(oc get deploy "${CONTROLLER_MANAGER_NAME}" -o jsonpath='{ .status.readyReplicas }') -ne "1" ]]; do
+        echo "****** Waiting for ${CONTROLLER_MANAGER_NAME} to be ready..."
         sleep 10
     done
 
-    echo "****** open-liberty-operator-controller-manager deployment is ready..."
+    echo "****** ${CONTROLLER_MANAGER_NAME} deployment is ready..."
 
     echo "****** Starting scorecard tests..."
     operator-sdk scorecard --verbose --selector=suite=kuttlsuite --namespace "${TEST_NAMESPACE}" --service-account scorecard-kuttl --wait-time 30m ./bundle || {
