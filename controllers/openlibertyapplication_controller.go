@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	networkingv1 "k8s.io/api/networking/v1"
 
@@ -33,25 +32,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
-
-//Constant Values
-const ssoSecretNameSuffix = "-olapp-sso"
-
-// Holds a list of namespaces the operator will be watching
-var watchNamespaces []string
 
 // ReconcileOpenLiberty reconciles a OpenLiberty object
 type ReconcileOpenLiberty struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	oputils.ReconcilerBase
-	Log logr.Logger
+	Log             logr.Logger
+	watchNamespaces []string
 }
+
+const applicationFinalizer = "finalizer.openlibertyapplications.apps.openliberty.io"
 
 // +kubebuilder:rbac:groups=apps.openliberty.io,resources=openlibertyapplications;openlibertyapplications/status;openlibertyapplications/finalizers,verbs=*,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=*,namespace=open-liberty-operator
@@ -64,13 +59,8 @@ type ReconcileOpenLiberty struct {
 // +kubebuilder:rbac:groups=serving.knative.dev,resources=services,verbs=*,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=*,namespace=open-liberty-operator
 
-const applicationFinalizer = "finalizer.openlibertyapplications.apps.openliberty.io"
-
-// Reconcile reads that state of the cluster for a OpenLiberty object and makes changes based on the state read
-// and what is in the OpenLiberty.Spec
-// Note:
-// The Controller will requeue the Request to be processed again if the returned error is non-nil or
-// Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
+// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
 func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconcile OpenLibertyApplication - starting")
@@ -78,8 +68,8 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// When running the operator locally, `ns` will be empty string
 	if ns == "" {
 		// Since this method can be called directly from unit test, populate `watchNamespaces`.
-		if watchNamespaces == nil {
-			watchNamespaces, err = oputils.GetWatchNamespaces()
+		if r.watchNamespaces == nil {
+			r.watchNamespaces, err = oputils.GetWatchNamespaces()
 			if err != nil {
 				reqLogger.Error(err, "Error getting watch namespace")
 				return reconcile.Result{}, err
@@ -87,7 +77,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 		// If the operator is running locally, use the first namespace in the `watchNamespaces`
 		// `watchNamespaces` must have at least one item
-		ns = watchNamespaces[0]
+		ns = r.watchNamespaces[0]
 	}
 
 	configMap, err := r.GetOpConfigMap("open-liberty-operator", ns)
@@ -174,7 +164,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		instance.Annotations = oputils.MergeMaps(instance.Annotations, oputils.GetOpenShiftAnnotations(instance))
 	}
 
-	// currentGen := instance.Generation
 	err = r.GetClient().Update(context.TODO(), instance)
 	if err != nil {
 		reqLogger.Error(err, "Error updating OpenLibertyApplication")
@@ -317,7 +306,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			svc.Labels[monitoringEnabledLabelName] = "true"
 		} else {
 			delete(svc.Labels, monitoringEnabledLabelName)
-
 		}
 		return nil
 	})
@@ -535,10 +523,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
 }
 
-func getMonitoringEnabledLabelName(ba common.BaseComponent) string {
-	return "monitor." + ba.GetGroupName() + "/enabled"
-}
-
 func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 
 	mgr.GetFieldIndexer().IndexField(context.Background(), &openlibertyv1beta2.OpenLibertyApplication{}, indexFieldImageStreamName, func(obj client.Object) []string {
@@ -570,7 +554,7 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 	pred := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// Ignore updates to CR status in which case metadata.Generation does not change
-			return e.ObjectOld.GetGeneration() != e.ObjectNew.GetGeneration() && (isClusterWide || watchNamespacesMap[e.ObjectOld.GetNamespace()])
+			return e.ObjectOld.GetGeneration() != e.ObjectNew.GetGeneration() && (isClusterWide || watchNamespacesMap[e.ObjectNew.GetNamespace()])
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
 			return isClusterWide || watchNamespacesMap[e.Object.GetNamespace()]
@@ -585,7 +569,6 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 
 	predSubResource := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			// Ignore updates to CR status in which case metadata.Generation does not change
 			return (isClusterWide || watchNamespacesMap[e.ObjectOld.GetNamespace()])
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
@@ -622,21 +605,6 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.StatefulSet{}, builder.WithPredicates(predSubResWithGenCheck)).
 		Owns(&autoscalingv1.HorizontalPodAutoscaler{}, builder.WithPredicates(predSubResource))
 
-	ssoSecretHandler := handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
-		if !strings.HasSuffix(o.GetName(), ssoSecretNameSuffix) {
-			return nil
-		}
-		return []ctrl.Request{
-			{
-				NamespacedName: types.NamespacedName{
-					Namespace: o.GetNamespace(),
-					Name:      strings.NewReplacer(ssoSecretNameSuffix, "").Replace(o.GetName()),
-				},
-			},
-		}
-	})
-
-	b.Watches(&source.Kind{Type: &corev1.Secret{}}, ssoSecretHandler)
 	ok, _ := r.IsGroupVersionSupported(routev1.SchemeGroupVersion.String(), "Route")
 	if ok {
 		b = b.Owns(&routev1.Route{}, builder.WithPredicates(predSubResource))
@@ -663,6 +631,10 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 		})
 	}
 	return b.Complete(r)
+}
+
+func getMonitoringEnabledLabelName(ba common.BaseComponent) string {
+	return "monitor." + ba.GetGroupName() + "/enabled"
 }
 
 func (r *ReconcileOpenLiberty) finalizeOpenLibertyApplication(reqLogger logr.Logger, olapp *openlibertyv1beta2.OpenLibertyApplication, pvcName string, pvcNamespace string) error {

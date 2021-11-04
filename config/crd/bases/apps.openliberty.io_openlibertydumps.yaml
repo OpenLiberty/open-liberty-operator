@@ -55,7 +55,7 @@ spec:
     name: v1beta2
     schema:
       openAPIV3Schema:
-        description: OpenLibertyDump is the Schema for the openlibertydumps API
+        description: The Schema for the Open Liberty dump API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

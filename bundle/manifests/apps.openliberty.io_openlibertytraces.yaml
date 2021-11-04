@@ -39,7 +39,7 @@ spec:
     name: v1beta2
     schema:
       openAPIV3Schema:
-        description: OpenLibertyTrace is the schema for the openlibertytraces API
+        description: The schema for the Open Liberty trace API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'

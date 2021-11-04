@@ -7,7 +7,6 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // OpenLibertyDumpSpec defines the desired state of OpenLibertyDump
-// +k8s:openapi-gen=true
 type OpenLibertyDumpSpec struct {
 	// The name of the Pod, which must be in the same namespace as the OpenLibertyDump CR.
 	PodName string `json:"podName"`
@@ -30,17 +29,14 @@ const (
 )
 
 // Defines the observed state of OpenLibertyDump
-// +k8s:openapi-gen=true
 type OpenLibertyDumpStatus struct {
 	// +listType=atomic
 	Conditions []OperationStatusCondition `json:"conditions,omitempty"`
 	DumpFile   string                     `json:"dumpFile,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// OpenLibertyDump is the Schema for the openlibertydumps API
-// +k8s:openapi-gen=true
+// The Schema for the Open Liberty dump API
+// +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=openlibertydumps,scope=Namespaced,shortName=oldump;oldumps
 // +kubebuilder:printcolumn:name="Started",type="string",JSONPath=".status.conditions[?(@.type=='Started')].status",priority=0,description="Indicates if dump operation has started"
@@ -59,8 +55,7 @@ type OpenLibertyDump struct {
 	Status OpenLibertyDumpStatus `json:"status,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
+// +kubebuilder:object:root=true
 // OpenLibertyDumpList contains a list of OpenLibertyDump
 type OpenLibertyDumpList struct {
 	metav1.TypeMeta `json:",inline"`
