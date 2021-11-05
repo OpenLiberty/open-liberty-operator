@@ -679,6 +679,7 @@ spec:
                   If not specified, it defaults to the name of the CR.
                 type: string
               applicationVersion:
+                description: Version of the application.
                 type: string
               autoscaling:
                 description: Configures the desired resource consumption of pods.

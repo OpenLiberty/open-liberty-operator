@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	openlibertyv1beta2 "github.com/OpenLiberty/open-liberty-operator/api/v1beta2"
+	rcoutils "github.com/application-stacks/runtime-component-operator/utils"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -118,6 +119,13 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *openlibertyv1beta2.Ope
 			pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, v)
 		}
 	}
+}
+
+func CustomizeLibertyAnnotations(pts *corev1.PodTemplateSpec, la *openlibertyv1beta2.OpenLibertyApplication) {
+	libertyAnnotations := map[string]string{
+		"libertyOperator": "OpenLiberty",
+	}
+	pts.Annotations = rcoutils.MergeMaps(pts.Annotations, libertyAnnotations)
 }
 
 // findEnvVars checks if the environment variable is already present

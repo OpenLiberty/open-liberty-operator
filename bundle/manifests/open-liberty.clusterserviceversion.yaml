@@ -91,7 +91,8 @@ spec:
         path: applicationImage
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
-      - displayName: Application Version
+      - description: Version of the application.
+        displayName: Application Version
         path: applicationVersion
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text

@@ -23,6 +23,7 @@ type OpenLibertyApplicationSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=2,type=spec,displayName="Application Image",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	ApplicationImage string `json:"applicationImage"`
 
+	// Version of the application.
 	// +operator-sdk:csv:customresourcedefinitions:order=3,type=spec,displayName="Application Version",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	ApplicationVersion string `json:"applicationVersion,omitempty"`
 
@@ -576,7 +577,7 @@ func (cr *OpenLibertyApplication) GetApplicationVersion() string {
 	return cr.Spec.ApplicationVersion
 }
 
-// GetApplicationName returns Application name to be used for integration with kAppNav
+// GetApplicationName returns Application name
 func (cr *OpenLibertyApplication) GetApplicationName() string {
 	return cr.Spec.ApplicationName
 }
