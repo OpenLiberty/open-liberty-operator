@@ -6,21 +6,3 @@ spec:
   applicationImage: imagestream-example
   replicas: 1
   expose: false
-  readinessProbe:
-    httpGet:
-      path: /
-      port: 9080
-    initialDelaySeconds: 1
-    timeoutSeconds: 1
-    periodSeconds: 5
-    successThreshold: 1
-    failureThreshold: 24
-  livenessProbe:
-    httpGet:
-      path: /
-      port: 9080
-    initialDelaySeconds: 8
-    timeoutSeconds: 1
-    periodSeconds: 5
-    successThreshold: 1
-    failureThreshold: 12
