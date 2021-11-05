@@ -8,7 +8,6 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // Defines the desired state of OpenLibertyTrace
-// +k8s:openapi-gen=true
 type OpenLibertyTraceSpec struct {
 	// The name of the Pod, which must be in the same namespace as the OpenLibertyTrace CR.
 	PodName string `json:"podName"`
@@ -27,17 +26,14 @@ type OpenLibertyTraceSpec struct {
 }
 
 // Defines the observed state of OpenLibertyTrace operation
-// +k8s:openapi-gen=true
 type OpenLibertyTraceStatus struct {
 	// +listType=atomic
 	Conditions       []OperationStatusCondition `json:"conditions,omitempty"`
 	OperatedResource OperatedResource           `json:"operatedResource,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// OpenLibertyTrace is the schema for the openlibertytraces API
-// +k8s:openapi-gen=true
+// The schema for the Open Liberty trace API
+// +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=openlibertytraces,scope=Namespaced,shortName=oltrace;oltraces
 // +kubebuilder:printcolumn:name="PodName",type="string",JSONPath=".status.operatedResource.resourceName",priority=0,description="Name of the last operated pod"
@@ -53,8 +49,7 @@ type OpenLibertyTrace struct {
 	Status OpenLibertyTraceStatus `json:"status,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
+// +kubebuilder:object:root=true
 // OpenLibertyTraceList contains a list of OpenLibertyTrace
 type OpenLibertyTraceList struct {
 	metav1.TypeMeta `json:",inline"`

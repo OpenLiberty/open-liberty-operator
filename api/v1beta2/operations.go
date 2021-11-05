@@ -8,7 +8,6 @@ import (
 )
 
 // OperationStatusCondition ...
-// +k8s:openapi-gen=true
 type OperationStatusCondition struct {
 	LastTransitionTime *metav1.Time                 `json:"lastTransitionTime,omitempty"`
 	LastUpdateTime     metav1.Time                  `json:"lastUpdateTime,omitempty"`
@@ -19,7 +18,6 @@ type OperationStatusCondition struct {
 }
 
 // OperatedResource ...
-// +k8s:openapi-gen=true
 type OperatedResource struct {
 	ResourceType string `json:"resourceType,omitempty"`
 	ResourceName string `json:"resourceName,omitempty"`

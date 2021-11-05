@@ -14,7 +14,6 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // Defines the desired state of OpenLibertyApplication.
-// +k8s:openapi-gen=true
 type OpenLibertyApplicationSpec struct {
 	// The name of the application this resource is part of. If not specified, it defaults to the name of the CR.
 	// +operator-sdk:csv:customresourcedefinitions:order=1,type=spec,displayName="Application Name",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
@@ -110,11 +109,6 @@ type OpenLibertyApplicationSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=60,type=spec,displayName="Env From"
 	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
 
-	// An array of architectures to be considered for deployment. Their position in the array indicates preference.
-	// +listType=set
-	// +operator-sdk:csv:customresourcedefinitions:order=61,type=spec,displayName="Architecture"
-	Architecture []string `json:"architecture,omitempty"`
-
 	// List of containers that run before other containers in a pod.
 	// +listType=map
 	// +listMapKey=name
@@ -137,7 +131,6 @@ type OpenLibertyApplicationSpec struct {
 }
 
 // Configures a Pod to run on particular Nodes.
-// +k8s:openapi-gen=true
 type OpenLibertyApplicationAffinity struct {
 	// Controls which nodes the pod are scheduled to run on, based on labels on the node.
 	// +operator-sdk:csv:customresourcedefinitions:order=37,type=spec,displayName="Node Affinity",xDescriptors="urn:alm:descriptor:com.tectonic.ui:nodeAffinity"
@@ -161,7 +154,6 @@ type OpenLibertyApplicationAffinity struct {
 }
 
 // Configures the desired resource consumption of pods.
-// +k8s:openapi-gen=true
 type OpenLibertyApplicationAutoScaling struct {
 	// Required field for autoscaling. Upper limit for the number of pods that can be set by the autoscaler. Parameter spec.resourceConstraints.requests.cpu must also be specified.
 	// +kubebuilder:validation:Minimum=1
@@ -178,7 +170,6 @@ type OpenLibertyApplicationAutoScaling struct {
 }
 
 // Configures parameters for the network service of pods.
-// +k8s:openapi-gen=true
 type OpenLibertyApplicationService struct {
 	// The port exposed by the container.
 	// +kubebuilder:validation:Maximum=65535
@@ -210,7 +201,6 @@ type OpenLibertyApplicationService struct {
 	TargetPort *int32 `json:"targetPort,omitempty"`
 
 	// A name of a secret that already contains TLS key, certificate and CA to be mounted in the pod.
-	// +k8s:openapi-gen=true
 	// +operator-sdk:csv:customresourcedefinitions:order=15,type=spec,displayName="Certificate Secret Reference",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	CertificateSecretRef *string `json:"certificateSecretRef,omitempty"`
 
@@ -240,12 +230,11 @@ type OpenLibertyApplicationStatefulSet struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=24,type=spec,displayName="Storage"
 	Storage *OpenLibertyApplicationStorage `json:"storage,omitempty"`
 
-	// Annotations to be added only to the StatefulSet and resources owned by the StatefulSet
+	// Annotations to be added only to the StatefulSet and resources owned by the StatefulSet.
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // Defines settings of persisted storage for StatefulSets.
-// +k8s:openapi-gen=true
 type OpenLibertyApplicationStorage struct {
 	// A convenient field to set the size of the persisted storage.
 	// +kubebuilder:validation:Pattern=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
@@ -262,7 +251,6 @@ type OpenLibertyApplicationStorage struct {
 }
 
 // Specifies parameters for Service Monitor.
-// +k8s:openapi-gen=true
 type OpenLibertyApplicationMonitoring struct {
 	// Labels to set on ServiceMonitor.
 	// +operator-sdk:csv:customresourcedefinitions:order=34,type=spec,displayName="Monitoring Labels",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
@@ -275,7 +263,6 @@ type OpenLibertyApplicationMonitoring struct {
 }
 
 // Specifies serviceability-related operations, such as gathering server memory dumps and server traces.
-// +k8s:openapi-gen=true
 type OpenLibertyApplicationServiceability struct {
 	// A convenient field to request the size of the persisted storage to use for serviceability.
 	// +kubebuilder:validation:Pattern=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
@@ -291,7 +278,6 @@ type OpenLibertyApplicationServiceability struct {
 }
 
 // Configures the ingress resource.
-// +k8s:openapi-gen=true
 type OpenLibertyApplicationRoute struct {
 
 	// Annotations to be added to the Route.
@@ -320,7 +306,6 @@ type OpenLibertyApplicationRoute struct {
 }
 
 // Defines the observed state of OpenLibertyApplication.
-// +k8s:openapi-gen=true
 type OpenLibertyApplicationStatus struct {
 	// +listType=atomic
 	// +operator-sdk:csv:customresourcedefinitions:type=status,displayName="Status Conditions",xDescriptors="urn:alm:descriptor:io.kubernetes.conditions"
@@ -333,7 +318,6 @@ type OpenLibertyApplicationStatus struct {
 }
 
 // Defines possible status conditions.
-// +k8s:openapi-gen=true
 type StatusCondition struct {
 	LastTransitionTime *metav1.Time           `json:"lastTransitionTime,omitempty"`
 	Reason             string                 `json:"reason,omitempty"`
@@ -350,10 +334,8 @@ const (
 	StatusConditionTypeReconciled StatusConditionType = "Reconciled"
 )
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// +k8s:openapi-gen=true
 // +kubebuilder:resource:path=openlibertyapplications,scope=Namespaced,shortName=olapp;olapps
+// +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Image",type="string",JSONPath=".spec.applicationImage",priority=0,description="Absolute name of the deployed image containing registry and tag"
 // +kubebuilder:printcolumn:name="Exposed",type="boolean",JSONPath=".spec.expose",priority=0,description="Specifies whether deployment is exposed externally via default Route"
@@ -371,7 +353,7 @@ type OpenLibertyApplication struct {
 	Status OpenLibertyApplicationStatus `json:"status,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // OpenLibertyApplicationList contains a list of OpenLibertyApplication
 type OpenLibertyApplicationList struct {
@@ -381,7 +363,6 @@ type OpenLibertyApplicationList struct {
 }
 
 // Specifies the configuration for Single sign-on (SSO) providers to authenticate with.
-// +k8s:openapi-gen=true
 type OpenLibertyApplicationSSO struct {
 	// +listType=atomic
 	OIDC []OidcClient `json:"oidc,omitempty"`
@@ -401,7 +382,6 @@ type OpenLibertyApplicationSSO struct {
 }
 
 // Represents configuration for an OpenID Connect (OIDC) client.
-// +k8s:openapi-gen=true
 type OidcClient struct {
 	// The unique ID for the provider. Default value is oidc.
 	ID string `json:"id,omitempty"`
@@ -435,7 +415,6 @@ type OidcClient struct {
 }
 
 // Represents configuration for an OAuth2 client.
-// +k8s:openapi-gen=true
 type OAuth2Client struct {
 	// Specifies the unique ID for the provider. The default value is oauth2.
 	ID string `json:"id,omitempty"`
@@ -484,7 +463,6 @@ type OAuth2Client struct {
 }
 
 // Represents configuration for social login using GitHub.
-// +k8s:openapi-gen=true
 type GithubLogin struct {
 	// Specifies the host name of your enterprise GitHub.
 	Hostname string `json:"hostname,omitempty"`
@@ -569,17 +547,20 @@ func (cr *OpenLibertyApplication) GetCreateKnativeService() *bool {
 	return cr.Spec.CreateKnativeService
 }
 
-// GetArchitecture returns slice of architectures
-func (cr *OpenLibertyApplication) GetArchitecture() []string {
-	return cr.Spec.Architecture
-}
-
 // GetAutoscaling returns autoscaling settings
 func (cr *OpenLibertyApplication) GetAutoscaling() common.BaseComponentAutoscaling {
 	if cr.Spec.Autoscaling == nil {
 		return nil
 	}
 	return cr.Spec.Autoscaling
+}
+
+// GetStorage returns storage settings
+func (ss *OpenLibertyApplicationStatefulSet) GetStorage() common.BaseComponentStorage {
+	if ss.Storage == nil {
+		return nil
+	}
+	return ss.Storage
 }
 
 // GetService returns service settings
@@ -673,14 +654,6 @@ func (cr *OpenLibertyApplication) GetStatefulSet() common.BaseComponentStatefulS
 // GetStatefulSetUpdateStrategy returns statefulSet strategy struct
 func (cr *OpenLibertyApplicationStatefulSet) GetStatefulSetUpdateStrategy() *appsv1.StatefulSetUpdateStrategy {
 	return cr.UpdateStrategy
-}
-
-// GetStorage returns storage settings
-func (ss *OpenLibertyApplicationStatefulSet) GetStorage() common.BaseComponentStorage {
-	if ss.Storage == nil {
-		return nil
-	}
-	return ss.Storage
 }
 
 // GetAnnotations returns annotations to be added only to the StatefulSet and its child resources
