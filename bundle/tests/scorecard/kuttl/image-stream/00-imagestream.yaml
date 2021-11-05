@@ -1,11 +1,11 @@
 apiVersion: image.openshift.io/v1
 kind: ImageStream
 metadata:
-  name: liberty-imagestream
+  name: imagestream-example
 spec:
   tags:
   - from:
       kind: DockerImage
-      name: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
+      name: navidsh/demo-day:v0.1.0
     name: latest
 

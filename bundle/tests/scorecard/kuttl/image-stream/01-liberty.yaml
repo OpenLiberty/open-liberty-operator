@@ -3,7 +3,7 @@ kind: OpenLibertyApplication
 metadata:
   name: imagestream-liberty-app
 spec:
-  applicationImage: liberty-imagestream
+  applicationImage: imagestream-example
   replicas: 1
   expose: false
   readinessProbe:
