@@ -6,7 +6,7 @@ spec:
   template:
     spec:
       containers:
-      - image: icr.io/appcafe/open-liberty@sha256:4f2f2bda45596dbfc4406024c6b01a9d019e06f7aef3c6289dc05f354c5b9036
+      - image: navidsh/demo-day@sha256:b441e81a681df8fdf6922f00318fb78d15dea7f24823eef58b2480aa84aba823
 status:
   readyReplicas: 1
 ---
@@ -14,7 +14,7 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
-  - image: icr.io/appcafe/open-liberty@sha256:4f2f2bda45596dbfc4406024c6b01a9d019e06f7aef3c6289dc05f354c5b9036
+  - image: navidsh/demo-day@sha256:b441e81a681df8fdf6922f00318fb78d15dea7f24823eef58b2480aa84aba823
 status:
   containerStatuses:
   - ready: true
