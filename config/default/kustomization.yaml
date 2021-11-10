@@ -9,8 +9,10 @@ namespace: olo-system
 namePrefix: olo-
 
 # Labels to add to all resources and selectors.
-#commonLabels:
-#  someName: someValue
+commonLabels:
+  app.kubernetes.io/instance: open-liberty-operator
+  app.kubernetes.io/managed-by: olm
+  app.kubernetes.io/name: open-liberty-operator
 
 bases:
 - ../crd

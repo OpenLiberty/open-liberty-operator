@@ -32,7 +32,6 @@ type OpenLibertyTraceStatus struct {
 	OperatedResource OperatedResource           `json:"operatedResource,omitempty"`
 }
 
-// The schema for the Open Liberty trace API
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=openlibertytraces,scope=Namespaced,shortName=oltrace;oltraces
@@ -40,7 +39,8 @@ type OpenLibertyTraceStatus struct {
 // +kubebuilder:printcolumn:name="Tracing",type="string",JSONPath=".status.conditions[?(@.type=='Enabled')].status",priority=0,description="Status of the trace condition"
 // +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.type=='Enabled')].reason",priority=1,description="Reason for the failure of trace condition"
 // +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Enabled')].message",priority=1,description="Failure message from trace condition"
-//+operator-sdk:csv:customresourcedefinitions:displayName="OpenLibertyTrace"
+// +operator-sdk:csv:customresourcedefinitions:displayName="OpenLibertyTrace"
+// Day-2 operation for gathering server traces
 type OpenLibertyTrace struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

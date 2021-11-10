@@ -23,6 +23,7 @@ type OpenLibertyApplicationSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=2,type=spec,displayName="Application Image",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	ApplicationImage string `json:"applicationImage"`
 
+	// Version of the application.
 	// +operator-sdk:csv:customresourcedefinitions:order=3,type=spec,displayName="Application Version",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	ApplicationVersion string `json:"applicationVersion,omitempty"`
 
@@ -80,7 +81,7 @@ type OpenLibertyApplicationSpec struct {
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
 
 	// Protects slow starting containers from livenessProbe.
-	// +operator-sdk:csv:customresourcedefinitions:order=55,type=spec,displayName="StartupProbe Probe"
+	// +operator-sdk:csv:customresourcedefinitions:order=55,type=spec,displayName="Startup Probe"
 	StartupProbe *corev1.Probe `json:"startupProbe,omitempty"`
 
 	// Name of the Secret to use to pull images from the specified repository. It is not required if the cluster is configured with a global image pull secret.
@@ -344,7 +345,8 @@ const (
 // +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Reconciled')].message",priority=1,description="Failure message from reconcile condition"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",priority=0,description="Age of the resource"
 //+operator-sdk:csv:customresourcedefinitions:displayName="OpenLibertyApplication",resources={{Deployment,v1},{Service,v1},{StatefulSet,v1},{Route,v1},{HorizontalPodAutoscaler,v1},{ServiceAccount,v1},{Secret,v1}}
-// Represents an instance of Open Liberty Application.
+
+// Represents the deployment of an Open Liberty application
 type OpenLibertyApplication struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -576,7 +578,7 @@ func (cr *OpenLibertyApplication) GetApplicationVersion() string {
 	return cr.Spec.ApplicationVersion
 }
 
-// GetApplicationName returns Application name to be used for integration with kAppNav
+// GetApplicationName returns Application name
 func (cr *OpenLibertyApplication) GetApplicationName() string {
 	return cr.Spec.ApplicationName
 }

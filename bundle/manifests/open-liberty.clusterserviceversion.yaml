@@ -54,7 +54,7 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - description: Represents an instance of Open Liberty Application.
+    - description: Represents the deployment of an Open Liberty application
       displayName: OpenLibertyApplication
       kind: OpenLibertyApplication
       name: openlibertyapplications.apps.openliberty.io
@@ -91,7 +91,8 @@ spec:
         path: applicationImage
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
-      - displayName: Application Version
+      - description: Version of the application.
+        displayName: Application Version
         path: applicationVersion
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
@@ -286,7 +287,7 @@ spec:
         displayName: Readiness Probe
         path: readinessProbe
       - description: Protects slow starting containers from livenessProbe.
-        displayName: StartupProbe Probe
+        displayName: Startup Probe
         path: startupProbe
       - description: Name of the Secret to use to pull images from the specified repository. It is not required if the cluster is configured with a global image pull secret.
         displayName: Pull Secret
@@ -321,12 +322,12 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:io.kubernetes.conditions
       version: v1beta2
-    - description: The Schema for the Open Liberty dump API
+    - description: Day-2 operation for generating server dumps
       displayName: OpenLibertyDump
       kind: OpenLibertyDump
       name: openlibertydumps.apps.openliberty.io
       version: v1beta2
-    - description: The schema for the Open Liberty trace API
+    - description: Day-2 operation for gathering server traces
       displayName: OpenLibertyTrace
       kind: OpenLibertyTrace
       name: openlibertytraces.apps.openliberty.io
@@ -366,9 +367,6 @@ spec:
     #### Easily mount logs and transaction directories
     If you need to mount the logs and transaction data from your application to an external volume such as NFS (or any storage supported in your cluster), simply add the following (customizing the folder location and size) to your OpenLibertyApplication CR: ``` storage: size: 2Gi mountPath: \"/logs\" ```
 
-    #### Integration with OpenShift's Certificate Manager
-    The Open Liberty Operator takes advantage of the [cert-manager tool](https://cert-manager.io/), if it is installed on the cluster. This allows the operator to automatically provision TLS certificates for pods as well as routes. When creating certificates via the OpenLibertyApplication CR the user can specify a particular issuer name and toggle the scopes between ClusterIssuer (cluster scoped) and Issuer (namespace scoped). If not specified, these values are retrieved from a ConfigMap, with a default value of `self-signed` and `ClusterIssuer`. The certificate is mounted into the container via a Secret so that it is automatically refreshed once the certificate is updated.
-
     #### Integration with OpenShift Serverless
     Deploy your serverless runtime component using a single toggle.  The Operator will convert all of its generated resources into [Knative](https://knative.dev) resources, allowing your pod to automatically scale to 0 when it is idle.
 
@@ -388,11 +386,17 @@ spec:
           replicas: 1
           selector:
             matchLabels:
+              app.kubernetes.io/instance: open-liberty-operator
+              app.kubernetes.io/managed-by: olm
+              app.kubernetes.io/name: open-liberty-operator
               control-plane: controller-manager
           strategy: {}
           template:
             metadata:
               labels:
+                app.kubernetes.io/instance: open-liberty-operator
+                app.kubernetes.io/managed-by: olm
+                app.kubernetes.io/name: open-liberty-operator
                 control-plane: controller-manager
             spec:
               containers:

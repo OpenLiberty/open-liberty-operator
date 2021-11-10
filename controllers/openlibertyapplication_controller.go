@@ -362,6 +362,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			oputils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
 			oputils.CustomizePersistence(statefulSet, instance)
 			lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance)
+			lutils.CustomizeLibertyAnnotations(&statefulSet.Spec.Template, instance)
 			if instance.Spec.SSO != nil {
 				err = lutils.CustomizeEnvSSO(&statefulSet.Spec.Template, instance, r.GetClient(), r.IsOpenShift())
 				if err != nil {
@@ -370,6 +371,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				}
 			}
 			lutils.ConfigureServiceability(&statefulSet.Spec.Template, instance)
+
 			return nil
 		})
 		if err != nil {
@@ -399,6 +401,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			oputils.CustomizeDeployment(deploy, instance)
 			oputils.CustomizePodSpec(&deploy.Spec.Template, instance)
 			lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance)
+			lutils.CustomizeLibertyAnnotations(&deploy.Spec.Template, instance)
 			if instance.Spec.SSO != nil {
 				err = lutils.CustomizeEnvSSO(&deploy.Spec.Template, instance, r.GetClient(), r.IsOpenShift())
 				if err != nil {

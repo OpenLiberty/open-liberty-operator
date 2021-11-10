@@ -55,7 +55,7 @@ spec:
     name: v1beta2
     schema:
       openAPIV3Schema:
-        description: The Schema for the Open Liberty dump API
+        description: Day-2 operation for generating server dumps
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

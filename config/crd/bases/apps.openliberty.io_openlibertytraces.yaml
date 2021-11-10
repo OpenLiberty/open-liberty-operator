@@ -41,7 +41,7 @@ spec:
     name: v1beta2
     schema:
       openAPIV3Schema:
-        description: The schema for the Open Liberty trace API
+        description: Day-2 operation for gathering server traces
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
