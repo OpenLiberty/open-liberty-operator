@@ -50,7 +50,7 @@ spec:
     name: v1beta2
     schema:
       openAPIV3Schema:
-        description: Represents an instance of Open Liberty Application.
+        description: Represents the deployment of an Open Liberty application
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

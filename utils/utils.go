@@ -123,7 +123,7 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *openlibertyv1beta2.Ope
 
 func CustomizeLibertyAnnotations(pts *corev1.PodTemplateSpec, la *openlibertyv1beta2.OpenLibertyApplication) {
 	libertyAnnotations := map[string]string{
-		"libertyOperator": "OpenLiberty",
+		"libertyOperator": "Open Liberty",
 	}
 	pts.Annotations = rcoutils.MergeMaps(pts.Annotations, libertyAnnotations)
 }
