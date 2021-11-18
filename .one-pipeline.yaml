@@ -47,33 +47,33 @@ containerize:
   script: |
     #!/usr/bin/env bash
     echo "containerize"
-    # if [[ "$PIPELINE_DEBUG" == 1 ]]; then
-    #   trap env EXIT
-    #   env
-    #   set -x
-    # fi
-    # # Download and configure golang
-    # wget --header "Accept: application/octet-stream"  "https://golang.org/dl/go1.16.linux-amd64.tar.gz" 
-    # rm -rf /usr/local/go && tar -C /usr/local -xf go1.16.linux-amd64.tar.gz
-    # export PATH=$PATH:/usr/local/go/bin
-    # apt-get update
-    # apt-get -y install build-essential 
-    # # Download and install skopeo
-    # if ! command -v skopeo &> /dev/null; then  
-    #   if [ ! -f "/apt/sources.list.d/devel:kubic:libcontainers:stable.list" ]; then
-    #     sudo sh -c "echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_18.04/ /' > /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list"      
-    #     wget --no-check-certificate -nv https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/xUbuntu_18.04/Release.key -O- | sudo apt-key add -
-    #     sudo apt-get update -qq
-    #   fi
-    #   sudo apt-get -y install skopeo
-    # else
-    #   skopeo --version
-    # fi  
-    # # Build images
-    # export PIPELINE_USERNAME=$(get_env ibmcloud-api-user)
-    # export PIPELINE_PASSWORD=$(get_env ibmcloud-api-key)    
-    # # Build amd64 image
-    # make build-pipeline-multiarch-image
+    if [[ "$PIPELINE_DEBUG" == 1 ]]; then
+      trap env EXIT
+      env
+      set -x
+    fi
+    # Download and configure golang
+    wget --header "Accept: application/octet-stream"  "https://golang.org/dl/go1.16.linux-amd64.tar.gz"
+    rm -rf /usr/local/go && tar -C /usr/local -xf go1.16.linux-amd64.tar.gz
+    export PATH=$PATH:/usr/local/go/bin
+    apt-get update
+    apt-get -y install build-essential
+    # Download and install skopeo
+    if ! command -v skopeo &> /dev/null; then
+      if [ ! -f "/apt/sources.list.d/devel:kubic:libcontainers:stable.list" ]; then
+        sudo sh -c "echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_18.04/ /' > /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list"
+        wget --no-check-certificate -nv https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/xUbuntu_18.04/Release.key -O- | sudo apt-key add -
+        sudo apt-get update -qq
+      fi
+      sudo apt-get -y install skopeo
+    else
+      skopeo --version
+    fi
+    # Build images
+    export PIPELINE_USERNAME=$(get_env ibmcloud-api-user)
+    export PIPELINE_PASSWORD=$(get_env ibmcloud-api-key)
+    # Build amd64 image
+    make build-pipeline-multiarch-image
     # make push-pipeline-multiarch-image
     # # Build ppc64le and s390x images
     # ./scripts/pipeline/launch-travis.sh -t $(get_env travis-token) -r "https://github.com/application-stacks/runtime-component-operator" -b $(get_env branch) -l

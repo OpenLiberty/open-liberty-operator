@@ -234,6 +234,9 @@ build-multiarch-image: ## Build operator image
 push-multiarch-image: ## Push operator image
 	./scripts/build-releases.sh --push -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" --image "${OPERATOR_IMAGE}"
 
+build-pipeline-multiarch-image: ## Build operator image
+	./scripts/build-releases.sh -u "${PIPELINE_USERNAME}" -p "${PIPELINE_PASSWORD}" --registry "${PIPELINE_REGISTRY}" --image "${PIPELINE_OPERATOR_IMAGE}"
+
 build-manifest: setup-manifest
 	./scripts/build-manifest.sh -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" --image "${OPERATOR_IMAGE}"
 
