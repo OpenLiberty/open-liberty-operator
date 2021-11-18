@@ -9,6 +9,9 @@ VERSION ?= 0.8.0
 
 OPERATOR_IMAGE ?= openliberty/operator
 OPERATOR_IMAGE_TAG ?= daily
+PIPELINE_REGISTRY ?= cp.stg.icr.io
+PIPELINE_REGISTY_NAMESPACE ?= cp/wshe
+PIPELINE_OPERATOR_IMAGE ?= $(PIPELINE_REGISTRY_NAMESPACE)/olo-operator
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "preview,fast,stable")
