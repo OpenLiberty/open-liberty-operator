@@ -107,7 +107,7 @@ push_release() {
 
   if [[ -n "${REGISTRY}" ]]; then
     echo "****** Pushing image to scan: ${IMAGE}:${release}-${arch}"
-    # docker push "${REGISTRY}/${IMAGE}:${release}-${arch}"
+    docker push "${REGISTRY}/${IMAGE}:${release}-${arch}"
   fi
 }
 
