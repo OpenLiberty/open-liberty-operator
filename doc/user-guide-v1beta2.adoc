@@ -1,6 +1,6 @@
 = Open Liberty Operator
 
-The Open Liberty Operator can be used to deploy and manage applications running on Open Liberty into Kubernetes clusters. You can also perform link:++#day-2-operations++[Day-2 operations] such as gathering traces and dumps using the operator.
+The Open Liberty Operator can be used to deploy and manage applications running on Open Liberty or WebSphere Liberty into Kubernetes clusters. You can also perform link:++#day-2-operations++[Day-2 operations] such as gathering traces and dumps using the operator.
 
 This documentation refers to the latest codebase.  For documentation and samples of older releases, please check out the link:++https://github.com/OpenLiberty/open-liberty-operator/releases++[main releases] page and navigate the corresponding tag.
 
@@ -23,7 +23,7 @@ NOTE: The Open Liberty Operator can only interact with resources it is given per
 
 The architecture of the Open Liberty Operator follows the basic controller pattern:  the Operator container with the controller is deployed into a Pod and listens for incoming resources with `Kind: OpenLibertyApplication`. Creating an `OpenLibertyApplication` custom resource (CR) triggers the Open Liberty Operator to create, update or delete Kubernetes resources needed by the application to run on your cluster.
 
-In addition, Open Liberty Operator makes it easy to perform link:++#day-2-operations++[Day-2 operations] on an Open Liberty server running inside a Pod as part of an `OpenLibertyApplication` instance:
+In addition, Open Liberty Operator makes it easy to perform link:++#day-2-operations++[Day-2 operations] on an Open Liberty or WebSphere Liberty server running inside a Pod as part of an `OpenLibertyApplication` instance:
 * Gather server traces using resource `Kind: OpenLibertyTrace`
 * Generate server dumps using resource `Kind: OpenLibertyDump`
 
@@ -196,7 +196,7 @@ RuntimeComponent` must be replaced with `Kind: OpenLibertyApplication`.
 
 For functionality that is unique to the Open Liberty Operator, see the following sections.
 
-=== Open Liberty Environment Variables
+=== Liberty Environment Variables
 
 The Open Liberty Operator sets a number of environment variables related to console logging by default. The following table shows the variables and their corresponding values.
 
@@ -229,7 +229,7 @@ spec:
 
 === Single Sign-On (SSO)
 
-Open Liberty provides capabilities to delegate authentication to external providers. Your application users can log in using their existing accounts for social media providers such as Google, Facebook, LinkedIn, Twitter, GitHub, or any OpenID Connect (OIDC) or OAuth 2.0 clients. Open Liberty Operator allows to easily configure and manage the single sign-on information for your applications.
+Liberty provides capabilities to delegate authentication to external providers. Your application users can log in using their existing accounts for social media providers such as Google, Facebook, LinkedIn, Twitter, GitHub, or any OpenID Connect (OIDC) or OAuth 2.0 clients. Open Liberty Operator allows to easily configure and manage the single sign-on information for your applications.
 
 Configure and build the application image with single sign-on by following the instructions link:++https://github.com/OpenLiberty/ci.docker#security++[here].
 
@@ -473,7 +473,7 @@ Additionally, each day-2 operation CRD has the following annotation which illust
 
 === Request server dump
 
-You can request a snapshot of the server status including different types of server dumps, from an instance of Open Liberty server running inside a `Pod`, using Open Liberty Operator and `OpenLibertyDump` custom resource (CR). To use this feature the `OpenLibertyApplication` needs to have link:++#storage-for-serviceability++[storage for serviceability] already configured. Also, the `OpenLibertyDump` CR must be created in the same namespace as the `Pod` to operate on.
+You can request a snapshot of the server status including different types of server dumps, from an instance of Liberty server running inside a `Pod`, using Open Liberty Operator and `OpenLibertyDump` custom resource (CR). To use this feature the `OpenLibertyApplication` needs to have link:++#storage-for-serviceability++[storage for serviceability] already configured. Also, the `OpenLibertyDump` CR must be created in the same namespace as the `Pod` to operate on.
 
 The configurable parameters are:
 
@@ -511,7 +511,7 @@ _System dump might not work on certain Kubernetes versions, such as OpenShift 4.
 
 === Request server traces
 
-You can request server traces, from an instance of Open Liberty server running inside a `Pod`, using Open Liberty Operator and `OpenLibertyTrace` custom resource (CR). To use this feature the `OpenLibertyApplication` must already have link:++#storage-for-serviceability++[storage for serviceability] configured. Also, the `OpenLibertyTrace` CR must be created in the same namespace as the `Pod` to operate on.
+You can request server traces, from an instance of Liberty server running inside a `Pod`, using Open Liberty Operator and `OpenLibertyTrace` custom resource (CR). To use this feature the `OpenLibertyApplication` must already have link:++#storage-for-serviceability++[storage for serviceability] configured. Also, the `OpenLibertyTrace` CR must be created in the same namespace as the `Pod` to operate on.
 
 The configurable parameters are:
 

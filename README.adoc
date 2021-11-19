@@ -3,7 +3,7 @@ image:https://goreportcard.com/badge/github.com/OpenLiberty/open-liberty-operato
 
 = Open Liberty Operator
 
-The Open Liberty Operator can be used to deploy and manage applications running on Open Liberty into link:++https://www.okd.io/++[OKD] or link:++https://www.openshift.com/++[OpenShift] clusters. You can also perform Day-2 operations such as gathering traces and dumps using the operator.
+The Open Liberty Operator can be used to deploy and manage applications running on either Open Liberty or WebSphere Liberty into Kubernetes-based platforms, such as link:++https://www.openshift.com/++[Red Hat OpenShift]. You can also perform Day-2 operations such as gathering traces and dumps using the operator.
 
 If there's a certain functionality you would like to see or a bug you would like to report, please use our link:++https://github.com/OpenLiberty/open-liberty-operator/issues[issues tab] to get in contact with us.
 
