@@ -146,6 +146,7 @@ function launch_travis() {
     fi
 
     REQUEST_NUMBER=$(jq -r '.request.id' travis-request.json)
+    cat travis-request.json
     echo "Travis build request number: $REQUEST_NUMBER"
 
     echo "Checking Travis build (${REQUEST_NUMBER}) status...."
@@ -168,6 +169,7 @@ function launch_travis() {
             "https://api.travis-ci.com/repo/${GH_REPO}/request/${REQUEST_NUMBER}" > travis-status-1.json
 
         REQUEST_STATUS=$(jq -r '.builds[].state' travis-status-1.json)
+        cat travis-status-1.json
         echo "Travis request ${REQUEST_NUMBER} status: '${REQUEST_STATUS}' ..."
 
         if [[ "${REQUEST_STATUS}" != "failed" && "${REQUEST_STATUS}" != "passed" ]]; then # FIXME
