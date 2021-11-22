@@ -13,3 +13,7 @@ spec:
 status:
   containerStatuses:
   - ready: true
+metadata:
+  labels:
+    app.kubernetes.io/instance: imagestream-liberty-app
+

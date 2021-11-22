@@ -16,3 +16,6 @@ spec:
       startupProbe:
         failureThreshold: 10
         periodSeconds: 5
+metadata:
+  labels:
+    app.kubernetes.io/instance: probes-liberty
