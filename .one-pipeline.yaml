@@ -81,7 +81,7 @@ containerize:
     echo $(get_env ibmcloud-api-key) | docker login us.icr.io -u "$(get_env ibmcloud-api-user)" --password-stdin
     make bundle-build
     BUNDLE_IMAGE=us.icr.io/olo-operator/operator:bundle-daily
-    docker tag applicationstacks/operator:bundle-daily $BUNDLE_IMAGE
+    docker tag openliberty/operator:bundle-daily $BUNDLE_IMAGE
     docker push $BUNDLE_IMAGE
     # # Build manifest
     # make build-pipeline-manifest
