@@ -326,9 +326,6 @@ spec:
     #### Easily mount logs and transaction directories
     If you need to mount the logs and transaction data from your application to an external volume such as NFS (or any storage supported in your cluster), simply add the following (customizing the folder location and size) to your OpenLibertyApplication CR: ``` storage: size: 2Gi mountPath: \"/logs\" ```
 
-    #### Integration with OpenShift's Certificate Manager
-    The Open Liberty Operator takes advantage of the [cert-manager tool](https://cert-manager.io/), if it is installed on the cluster. This allows the operator to automatically provision TLS certificates for pods as well as routes. When creating certificates via the OpenLibertyApplication CR the user can specify a particular issuer name and toggle the scopes between ClusterIssuer (cluster scoped) and Issuer (namespace scoped). If not specified, these values are retrieved from a ConfigMap, with a default value of `self-signed` and `ClusterIssuer`. The certificate is mounted into the container via a Secret so that it is automatically refreshed once the certificate is updated.
-
     #### Integration with OpenShift Serverless
     Deploy your serverless runtime component using a single toggle.  The Operator will convert all of its generated resources into [Knative](https://knative.dev) resources, allowing your pod to automatically scale to 0 when it is idle.
 

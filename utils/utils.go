@@ -97,7 +97,7 @@ func ExecuteCommandInContainer(config *rest.Config, podName, podNamespace, conta
 }
 
 // CustomizeLibertyEnv adds configured env variables appending configured liberty settings
-func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *openlibertyv1beta2.OpenLibertyApplication) {
+func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *openlibertyv1beta2.OpenLibertyApplication, client client.Client) error {
 	// ENV variables have already been set, check if they exist before setting defaults
 	targetEnv := []corev1.EnvVar{
 		{Name: "WLP_LOGGING_CONSOLE_LOGLEVEL", Value: "info"},
@@ -119,6 +119,32 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *openlibertyv1beta2.Ope
 			pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, v)
 		}
 	}
+
+	if la.GetService() != nil && la.GetService().GetCertificateSecretRef() != nil {
+		if err := addSecretResourceVersionAsEnvVar(pts, la, client, *la.GetService().GetCertificateSecretRef(), "SERVICE_CERT"); err != nil {
+			return err
+		}
+	}
+
+	if la.GetRoute() != nil && la.GetRoute().GetCertificateSecretRef() != nil {
+		if err := addSecretResourceVersionAsEnvVar(pts, la, client, *la.GetRoute().GetCertificateSecretRef(), "ROUTE_CERT"); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func addSecretResourceVersionAsEnvVar(pts *corev1.PodTemplateSpec, la *openlibertyv1beta2.OpenLibertyApplication, client client.Client, secretName string, envNamePrefix string) error {
+	secret := &corev1.Secret{}
+	err := client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: la.GetNamespace()}, secret)
+	if err != nil {
+		return errors.Wrapf(err, "Secret %q was not found in namespace %q", secretName, la.GetNamespace())
+	}
+	pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, corev1.EnvVar{
+		Name:  envNamePrefix + "_SECRET_RESOURCE_VERSION",
+		Value: secret.ResourceVersion})
+	return nil
 }
 
 func CustomizeLibertyAnnotations(pts *corev1.PodTemplateSpec, la *openlibertyv1beta2.OpenLibertyApplication) {
