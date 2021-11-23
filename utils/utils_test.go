@@ -61,7 +61,13 @@ func TestCustomizeLibertyEnv(t *testing.T) {
 	// Always call CustomizePodSpec to populate Containers & simulate real behaviour
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	oputils.CustomizePodSpec(pts, openliberty)
-	CustomizeLibertyEnv(pts, openliberty)
+
+	objs, s := []runtime.Object{openliberty}, scheme.Scheme
+	cl := fakeclient.NewFakeClient(objs...)
+	rcl := fakeclient.NewFakeClient(objs...)
+	rb := oputils.NewReconcilerBase(rcl, cl, s, &rest.Config{}, record.NewFakeRecorder(10))
+
+	CustomizeLibertyEnv(pts, openliberty, rb.GetClient())
 
 	testEnv := []Test{
 		{"Test environment defaults", pts.Spec.Containers[0].Env, targetEnv},
@@ -86,7 +92,8 @@ func TestCustomizeLibertyEnv(t *testing.T) {
 
 	openliberty = createOpenLibertyApp(name, namespace, spec)
 	oputils.CustomizePodSpec(pts, openliberty)
-	CustomizeLibertyEnv(pts, openliberty)
+
+	CustomizeLibertyEnv(pts, openliberty, rb.GetClient())
 
 	testEnv = []Test{
 		{"Test environment config", pts.Spec.Containers[0].Env, targetEnv},
