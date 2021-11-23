@@ -23,6 +23,9 @@ status:
 # It also seems that order is important, so this could be fragile
 apiVersion: v1
 kind: Pod
+metadata:
+  labels:
+    app.kubernetes.io/instance: sso-liberty
 spec:
   containers:
   - env:
