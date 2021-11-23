@@ -103,9 +103,6 @@ build: generate fmt vet ## Build manager binary.
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
-docker-login:
-	docker login -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}"
-
 docker-build: test ## Build docker image with the manager.
 	docker build -t ${IMG} .
 
@@ -244,9 +241,6 @@ docker-login:
 
 build-manifest: setup-manifest
 	./scripts/build-manifest.sh --image "${PUBLISH_REGISTRY}/${OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
-
-setup-manifest:
-	./scripts/installers/install-manifest-tool.sh
 
 test-e2e:
 	./scripts/e2e-release.sh --registry-name default-route --registry-namespace openshift-image-registry \
