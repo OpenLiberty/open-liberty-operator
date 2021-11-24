@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/OpenLiberty/open-liberty-operator.svg?branch=master)](https://travis-ci.org/OpenLiberty/open-liberty-operator)
+[![Build Status](https://travis-ci.org/OpenLiberty/open-liberty-operator.svg?branch=main)](https://travis-ci.org/OpenLiberty/open-liberty-operator)
 [![Go Report Card](https://goreportcard.com/badge/github.com/OpenLiberty/open-liberty-operator)](https://goreportcard.com/report/github.com/OpenLiberty/open-liberty-operator)
 
 # Open Liberty Operator

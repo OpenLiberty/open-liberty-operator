@@ -63,7 +63,7 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `serviceAccountName` | The name of the OpenShift service account to be used during deployment.
 | `applicationImage` | The absolute name of the image to be deployed, containing the registry and the tag. On OpenShift, it can also be set to `<project name>/<image stream name>[:tag]` to reference an image from an image stream. If `<project name>` and `<tag>` values are not defined, they default to the namespace of the CR and the value of `latest`, respectively.
 | `applicationName` | The name of the application this resource is part of. If not specified, it defaults to the name of the CR.
-| `createAppDefinition`   | A boolean to toggle the automatic configuration of Kubernetes resources for the `OpenLibertyApplication` CR to allow creation of an application definition by link:++https://kappnav.io/++[kAppNav]. The default value is `true`. See link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#kubernetes-application-navigator-kappnav-support++[Application Navigator] for more information.
+| `createAppDefinition`   | A boolean to toggle the automatic configuration of Kubernetes resources for the `OpenLibertyApplication` CR to allow creation of an application definition by link:++https://kappnav.io/++[kAppNav]. The default value is `true`. See link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#kubernetes-application-navigator-kappnav-support++[Application Navigator] for more information.
 | `pullPolicy` | The policy used when pulling the image.  One of: `Always`, `Never`, and `IfNotPresent`.
 | `pullSecret` | If using a registry that requires authentication, the name of the secret containing credentials.
 | `initContainers` | The list of link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#container-v1-core++[Init Container] definitions.
@@ -102,17 +102,17 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `resourceConstraints.requests.memory` | The minimum memory in bytes. Specify integers with one of these suffixes: E, P, T, G, M, K, or power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.
 | `resourceConstraints.limits.cpu` | The upper limit of CPU core. Specify integers, fractions (e.g. 0.5), or millicores values(e.g. 100m, where 100m is equivalent to .1 core).
 | `resourceConstraints.limits.memory` | The memory upper limit in bytes. Specify integers with suffixes: E, P, T, G, M, K, or power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.
-| `env`   | An array of environment variables following the format of `{name, value}`, where value is a simple string. It may also follow the format of `{name, valueFrom}`, where valueFrom refers to a value in a `ConfigMap` or `Secret` resource. See link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#environment-variables++[Environment variables] for more info.
-| `envFrom`   | An array of references to `ConfigMap` or `Secret` resources containing environment variables. Keys from `ConfigMap` or `Secret` resources become environment variable names in your container. See link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#environment-variables++[Environment variables] for more info.
+| `env`   | An array of environment variables following the format of `{name, value}`, where value is a simple string. It may also follow the format of `{name, valueFrom}`, where valueFrom refers to a value in a `ConfigMap` or `Secret` resource. See link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#environment-variables++[Environment variables] for more info.
+| `envFrom`   | An array of references to `ConfigMap` or `Secret` resources containing environment variables. Keys from `ConfigMap` or `Secret` resources become environment variable names in your container. See link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#environment-variables++[Environment variables] for more info.
 | `readinessProbe`   | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#define-readiness-probes++[Kubernetes readiness probe] that controls when the pod is ready to receive traffic.
 | `livenessProbe` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#define-a-liveness-http-request++[Kubernetes liveness probe] that controls when Kubernetes needs to restart the pod.
 | `volumes` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/storage/volumes++[pod volume].
 | `volumeMounts` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/storage/volumes/++[pod volumeMount].
-| `storage.size` | A convenient field to set the size of the persisted storage. Can be overridden by the `storage.volumeClaimTemplate` property. Operator will create a `StatefulSet` instead of a `Deployment` when `storage` is configured. See link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Persistence++[Persistence] for more information.
+| `storage.size` | A convenient field to set the size of the persisted storage. Can be overridden by the `storage.volumeClaimTemplate` property. Operator will create a `StatefulSet` instead of a `Deployment` when `storage` is configured. See link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#Persistence++[Persistence] for more information.
 | `storage.mountPath` | The directory inside the container where this persisted storage will be bound to.
 | `storage.volumeClaimTemplate` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#components++[volumeClaimTemplate] component of a `StatefulSet`.
-| `monitoring.labels` | Labels to set on link:++https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitor++[ServiceMonitor].
-| `monitoring.endpoints` | A YAML snippet representing an array of link:++https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint++[Endpoint] component from ServiceMonitor.
+| `monitoring.labels` | Labels to set on link:++https://github.com/coreos/prometheus-operator/blob/main/Documentation/api.md#servicemonitor++[ServiceMonitor].
+| `monitoring.endpoints` | A YAML snippet representing an array of link:++https://github.com/coreos/prometheus-operator/blob/main/Documentation/api.md#endpoint++[Endpoint] component from ServiceMonitor.
 | `serviceability.size` | A convenient field to request the size of the persisted storage to use for serviceability. Can be overridden by the `serviceability.volumeClaimName` property. See link:++#storage-for-serviceability++[Storage for serviceability] for more information.
 | `serviceability.storageClassName` | A convenient field to request the StorageClassName of the persisted storage to use for serviceability. Can be overridden by the `serviceability.volumeClaimName` property. See link:++#storage-for-serviceability++[Storage for serviceability] for more information.
 | `serviceability.volumeClaimName` | The name of the link:++https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims++[PersistentVolumeClaim] resource you created to be used for serviceability. Must be in the same namespace.
@@ -194,21 +194,21 @@ Open Liberty Operator is based on the generic link:++https://github.com/applicat
 information on the usage of common functionality, see the Runtime Component Operator documentation below. Note that, in the samples from the links below, the instances of `Kind:
 RuntimeComponent` must be replaced with `Kind: OpenLibertyApplication`.
 
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Image-streams++[Image Streams]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Service-account++[Service Account]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Labels++[Labels]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Annotations++[Annotations]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Environment-variables++[Environment Variables]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#High-availability++[High Availability]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Service-ports++[Service Ports]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Persistence++[Persistence]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Service-binding++[Service Binding]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Monitoring++[Monitoring]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Knative-support++[Knative Support]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Exposing-service-externally++[Exposing Service]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#kubernetes-application-navigator-kappnav-support++[Kubernetes Application Navigator]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#certificate-manager-integration++[Certificate Manager]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#affinity++[Affinity]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#Image-streams++[Image Streams]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#Service-account++[Service Account]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#Labels++[Labels]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#Annotations++[Annotations]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#Environment-variables++[Environment Variables]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#High-availability++[High Availability]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#Service-ports++[Service Ports]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#Persistence++[Persistence]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#Service-binding++[Service Binding]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#Monitoring++[Monitoring]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#Knative-support++[Knative Support]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#Exposing-service-externally++[Exposing Service]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#kubernetes-application-navigator-kappnav-support++[Kubernetes Application Navigator]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#certificate-manager-integration++[Certificate Manager]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#affinity++[Affinity]
 
 For functionality that is unique to the Open Liberty Operator, see the following sections.
 
@@ -280,7 +280,7 @@ data:
 
 Next, configure single sign-on in `OpenLibertyApplication` CR. At minimum, `sso: {}` should be set in order for the operator to pass the values from the above `Secret` to your application. Refer to the link:++#custom-resource-definition-crd++[parameters list] for additional configurations for `sso`.
 
-In addition, single sign-on requires secured Service and secured Route configured with necessary certificates. Refer to link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#certificate-manager-integration++[Certificate Manager Integration] for more information.
+In addition, single sign-on requires secured Service and secured Route configured with necessary certificates. Refer to link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#certificate-manager-integration++[Certificate Manager Integration] for more information.
 
 To automatically trust certificates from well known identity providers, including social login providers such as Google and Facebook, set environment variable `SEC_TLS_TRUSTDEFAULTCERTS` to `true`. To automatically trust certificates issued by the Kubernetes cluster, set environment variable `SEC_IMPORT_K8S_CERTS` to `true`. Alternatively, you could include the necessary certificates manually when building application image or mounting them using a volume when deploying your application.
 

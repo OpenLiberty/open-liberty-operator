@@ -115,7 +115,7 @@ Expand an individual log entry to see the `structured.*` formatted individual fi
 
 image::images/app-logging-ocp-expand-entry.png[Kibana 7 page with the application log entries]
 
-Kibana dashboards created for Open Liberty logging events can be found link:++https://github.com/OpenLiberty/open-liberty-operator/tree/master/deploy/dashboards/logging++[here]. To import a dashboard and its associated objects, navigate back to the **Management** page and click **Saved Objects**. Click **Import** and select the dashboard file. When prompted, click the **Yes, overwrite all** option.
+Kibana dashboards created for Open Liberty logging events can be found link:++https://github.com/OpenLiberty/open-liberty-operator/tree/main/deploy/dashboards/logging++[here]. To import a dashboard and its associated objects, navigate back to the **Management** page and click **Saved Objects**. Click **Import** and select the dashboard file. When prompted, click the **Yes, overwrite all** option.
 
 Head back to the **Dashboard** page and enjoy navigating logs on the newly imported dashboard.
 
