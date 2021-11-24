@@ -1,0 +1,10 @@
+# Check that if there is a matching node affinity lab a pod is created
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: node-affinity-lib
+spec:
+  # Add fields here
+  affinity:
+    architecture:
+      - amd64
