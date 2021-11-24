@@ -5,7 +5,7 @@ kind: OpenLibertyApplication
 metadata:
   name: autoscaling2-liberty
 spec:
-  resourceConstraints:
+  resources:
     requests:
       cpu: "0.2"
   autoscaling:

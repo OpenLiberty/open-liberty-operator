@@ -429,7 +429,7 @@ spec:
                 description: Configures the desired resource consumption of pods.
                 properties:
                   maxReplicas:
-                    description: Required field for autoscaling. Upper limit for the number of pods that can be set by the autoscaler. Parameter .spec.resourceConstraints.requests.cpu must also be specified.
+                    description: Required field for autoscaling. Upper limit for the number of pods that can be set by the autoscaler. Parameter .spec.resources.requests.cpu must also be specified.
                     format: int32
                     minimum: 1
                     type: integer
@@ -1862,7 +1862,7 @@ spec:
                 description: Number of pods to create. Not applicable when .spec.autoscaling or .spec.createKnativeService is specified.
                 format: int32
                 type: integer
-              resourceConstraints:
+              resources:
                 description: Limits the amount of required resources.
                 properties:
                   limits:

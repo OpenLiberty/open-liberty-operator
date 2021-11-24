@@ -58,7 +58,7 @@ type OpenLibertyApplicationSpec struct {
 
 	// Limits the amount of required resources.
 	// +operator-sdk:csv:customresourcedefinitions:order=11,type=spec,displayName="Resource Requirements",xDescriptors="urn:alm:descriptor:com.tectonic.ui:resourceRequirements"
-	ResourceConstraints *corev1.ResourceRequirements `json:"resourceConstraints,omitempty"`
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 
 	// +operator-sdk:csv:customresourcedefinitions:order=12,type=spec,displayName="Probes"
 	Probes *OpenLibertyApplicationProbes `json:"probes,omitempty"`
@@ -162,7 +162,7 @@ type OpenLibertyApplicationAffinity struct {
 
 // Configures the desired resource consumption of pods.
 type OpenLibertyApplicationAutoScaling struct {
-	// Required field for autoscaling. Upper limit for the number of pods that can be set by the autoscaler. Parameter .spec.resourceConstraints.requests.cpu must also be specified.
+	// Required field for autoscaling. Upper limit for the number of pods that can be set by the autoscaler. Parameter .spec.resources.requests.cpu must also be specified.
 	// +kubebuilder:validation:Minimum=1
 	// +operator-sdk:csv:customresourcedefinitions:order=1,type=spec,displayName="Max Replicas",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
 	MaxReplicas int32 `json:"maxReplicas,omitempty"`
@@ -544,7 +544,7 @@ func (cr *OpenLibertyApplication) GetVolumeMounts() []corev1.VolumeMount {
 
 // GetResourceConstraints returns resource constraints
 func (cr *OpenLibertyApplication) GetResourceConstraints() *corev1.ResourceRequirements {
-	return cr.Spec.ResourceConstraints
+	return cr.Spec.Resources
 }
 
 // GetExpose returns expose flag
@@ -874,8 +874,8 @@ func (cr *OpenLibertyApplication) Initialize() {
 		cr.Spec.PullPolicy = &pp
 	}
 
-	if cr.Spec.ResourceConstraints == nil {
-		cr.Spec.ResourceConstraints = &corev1.ResourceRequirements{}
+	if cr.Spec.Resources == nil {
+		cr.Spec.Resources = &corev1.ResourceRequirements{}
 	}
 
 	// Default applicationName to cr.Name, if a user sets createAppDefinition to true but doesn't set applicationName

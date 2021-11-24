@@ -3,6 +3,6 @@ kind: OpenLibertyApplication
 metadata:
   name: autoscaling3-liberty
 spec:
-  resourceConstraints:
+  resources:
   autoscaling:
 

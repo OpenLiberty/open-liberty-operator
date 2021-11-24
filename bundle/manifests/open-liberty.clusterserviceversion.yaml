@@ -89,7 +89,7 @@ spec:
         path: applicationImage
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Required field for autoscaling. Upper limit for the number of pods that can be set by the autoscaler. Parameter .spec.resourceConstraints.requests.cpu must also be specified.
+      - description: Required field for autoscaling. Upper limit for the number of pods that can be set by the autoscaler. Parameter .spec.resources.requests.cpu must also be specified.
         displayName: Max Replicas
         path: autoscaling.maxReplicas
         x-descriptors:
@@ -157,7 +157,7 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:text
       - description: Limits the amount of required resources.
         displayName: Resource Requirements
-        path: resourceConstraints
+        path: resources
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
       - description: Node proxies this port into your service.

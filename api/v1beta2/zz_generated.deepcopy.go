@@ -488,8 +488,8 @@ func (in *OpenLibertyApplicationSpec) DeepCopyInto(out *OpenLibertyApplicationSp
 		*out = new(OpenLibertyApplicationAutoScaling)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.ResourceConstraints != nil {
-		in, out := &in.ResourceConstraints, &out.ResourceConstraints
+	if in.Resources != nil {
+		in, out := &in.Resources, &out.Resources
 		*out = new(v1.ResourceRequirements)
 		(*in).DeepCopyInto(*out)
 	}
