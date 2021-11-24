@@ -40,7 +40,13 @@ main() {
 
   # Build manifest for target release(s)
   if [[ "${TARGET}" != "releases" ]]; then
-    build_manifest "${TARGET}"
+    # Remove 'v' prefix from any releases matching version regex `\d+\.\d+\.\d+.*`
+    if [[ "${TARGET}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+      readonly release_tag="${TARGET#*v}"
+    else
+      readonly release_tag="${TARGET}"
+    fi
+    build_manifest "${release_tag}"
   else
     build_manifests
   fi
@@ -53,8 +59,10 @@ build_manifest() {
   ## try to build manifest but allow failure
   ## this allows new release builds
   local target="${IMAGE}:${tag}"
+  # TODO: Add back in linux/s390x and linux/ppc64le once build platforms are back up
+  # --platforms "linux/amd64,linux/s390x,linux/ppc64le" \
   manifest-tool push from-args \
-    --platforms "linux/amd64,linux/s390x,linux/ppc64le" \
+    --platforms "linux/amd64" \
     --template "${target}-ARCH" \
     --target "${target}" \
     || echo "*** WARN: Target architectures not available"
