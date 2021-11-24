@@ -45,7 +45,7 @@ spec:
 
 . To deploy an additional Grafana instance for creating custom dashboards, follow this RedHat blog link:++https://www.redhat.com/en/blog/custom-grafana-dashboards-red-hat-openshift-container-platform-4++[Custom Grafana dashboards for Red Hat OpenShift Container Platform 4]. This Grafana instance will be connected to OpenShift monitoring in the `openshift-monitoring` namespace and additional Grafana dashboards will increase the load on the Prometheus service, so pay attention to Prometheus' CPU and memory usage when deploying dashboards.  
 
-. Deploy the following template Grafana Dashboard link:++https://github.com/OpenLiberty/open-liberty-operator/blob/master/doc/guides-code/grafana_dashboard.yaml.txt++[grafana_dashboard.yaml.txt] to see all the services currently being monitored. Please ensure that the namespace in this yaml is configured to the namespace already deployed
+. Deploy the following template Grafana Dashboard link:++https://github.com/OpenLiberty/open-liberty-operator/blob/main/doc/guides-code/grafana_dashboard.yaml.txt++[grafana_dashboard.yaml.txt] to see all the services currently being monitored. Please ensure that the namespace in this yaml is configured to the namespace already deployed
 
 . Under Networking > Routes, visit Grafana to see the template dashboard. You can now consume all the application metrics gathered by Prometheus on the Grafana dashboard.
 
@@ -85,7 +85,7 @@ oc new-project prometheus-operator
 
 . Click on Overview and create a service monitor instance. A ServiceMonitor defines a service endpoint that needs to be monitored by the Prometheus instance.
 
-. Inside the Service Monitor YAML file, make sure **metadata.namespace** is your monitoring namespace. In this case, it will be prometheus-operator. **spec.namespaceSelector** and **spec.selector** for labels should be configured to match your app deployment's namespace and label. For example, inside the `service_monitor.yaml` file, an application with label **app: example-app** from namespace **myapp** will be monitored by the service monitor. If the metrics endpoint is secured, you can define a secured endpoint with authentication configuration by following the link:++https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint++[endpoint] API documentation of Prometheus Operator.
+. Inside the Service Monitor YAML file, make sure **metadata.namespace** is your monitoring namespace. In this case, it will be prometheus-operator. **spec.namespaceSelector** and **spec.selector** for labels should be configured to match your app deployment's namespace and label. For example, inside the `service_monitor.yaml` file, an application with label **app: example-app** from namespace **myapp** will be monitored by the service monitor. If the metrics endpoint is secured, you can define a secured endpoint with authentication configuration by following the link:++https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#endpoint++[endpoint] API documentation of Prometheus Operator.
 
 . Create a Service Account with Cluster role and Cluster role binding to ensure you have the permission to get nodes and pods in other namespaces at the cluster scope. Refer to the `service_account.yaml` file. Create the YAML file and apply it.
 +

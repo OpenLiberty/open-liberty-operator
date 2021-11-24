@@ -184,7 +184,7 @@ spec:
     name: IBM
   links:
   - name: Open Liberty Operator Guide
-    url: https://github.com/OpenLiberty/open-liberty-operator/blob/master/README.md
+    url: https://github.com/OpenLiberty/open-liberty-operator/blob/main/README.md
   keywords:
   - 'Open Liberty'
   - 'MicroProfile'
