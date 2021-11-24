@@ -4,6 +4,8 @@ The Open Liberty Operator can be used to deploy and manage applications running 
 
 This documentation refers to the latest codebase.  For documentation and samples of older releases, please check out the link:++https://github.com/OpenLiberty/open-liberty-operator/releases++[main releases] page and navigate the corresponding tag.
 
+**Important**: This user guide only applies to operator versions 0.8.0 and above. For operator versions 0.7.1 and below, refer to this link:++user-guide.adoc++[user guide].
+
 == Operator installation
 
 //Use the instructions for one of the link:++../deploy/releases++[releases] to install the operator into a Kubernetes cluster.
@@ -35,7 +37,7 @@ Each instance of `OpenLibertyApplication` CR represents the application to be de
 
 [source,yaml]
 ----
-apiVersion: openliberty.io/v1beta1
+apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
   name: my-liberty-app
@@ -66,7 +68,6 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `pullSecret` | If using a registry that requires authentication, the name of the secret containing credentials.
 | `initContainers` | The list of link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#container-v1-core++[Init Container] definitions.
 | `sidecarContainers` | The list of `sidecar` containers. These are additional containers to be added to the pods. Note: Sidecar containers should not be named `app`.
-| `architecture` | An array of architectures to be considered for deployment. Their position in the array indicates preference.
 | `service.bindable` | A boolean to toggle whether the operator expose the application as a bindable service. Defaults to `false`.
 | `service.port` | The port exposed by the container.
 | `service.targetPort` | The port that the operator assigns to containers inside pods. Defaults to the value of `service.port`.
@@ -97,9 +98,9 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `resourceConstraints.limits.memory` | The memory upper limit in bytes. Specify integers with suffixes: E, P, T, G, M, K, or power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.
 | `env`   | An array of environment variables following the format of `{name, value}`, where value is a simple string. It may also follow the format of `{name, valueFrom}`, where valueFrom refers to a value in a `ConfigMap` or `Secret` resource. See link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#environment-variables++[Environment variables] for more info.
 | `envFrom`   | An array of references to `ConfigMap` or `Secret` resources containing environment variables. Keys from `ConfigMap` or `Secret` resources become environment variable names in your container. See link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#environment-variables++[Environment variables] for more info.
-| `readinessProbe`   | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes++[Kubernetes readiness probe] that controls when the pod is ready to receive traffic.
-| `livenessProbe` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request++[Kubernetes liveness probe] that controls when Kubernetes needs to restart the pod.
-| `startupProbe` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes++[Kubernetes startup probe] that controls when Kubernetes needs to startup the pod on its first initialization.
+| `probes.readiness`   | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes++[Kubernetes readiness probe] that controls when the pod is ready to receive traffic.
+| `probes.liveness` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request++[Kubernetes liveness probe] that controls when Kubernetes needs to restart the pod.
+| `probes.startup` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes++[Kubernetes startup probe] that controls when Kubernetes needs to startup the pod on its first initialization.
 | `volumes` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/storage/volumes++[pod volume].
 | `volumeMounts` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/storage/volumes/++[pod volumeMount].
 | `monitoring.labels` | Labels to set on link:++https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitor++[ServiceMonitor].
@@ -113,6 +114,11 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `route.termination`   | TLS termination policy. Can be one of `edge`, `reencrypt` and `passthrough`.
 | `route.insecureEdgeTerminationPolicy`   | HTTP traffic policy with TLS enabled. Can be one of `Allow`, `Redirect` and `None`.
 | `route.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be used in the route. Also can contain destination CA certificate. The following keys are valid in the secret: `ca.crt`, `destCA.crt`, `tls.crt`, and `tls.key`.
+| `affinity.nodeAffinity` | A YAML object that represents a link:++https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#nodeaffinity-v1-core++[NodeAffinity].
+| `affinity.nodeAffinityLabels` | A YAML object that contains set of required labels and their values.
+| `affinity.podAffinity` | A YAML object that represents a link:++https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#podaffinity-v1-core++[PodAffinity].
+| `affinity.podAntiAffinity` | A YAML object that represents a link:++https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#podantiaffinity-v1-core++[PodAntiAffinity].
+| `affinity.architecture` | An array of architectures to be considered for deployment. Their position in the array indicates preference.
 | `sso`   | Specifies the configuration for single sign-on providers to authenticate with. Specify sensitive fields, such as _clientId_ and _clientSecret_, for the selected providers by using the `Secret`. For more information, see link:++#single-sign-on-sso++[Single Sign-On (SSO)].
 | `sso.mapToUserRegistry`   | Specifies whether to map a user identifier to a registry user. This parameter applies to all providers.
 | `sso.redirectToRPHostAndPort`   | Specifies a callback protocol, host and port number, such as https://myfrontend.mycompany.com. This parameter applies to all providers. 
@@ -154,7 +160,7 @@ Use the following CR to deploy your application image to a Kubernetes environmen
 
 [source,yaml]
 ----
-apiVersion: openliberty.io/v1beta1
+apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
   name: my-liberty-app
@@ -193,6 +199,7 @@ RuntimeComponent` must be replaced with `Kind: OpenLibertyApplication`.
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Exposing-service-externally++[Exposing Service]
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#kubernetes-application-navigator-kappnav-support++[Kubernetes Application Navigator]
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#certificate-manager-integration++[Certificate Manager]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#affinity++[Affinity]
 
 For functionality that is unique to the Open Liberty Operator, see the following sections.
 
@@ -212,7 +219,7 @@ To override these default values with your own values, set them manually in your
 
 [source,yaml]
 ----
-apiVersion: openliberty.io/v1beta1
+apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
   name: my-liberty-app
@@ -272,7 +279,7 @@ In the following example, a self-signed certificate is used for secured Service 
 
 [source,yaml]
 ----
-apiVersion: openliberty.io/v1beta1
+apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
   name: my-app
@@ -414,7 +421,7 @@ You can specify the size of the persisted storage to request using `serviceabili
 
 [source,yaml]
 ----
-apiVersion: openliberty.io/v1beta1
+apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
   name: my-liberty-app
@@ -429,7 +436,7 @@ You can also create the `PersistentVolumeClaim` yourself and specify its name us
 
 [source,yaml]
 ----
-apiVersion: openliberty.io/v1beta1
+apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
   name: my-liberty-app
@@ -488,7 +495,7 @@ Example including heap and thread dump:
 
 [source,yaml]
 ----
-apiVersion: openliberty.io/v1beta1
+apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyDump
 metadata:
   name: example-dump
@@ -529,7 +536,7 @@ Example:
 
 [source,yaml]
 ----
-apiVersion: openliberty.io/v1beta1
+apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyTrace
 metadata:
   name: example-trace

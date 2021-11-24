@@ -5,6 +5,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -86,6 +87,7 @@ type BaseComponentRoute interface {
 	GetAnnotations() map[string]string
 	GetHost() string
 	GetPath() string
+	GetPathType() networkingv1.PathType
 	GetCertificateSecretRef() *string
 }
 
@@ -111,6 +113,13 @@ type BaseComponentStatefulSet interface {
 	GetAnnotations() map[string]string
 }
 
+// BaseComponentProbes describes the probes for application container
+type BaseComponentProbes interface {
+	GetLivenessProbe() *corev1.Probe
+	GetReadinessProbe() *corev1.Probe
+	GetStartupProbe() *corev1.Probe
+}
+
 // BaseComponent represents basic kubernetes application
 type BaseComponent interface {
 	GetApplicationImage() string
@@ -118,9 +127,7 @@ type BaseComponent interface {
 	GetPullSecret() *string
 	GetServiceAccountName() *string
 	GetReplicas() *int32
-	GetLivenessProbe() *corev1.Probe
-	GetReadinessProbe() *corev1.Probe
-	GetStartupProbe() *corev1.Probe
+	GetProbes() BaseComponentProbes
 	GetVolumes() []corev1.Volume
 	GetVolumeMounts() []corev1.VolumeMount
 	GetResourceConstraints() *corev1.ResourceRequirements

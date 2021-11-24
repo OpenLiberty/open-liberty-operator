@@ -12,21 +12,22 @@ spec:
   service:
     type: ClusterIP
     port: 9080
-  readinessProbe:
-    httpGet:
-      path: /
-      port: 9080
-    initialDelaySeconds: 1
-    timeoutSeconds: 1
-    periodSeconds: 5
-    successThreshold: 1
-    failureThreshold: 24
-  livenessProbe:
-    httpGet:
-      path: /
-      port: 9080
-    initialDelaySeconds: 8
-    timeoutSeconds: 1
-    periodSeconds: 5
-    successThreshold: 1
-    failureThreshold: 12
+  probes:
+    readiness:
+      httpGet:
+        path: /
+        port: 9080
+      initialDelaySeconds: 1
+      timeoutSeconds: 1
+      periodSeconds: 5
+      successThreshold: 1
+      failureThreshold: 24
+    liveness:
+      httpGet:
+        path: /
+        port: 9080
+      initialDelaySeconds: 8
+      timeoutSeconds: 1
+      periodSeconds: 5
+      successThreshold: 1
+      failureThreshold: 12
