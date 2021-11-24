@@ -10,6 +10,11 @@ VERSION ?= 0.8.0
 OPERATOR_IMAGE ?= openliberty/operator
 OPERATOR_IMAGE_TAG ?= daily
 
+# Type of release. Can be "daily", "releases", or a release tag.
+RELEASE_TARGET := $(or ${RELEASE_TARGET}, ${TRAVIS_TAG}, daily)
+
+PUBLISH_REGISTRY=docker.io
+
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "preview,fast,stable")
 # To re-generate a bundle for other specific channels without changing the standard setup, you can:
@@ -97,9 +102,6 @@ build: generate fmt vet ## Build manager binary.
 
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
-
-docker-login:
-	docker login -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}"
 
 docker-build: test ## Build docker image with the manager.
 	docker build -t ${IMG} .
@@ -229,15 +231,41 @@ build-image: ## Build operator Docker image and tag with "${OPERATOR_IMAGE}:${OP
 	docker build -t ${OPERATOR_IMAGE}:${OPERATOR_IMAGE_TAG} .
 
 build-multiarch-image: ## Build operator image
-	./scripts/build-releases.sh -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" --image "${OPERATOR_IMAGE}"
+	./scripts/build-release.sh --skip-push -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" --image "${OPERATOR_IMAGE}" --release "${OPERATOR_IMAGE_TAG}"
 
-push-multiarch-image: ## Push operator image
-	./scripts/build-releases.sh --push -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" --image "${OPERATOR_IMAGE}"
+build-and-push-multiarch-image: ## Build and push operator image
+	./scripts/build-release.sh -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" --image "${PUBLISH_REGISTRY}/${OPERATOR_IMAGE}" --release "${OPERATOR_IMAGE_TAG}"
+
+docker-login:
+	docker login -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}"
 
 build-manifest: setup-manifest
-	./scripts/build-manifest.sh -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" --image "${OPERATOR_IMAGE}"
+	./scripts/build-manifest.sh --image "${PUBLISH_REGISTRY}/${OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
 
 test-e2e:
-	./scripts/e2e.sh -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" \
-                     --cluster-url "${CLUSTER_URL}" --cluster-token "${CLUSTER_TOKEN}" \
-                     --registry-name default-route --registry-namespace openshift-image-registry
+	./scripts/e2e-release.sh --registry-name default-route --registry-namespace openshift-image-registry \
+                     --test-tag "${TRAVIS_BUILD_NUMBER}" --target "${RELEASE_TARGET}"
+
+build-releases:
+	./scripts/build-releases.sh --image "${PUBLISH_REGISTRY}/${OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
+
+bundle-releases:
+	./scripts/bundle-releases.sh --image "${PUBLISH_REGISTRY}/${OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
+
+install-podman:
+	./scripts/installers/install-podman.sh
+
+install-opm:
+	./scripts/installers/install-opm.sh
+
+bundle-build-podman:
+	podman build -f bundle.Dockerfile -t "${BUNDLE_IMG}"
+
+bundle-push-podman:
+	podman push --format=docker "${BUNDLE_IMG}"
+
+build-catalog:
+	opm index add --bundles "${BUNDLE_IMG}" --tag "${CATALOG_IMG}"
+
+push-catalog: docker-login
+	podman push --format=docker "${CATALOG_IMG}"

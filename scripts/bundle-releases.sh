@@ -19,13 +19,13 @@ main() {
   parse_args "$@"
 
   if [[ -z "${TARGET}" ]]; then
-    echo "****** Missing target release for operator build, see usage"
+    echo "****** Missing target release for bundle build, see usage"
     echo "${usage}"
     exit 1
   fi
 
   if [[ -z "${IMAGE}" ]]; then
-    echo "****** Missing target image for operator build, see usage"
+    echo "****** Missing target image for bundle build, see usage"
     echo "${usage}"
     exit 1
   fi
@@ -38,15 +38,39 @@ main() {
 
   echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
 
-  # Build target release(s)
+  # Bundle target release(s)
   if [[ "${TARGET}" != "releases" ]]; then
-    "${script_dir}/build-release.sh" -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" --release "${TARGET}" --image "${IMAGE}"
+    bundle_release "${TARGET}"
   else
-    build_releases
+    bundle_releases
   fi
 }
 
-build_releases() {
+bundle_release() {
+  local tag="${1}"
+  # Remove 'v' prefix from any releases matching version regex `\d+\.\d+\.\d+.*`
+  if [[ "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+    local release_tag="${tag#*v}"
+  else
+    local release_tag="${tag}"
+  fi
+  local operator_ref="${IMAGE}:${release_tag}"
+
+  # Switch to release tag
+  if [[ "${tag}" != "daily" ]]; then
+    git checkout -q "${tag}"
+  fi
+
+  # Build the bundle
+  local bundle_ref="${IMAGE}:bundle-${release_tag}"
+  make bundle-build-podman bundle-push-podman IMG="${operator_ref}" BUNDLE_IMG="${bundle_ref}"
+
+  # Build the catalog
+  local catalog_ref="${IMAGE}:catalog-${release_tag}"
+  make build-catalog push-catalog IMG="${operator_ref}" BUNDLE_IMG="${bundle_ref}" CATALOG_IMG="${catalog_ref}"
+}
+
+bundle_releases() {
   tags="$(git tag -l)"
   while read -r tag; do
     if [[ -z "${tag}" ]]; then
@@ -59,7 +83,7 @@ build_releases() {
       continue
     fi
 
-    "${script_dir}/build-release.sh" -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" --release "${tag}" --image "${IMAGE}"
+    bundle_release "${tag}"
   done <<< "${tags}"
 }
 
