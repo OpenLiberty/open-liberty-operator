@@ -4,6 +4,8 @@ The Open Liberty Operator can be used to deploy and manage applications running 
 
 This documentation refers to the latest codebase.  For documentation and samples of older releases, please check out the link:++https://github.com/OpenLiberty/open-liberty-operator/releases++[main releases] page and navigate the corresponding tag.
 
+**Important**: This user guide only applies to operator versions 0.7.1 and below. For operator versions 0.8.0 and above, refer to this link:++user-guide-v1beta2.adoc++[user guide].
+
 == Operator installation
 
 Use the instructions for one of the link:++../deploy/releases++[releases] to install the operator into a Kubernetes cluster.
@@ -121,6 +123,11 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `route.insecureEdgeTerminationPolicy`   | HTTP traffic policy with TLS enabled. Can be one of `Allow`, `Redirect` and `None`.
 | `route.certificate`  | A YAML object representing a link:++https://cert-manager.io/docs/reference/api-docs/#cert-manager.io/v1alpha2.CertificateSpec++[Certificate].
 | `route.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be used in the route. Also can contain destination CA certificate. The following keys are valid in the secret: `ca.crt`, `destCA.crt`, `tls.crt`, and `tls.key`.
+| `affinity.nodeAffinity` | A YAML object that represents a link:++https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#nodeaffinity-v1-core++[NodeAffinity].
+| `affinity.nodeAffinityLabels` | A YAML object that contains set of required labels and their values.
+| `affinity.podAffinity` | A YAML object that represents a link:++https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#podaffinity-v1-core++[PodAffinity].
+| `affinity.podAntiAffinity` | A YAML object that represents a link:++https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#podantiaffinity-v1-core++[PodAntiAffinity].
+| `affinity.architecture` | An array of architectures to be considered for deployment. Their position in the array indicates preference.
 | `sso`   | Specifies the configuration for single sign-on providers to authenticate with. Specify sensitive fields, such as _clientId_ and _clientSecret_, for the selected providers by using the `Secret`. For more information, see link:++#single-sign-on-sso++[Single Sign-On (SSO)].
 | `sso.mapToUserRegistry`   | Specifies whether to map a user identifier to a registry user. This parameter applies to all providers.
 | `sso.redirectToRPHostAndPort`   | Specifies a callback protocol, host and port number, such as https://myfrontend.mycompany.com. This parameter applies to all providers. 
@@ -201,6 +208,7 @@ RuntimeComponent` must be replaced with `Kind: OpenLibertyApplication`.
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#Exposing-service-externally++[Exposing Service]
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#kubernetes-application-navigator-kappnav-support++[Kubernetes Application Navigator]
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#certificate-manager-integration++[Certificate Manager]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide.adoc#affinity++[Affinity]
 
 For functionality that is unique to the Open Liberty Operator, see the following sections.
 

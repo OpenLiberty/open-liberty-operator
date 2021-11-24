@@ -8,6 +8,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -15,13 +16,14 @@ import (
 
 // Defines the desired state of OpenLibertyApplication.
 type OpenLibertyApplicationSpec struct {
-	// The name of the application this resource is part of. If not specified, it defaults to the name of the CR.
-	// +operator-sdk:csv:customresourcedefinitions:order=1,type=spec,displayName="Application Name",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
-	ApplicationName string `json:"applicationName,omitempty"`
 
-	// Application image to be installed.
-	// +operator-sdk:csv:customresourcedefinitions:order=2,type=spec,displayName="Application Image",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	// Application image to deploy.
+	// +operator-sdk:csv:customresourcedefinitions:order=1,type=spec,displayName="Application Image",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	ApplicationImage string `json:"applicationImage"`
+
+	// Name of the application. Defaults to the name of this custom resource.
+	// +operator-sdk:csv:customresourcedefinitions:order=2,type=spec,displayName="Application Name",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	ApplicationName string `json:"applicationName,omitempty"`
 
 	// Version of the application.
 	// +operator-sdk:csv:customresourcedefinitions:order=3,type=spec,displayName="Application Version",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
@@ -31,107 +33,111 @@ type OpenLibertyApplicationSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=4,type=spec,displayName="Pull Policy",xDescriptors="urn:alm:descriptor:com.tectonic.ui:imagePullPolicy"
 	PullPolicy *corev1.PullPolicy `json:"pullPolicy,omitempty"`
 
-	// Number of pods to create.
-	// +operator-sdk:csv:customresourcedefinitions:order=5,type=spec,displayName="Replicas",xDescriptors="urn:alm:descriptor:com.tectonic.ui:podCount"
-	Replicas *int32 `json:"replicas,omitempty"`
-
-	// A boolean that toggles the external exposure of this deployment via a Route or a Knative Route resource.
-	// +operator-sdk:csv:customresourcedefinitions:order=6,type=spec,displayName="Expose",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
-	Expose *bool `json:"expose,omitempty"`
-
-	// Limits the amount of required resources.
-	// +operator-sdk:csv:customresourcedefinitions:order=7,type=spec,displayName="Resource Requirements",xDescriptors="urn:alm:descriptor:com.tectonic.ui:resourceRequirements"
-	ResourceConstraints *corev1.ResourceRequirements `json:"resourceConstraints,omitempty"`
-
-	// +operator-sdk:csv:customresourcedefinitions:order=8,type=spec,displayName="Service"
-	Service *OpenLibertyApplicationService `json:"service,omitempty"`
-
-	// +operator-sdk:csv:customresourcedefinitions:order=16,type=spec,displayName="Auto Scaling"
-	Autoscaling *OpenLibertyApplicationAutoScaling `json:"autoscaling,omitempty"`
-
-	// +operator-sdk:csv:customresourcedefinitions:order=20,type=spec,displayName="Deployment"
-	Deployment *OpenLibertyApplicationDeployment `json:"deployment,omitempty"`
-
-	// +operator-sdk:csv:customresourcedefinitions:order=22,type=spec,displayName="StatefulSet"
-	StatefulSet *OpenLibertyApplicationStatefulSet `json:"statefulSet,omitempty"`
-
-	// The name of the OpenShift service account to be used during deployment.
-	// +operator-sdk:csv:customresourcedefinitions:order=28,type=spec,displayName="Service Account Name",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
-	ServiceAccountName *string `json:"serviceAccountName,omitempty"`
-
-	// +operator-sdk:csv:customresourcedefinitions:order=33,type=spec,displayName="Monitoring"
-	Monitoring *OpenLibertyApplicationMonitoring `json:"monitoring,omitempty"`
-
-	// +operator-sdk:csv:customresourcedefinitions:order=36,type=spec,displayName="Affinity"
-	Affinity *OpenLibertyApplicationAffinity `json:"affinity,omitempty"`
-
-	// +operator-sdk:csv:customresourcedefinitions:order=41,type=spec,displayName="Route"
-	Route *OpenLibertyApplicationRoute `json:"route,omitempty"`
-
-	// A boolean to toggle the creation of Knative resources and usage of Knative serving.
-	// +operator-sdk:csv:customresourcedefinitions:order=52,type=spec,displayName="Create Knative Service",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
-	CreateKnativeService *bool `json:"createKnativeService,omitempty"`
-
-	// Detects if the services need to be restarted.
-	// +operator-sdk:csv:customresourcedefinitions:order=53,type=spec,displayName="Liveness Probe"
-	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
-
-	// Detects if the services are ready to serve.
-	// +operator-sdk:csv:customresourcedefinitions:order=54,type=spec,displayName="Readiness Probe"
-	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
-
-	// Protects slow starting containers from livenessProbe.
-	// +operator-sdk:csv:customresourcedefinitions:order=55,type=spec,displayName="Startup Probe"
-	StartupProbe *corev1.Probe `json:"startupProbe,omitempty"`
-
 	// Name of the Secret to use to pull images from the specified repository. It is not required if the cluster is configured with a global image pull secret.
-	// +operator-sdk:csv:customresourcedefinitions:order=56,type=spec,displayName="Pull Secret",xDescriptors="urn:alm:descriptor:io.kubernetes:Secret"
+	// +operator-sdk:csv:customresourcedefinitions:order=5,type=spec,displayName="Pull Secret",xDescriptors="urn:alm:descriptor:io.kubernetes:Secret"
 	PullSecret *string `json:"pullSecret,omitempty"`
 
-	// Represents a pod volume with data that is accessible to the containers.
-	// +listType=map
-	// +listMapKey=name
-	// +operator-sdk:csv:customresourcedefinitions:order=57,type=spec,displayName="Volume"
-	Volumes []corev1.Volume `json:"volumes,omitempty"`
+	// Name of the service account to use for deploying the application. A service account is automatically created if it's not specified.
+	// +operator-sdk:csv:customresourcedefinitions:order=6,type=spec,displayName="Service Account Name",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	ServiceAccountName *string `json:"serviceAccountName,omitempty"`
 
-	// Represents where to mount the volumes into containers.
-	// +listType=atomic
-	// +operator-sdk:csv:customresourcedefinitions:order=58,type=spec,displayName="Volume Mounts"
-	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
+	// Create Knative resources and use Knative serving.
+	// +operator-sdk:csv:customresourcedefinitions:order=7,type=spec,displayName="Create Knative Service",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	CreateKnativeService *bool `json:"createKnativeService,omitempty"`
 
-	// An array of environment variables following the format of {name, value}, where value is a simple string.
-	// +listType=map
-	// +listMapKey=name
-	// +operator-sdk:csv:customresourcedefinitions:order=59,type=spec,displayName="Env Var"
-	Env []corev1.EnvVar `json:"env,omitempty"`
+	// Expose the application externally via a Route, a Knative Route or an Ingress resource.
+	// +operator-sdk:csv:customresourcedefinitions:order=8,type=spec,displayName="Expose",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	Expose *bool `json:"expose,omitempty"`
 
-	// An array of references to ConfigMap or Secret resources containing environment variables.
-	// +listType=atomic
-	// +operator-sdk:csv:customresourcedefinitions:order=60,type=spec,displayName="Env From"
-	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
+	// Number of pods to create. Not applicable when .spec.autoscaling or .spec.createKnativeService is specified.
+	// +operator-sdk:csv:customresourcedefinitions:order=9,type=spec,displayName="Replicas",xDescriptors="urn:alm:descriptor:com.tectonic.ui:podCount"
+	Replicas *int32 `json:"replicas,omitempty"`
 
-	// List of containers that run before other containers in a pod.
-	// +listType=map
-	// +listMapKey=name
-	// +operator-sdk:csv:customresourcedefinitions:order=62,type=spec,displayName="Init Containers"
-	InitContainers []corev1.Container `json:"initContainers,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:order=10,type=spec,displayName="Auto Scaling"
+	Autoscaling *OpenLibertyApplicationAutoScaling `json:"autoscaling,omitempty"`
 
-	// The list of sidecar containers. These are additional containers to be added to the pods.
-	// +listType=map
-	// +listMapKey=name
-	// +operator-sdk:csv:customresourcedefinitions:order=63,type=spec,displayName="Sidecar Containers"
-	SidecarContainers []corev1.Container `json:"sidecarContainers,omitempty"`
+	// Limits the amount of required resources.
+	// +operator-sdk:csv:customresourcedefinitions:order=11,type=spec,displayName="Resource Requirements",xDescriptors="urn:alm:descriptor:com.tectonic.ui:resourceRequirements"
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 
-	// Open Liberty specific capabilities
+	// +operator-sdk:csv:customresourcedefinitions:order=12,type=spec,displayName="Probes"
+	Probes *OpenLibertyApplicationProbes `json:"probes,omitempty"`
 
-	// +operator-sdk:csv:customresourcedefinitions:order=29,type=spec,displayName="Serviceability"
+	// +operator-sdk:csv:customresourcedefinitions:order=13,type=spec,displayName="Deployment"
+	Deployment *OpenLibertyApplicationDeployment `json:"deployment,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:order=14,type=spec,displayName="StatefulSet"
+	StatefulSet *OpenLibertyApplicationStatefulSet `json:"statefulSet,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:order=15,type=spec,displayName="Service"
+	Service *OpenLibertyApplicationService `json:"service,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:order=16,type=spec,displayName="Route"
+	Route *OpenLibertyApplicationRoute `json:"route,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:order=17,type=spec,displayName="Serviceability"
 	Serviceability *OpenLibertyApplicationServiceability `json:"serviceability,omitempty"`
 
-	// +operator-sdk:csv:customresourcedefinitions:order=30,type=spec,displayName="Single sign-on"
+	// +operator-sdk:csv:customresourcedefinitions:order=18,type=spec,displayName="Single sign-on"
 	SSO *OpenLibertyApplicationSSO `json:"sso,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:order=19,type=spec,displayName="Monitoring"
+	Monitoring *OpenLibertyApplicationMonitoring `json:"monitoring,omitempty"`
+
+	// An array of environment variables for the application container.
+	// +listType=map
+	// +listMapKey=name
+	// +operator-sdk:csv:customresourcedefinitions:order=20,type=spec,displayName="Environment Variables"
+	Env []corev1.EnvVar `json:"env,omitempty"`
+
+	// List of sources to populate environment variables in the application container.
+	// +listType=atomic
+	// +operator-sdk:csv:customresourcedefinitions:order=21,type=spec,displayName="Environment Variables from Sources"
+	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
+
+	// Represents a volume with data that is accessible to the application container.
+	// +listType=map
+	// +listMapKey=name
+	// +operator-sdk:csv:customresourcedefinitions:order=22,type=spec,displayName="Volumes"
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
+
+	// Represents where to mount the volumes into the application container.
+	// +listType=atomic
+	// +operator-sdk:csv:customresourcedefinitions:order=23,type=spec,displayName="Volume Mounts"
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
+
+	// List of containers to run before other containers in a pod.
+	// +listType=map
+	// +listMapKey=name
+	// +operator-sdk:csv:customresourcedefinitions:order=24,type=spec,displayName="Init Containers"
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
+
+	// List of sidecar containers. These are additional containers to be added to the pods.
+	// +listType=map
+	// +listMapKey=name
+	// +operator-sdk:csv:customresourcedefinitions:order=25,type=spec,displayName="Sidecar Containers"
+	SidecarContainers []corev1.Container `json:"sidecarContainers,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:order=26,type=spec,displayName="Affinity"
+	Affinity *OpenLibertyApplicationAffinity `json:"affinity,omitempty"`
 }
 
-// Configures a Pod to run on particular Nodes.
+// Define health checks on application container to determine whether it is alive or ready to receive traffic
+type OpenLibertyApplicationProbes struct {
+	// Periodic probe of container liveness. Container will be restarted if the probe fails.
+	// +operator-sdk:csv:customresourcedefinitions:order=49,type=spec,displayName="Liveness Probe"
+	Liveness *corev1.Probe `json:"liveness,omitempty"`
+
+	// Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails.
+	// +operator-sdk:csv:customresourcedefinitions:order=50,type=spec,displayName="Readiness Probe"
+	Readiness *corev1.Probe `json:"readiness,omitempty"`
+
+	// Probe to determine successful initialization. If specified, other probes are not executed until this completes successfully.
+	// +operator-sdk:csv:customresourcedefinitions:order=51,type=spec,displayName="Startup Probe"
+	Startup *corev1.Probe `json:"startup,omitempty"`
+}
+
+// Configure pods to run on particular Nodes.
 type OpenLibertyApplicationAffinity struct {
 	// Controls which nodes the pod are scheduled to run on, based on labels on the node.
 	// +operator-sdk:csv:customresourcedefinitions:order=37,type=spec,displayName="Node Affinity",xDescriptors="urn:alm:descriptor:com.tectonic.ui:nodeAffinity"
@@ -156,17 +162,17 @@ type OpenLibertyApplicationAffinity struct {
 
 // Configures the desired resource consumption of pods.
 type OpenLibertyApplicationAutoScaling struct {
-	// Required field for autoscaling. Upper limit for the number of pods that can be set by the autoscaler. Parameter spec.resourceConstraints.requests.cpu must also be specified.
+	// Required field for autoscaling. Upper limit for the number of pods that can be set by the autoscaler. Parameter .spec.resources.requests.cpu must also be specified.
 	// +kubebuilder:validation:Minimum=1
-	// +operator-sdk:csv:customresourcedefinitions:order=17,type=spec,displayName="Max Replicas",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
+	// +operator-sdk:csv:customresourcedefinitions:order=1,type=spec,displayName="Max Replicas",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
 	MaxReplicas int32 `json:"maxReplicas,omitempty"`
 
 	// Lower limit for the number of pods that can be set by the autoscaler.
-	// +operator-sdk:csv:customresourcedefinitions:order=18,type=spec,displayName="Min Replicas",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
+	// +operator-sdk:csv:customresourcedefinitions:order=2,type=spec,displayName="Min Replicas",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
 	MinReplicas *int32 `json:"minReplicas,omitempty"`
 
-	// Target average CPU utilization (represented as a percentage of requested CPU) over all the pods.
-	// +operator-sdk:csv:customresourcedefinitions:order=19,type=spec,displayName="Target CPU Utilization Percentage",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
+	// Target average CPU utilization, represented as a percentage of requested CPU, over all the pods.
+	// +operator-sdk:csv:customresourcedefinitions:order=3,type=spec,displayName="Target CPU Utilization Percentage",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
 	TargetCPUUtilizationPercentage *int32 `json:"targetCPUUtilizationPercentage,omitempty"`
 }
 
@@ -195,7 +201,7 @@ type OpenLibertyApplicationService struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=13,type=spec,displayName="Service Annotations",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	Annotations map[string]string `json:"annotations,omitempty"`
 
-	// The port that the operator assigns to containers inside pods. Defaults to the value of spec.service.port.
+	// The port that the operator assigns to containers inside pods. Defaults to the value of .spec.service.port.
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:validation:Minimum=1
 	// +operator-sdk:csv:customresourcedefinitions:order=14,type=spec,displayName="Target Port",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
@@ -206,9 +212,11 @@ type OpenLibertyApplicationService struct {
 	CertificateSecretRef *string `json:"certificateSecretRef,omitempty"`
 
 	// An array consisting of service ports.
+	// +operator-sdk:csv:customresourcedefinitions:order=16,type=spec
 	Ports []corev1.ServicePort `json:"ports,omitempty"`
 
 	// Expose the application as a bindable service. Defaults to false.
+	// +operator-sdk:csv:customresourcedefinitions:order=17,type=spec,displayName="Bindable",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
 	Bindable *bool `json:"bindable,omitempty"`
 }
 
@@ -293,6 +301,9 @@ type OpenLibertyApplicationRoute struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=44,type=spec,displayName="Route Path",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	Path string `json:"path,omitempty"`
 
+	// Path type to be used for Ingress.
+	PathType networkingv1.PathType `json:"pathType,omitempty"`
+
 	// A name of a secret that already contains TLS key, certificate and CA to be used in the route. Also can contain destination CA certificate.
 	// +operator-sdk:csv:customresourcedefinitions:order=45,type=spec,displayName="Certificate Secret Reference",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	CertificateSecretRef *string `json:"certificateSecretRef,omitempty"`
@@ -314,7 +325,7 @@ type OpenLibertyApplicationStatus struct {
 	RouteAvailable *bool             `json:"routeAvailable,omitempty"`
 	ImageReference string            `json:"imageReference,omitempty"`
 
-	// +operator-sdk:csv:customresourcedefinitions:type=status,displayName="Service Binding Secret",xDescriptors="urn:alm:descriptor:io.kubernetes:Secret"
+	// +operator-sdk:csv:customresourcedefinitions:type=status,displayName="Service Binding"
 	Binding *corev1.LocalObjectReference `json:"binding,omitempty"`
 }
 
@@ -499,19 +510,26 @@ func (cr *OpenLibertyApplication) GetReplicas() *int32 {
 	return cr.Spec.Replicas
 }
 
+func (cr *OpenLibertyApplication) GetProbes() common.BaseComponentProbes {
+	if cr.Spec.Probes == nil {
+		return nil
+	}
+	return cr.Spec.Probes
+}
+
 // GetLivenessProbe returns liveness probe
-func (cr *OpenLibertyApplication) GetLivenessProbe() *corev1.Probe {
-	return cr.Spec.LivenessProbe
+func (p *OpenLibertyApplicationProbes) GetLivenessProbe() *corev1.Probe {
+	return p.Liveness
 }
 
 // GetReadinessProbe returns readiness probe
-func (cr *OpenLibertyApplication) GetReadinessProbe() *corev1.Probe {
-	return cr.Spec.ReadinessProbe
+func (p *OpenLibertyApplicationProbes) GetReadinessProbe() *corev1.Probe {
+	return p.Readiness
 }
 
 // GetStartupProbe returns startup probe
-func (cr *OpenLibertyApplication) GetStartupProbe() *corev1.Probe {
-	return cr.Spec.StartupProbe
+func (p *OpenLibertyApplicationProbes) GetStartupProbe() *corev1.Probe {
+	return p.Startup
 }
 
 // GetVolumes returns volumes slice
@@ -526,7 +544,7 @@ func (cr *OpenLibertyApplication) GetVolumeMounts() []corev1.VolumeMount {
 
 // GetResourceConstraints returns resource constraints
 func (cr *OpenLibertyApplication) GetResourceConstraints() *corev1.ResourceRequirements {
-	return cr.Spec.ResourceConstraints
+	return cr.Spec.Resources
 }
 
 // GetExpose returns expose flag
@@ -819,6 +837,11 @@ func (r *OpenLibertyApplicationRoute) GetPath() string {
 	return r.Path
 }
 
+// GetPathType returns pathType to use for the route
+func (r *OpenLibertyApplicationRoute) GetPathType() networkingv1.PathType {
+	return r.PathType
+}
+
 // GetNodeAffinity returns node affinity
 func (a *OpenLibertyApplicationAffinity) GetNodeAffinity() *corev1.NodeAffinity {
 	return a.NodeAffinity
@@ -851,8 +874,8 @@ func (cr *OpenLibertyApplication) Initialize() {
 		cr.Spec.PullPolicy = &pp
 	}
 
-	if cr.Spec.ResourceConstraints == nil {
-		cr.Spec.ResourceConstraints = &corev1.ResourceRequirements{}
+	if cr.Spec.Resources == nil {
+		cr.Spec.Resources = &corev1.ResourceRequirements{}
 	}
 
 	// Default applicationName to cr.Name, if a user sets createAppDefinition to true but doesn't set applicationName
