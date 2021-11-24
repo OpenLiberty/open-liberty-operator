@@ -593,7 +593,7 @@ spec:
     name: Artur Dzmitryieu
   - email: leojc@ca.ibm.com
     name: Leo Christy Jesuraj
-  maturity: alpha
+  maturity: beta
   provider:
     name: IBM
   version: 0.8.0
