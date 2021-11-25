@@ -3,4 +3,6 @@ kind: Deployment
 metadata:
   name: my-liberty-app
 status:
+  replicas: 2
   readyReplicas: 2
+  updatedReplicas: 2

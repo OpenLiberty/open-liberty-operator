@@ -3,7 +3,9 @@ kind: Deployment
 metadata:
   name: autoscaling3-liberty
 status:
+  replicas: 3
   readyReplicas: 3
+  updatedReplicas: 3
 ---
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler

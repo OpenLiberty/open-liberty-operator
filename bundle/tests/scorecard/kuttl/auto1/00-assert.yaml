@@ -3,4 +3,6 @@ kind: Deployment
 metadata:
   name: autoscaling1-liberty
 status:
+  replicas: 1
   readyReplicas: 1
+  updatedReplicas: 1
