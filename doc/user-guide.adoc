@@ -1,4 +1,4 @@
-= Open Liberty Operator
+= Open Liberty Operator v0.7.1 and below
 
 The Open Liberty Operator can be used to deploy and manage applications running on either Open Liberty or WebSphere Liberty into Kubernetes clusters. You can also perform link:++#day-2-operations++[Day-2 operations] such as gathering traces and dumps using the operator.
 
@@ -438,7 +438,6 @@ spec:
   applicationImage: quay.io/my-repo/my-app:1.0
   serviceability:
     size: 1Gi
-    storageClassName: nfs
 ----
 
 You can also create the `PersistentVolumeClaim` yourself and specify its name using `serviceability.volumeClaimName` parameter. You must create it in the same namespace as the `OpenLibertyApplication` instance.
@@ -561,6 +560,8 @@ Generated trace files, along with _messages.log_ files, will be in the folder us
 Once the trace has started, it can be stopped by setting the `disable` parameter to `true`. Deleting the CR will also stop the tracing. Changing the `podName` will first stop the tracing on the old Pod before enabling traces on the new Pod.
 
 You can check the status of a trace operation using the `status` field inside the CR YAML. You can also run the command `oc get oltrace -o wide` to see the status of all trace operations in the current namespace.
+
+**Important**: _Liberty server must allow configuration dropins. The following configuration should not be set on the server: `<config updateTrigger=“disabled”/>`. Otherwise, OpenLibertyTrace operation will not work on the server._
 
 Note:
 _The operator doesn't monitor the Pods. If the Pod is restarted or deleted after the trace is enabled, then the tracing wouldn't be automatically enabled when the Pod comes back up. In that case, the status of the trace operation may not correctly report whether the trace is enabled or not._

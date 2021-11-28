@@ -5,6 +5,8 @@ metadata:
 spec:
   # Add fields here
   applicationImage: registry.connect.redhat.com/ibm/open-liberty-samples:springPetClinic
+  expose: true
+  replicas: 1
 # MicroProfile Health Probes
 #  readinessProbe:
 #    httpGet:
