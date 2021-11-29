@@ -246,6 +246,9 @@ push-pipeline-multiarch-image: ## Push operator image
 build-manifest: setup-manifest
 	./scripts/build-manifest.sh -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" --image "${OPERATOR_IMAGE}"
 
+build-pipeline-manifest: setup-manifest
+	./scripts/build-manifest.sh -u "${PIPELINE_USERNAME}" -p "${PIPELINE_PASSWORD}" --registry "${PIPELINE_REGISTRY}" --image "${PIPELINE_OPERATOR_IMAGE}"
+
 test-e2e:
 	./scripts/e2e.sh -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" \
                      --cluster-url "${CLUSTER_URL}" --cluster-token "${CLUSTER_TOKEN}" \

@@ -28,7 +28,11 @@ main() {
     exit 1
   fi
 
-  echo "${PASS}" | docker login -u "${USER}" --password-stdin
+  if [[ -z "${REGISTRY}" ]]; then
+    echo "${PASS}" | docker login -u "${USER}" --password-stdin
+  else
+    echo "${PASS}" | docker login "${REGISTRY}" -u "${USER}" --password-stdin
+  fi
 
   if [[ "${TRAVIS}" != "true" ]] || [[ "${TRAVIS_PULL_REQUEST}" != "false" ]] || [[ "${TRAVIS_BRANCH}" != "master" ]]; then
     echo "****** Skipping manifest for: daily"
@@ -64,6 +68,9 @@ build_manifest() {
   ## try to build manifest but allow failure
   ## this allows new release builds
   local target="${IMAGE}:${tag}"
+  if [[ -n "${REGISTRY}" ]]; then
+    target="${REGISTRY}/${IMAGE}:${tag}"
+  fi
   manifest-tool push from-args \
     --platforms "linux/amd64,linux/s390x,linux/ppc64le" \
     --template "${target}-ARCH" \
@@ -81,6 +88,10 @@ parse_args() {
     -p)
       shift
       readonly PASS="${1}"
+      ;;
+    --registry)
+      shift
+      readonly REGISTRY="${1}"
       ;;
     --image)
       shift
