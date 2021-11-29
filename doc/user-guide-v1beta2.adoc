@@ -272,7 +272,7 @@ data:
 
 Next, configure single sign-on in `OpenLibertyApplication` CR. At minimum, `.spec.sso: {}` should be set in order for the operator to pass the values from the above `Secret` to your application. Refer to the link:++#custom-resource-definition-crd++[field list] for additional configurations for Single sign-on.
 
-In addition, single sign-on requires secured Service and secured Route configured with necessary certificates. Refer to link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#certificate-manager-integration++[Certificate Manager Integration] for more information.
+In addition, single sign-on requires secured Service and secured Route configured with necessary certificates. Refer to link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#certificates++[Certificates] for more information.
 
 To automatically trust certificates from well known identity providers, including social login providers such as Google and Facebook, set environment variable `SEC_TLS_TRUSTDEFAULTCERTS` to `true`. To automatically trust certificates issued by the Kubernetes cluster, set environment variable `SEC_IMPORT_K8S_CERTS` to `true`. Alternatively, you could include the necessary certificates manually when building application image or mounting them using a volume when deploying your application.
 

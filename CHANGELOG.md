@@ -13,7 +13,7 @@ All notable changes to this project will be documented in this file.
 
 **Breaking changes:** API version of the custom resources (CRs) `OpenLibertyApplication`, `OpenLibertyDump` and `OpenLibertyTrace` have changed. Custom resources with `apiVersion: openliberty.io/v1beta1` are not handled by Open Liberty Operator versions 0.8.0 and above. You must delete existing custom resources with `apiVersion: openliberty.io/v1beta1` and create new custom resources with `apiVersion: apps.openliberty.io/v1beta2`.
 
-See the [new user guide](https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc) for more information on the changes to the fields listed below.
+See the [new user guide](https://github.com/OpenLiberty/open-liberty-operator/blob/main/doc/user-guide-v1beta2.adoc) for more information on the changes to the fields listed below.
 
 ### Removed
 
