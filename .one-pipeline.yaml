@@ -85,16 +85,16 @@ containerize:
     docker push $BUNDLE_IMAGE
     # Build manifest
     make build-pipeline-manifest
-    # # Save artifacts
-    # declare -a tags=("daily-amd64" "daily-ppc64le" "daily-s390x") 
-    # for i in "${tags[@]}"
-    # do
-    #   IMAGE=cp.stg.icr.io/cp/olo-operator:$i
-    #   DIGEST="$(skopeo inspect docker://$IMAGE | grep Digest | grep -o 'sha[^\"]*')"
-    #   ARCH=$(echo $i | cut -d'-' -f 2)
-    #   echo "Saving artifact $i name=$IMAGE digest=$DIGEST"
-    #   save_artifact $i type=image name="$IMAGE" "digest=$DIGEST" "arch=$ARCH"   
-    # done
+    # Save artifacts
+    declare -a tags=("daily-amd64" "daily-ppc64le" "daily-s390x")
+    for i in "${tags[@]}"
+    do
+      IMAGE=cp.stg.icr.io/cp/olo-operator:$i
+      DIGEST="$(skopeo inspect docker://$IMAGE | grep Digest | grep -o 'sha[^\"]*')"
+      ARCH=$(echo $i | cut -d'-' -f 2)
+      echo "Saving artifact $i name=$IMAGE digest=$DIGEST"
+      save_artifact $i type=image name="$IMAGE" "digest=$DIGEST" "arch=$ARCH"
+    done
 
     # # launch the sub-pipeline to do the twistlock scanning on the amd64 container image    
     # source "${ONE_PIPELINE_PATH}"/tools/trigger-task
