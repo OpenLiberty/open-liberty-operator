@@ -253,3 +253,9 @@ test-e2e:
 	./scripts/e2e.sh -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" \
                      --cluster-url "${CLUSTER_URL}" --cluster-token "${CLUSTER_TOKEN}" \
                      --registry-name default-route --registry-namespace openshift-image-registry
+
+test-pipeline-e2e:
+	./scripts/pipeline/fyre-e2e.sh -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" \
+                     --cluster-url "${CLUSTER_URL}" --cluster-token "${CLUSTER_TOKEN}" \
+                     --registry-name "${PIPELINE_REGISTRY}" --registry-namespace "${PIPELINE_REGISTRY_NAMESPACE}" \
+					 --registry-user "${PIPELINE_USERNAME}" --registry-password "${PIPELINE_PASSWORD}"
