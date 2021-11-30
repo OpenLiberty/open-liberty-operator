@@ -5,7 +5,7 @@ metadata:
 spec:
   tls:
     caCertificate: |
-      cacrt
+      cacrtupdate
     certificate: |
       tlscrt
     destinationCACertificate: |
