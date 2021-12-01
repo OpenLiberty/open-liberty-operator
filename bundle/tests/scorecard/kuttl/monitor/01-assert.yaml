@@ -3,7 +3,9 @@ kind: Deployment
 metadata:
   name: service-monitor-liberty
 status:
+  replicas: 1
   readyReplicas: 1
+  updatedReplicas: 1
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
