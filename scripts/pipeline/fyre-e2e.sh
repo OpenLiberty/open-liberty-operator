@@ -17,9 +17,9 @@ setup_env() {
 
     # Set variables for rest of script to use
     #readonly DEFAULT_REGISTRY=$(oc get route "${REGISTRY_NAME}" -o jsonpath="{ .spec.host }" -n "${REGISTRY_NAMESPACE}")
-    readonly TEST_NAMESPACE="runtime-operator-test-${TRAVIS_BUILD_NUMBER}"
-    readonly BUILD_IMAGE="${REGISTRY_NAME}/${REGISTRY_NAMESPACE}/rco-operator:daily"
-    readonly BUNDLE_IMAGE="${REGISTRY_NAME}/${REGISTRY_NAMESPACE}/rco-operator:bundle-daily"
+    readonly TEST_NAMESPACE="olo-test-${TRAVIS_BUILD_NUMBER}"
+    readonly BUILD_IMAGE="${REGISTRY_NAME}/${REGISTRY_NAMESPACE}/olo-operator:daily"
+    readonly BUNDLE_IMAGE="${REGISTRY_NAME}/${REGISTRY_NAMESPACE}/olo-operator:bundle-daily"
 
     echo "****** Creating test namespace: ${TEST_NAMESPACE}"
     oc new-project "${TEST_NAMESPACE}" || oc project "${TEST_NAMESPACE}"
@@ -107,12 +107,12 @@ main() {
     }
 
     # Wait for operator deployment to be ready
-    while [[ $(oc get deploy rco-controller-manager -o jsonpath='{ .status.readyReplicas }') -ne "1" ]]; do
-        echo "****** Waiting for rco-controller-manager to be ready..."
+    while [[ $(oc get deploy olo-controller-manager -o jsonpath='{ .status.readyReplicas }') -ne "1" ]]; do
+        echo "****** Waiting for olo-controller-manager to be ready..."
         sleep 10
     done
 
-    echo "****** rco-controller-manager deployment is ready..."
+    echo "****** olo-controller-manager deployment is ready..."
 
     echo "****** Starting scorecard tests..."
     operator-sdk scorecard --verbose --kubeconfig  ${HOME}/.kube/config --selector=suite=kuttlsuite --namespace="${TEST_NAMESPACE}" --service-account="scorecard-kuttl" --wait-time 30m ./bundle || {
