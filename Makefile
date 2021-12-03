@@ -10,7 +10,7 @@ VERSION ?= 0.8.0
 OPERATOR_IMAGE ?= openliberty/operator
 OPERATOR_IMAGE_TAG ?= daily
 PIPELINE_REGISTRY ?= cp.stg.icr.io
-PIPELINE_REGISTY_NAMESPACE ?= cp
+PIPELINE_REGISTRY_NAMESPACE ?= cp
 PIPELINE_OPERATOR_IMAGE ?= cp/olo-operator
 
 # CHANNELS define the bundle channels used in the bundle.
