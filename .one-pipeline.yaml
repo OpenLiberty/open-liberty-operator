@@ -36,13 +36,14 @@ static-scan:
     sonar.projectKey=open-liberty-operator
     sonar.host.url=$SONAR_HOST_URL
     sonar.sources=.
-    sonar.login=$SONAR_PASS
+    sonar.login=$SONAR_USER
+    sonar.password=$SONAR_PASS
     sonar.c.file.suffixes=-
     sonar.cpp.file.suffixes=-
     sonar.objc.file.suffixes=-
     EOF
     chmod -x "$WORKSPACE"/open-liberty-operator/sonar-project.properties
-    echo "$SONAR_PASS" >> /tmp/sonarqube-token
+    #echo "$SONAR_PASS" >> /tmp/sonarqube-token
     "${ONE_PIPELINE_PATH}"/internal/sonarqube/sonarqube_run
 
 containerize:
