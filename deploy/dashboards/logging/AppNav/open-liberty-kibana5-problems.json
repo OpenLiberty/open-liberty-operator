@@ -1,14 +1,14 @@
 [
   {
-    "_id": "Liberty-Problems-K5-20191122",
+    "_id": "Liberty-Problems-K5-20190909",
     "_type": "dashboard",
     "_source": {
-      "title": "Liberty-Problems-K5-20191122",
+      "title": "Liberty-Problems-K5-20190909",
       "hits": 0,
       "description": "Dashboard visualizes message, trace and FFDC information for Liberty servers. Use this dashboard to look for errors, warnings and other problems.",
-      "panelsJSON": "[{\"col\":1,\"id\":\"liberty_probleminfo\",\"panelIndex\":1,\"row\":1,\"size_x\":12,\"size_y\":1,\"type\":\"visualization\"},{\"col\":1,\"id\":\"liberty_topMessageIds\",\"panelIndex\":5,\"row\":8,\"size_x\":12,\"size_y\":3,\"type\":\"visualization\"},{\"col\":1,\"id\":\"liberty_messageGraph\",\"panelIndex\":6,\"row\":11,\"size_x\":4,\"size_y\":2,\"embeddableConfig\":{\"vis\":{\"colors\":{\"AUDIT\":\"#3F2B5B\",\"INFO\":\"#7EB26D\",\"SEVERE\":\"#BF1B00\",\"WARNING\":\"#F2C96D\"}}},\"type\":\"visualization\"},{\"col\":9,\"id\":\"liberty_ffdcGraph\",\"panelIndex\":7,\"row\":11,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":5,\"id\":\"liberty_traceGraph\",\"panelIndex\":8,\"row\":11,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":1,\"id\":\"b1afa090-c266-11e8-b344-7d7a26e293da\",\"panelIndex\":19,\"row\":2,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":5,\"id\":\"c1f2fce0-c266-11e8-b344-7d7a26e293da\",\"panelIndex\":20,\"row\":2,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":9,\"id\":\"d29457b0-c266-11e8-b344-7d7a26e293da\",\"panelIndex\":21,\"row\":2,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":1,\"columns\":[\"loglevel\",\"module\",\"message\",\"kubernetes.pod_name\",\"ibm_sequence\"],\"id\":\"liberty_messageSearch\",\"panelIndex\":25,\"row\":13,\"size_x\":12,\"size_y\":4,\"sort\":[\"@timestamp\",\"desc\"],\"type\":\"search\"},{\"col\":1,\"columns\":[\"loglevel\",\"module\",\"message\",\"kubernetes.pod_name\",\"ibm_sequence\"],\"id\":\"liberty_traceSearch\",\"panelIndex\":26,\"row\":21,\"size_x\":12,\"size_y\":4,\"sort\":[\"@timestamp\",\"desc\"],\"type\":\"search\"},{\"col\":1,\"columns\":[\"ibm_className\",\"ibm_probeID\",\"ibm_exceptionName\",\"kubernetes.pod_name\",\"ibm_sequence\"],\"id\":\"liberty_ffdcSearch\",\"panelIndex\":27,\"row\":17,\"size_x\":12,\"size_y\":4,\"sort\":[\"@timestamp\",\"desc\"],\"type\":\"search\"},{\"col\":1,\"id\":\"bbdafb10-8a2e-11e9-bccd-ad683bf7518d\",\"panelIndex\":28,\"row\":4,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":5,\"id\":\"f04cbb40-8a2e-11e9-bccd-ad683bf7518d\",\"panelIndex\":29,\"row\":4,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":9,\"id\":\"21ecbdd0-8a2f-11e9-bccd-ad683bf7518d\",\"panelIndex\":30,\"row\":4,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":1,\"id\":\"liberty_potentialProblemCount\",\"panelIndex\":31,\"row\":6,\"size_x\":12,\"size_y\":2,\"type\":\"visualization\"}]",
+      "panelsJSON": "[{\"col\":1,\"id\":\"liberty_probleminfo\",\"panelIndex\":1,\"row\":1,\"size_x\":12,\"size_y\":1,\"type\":\"visualization\"},{\"col\":1,\"id\":\"liberty_topMessageIds\",\"panelIndex\":5,\"row\":6,\"size_x\":12,\"size_y\":3,\"type\":\"visualization\"},{\"col\":1,\"id\":\"liberty_messageGraph\",\"panelIndex\":6,\"row\":9,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":9,\"id\":\"liberty_ffdcGraph\",\"panelIndex\":7,\"row\":9,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":5,\"id\":\"liberty_traceGraph\",\"panelIndex\":8,\"row\":9,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":1,\"id\":\"b1afa090-c266-11e8-b344-7d7a26e293da\",\"panelIndex\":19,\"row\":2,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":5,\"id\":\"c1f2fce0-c266-11e8-b344-7d7a26e293da\",\"panelIndex\":20,\"row\":2,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":9,\"id\":\"d29457b0-c266-11e8-b344-7d7a26e293da\",\"panelIndex\":21,\"row\":2,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":1,\"columns\":[\"loglevel\",\"module\",\"message\",\"kubernetes.pod_name\",\"ibm_sequence\"],\"id\":\"liberty_messageSearch\",\"panelIndex\":25,\"row\":11,\"size_x\":12,\"size_y\":4,\"sort\":[\"@timestamp\",\"desc\"],\"type\":\"search\"},{\"col\":1,\"columns\":[\"loglevel\",\"module\",\"message\",\"kubernetes.pod_name\",\"ibm_sequence\"],\"id\":\"liberty_traceSearch\",\"panelIndex\":26,\"row\":15,\"size_x\":12,\"size_y\":4,\"sort\":[\"@timestamp\",\"desc\"],\"type\":\"search\"},{\"col\":1,\"columns\":[\"ibm_className\",\"ibm_probeID\",\"ibm_exceptionName\",\"kubernetes.pod_name\",\"ibm_sequence\"],\"id\":\"liberty_ffdcSearch\",\"panelIndex\":27,\"row\":19,\"size_x\":12,\"size_y\":4,\"sort\":[\"@timestamp\",\"desc\"],\"type\":\"search\"},{\"col\":1,\"id\":\"bbdafb10-8a2e-11e9-bccd-ad683bf7518d\",\"panelIndex\":28,\"row\":4,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":5,\"id\":\"f04cbb40-8a2e-11e9-bccd-ad683bf7518d\",\"panelIndex\":29,\"row\":4,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"},{\"col\":9,\"id\":\"21ecbdd0-8a2f-11e9-bccd-ad683bf7518d\",\"panelIndex\":30,\"row\":4,\"size_x\":4,\"size_y\":2,\"type\":\"visualization\"}]",
       "optionsJSON": "{\"darkTheme\":false}",
-      "uiStateJSON": "{\"P-19\":{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}},\"P-20\":{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}},\"P-21\":{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}},\"P-28\":{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}},\"P-29\":{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}},\"P-30\":{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}},\"P-6\":{\"vis\":{\"colors\":{\"AUDIT\":\"#4F2671\",\"INFO\":\"#629E51\",\"SEVERE\":\"#BF1B00\",\"WARNING\":\"#F2C96D\"}}}}",
+      "uiStateJSON": "{\"P-19\":{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}},\"P-20\":{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}},\"P-21\":{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}},\"P-28\":{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}},\"P-29\":{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}},\"P-30\":{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}},\"P-6\":{\"vis\":{\"colors\":{\"AUDIT\":\"#3F2B5B\",\"INFO\":\"#7EB26D\",\"SEVERE\":\"#BF1B00\",\"WARNING\":\"#F2C96D\"}}}}",
       "version": 1,
       "timeRestore": true,
       "timeTo": "now",
@@ -24,10 +24,10 @@
     }
   },
   {
-    "_id": "liberty_problemSearch",
+    "_id": "liberty_all",
     "_type": "search",
     "_source": {
-      "title": "Liberty Problem Search",
+      "title": "Liberty All Search",
       "description": "",
       "hits": 0,
       "columns": [
@@ -39,11 +39,28 @@
       ],
       "version": 1,
       "kibanaSavedObjectMeta": {
-        "searchSourceJSON": "{\"index\":\"project.*\",\"highlight\":{\"pre_tags\":[\"@kibana-highlighted-field@\"],\"post_tags\":[\"@/kibana-highlighted-field@\"],\"fields\":{\"*\":{}},\"fragment_size\":2147483647},\"filter\":[],\"query\":{\"bool\":{\"should\":[{\"match_phrase\":{\"type\":\"liberty_message\"}},{\"match_phrase\":{\"type\":\"liberty_trace\"}},{\"match_phrase\":{\"type\":\"liberty_ffdc\"}}],\"minimum_should_match\":1}},\"highlightAll\":true,\"version\":true}"
+        "searchSourceJSON": "{\"index\":\"project.*\",\"highlight\":{\"pre_tags\":[\"@kibana-highlighted-field@\"],\"post_tags\":[\"@/kibana-highlighted-field@\"],\"fields\":{\"*\":{}},\"fragment_size\":2147483647},\"filter\":[],\"query\":{\"query_string\":{\"query\":\"type:liberty_*\",\"analyze_wildcard\":true}}}"
       }
-    },
-    "_meta": {
-      "savedObjectVersion": 2
+    }
+  },
+  {
+    "_id": "liberty_all_IBM_Sequence",
+    "_type": "search",
+    "_source": {
+      "title": "Liberty All Search (sorted by Sequence)",
+      "description": "",
+      "hits": 0,
+      "columns": [
+        "_source"
+      ],
+      "sort": [
+        "ibm_sequence",
+        "desc"
+      ],
+      "version": 1,
+      "kibanaSavedObjectMeta": {
+        "searchSourceJSON": "{\"index\":\"project.*\",\"highlight\":{\"pre_tags\":[\"@kibana-highlighted-field@\"],\"post_tags\":[\"@/kibana-highlighted-field@\"],\"fields\":{\"*\":{}},\"fragment_size\":2147483647},\"filter\":[],\"query\":{\"query_string\":{\"query\":\"type:liberty_*\",\"analyze_wildcard\":true}}}"
+      }
     }
   },
   {
@@ -97,7 +114,7 @@
         "ibm_className",
         "ibm_probeID",
         "ibm_exceptionName",
-        "kubernetes.pod_name",
+        "kubernetes.pod",
         "ibm_sequence"
       ],
       "sort": [
@@ -121,7 +138,7 @@
         "ibm_className",
         "ibm_probeID",
         "ibm_exceptionName",
-        "kubernetes.pod_name",
+        "kubernetes.pod",
         "ibm_sequence"
       ],
       "sort": [
@@ -145,7 +162,7 @@
         "loglevel",
         "module",
         "message",
-        "kubernetes.pod_name",
+        "kubernetes.pod",
         "ibm_sequence"
       ],
       "sort": [
@@ -169,7 +186,7 @@
         "loglevel",
         "module",
         "message",
-        "kubernetes.pod_name",
+        "kubernetes.pod",
         "ibm_sequence"
       ],
       "sort": [
@@ -193,7 +210,7 @@
         "loglevel",
         "module",
         "message",
-        "kubernetes.pod_name",
+        "kubernetes.pod",
         "ibm_sequence"
       ],
       "sort": [
@@ -217,7 +234,7 @@
         "loglevel",
         "module",
         "message",
-        "kubernetes.pod_name",
+        "kubernetes.pod",
         "ibm_sequence"
       ],
       "sort": [
@@ -234,8 +251,8 @@
     "_id": "21ecbdd0-8a2f-11e9-bccd-ad683bf7518d",
     "_type": "visualization",
     "_source": {
-      "title": "Liberty Servers (Problems)",
-      "visState": "{\"title\":\"Liberty Servers (Problems)\",\"type\":\"table\",\"params\":{\"perPage\":10,\"showMeticsAtAllLevels\":false,\"showPartialRows\":false,\"showTotal\":false,\"sort\":{\"columnIndex\":null,\"direction\":null},\"totalFunc\":\"sum\"},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"ibm_serverName.raw\",\"size\":5,\"order\":\"desc\",\"orderBy\":\"1\"}}],\"listeners\":{}}",
+      "title": "Server (Problems)",
+      "visState": "{\"title\":\"Server (Problems)\",\"type\":\"table\",\"params\":{\"perPage\":10,\"showMeticsAtAllLevels\":false,\"showPartialRows\":false,\"showTotal\":false,\"sort\":{\"columnIndex\":null,\"direction\":null},\"totalFunc\":\"sum\"},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"ibm_serverName.raw\",\"size\":5,\"order\":\"desc\",\"orderBy\":\"1\"}}],\"listeners\":{}}",
       "uiStateJSON": "{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}}",
       "description": "",
       "version": 1,
@@ -252,7 +269,7 @@
       "visState": "{\"title\":\"Pod\",\"type\":\"table\",\"params\":{\"perPage\":10,\"showPartialRows\":false,\"showMeticsAtAllLevels\":false,\"sort\":{\"columnIndex\":null,\"direction\":null},\"showTotal\":false,\"totalFunc\":\"sum\"},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"kubernetes.pod_name\",\"size\":5,\"order\":\"desc\",\"orderBy\":\"1\"}}],\"listeners\":{}}",
       "uiStateJSON": "{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}}",
       "description": "",
-      "savedSearchId": "liberty_problemSearch",
+      "savedSearchId": "liberty_all",
       "version": 1,
       "kibanaSavedObjectMeta": {
         "searchSourceJSON": "{\"filter\":[]}"
@@ -267,7 +284,7 @@
       "visState": "{\"title\":\"Namespace\",\"type\":\"table\",\"params\":{\"perPage\":10,\"showPartialRows\":false,\"showMeticsAtAllLevels\":false,\"sort\":{\"columnIndex\":null,\"direction\":null},\"showTotal\":false,\"totalFunc\":\"sum\"},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"kubernetes.namespace_name\",\"size\":5,\"order\":\"desc\",\"orderBy\":\"1\"}}],\"listeners\":{}}",
       "uiStateJSON": "{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}}",
       "description": "",
-      "savedSearchId": "liberty_problemSearch",
+      "savedSearchId": "liberty_all",
       "version": 1,
       "kibanaSavedObjectMeta": {
         "searchSourceJSON": "{\"filter\":[]}"
@@ -292,8 +309,8 @@
     "_id": "bbdafb10-8a2e-11e9-bccd-ad683bf7518d",
     "_type": "visualization",
     "_source": {
-      "title": "Liberty Hosts (Problems)",
-      "visState": "{\"aggs\":[{\"enabled\":true,\"id\":\"1\",\"params\":{},\"schema\":\"metric\",\"type\":\"count\"},{\"enabled\":true,\"id\":\"2\",\"params\":{\"field\":\"host.raw\",\"order\":\"desc\",\"orderBy\":\"1\",\"size\":5},\"schema\":\"bucket\",\"type\":\"terms\"}],\"listeners\":{},\"params\":{\"perPage\":10,\"showMeticsAtAllLevels\":false,\"showPartialRows\":false,\"showTotal\":false,\"sort\":{\"columnIndex\":null,\"direction\":null},\"totalFunc\":\"sum\"},\"title\":\"Liberty Hosts (Problems)\",\"type\":\"table\"}",
+      "title": "Host (Problems)",
+      "visState": "{\"aggs\":[{\"enabled\":true,\"id\":\"1\",\"params\":{},\"schema\":\"metric\",\"type\":\"count\"},{\"enabled\":true,\"id\":\"2\",\"params\":{\"field\":\"host.raw\",\"order\":\"desc\",\"orderBy\":\"1\",\"size\":5},\"schema\":\"bucket\",\"type\":\"terms\"}],\"listeners\":{},\"params\":{\"perPage\":10,\"showMeticsAtAllLevels\":false,\"showPartialRows\":false,\"showTotal\":false,\"sort\":{\"columnIndex\":null,\"direction\":null},\"totalFunc\":\"sum\"},\"title\":\"Host (Problems)\",\"type\":\"table\"}",
       "uiStateJSON": "{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}}",
       "description": "",
       "version": 1,
@@ -338,7 +355,7 @@
       "visState": "{\"aggs\":[{\"enabled\":true,\"id\":\"1\",\"params\":{},\"schema\":\"metric\",\"type\":\"count\"},{\"enabled\":true,\"id\":\"2\",\"params\":{\"field\":\"kubernetes.container_name.raw\",\"order\":\"desc\",\"orderBy\":\"1\",\"size\":5},\"schema\":\"bucket\",\"type\":\"terms\"}],\"listeners\":{},\"params\":{\"perPage\":10,\"showMeticsAtAllLevels\":false,\"showPartialRows\":false,\"showTotal\":false,\"sort\":{\"columnIndex\":null,\"direction\":null},\"totalFunc\":\"sum\"},\"title\":\"Container\",\"type\":\"table\"}",
       "uiStateJSON": "{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}}",
       "description": "",
-      "savedSearchId": "liberty_problemSearch",
+      "savedSearchId": "liberty_all",
       "version": 1,
       "kibanaSavedObjectMeta": {
         "searchSourceJSON": "{\"filter\":[]}"
@@ -349,8 +366,8 @@
     "_id": "f04cbb40-8a2e-11e9-bccd-ad683bf7518d",
     "_type": "visualization",
     "_source": {
-      "title": "Liberty User Directories (Problems)",
-      "visState": "{\"title\":\"Liberty User Directories (Problems)\",\"type\":\"table\",\"params\":{\"perPage\":10,\"showMeticsAtAllLevels\":false,\"showPartialRows\":false,\"showTotal\":false,\"sort\":{\"columnIndex\":null,\"direction\":null},\"totalFunc\":\"sum\"},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"ibm_userDir.raw\",\"size\":5,\"order\":\"desc\",\"orderBy\":\"1\"}}],\"listeners\":{}}",
+      "title": "User Dir (Problems)",
+      "visState": "{\"title\":\"User Dir (Problems)\",\"type\":\"table\",\"params\":{\"perPage\":10,\"showMeticsAtAllLevels\":false,\"showPartialRows\":false,\"showTotal\":false,\"sort\":{\"columnIndex\":null,\"direction\":null},\"totalFunc\":\"sum\"},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"ibm_userDir.raw\",\"size\":5,\"order\":\"desc\",\"orderBy\":\"1\"}}],\"listeners\":{}}",
       "uiStateJSON": "{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}}",
       "description": "",
       "version": 1,
@@ -424,7 +441,7 @@
     "_source": {
       "title": "Liberty Message",
       "visState": "{\"title\":\"Liberty Message\",\"type\":\"histogram\",\"params\":{\"addLegend\":true,\"addTimeMarker\":false,\"addTooltip\":true,\"categoryAxes\":[{\"id\":\"CategoryAxis-1\",\"labels\":{\"show\":true,\"truncate\":100},\"position\":\"bottom\",\"scale\":{\"type\":\"linear\"},\"show\":true,\"style\":{},\"title\":{\"text\":\"@timestamp per 30 minutes\"},\"type\":\"category\"}],\"defaultYExtents\":false,\"grid\":{\"categoryLines\":false,\"style\":{\"color\":\"#eee\"}},\"legendPosition\":\"right\",\"mode\":\"stacked\",\"scale\":\"linear\",\"seriesParams\":[{\"data\":{\"id\":\"1\",\"label\":\"Count\"},\"drawLinesBetweenPoints\":true,\"mode\":\"stacked\",\"show\":\"true\",\"showCircles\":true,\"type\":\"histogram\",\"valueAxis\":\"ValueAxis-1\"}],\"setYExtents\":false,\"shareYAxis\":true,\"times\":[],\"valueAxes\":[{\"id\":\"ValueAxis-1\",\"labels\":{\"filter\":false,\"rotate\":0,\"show\":true,\"truncate\":100},\"name\":\"LeftAxis-1\",\"position\":\"left\",\"scale\":{\"mode\":\"normal\",\"type\":\"linear\"},\"show\":true,\"style\":{},\"title\":{\"text\":\"Count\"},\"type\":\"value\"}],\"yAxis\":{}},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"date_histogram\",\"schema\":\"segment\",\"params\":{\"field\":\"@timestamp\",\"interval\":\"auto\",\"customInterval\":\"2h\",\"min_doc_count\":1,\"extended_bounds\":{}}},{\"id\":\"3\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"group\",\"params\":{\"field\":\"loglevel.raw\",\"size\":5,\"order\":\"desc\",\"orderBy\":\"1\"}}],\"listeners\":{}}",
-      "uiStateJSON": "{\"vis\":{\"colors\":{\"ERROR\":\"#BF1B00\",\"FATAL\":\"#58140C\",\"AUDIT\":\"#614D93\",\"DETAIL\":\"#1F78C1\",\"WARNING\":\"#EAB839\",\"SystemOut\":\"#A25778\",\"SystemErr\":\"#E0752D\",\"INFO\":\"#7EB26D\"}}}",
+      "uiStateJSON": "{}",
       "description": "",
       "version": 1,
       "kibanaSavedObjectMeta": {
@@ -485,21 +502,6 @@
       "uiStateJSON": "{}",
       "description": "",
       "savedSearchId": "liberty_traceSearch",
-      "version": 1,
-      "kibanaSavedObjectMeta": {
-        "searchSourceJSON": "{\"filter\":[]}"
-      }
-    }
-  },
-  {
-    "_id": "liberty_potentialProblemCount",
-    "_type": "visualization",
-    "_source": {
-      "title": "Liberty Potential Problem Count",
-      "visState": "{\"title\":\"Liberty Potential Problem Count\",\"type\":\"metric\",\"params\":{\"addTooltip\":true,\"addLegend\":false,\"type\":\"metric\",\"metric\":{\"percentageMode\":false,\"useRanges\":false,\"colorSchema\":\"Green to Red\",\"metricColorMode\":\"None\",\"colorsRange\":[{\"from\":0,\"to\":10000}],\"labels\":{\"show\":true},\"invertColors\":false,\"style\":{\"bgFill\":\"#000\",\"bgColor\":false,\"labelColor\":false,\"subText\":\"\",\"fontSize\":40}},\"gauge\":{\"verticalSplit\":false,\"autoExtend\":false,\"percentageMode\":false,\"gaugeType\":\"Metric\",\"gaugeStyle\":\"Full\",\"backStyle\":\"Full\",\"orientation\":\"vertical\",\"colorSchema\":\"Green to Red\",\"gaugeColorMode\":\"None\",\"useRange\":false,\"colorsRange\":[{\"from\":0,\"to\":100}],\"invertColors\":false,\"labels\":{\"show\":true,\"color\":\"black\"},\"scale\":{\"show\":false,\"labels\":false,\"color\":\"#333\",\"width\":2},\"type\":\"simple\",\"style\":{\"fontSize\":50,\"bgColor\":false,\"labelColor\":false,\"subText\":\"\"}}},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"filters\",\"schema\":\"group\",\"params\":{\"filters\":[{\"input\":{\"query\":{\"query_string\":{\"query\":\"loglevel:FATAL\"}}},\"label\":\"FATAL\"},{\"input\":{\"query\":{\"query_string\":{\"query\":\"loglevel:ERROR OR loglevel:SEVERE\"}}},\"label\":\"ERROR\"},{\"input\":{\"query\":{\"query_string\":{\"query\":\"loglevel:WARNING\"}}},\"label\":\"WARNING\"},{\"input\":{\"query\":{\"query_string\":{\"query\":\"loglevel:SystemErr\"}}},\"label\":\"SystemErr\"}]}}],\"listeners\":{}}",
-      "uiStateJSON": "{\"vis\":{\"defaultColors\":{\"0 - 100\":\"rgb(0,104,55)\"}}}",
-      "description": "",
-      "savedSearchId": "liberty_messageSearch",
       "version": 1,
       "kibanaSavedObjectMeta": {
         "searchSourceJSON": "{\"filter\":[]}"
