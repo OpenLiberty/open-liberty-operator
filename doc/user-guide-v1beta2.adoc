@@ -1,8 +1,10 @@
 = Open Liberty Operator
 
-The Open Liberty Operator can be used to deploy and manage applications running on Open Liberty into Kubernetes clusters. You can also perform link:++#day-2-operations++[Day-2 operations] such as gathering traces and dumps using the operator.
+The Open Liberty Operator can be used to deploy and manage applications running on Open Liberty or WebSphere Liberty into Kubernetes clusters. You can also perform link:++#day-2-operations++[Day-2 operations] such as gathering traces and dumps using the operator.
 
 This documentation refers to the latest codebase.  For documentation and samples of older releases, please check out the link:++https://github.com/OpenLiberty/open-liberty-operator/releases++[main releases] page and navigate the corresponding tag.
+
+**Important**: This user guide only applies to operator versions 0.8.0 and above. For operator versions 0.7.1 and below, refer to this link:++user-guide.adoc++[user guide].
 
 == Operator installation
 
@@ -23,7 +25,7 @@ NOTE: The Open Liberty Operator can only interact with resources it is given per
 
 The architecture of the Open Liberty Operator follows the basic controller pattern:  the Operator container with the controller is deployed into a Pod and listens for incoming resources with `Kind: OpenLibertyApplication`. Creating an `OpenLibertyApplication` custom resource (CR) triggers the Open Liberty Operator to create, update or delete Kubernetes resources needed by the application to run on your cluster.
 
-In addition, Open Liberty Operator makes it easy to perform link:++#day-2-operations++[Day-2 operations] on an Open Liberty server running inside a Pod as part of an `OpenLibertyApplication` instance:
+In addition, Open Liberty Operator makes it easy to perform link:++#day-2-operations++[Day-2 operations] on an Open Liberty or WebSphere Liberty server running inside a Pod as part of an `OpenLibertyApplication` instance:
 * Gather server traces using resource `Kind: OpenLibertyTrace`
 * Generate server dumps using resource `Kind: OpenLibertyDump`
 
@@ -35,7 +37,7 @@ Each instance of `OpenLibertyApplication` CR represents the application to be de
 
 [source,yaml]
 ----
-apiVersion: openliberty.io/v1beta1
+apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
   name: my-liberty-app
@@ -66,7 +68,6 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `pullSecret` | If using a registry that requires authentication, the name of the secret containing credentials.
 | `initContainers` | The list of link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#container-v1-core++[Init Container] definitions.
 | `sidecarContainers` | The list of `sidecar` containers. These are additional containers to be added to the pods. Note: Sidecar containers should not be named `app`.
-| `architecture` | An array of architectures to be considered for deployment. Their position in the array indicates preference.
 | `service.bindable` | A boolean to toggle whether the operator expose the application as a bindable service. Defaults to `false`.
 | `service.port` | The port exposed by the container.
 | `service.targetPort` | The port that the operator assigns to containers inside pods. Defaults to the value of `service.port`.
@@ -81,7 +82,7 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `deployment.updateStrategy`   | A field to specify the update strategy of the deployment. For more information, see link:++https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy++[updateStrategy]
 | `deployment.updateStrategy.type`   | The type of update strategy of the deployment. The type can be set to `RollingUpdate` or `Recreate`, where `RollingUpdate` is the default update strategy.
 | `deployment.annotations`   | Annotations to be added only to the deployment and resources owned by the deployment.
-| `statefulSet.storage.size` | A convenient field to set the size of the persisted storage. Can be overridden by the `storage.volumeClaimTemplate` property. Operator will create a `StatefulSet` instead of a `Deployment` when `storage` is configured. See link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Persistence++[Persistence] for more information.
+| `statefulSet.storage.size` | A convenient field to set the size of the persisted storage. Can be overridden by the `storage.volumeClaimTemplate` property. Operator will create a `StatefulSet` instead of a `Deployment` when `storage` is configured. See link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#Persistence++[Persistence] for more information.
 | `statefulSet.storage.mountPath` | The directory inside the container where this persisted storage will be bound to.
 | `statefulSet.storage.volumeClaimTemplate` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#components++[volumeClaimTemplate] component of a `StatefulSet`.
 | `statefulSet.updateStrategy`   | A field to specify the update strategy of the StatefulSet. For more information, see link:++https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies++[updateStrategy]
@@ -91,19 +92,19 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `autoscaling.maxReplicas` | Required field for autoscaling. Upper limit for the number of pods that can be set by the autoscaler. It cannot be lower than the minimum number of replicas.
 | `autoscaling.minReplicas`   | Lower limit for the number of pods that can be set by the autoscaler.
 | `autoscaling.targetCPUUtilizationPercentage`   | Target average CPU utilization (represented as a percentage of requested CPU) over all the pods.
-| `resourceConstraints.requests.cpu` | The minimum required CPU core. Specify integers, fractions (e.g. 0.5), or millicore values(e.g. 100m, where 100m is equivalent to .1 core). Required field for autoscaling.
-| `resourceConstraints.requests.memory` | The minimum memory in bytes. Specify integers with one of these suffixes: E, P, T, G, M, K, or power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.
-| `resourceConstraints.limits.cpu` | The upper limit of CPU core. Specify integers, fractions (e.g. 0.5), or millicores values(e.g. 100m, where 100m is equivalent to .1 core).
-| `resourceConstraints.limits.memory` | The memory upper limit in bytes. Specify integers with suffixes: E, P, T, G, M, K, or power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.
-| `env`   | An array of environment variables following the format of `{name, value}`, where value is a simple string. It may also follow the format of `{name, valueFrom}`, where valueFrom refers to a value in a `ConfigMap` or `Secret` resource. See link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#environment-variables++[Environment variables] for more info.
-| `envFrom`   | An array of references to `ConfigMap` or `Secret` resources containing environment variables. Keys from `ConfigMap` or `Secret` resources become environment variable names in your container. See link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#environment-variables++[Environment variables] for more info.
-| `readinessProbe`   | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes++[Kubernetes readiness probe] that controls when the pod is ready to receive traffic.
-| `livenessProbe` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request++[Kubernetes liveness probe] that controls when Kubernetes needs to restart the pod.
-| `startupProbe` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes++[Kubernetes startup probe] that controls when Kubernetes needs to startup the pod on its first initialization.
+| `resources.requests.cpu` | The minimum required CPU core. Specify integers, fractions (e.g. 0.5), or millicore values(e.g. 100m, where 100m is equivalent to .1 core). Required field for autoscaling.
+| `resources.requests.memory` | The minimum memory in bytes. Specify integers with one of these suffixes: E, P, T, G, M, K, or power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.
+| `resources.limits.cpu` | The upper limit of CPU core. Specify integers, fractions (e.g. 0.5), or millicores values(e.g. 100m, where 100m is equivalent to .1 core).
+| `resources.limits.memory` | The memory upper limit in bytes. Specify integers with suffixes: E, P, T, G, M, K, or power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.
+| `env`   | An array of environment variables following the format of `{name, value}`, where value is a simple string. It may also follow the format of `{name, valueFrom}`, where valueFrom refers to a value in a `ConfigMap` or `Secret` resource. See link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#environment-variables++[Environment variables] for more info.
+| `envFrom`   | An array of references to `ConfigMap` or `Secret` resources containing environment variables. Keys from `ConfigMap` or `Secret` resources become environment variable names in your container. See link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#environment-variables++[Environment variables] for more info.
+| `probes.readiness`   | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes++[Kubernetes readiness probe] that controls when the pod is ready to receive traffic.
+| `probes.liveness` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request++[Kubernetes liveness probe] that controls when Kubernetes needs to restart the pod.
+| `probes.startup` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes++[Kubernetes startup probe] that controls when Kubernetes needs to startup the pod on its first initialization.
 | `volumes` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/storage/volumes++[pod volume].
 | `volumeMounts` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/storage/volumes/++[pod volumeMount].
-| `monitoring.labels` | Labels to set on link:++https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitor++[ServiceMonitor].
-| `monitoring.endpoints` | A YAML snippet representing an array of link:++https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint++[Endpoint] component from ServiceMonitor.
+| `monitoring.labels` | Labels to set on link:++https://github.com/coreos/prometheus-operator/blob/main/Documentation/api.md#servicemonitor++[ServiceMonitor].
+| `monitoring.endpoints` | A YAML snippet representing an array of link:++https://github.com/coreos/prometheus-operator/blob/main/Documentation/api.md#endpoint++[Endpoint] component from ServiceMonitor.
 | `serviceability.size` | A convenient field to request the size of the persisted storage to use for serviceability. Can be overridden by the `serviceability.volumeClaimName` property. See link:++#storage-for-serviceability++[Storage for serviceability] for more information.
 | `serviceability.storageClassName` | A convenient field to request the StorageClassName of the persisted storage to use for serviceability. Can be overridden by the `serviceability.volumeClaimName` property. See link:++#storage-for-serviceability++[Storage for serviceability] for more information.
 | `serviceability.volumeClaimName` | The name of the link:++https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims++[PersistentVolumeClaim] resource you created to be used for serviceability. Must be in the same namespace.
@@ -113,6 +114,11 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `route.termination`   | TLS termination policy. Can be one of `edge`, `reencrypt` and `passthrough`.
 | `route.insecureEdgeTerminationPolicy`   | HTTP traffic policy with TLS enabled. Can be one of `Allow`, `Redirect` and `None`.
 | `route.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be used in the route. Also can contain destination CA certificate. The following keys are valid in the secret: `ca.crt`, `destCA.crt`, `tls.crt`, and `tls.key`.
+| `affinity.nodeAffinity` | A YAML object that represents a link:++https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#nodeaffinity-v1-core++[NodeAffinity].
+| `affinity.nodeAffinityLabels` | A YAML object that contains set of required labels and their values.
+| `affinity.podAffinity` | A YAML object that represents a link:++https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#podaffinity-v1-core++[PodAffinity].
+| `affinity.podAntiAffinity` | A YAML object that represents a link:++https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#podantiaffinity-v1-core++[PodAntiAffinity].
+| `affinity.architecture` | An array of architectures to be considered for deployment. Their position in the array indicates preference.
 | `sso`   | Specifies the configuration for single sign-on providers to authenticate with. Specify sensitive fields, such as _clientId_ and _clientSecret_, for the selected providers by using the `Secret`. For more information, see link:++#single-sign-on-sso++[Single Sign-On (SSO)].
 | `sso.mapToUserRegistry`   | Specifies whether to map a user identifier to a registry user. This parameter applies to all providers.
 | `sso.redirectToRPHostAndPort`   | Specifies a callback protocol, host and port number, such as https://myfrontend.mycompany.com. This parameter applies to all providers. 
@@ -154,7 +160,7 @@ Use the following CR to deploy your application image to a Kubernetes environmen
 
 [source,yaml]
 ----
-apiVersion: openliberty.io/v1beta1
+apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
   name: my-liberty-app
@@ -179,24 +185,25 @@ Open Liberty Operator is based on the generic link:++https://github.com/applicat
 information on the usage of common functionality, see the Runtime Component Operator documentation below. Note that, in the samples from the links below, the instances of `Kind:
 RuntimeComponent` must be replaced with `Kind: OpenLibertyApplication`.
 
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Image-streams++[Image Streams]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Service-account++[Service Account]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Labels++[Labels]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Annotations++[Annotations]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Environment-variables++[Environment Variables]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#High-availability++[High Availability]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Service-ports++[Service Ports]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Persistence++[Persistence]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Service-binding++[Service Binding]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Monitoring++[Monitoring]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Knative-support++[Knative Support]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#Exposing-service-externally++[Exposing Service]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#kubernetes-application-navigator-kappnav-support++[Kubernetes Application Navigator]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#certificate-manager-integration++[Certificate Manager]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#Image-streams++[Image Streams]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#Service-account++[Service Account]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#Labels++[Labels]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#Annotations++[Annotations]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#Environment-variables++[Environment Variables]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#High-availability++[High Availability]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#Service-ports++[Service Ports]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#Persistence++[Persistence]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#Service-binding++[Service Binding]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#Monitoring++[Monitoring]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#Knative-support++[Knative Support]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#Exposing-service-externally++[Exposing Service]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#kubernetes-application-navigator-kappnav-support++[Kubernetes Application Navigator]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#certificate-manager-integration++[Certificate Manager]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#affinity++[Affinity]
 
 For functionality that is unique to the Open Liberty Operator, see the following sections.
 
-=== Open Liberty Environment Variables
+=== Liberty Environment Variables
 
 The Open Liberty Operator sets a number of environment variables related to console logging by default. The following table shows the variables and their corresponding values.
 
@@ -212,7 +219,7 @@ To override these default values with your own values, set them manually in your
 
 [source,yaml]
 ----
-apiVersion: openliberty.io/v1beta1
+apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
   name: my-liberty-app
@@ -229,7 +236,7 @@ spec:
 
 === Single Sign-On (SSO)
 
-Open Liberty provides capabilities to delegate authentication to external providers. Your application users can log in using their existing accounts for social media providers such as Google, Facebook, LinkedIn, Twitter, GitHub, or any OpenID Connect (OIDC) or OAuth 2.0 clients. Open Liberty Operator allows to easily configure and manage the single sign-on information for your applications.
+Liberty provides capabilities to delegate authentication to external providers. Your application users can log in using their existing accounts for social media providers such as Google, Facebook, LinkedIn, Twitter, GitHub, or any OpenID Connect (OIDC) or OAuth 2.0 clients. Open Liberty Operator allows to easily configure and manage the single sign-on information for your applications.
 
 Configure and build the application image with single sign-on by following the instructions link:++https://github.com/OpenLiberty/ci.docker#security++[here].
 
@@ -264,7 +271,7 @@ data:
 
 Next, configure single sign-on in `OpenLibertyApplication` CR. At minimum, `sso: {}` should be set in order for the operator to pass the values from the above `Secret` to your application. Refer to the link:++#custom-resource-definition-crd++[parameters list] for additional configurations for `sso`.
 
-In addition, single sign-on requires secured Service and secured Route configured with necessary certificates. Refer to link:++https://github.com/application-stacks/runtime-component-operator/blob/master/doc/user-guide-v1beta2.adoc#certificate-manager-integration++[Certificate Manager Integration] for more information.
+In addition, single sign-on requires secured Service and secured Route configured with necessary certificates. Refer to link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#certificate-manager-integration++[Certificate Manager Integration] for more information.
 
 To automatically trust certificates from well known identity providers, including social login providers such as Google and Facebook, set environment variable `SEC_TLS_TRUSTDEFAULTCERTS` to `true`. To automatically trust certificates issued by the Kubernetes cluster, set environment variable `SEC_IMPORT_K8S_CERTS` to `true`. Alternatively, you could include the necessary certificates manually when building application image or mounting them using a volume when deploying your application.
 
@@ -272,7 +279,7 @@ In the following example, a self-signed certificate is used for secured Service 
 
 [source,yaml]
 ----
-apiVersion: openliberty.io/v1beta1
+apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
   name: my-app
@@ -414,7 +421,7 @@ You can specify the size of the persisted storage to request using `serviceabili
 
 [source,yaml]
 ----
-apiVersion: openliberty.io/v1beta1
+apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
   name: my-liberty-app
@@ -429,7 +436,7 @@ You can also create the `PersistentVolumeClaim` yourself and specify its name us
 
 [source,yaml]
 ----
-apiVersion: openliberty.io/v1beta1
+apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
   name: my-liberty-app
@@ -473,7 +480,7 @@ Additionally, each day-2 operation CRD has the following annotation which illust
 
 === Request server dump
 
-You can request a snapshot of the server status including different types of server dumps, from an instance of Open Liberty server running inside a `Pod`, using Open Liberty Operator and `OpenLibertyDump` custom resource (CR). To use this feature the `OpenLibertyApplication` needs to have link:++#storage-for-serviceability++[storage for serviceability] already configured. Also, the `OpenLibertyDump` CR must be created in the same namespace as the `Pod` to operate on.
+You can request a snapshot of the server status including different types of server dumps, from an instance of Liberty server running inside a `Pod`, using Open Liberty Operator and `OpenLibertyDump` custom resource (CR). To use this feature the `OpenLibertyApplication` needs to have link:++#storage-for-serviceability++[storage for serviceability] already configured. Also, the `OpenLibertyDump` CR must be created in the same namespace as the `Pod` to operate on.
 
 The configurable parameters are:
 
@@ -488,7 +495,7 @@ Example including heap and thread dump:
 
 [source,yaml]
 ----
-apiVersion: openliberty.io/v1beta1
+apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyDump
 metadata:
   name: example-dump
@@ -511,7 +518,7 @@ _System dump might not work on certain Kubernetes versions, such as OpenShift 4.
 
 === Request server traces
 
-You can request server traces, from an instance of Open Liberty server running inside a `Pod`, using Open Liberty Operator and `OpenLibertyTrace` custom resource (CR). To use this feature the `OpenLibertyApplication` must already have link:++#storage-for-serviceability++[storage for serviceability] configured. Also, the `OpenLibertyTrace` CR must be created in the same namespace as the `Pod` to operate on.
+You can request server traces, from an instance of Liberty server running inside a `Pod`, using Open Liberty Operator and `OpenLibertyTrace` custom resource (CR). To use this feature the `OpenLibertyApplication` must already have link:++#storage-for-serviceability++[storage for serviceability] configured. Also, the `OpenLibertyTrace` CR must be created in the same namespace as the `Pod` to operate on.
 
 The configurable parameters are:
 
@@ -529,7 +536,7 @@ Example:
 
 [source,yaml]
 ----
-apiVersion: openliberty.io/v1beta1
+apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyTrace
 metadata:
   name: example-trace

@@ -134,7 +134,7 @@ spec:
     During this integration we also set the corresponding labels to support OpenShift''s Developer Topology UI,which allows you to visualize your entire set of deployments 
     and how they are connected.  
 
-        See our [**documentation**](https://github.com/OpenLiberty/open-liberty-operator/tree/master/doc/)
+        See our [**documentation**](https://github.com/OpenLiberty/open-liberty-operator/tree/main/doc/)
         for more information.'
   maturity: beta
   replaces: open-liberty-operator.0.3.0
@@ -164,7 +164,7 @@ spec:
     name: IBM
   links:
     - name: Documentation
-      url: https://github.com/OpenLiberty/open-liberty-operator/tree/master/doc
+      url: https://github.com/OpenLiberty/open-liberty-operator/tree/main/doc
     - name: Open Liberty
       url: https://openliberty.io/
     - name: Open Liberty Images

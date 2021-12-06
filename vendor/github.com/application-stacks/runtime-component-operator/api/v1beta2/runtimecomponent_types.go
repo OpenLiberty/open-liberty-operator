@@ -24,6 +24,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -88,17 +89,8 @@ type RuntimeComponentSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=48,type=spec,displayName="Create Knative Service",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
 	CreateKnativeService *bool `json:"createKnativeService,omitempty"`
 
-	// Detects if the services needs to be restarted.
-	// +operator-sdk:csv:customresourcedefinitions:order=49,type=spec,displayName="Liveness Probe"
-	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
-
-	// Detects if the services are ready to serve.
-	// +operator-sdk:csv:customresourcedefinitions:order=50,type=spec,displayName="Readiness Probe"
-	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
-
-	// Protects slow starting containers from livenessProbe.
-	// +operator-sdk:csv:customresourcedefinitions:order=51,type=spec,displayName="StartupProbe Probe"
-	StartupProbe *corev1.Probe `json:"startupProbe,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:order=49,type=spec,displayName="Probes"
+	Probes *RuntimeComponentProbes `json:"probes,omitempty"`
 
 	// Name of the Secret to use to pull images from the specified repository. It is not required if the cluster is configured with a global image pull secret.
 	// +operator-sdk:csv:customresourcedefinitions:order=52,type=spec,displayName="Pull Secret",xDescriptors="urn:alm:descriptor:io.kubernetes:Secret"
@@ -139,6 +131,21 @@ type RuntimeComponentSpec struct {
 	SidecarContainers []corev1.Container `json:"sidecarContainers,omitempty"`
 }
 
+// Define health checks on application container to determine whether it is alive or ready to receive traffic
+type RuntimeComponentProbes struct {
+	// Periodic probe of container liveness. Container will be restarted if the probe fails.
+	// +operator-sdk:csv:customresourcedefinitions:order=49,type=spec,displayName="Liveness Probe"
+	Liveness *corev1.Probe `json:"liveness,omitempty"`
+
+	// Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails.
+	// +operator-sdk:csv:customresourcedefinitions:order=50,type=spec,displayName="Readiness Probe"
+	Readiness *corev1.Probe `json:"readiness,omitempty"`
+
+	// Probe to determine successful initialization. If specified, other probes are not executed until this completes successfully.
+	// +operator-sdk:csv:customresourcedefinitions:order=51,type=spec,displayName="Startup Probe"
+	Startup *corev1.Probe `json:"startup,omitempty"`
+}
+
 // Configures a Pod to run on particular Nodes.
 type RuntimeComponentAffinity struct {
 
@@ -154,7 +161,7 @@ type RuntimeComponentAffinity struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=35,type=spec,displayName="Pod Anti Affinity",xDescriptors="urn:alm:descriptor:com.tectonic.ui:podAntiAffinity"
 	PodAntiAffinity *corev1.PodAntiAffinity `json:"podAntiAffinity,omitempty"`
 
-	// A YAML object that contains set of required labels and their values.
+	// A YAML object that contains a set of required labels and their values.
 	// +operator-sdk:csv:customresourcedefinitions:order=36,type=spec,displayName="Node Affinity Labels",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	NodeAffinityLabels map[string]string `json:"nodeAffinityLabels,omitempty"`
 
@@ -205,13 +212,13 @@ type RuntimeComponentService struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=13,type=spec,displayName="Service Annotations",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	Annotations map[string]string `json:"annotations,omitempty"`
 
-	// The port that the operator assigns to containers inside pods. Defaults to the value of service.port.
+	// The port that the operator assigns to containers inside pods. Defaults to the value of spec.service.port.
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:validation:Minimum=1
 	// +operator-sdk:csv:customresourcedefinitions:order=14,type=spec,displayName="Target Port",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
 	TargetPort *int32 `json:"targetPort,omitempty"`
 
-	// 	A name of a secret that already contains TLS key, certificate and CA to be mounted in the pod.
+	// A name of a secret that already contains TLS key, certificate and CA to be mounted in the pod.
 	// +k8s:openapi-gen=true
 	// +operator-sdk:csv:customresourcedefinitions:order=15,type=spec,displayName="Certificate Secret Reference",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	CertificateSecretRef *string `json:"certificateSecretRef,omitempty"`
@@ -219,7 +226,7 @@ type RuntimeComponentService struct {
 	// An array consisting of service ports.
 	Ports []corev1.ServicePort `json:"ports,omitempty"`
 
-	// A boolean to toggle whether the operator expose the application as a bindable service. The default value for this parameter is false.
+	// Expose the application as a bindable service. Defaults to false.
 	Bindable *bool `json:"bindable,omitempty"`
 }
 
@@ -273,6 +280,7 @@ type RuntimeComponentMonitoring struct {
 	Labels map[string]string `json:"labels,omitempty"`
 
 	// A YAML snippet representing an array of Endpoint component from ServiceMonitor.
+	// +listType=atomic
 	// +operator-sdk:csv:customresourcedefinitions:order=31,type=spec,displayName="Monitoring Endpoints",xDescriptors="urn:alm:descriptor:com.tectonic.ui:endpointList"
 	Endpoints []prometheusv1.Endpoint `json:"endpoints,omitempty"`
 }
@@ -292,6 +300,9 @@ type RuntimeComponentRoute struct {
 	// Path to be used for Route.
 	// +operator-sdk:csv:customresourcedefinitions:order=40,type=spec,displayName="Route Path",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	Path string `json:"path,omitempty"`
+
+	// Path type to be used for Ingress.
+	PathType networkingv1.PathType `json:"pathType,omitempty"`
 
 	// A name of a secret that already contains TLS key, certificate and CA to be used in the route. Also can contain destination CA certificate.
 	// +operator-sdk:csv:customresourcedefinitions:order=41,type=spec,displayName="Certificate Secret Reference",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
@@ -335,11 +346,18 @@ const (
 	StatusConditionTypeReconciled StatusConditionType = "Reconciled"
 )
 
+// +kubebuilder:resource:path=runtimecomponents,scope=Namespaced,shortName=comp;comps
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-
-// RuntimeComponent is the Schema for the runtimecomponents API.
+// +kubebuilder:printcolumn:name="Image",type="string",JSONPath=".spec.applicationImage",priority=0,description="Absolute name of the deployed image containing registry and tag"
+// +kubebuilder:printcolumn:name="Exposed",type="boolean",JSONPath=".spec.expose",priority=0,description="Specifies whether deployment is exposed externally via default Route"
+// +kubebuilder:printcolumn:name="Reconciled",type="string",JSONPath=".status.conditions[?(@.type=='Reconciled')].status",priority=0,description="Status of the reconcile condition"
+// +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.type=='Reconciled')].reason",priority=1,description="Reason for the failure of reconcile condition"
+// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Reconciled')].message",priority=1,description="Failure message from reconcile condition"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",priority=0,description="Age of the resource"
 //+operator-sdk:csv:customresourcedefinitions:displayName="RuntimeComponent",resources={{Deployment,v1},{Service,v1},{StatefulSet,v1},{Route,v1},{HorizontalPodAutoscaler,v1},{ServiceAccount,v1},{Secret,v1}}
+
+// Represents the deployment of a runtime component
 type RuntimeComponent struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -386,19 +404,26 @@ func (cr *RuntimeComponent) GetReplicas() *int32 {
 	return cr.Spec.Replicas
 }
 
+func (cr *RuntimeComponent) GetProbes() common.BaseComponentProbes {
+	if cr.Spec.Probes == nil {
+		return nil
+	}
+	return cr.Spec.Probes
+}
+
 // GetLivenessProbe returns liveness probe
-func (cr *RuntimeComponent) GetLivenessProbe() *corev1.Probe {
-	return cr.Spec.LivenessProbe
+func (p *RuntimeComponentProbes) GetLivenessProbe() *corev1.Probe {
+	return p.Liveness
 }
 
 // GetReadinessProbe returns readiness probe
-func (cr *RuntimeComponent) GetReadinessProbe() *corev1.Probe {
-	return cr.Spec.ReadinessProbe
+func (p *RuntimeComponentProbes) GetReadinessProbe() *corev1.Probe {
+	return p.Readiness
 }
 
 // GetStartupProbe returns startup probe
-func (cr *RuntimeComponent) GetStartupProbe() *corev1.Probe {
-	return cr.Spec.StartupProbe
+func (p *RuntimeComponentProbes) GetStartupProbe() *corev1.Probe {
+	return p.Startup
 }
 
 // GetVolumes returns volumes slice
@@ -488,7 +513,7 @@ func (cr *RuntimeComponent) GetInitContainers() []corev1.Container {
 	return cr.Spec.InitContainers
 }
 
-// GetSidecarContainers returns list of user specified containers
+// GetSidecarContainers returns list of sidecar containers
 func (cr *RuntimeComponent) GetSidecarContainers() []corev1.Container {
 	return cr.Spec.SidecarContainers
 }
@@ -498,7 +523,7 @@ func (cr *RuntimeComponent) GetGroupName() string {
 	return "rc.app.stacks"
 }
 
-// GetRoute returns route configuration for RuntimeComponent
+// GetRoute returns route
 func (cr *RuntimeComponent) GetRoute() common.BaseComponentRoute {
 	if cr.Spec.Route == nil {
 		return nil
@@ -620,10 +645,6 @@ func (s *RuntimeComponentService) GetNodePort() *int32 {
 
 // GetTargetPort returns the internal target port for containers
 func (s *RuntimeComponentService) GetTargetPort() *int32 {
-	if s.TargetPort == nil {
-		return nil
-	}
-
 	return s.TargetPort
 }
 
@@ -690,6 +711,11 @@ func (r *RuntimeComponentRoute) GetHost() string {
 // GetPath returns path to use for the route
 func (r *RuntimeComponentRoute) GetPath() string {
 	return r.Path
+}
+
+// GetPathType returns pathType to use for the route
+func (r *RuntimeComponentRoute) GetPathType() networkingv1.PathType {
+	return r.PathType
 }
 
 // GetNodeAffinity returns node affinity

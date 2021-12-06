@@ -4,6 +4,7 @@ metadata:
   name: probes-liberty
 spec:
   # Add fields here
-  livenessProbe: null
-  readinessProbe: null
-  startupProbe: null
+  probes:
+    liveness: null
+    readiness: null
+    startup: null

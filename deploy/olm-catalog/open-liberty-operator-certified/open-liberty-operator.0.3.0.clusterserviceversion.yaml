@@ -66,7 +66,7 @@ spec:
         Automatically configures the Kubernetes resources for integration with [kAppNav](https://kappnav.io/).
 
 
-        See our [**documentation**](https://github.com/OpenLiberty/open-liberty-operator/tree/master/doc/)
+        See our [**documentation**](https://github.com/OpenLiberty/open-liberty-operator/tree/main/doc/)
         for more information.'
   maturity: beta
   version: 0.3.0
@@ -94,7 +94,7 @@ spec:
     name: IBM
   links:
     - name: Documentation
-      url: https://github.com/OpenLiberty/open-liberty-operator/tree/master/doc
+      url: https://github.com/OpenLiberty/open-liberty-operator/tree/main/doc
     - name: Open Liberty
       url: https://openliberty.io/
     - name: Open Liberty Images

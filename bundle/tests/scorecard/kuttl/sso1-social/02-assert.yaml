@@ -14,7 +14,9 @@ kind: Deployment
 metadata:
   name: sso-liberty
 status:
+  replicas: 1
   readyReplicas: 1
+  updatedReplicas: 1
 ---
 # Annoyingly kuttl insists that if you assert on an array, it
 # must be the same length as the real version, so it is necessary
@@ -23,6 +25,9 @@ status:
 # It also seems that order is important, so this could be fragile
 apiVersion: v1
 kind: Pod
+metadata:
+  labels:
+    app.kubernetes.io/instance: sso-liberty
 spec:
   containers:
   - env:
