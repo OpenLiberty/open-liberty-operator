@@ -81,7 +81,7 @@ containerize:
     make build-pipeline-multiarch-image
     make push-pipeline-multiarch-image
     # Build ppc64le and s390x images
-    # ./scripts/pipeline/launch-travis.sh -t $(get_env travis-token) -r "https://github.com/OpenLiberty/open-liberty-operator" -b $(get_env branch) -l
+    ./scripts/pipeline/launch-travis.sh -t $(get_env travis-token) -r "https://github.com/OpenLiberty/open-liberty-operator" -b $(get_env branch) -l
     # Build bundle image
     echo $(get_env ibmcloud-api-key) | docker login cp.stg.icr.io -u "$(get_env ibmcloud-api-user)" --password-stdin
     make bundle-build
