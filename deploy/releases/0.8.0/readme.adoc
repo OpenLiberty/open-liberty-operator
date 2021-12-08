@@ -1,0 +1,44 @@
+= Open Liberty Operator v0.8.0
+
+== Changelog
+
+All notable changes are documented in the link:++https://github.com/OpenLiberty/open-liberty-operator/blob/main/CHANGELOG.md#080++[Changelog].
+
+== Supported Environments
+
+The Open Liberty Operator is tested and built on the following CPU architectures:
+
+* amd64
+
+The operator will run on any cluster that has Kubernetes v1.19 or higher.
+
+== Installation
+
+=== Option 1: Install using Operator Lifecycle Manager (OLM)
+
+* Create the `CatalogSource` to add Open Liberty Operator.
+
+[source,yaml]
+----
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+   name: open-liberty-operator-catalog
+   namespace: openshift-marketplace
+spec:
+   displayName: Open Liberty Operator
+   sourceType: grpc
+   image: openliberty/operator:catalog-0.8.0
+----
+
+* From the integrated OperatorHub, filter by selecting `Open Liberty Operator` checkbox under `Source`. Click on the tile with `Open Liberty` to install the operator.
+
+=== Option 2: Install using kustomize
+
+See the instructions link:++kustomize/++[here].
+
+== Current Limitations
+
+* Knative support is limited. Values specified for `.spec.autoscaling`, `.spec.resources` and `.spec.replicas` fields would not apply for Knative when enabled using `.spec.createKnativeService` field.
+* Monitoring feature does not support integration with Knative Service. Prometheus Operator is required to use ServiceMonitor.
+* After the initial deployment of `OpenLibertyApplication`, any changes to its labels would be applied only when one of the fields from `.spec` is updated.

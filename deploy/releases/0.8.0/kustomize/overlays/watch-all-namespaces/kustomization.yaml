@@ -3,7 +3,12 @@ kind: Kustomization
 
 namespace: default
 
+bases:
+- ../../base
+
 resources:
-  - open-liberty-crd.yaml
-  - open-liberty-operator.yaml
+- cluster-roles.yaml
+
+patchesStrategicMerge:
+- olo-all-namespaces.yaml
 

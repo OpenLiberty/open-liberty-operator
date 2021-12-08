@@ -1,4 +1,4 @@
-= Open Liberty Operator
+= Open Liberty Operator v0.7.1 and below
 
 The Open Liberty Operator can be used to deploy and manage applications running on either Open Liberty or WebSphere Liberty into Kubernetes clusters. You can also perform link:++#day-2-operations++[Day-2 operations] such as gathering traces and dumps using the operator.
 
@@ -81,7 +81,7 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `service.nodePort` | Node proxies this port into your service. Please note once this port is set to a non-zero value it cannot be reset to zero.
 | `service.annotations` | Annotations to be added to the service.
 | `service.certificate` | A YAML object representing a link:++https://cert-manager.io/docs/reference/api-docs/#cert-manager.io/v1alpha2.CertificateSpec++[Certificate].
-| `service.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be mounted in the pod.
+| `service.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be mounted in the pod. The following keys are valid in the secret: `ca.crt`, `tls.crt`, and `tls.key`.
 | `service.provides.category` | Service binding type to be provided by this CR. At this time, the only allowed value is `openapi`.
 | `service.provides.protocol` | Protocol of the provided service. Defauts to `http`.
 | `service.provides.context` | Specifies context root of the service.
@@ -122,7 +122,7 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `route.termination`   | TLS termination policy. Can be one of `edge`, `reencrypt` and `passthrough`.
 | `route.insecureEdgeTerminationPolicy`   | HTTP traffic policy with TLS enabled. Can be one of `Allow`, `Redirect` and `None`.
 | `route.certificate`  | A YAML object representing a link:++https://cert-manager.io/docs/reference/api-docs/#cert-manager.io/v1alpha2.CertificateSpec++[Certificate].
-| `route.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be used in the route. Also can contain destination CA certificate. The following keys are valid in the secret: `ca.crt`, `destCA.crt`, `tls.crt`, and `tls.key`.
+| `route.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be used in the route. It can also contain destination CA certificate. The following keys are valid in the secret: `ca.crt`, `destCA.crt`, `tls.crt`, and `tls.key`.
 | `affinity.nodeAffinity` | A YAML object that represents a link:++https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#nodeaffinity-v1-core++[NodeAffinity].
 | `affinity.nodeAffinityLabels` | A YAML object that contains set of required labels and their values.
 | `affinity.podAffinity` | A YAML object that represents a link:++https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#podaffinity-v1-core++[PodAffinity].
@@ -438,7 +438,6 @@ spec:
   applicationImage: quay.io/my-repo/my-app:1.0
   serviceability:
     size: 1Gi
-    storageClassName: nfs
 ----
 
 You can also create the `PersistentVolumeClaim` yourself and specify its name using `serviceability.volumeClaimName` parameter. You must create it in the same namespace as the `OpenLibertyApplication` instance.
@@ -561,6 +560,8 @@ Generated trace files, along with _messages.log_ files, will be in the folder us
 Once the trace has started, it can be stopped by setting the `disable` parameter to `true`. Deleting the CR will also stop the tracing. Changing the `podName` will first stop the tracing on the old Pod before enabling traces on the new Pod.
 
 You can check the status of a trace operation using the `status` field inside the CR YAML. You can also run the command `oc get oltrace -o wide` to see the status of all trace operations in the current namespace.
+
+**Important**: _Liberty server must allow configuration dropins. The following configuration should not be set on the server: `<config updateTrigger=“disabled”/>`. Otherwise, OpenLibertyTrace operation will not work on the server._
 
 Note:
 _The operator doesn't monitor the Pods. If the Pod is restarted or deleted after the trace is enabled, then the tracing wouldn't be automatically enabled when the Pod comes back up. In that case, the status of the trace operation may not correctly report whether the trace is enabled or not._
