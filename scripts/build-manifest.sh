@@ -91,22 +91,6 @@ build_manifests() {
   done <<< "${tags}"
 }
 
-build_manifest() {
-  local tag="$1"
-
-  ## try to build manifest but allow failure
-  ## this allows new release builds
-  local target="${IMAGE}:${tag}"
-  if [[ -n "${REGISTRY}" ]]; then
-    target="${REGISTRY}/${IMAGE}:${tag}"
-  fi
-  manifest-tool push from-args \
-    --platforms "linux/amd64,linux/s390x,linux/ppc64le" \
-    --template "${target}-ARCH" \
-    --target "${target}" \
-    || echo "*** WARN: Target archs not available"
-}
-
 parse_args() {
     while [ $# -gt 0 ]; do
     case "$1" in
