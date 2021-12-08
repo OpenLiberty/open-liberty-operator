@@ -91,7 +91,6 @@ build_manifests() {
   done <<< "${tags}"
 }
 
-<<<<<<< HEAD
 build_manifest() {
   local tag="$1"
 
@@ -108,8 +107,6 @@ build_manifest() {
     || echo "*** WARN: Target archs not available"
 }
 
-=======
->>>>>>> 4dd03672d19f253325b0bd383c509edbbdae24a7
 parse_args() {
     while [ $# -gt 0 ]; do
     case "$1" in

@@ -8,10 +8,9 @@ OPERATOR_SDK_RELEASE_VERSION ?= v1.6.4
 VERSION ?= 0.8.0
 
 OPERATOR_IMAGE ?= openliberty/operator
-OPERATOR_IMAGE_TAG ?= daily
 PIPELINE_REGISTRY ?= cp.stg.icr.io
 PIPELINE_REGISTRY_NAMESPACE ?= cp
-PIPELINE_OPERATOR_IMAGE ?= cp/olo-operator
+PIPELINE_OPERATOR_IMAGE ?= ${PIPELINE_REGISTRY_NAMESPACE}/olo-operator
 
 # Type of release. Can be "daily", "releases", or a release tag.
 RELEASE_TARGET := $(or ${RELEASE_TARGET}, ${TRAVIS_TAG}, daily)
@@ -245,7 +244,7 @@ build-manifest: setup-manifest
 	./scripts/build-manifest.sh --image "${PUBLISH_REGISTRY}/${OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
 
 build-pipeline-manifest: setup-manifest
-	./scripts/build-manifest.sh -u "${PIPELINE_USERNAME}" -p "${PIPELINE_PASSWORD}" --registry "${PIPELINE_REGISTRY}" --image "${PIPELINE_OPERATOR_IMAGE}"
+	./scripts/build-manifest.sh -u "${PIPELINE_USERNAME}" -p "${PIPELINE_PASSWORD}" --registry "${PIPELINE_REGISTRY}" --image "${PIPELINE_OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
 
 test-e2e:
 	./scripts/e2e-release.sh --registry-name default-route --registry-namespace openshift-image-registry \
@@ -255,13 +254,20 @@ test-pipeline-e2e:
 	./scripts/pipeline/fyre-e2e.sh -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" \
                      --cluster-url "${CLUSTER_URL}" --cluster-token "${CLUSTER_TOKEN}" \
                      --registry-name "${PIPELINE_REGISTRY}" --registry-namespace "${PIPELINE_REGISTRY_NAMESPACE}" \
-                     --registry-user "${PIPELINE_USERNAME}" --registry-password "${PIPELINE_PASSWORD}"
+                     --registry-user "${PIPELINE_USERNAME}" --registry-password "${PIPELINE_PASSWORD}" \
+                     --test-tag "${TRAVIS_BUILD_NUMBER}" --release "${RELEASE_TARGET}"
 
 build-releases:
 	./scripts/build-releases.sh --image "${PUBLISH_REGISTRY}/${OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
 
+build-pipeline-releases:
+    ./scripts/build-releases.sh -u "${PIPELINE_USERNAME}" -p "${PIPELINE_PASSWORD}" --registry "${PIPELINE_REGISTRY}" --image "${PIPELINE_REGISTRY}/${PIPELINE_OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
+
 bundle-releases:
 	./scripts/bundle-releases.sh --image "${PUBLISH_REGISTRY}/${OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
+
+bundle-pipeline-releases:
+    ./scripts/bundle-releases.sh -u "${PIPELINE_USERNAME}" -p "${PIPELINE_PASSWORD}" --registry "${PIPELINE_REGISTRY}" --image "${PIPELINE_REGISTRY}/${PIPELINE_OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
 
 install-podman:
 	./scripts/installers/install-podman.sh
@@ -280,3 +286,6 @@ build-catalog:
 
 push-catalog: docker-login
 	podman push --format=docker "${CATALOG_IMG}"
+
+push-pipeline-catalog:
+    podman push --format=docker "${CATALOG_IMG}"

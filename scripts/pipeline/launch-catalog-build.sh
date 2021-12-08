@@ -100,7 +100,7 @@ function launch_travis() {
                 ],    
                 \"before_install\": [
                     \"sudo apt-get update\"
-                ],
+                ],    
                 \"stages\": [
                     {
                         \"name\": \"build\"
@@ -110,26 +110,23 @@ function launch_travis() {
                     \"include\": [
                         {
                             \"stage\": \"build\",
-                            \"name\": \"Build image on ppc64le\",
+                            \"name\": \"Build bundle on amd64\",
                             \"os\": \"linux\",
-                            \"arch\": \"ppc64le\",
+                            \"arch\": \"amd64\",
+                            \"before_install\": [
+                                \"sudo apt-get install -qq -y software-properties-common uidmap\",
+                                \"make install-podman\",
+                                \"make install-opm\"
+                            ],    
                             \"script\": [
-                                \"make build-pipeline-releases\"
-                            ]
-                        },
-                        {
-                            \"name\": \"Build image on s390x\",
-                            \"os\": \"linux\",
-                            \"arch\": \"s390x\",
-                            \"script\": [
-                                \"make build-pipeline-releases\"
+                                \"make bundle-pipeline-releases\"
                             ]
                         }
                     ]
                 }
             },
             \"sha\": \"$GH_COMMIT_ID\",
-            \"message\": \"Run architecture builds\"
+            \"message\": \"Run bundle builds\"
         }}"
 
         echo $body

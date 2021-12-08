@@ -45,7 +45,11 @@ main() {
 
   # Build target release(s)
   if [[ "${TARGET}" != "releases" ]]; then
-    "${script_dir}/build-release.sh" -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" --release "${TARGET}" --image "${IMAGE}"
+    if [[ -z "${REGISTRY}" ]]; then 
+      "${script_dir}/build-release.sh" -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" --release "${TARGET}" --image "${IMAGE}"
+    else
+      "${script_dir}/build-release.sh" -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" --release "${TARGET}" --image "${IMAGE}" --registry "${REGISTRY}"
+    fi  
   else
     build_releases
   fi

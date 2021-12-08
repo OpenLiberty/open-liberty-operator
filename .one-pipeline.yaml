@@ -189,7 +189,8 @@ release:
   image: wcp-compliance-automation-team-docker-local.artifactory.swg-devops.com/ibm-compliance-automation:1.9.1@sha256:3f3e344a1efb160d83c48cf2ee878a39cbad058c8640c423472e0546316232fd
   script: |
     #!/usr/bin/env bash
-    echo "release" 
+    echo "release"
+    set_env ibmcloud-api-key $(get_env ibmcloud-api-key-prod)
 
 #owasp-zap-api:
 #  dind: true
