@@ -261,13 +261,13 @@ build-releases:
 	./scripts/build-releases.sh --image "${PUBLISH_REGISTRY}/${OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
 
 build-pipeline-releases:
-    ./scripts/build-releases.sh -u "${PIPELINE_USERNAME}" -p "${PIPELINE_PASSWORD}" --registry "${PIPELINE_REGISTRY}" --image "${PIPELINE_REGISTRY}/${PIPELINE_OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
+	./scripts/build-releases.sh -u "${PIPELINE_USERNAME}" -p "${PIPELINE_PASSWORD}" --registry "${PIPELINE_REGISTRY}" --image "${PIPELINE_REGISTRY}/${PIPELINE_OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
 
 bundle-releases:
 	./scripts/bundle-releases.sh --image "${PUBLISH_REGISTRY}/${OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
 
 bundle-pipeline-releases:
-    ./scripts/bundle-releases.sh -u "${PIPELINE_USERNAME}" -p "${PIPELINE_PASSWORD}" --registry "${PIPELINE_REGISTRY}" --image "${PIPELINE_REGISTRY}/${PIPELINE_OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
+	./scripts/bundle-releases.sh -u "${PIPELINE_USERNAME}" -p "${PIPELINE_PASSWORD}" --registry "${PIPELINE_REGISTRY}" --image "${PIPELINE_REGISTRY}/${PIPELINE_OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
 
 install-podman:
 	./scripts/installers/install-podman.sh
@@ -288,4 +288,4 @@ push-catalog: docker-login
 	podman push --format=docker "${CATALOG_IMG}"
 
 push-pipeline-catalog:
-    podman push --format=docker "${CATALOG_IMG}"
+	podman push --format=docker "${CATALOG_IMG}"
