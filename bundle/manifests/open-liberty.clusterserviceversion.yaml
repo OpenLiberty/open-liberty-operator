@@ -341,6 +341,12 @@ spec:
       kind: OpenLibertyDump
       name: openlibertydumps.apps.openliberty.io
       version: v1beta2
+      statusDescriptors:
+      - description: Location of the generated dump file
+        displayName: Dump Path
+        path: dumpFile
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
     - description: Day-2 operation for gathering server traces
       displayName: OpenLibertyTrace
       kind: OpenLibertyTrace
