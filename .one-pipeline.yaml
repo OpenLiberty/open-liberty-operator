@@ -157,8 +157,6 @@ acceptance-test:
     export TRAVIS_BUILD_NUMBER=$BUILD_NUMBER
     make setup
     make test-pipeline-e2e
-    stage_name="acceptance-tests"
-    save_artifact "olo-operator-test" "${stage_name}-result=$exit_code"
 
 scan-artifact:
   abort_on_failure: false

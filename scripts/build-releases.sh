@@ -38,9 +38,9 @@ main() {
 
   ## login to docker
   if [[ -z "${REGISTRY}" ]]; then
-    echo "${DOCKER_PASSWORD}" | docker login -u "${USER}" --password-stdin
+    echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
   else
-    echo "${DOCKER_PASSWORD}" | docker login "${REGISTRY}" -u "${USER}" --password-stdin
+    echo "${DOCKER_PASSWORD}" | docker login "${REGISTRY}" -u "${DOCKER_USERNAME}" --password-stdin
   fi
 
   # Build target release(s)
