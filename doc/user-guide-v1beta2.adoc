@@ -1,23 +1,24 @@
-= Open Liberty Operator
+= Open Liberty Operator v0.8.0+
 
 The Open Liberty Operator can be used to deploy and manage applications running on Open Liberty or WebSphere Liberty into Kubernetes clusters. You can also perform link:++#day-2-operations++[Day-2 operations] such as gathering traces and dumps using the operator.
 
 This documentation refers to the latest codebase.  For documentation and samples of older releases, please check out the link:++https://github.com/OpenLiberty/open-liberty-operator/releases++[main releases] page and navigate the corresponding tag.
 
-**Important**: This user guide only applies to operator versions 0.8.0 and above. For operator versions 0.7.1 and below, refer to this link:++user-guide.adoc++[user guide].
+**Important**: This user guide only applies to operator versions **0.8.0 and above**. For operator versions **0.7.1 and below**, refer to this link:++user-guide.adoc++[user guide].
+
+**Important**: If you are upgrading from Open Liberty Operator versions 0.7.1 and below, note that API version of the custom resources (CRs) `OpenLibertyApplication`, `OpenLibertyDump` and `OpenLibertyTrace` have changed. Custom resources with `apiVersion: openliberty.io/v1beta1` are not handled by Open Liberty Operator versions 0.8.0 and above. You must delete existing custom resources with `apiVersion: openliberty.io/v1beta1` and create new custom resources with `apiVersion: apps.openliberty.io/v1beta2`.
 
 == Operator installation
 
-//Use the instructions for one of the link:++../deploy/releases++[releases] to install the operator into a Kubernetes cluster.
+Use the instructions for one of the link:++../deploy/releases++[releases] to install the operator into a Kubernetes cluster.
 
 The Open Liberty Operator can be installed to:
 
 * watch own namespace
 * watch another namespace
-* watch multiple namespaces
 * watch all namespaces in the cluster
 
-Appropriate cluster roles and bindings are required to watch another namespace, watch multiple namespaces or watch all namespaces in the cluster.
+Appropriate cluster roles and bindings are required to watch another namespace or to watch all namespaces in the cluster.
 
 NOTE: The Open Liberty Operator can only interact with resources it is given permission to interact through link:++https://kubernetes.io/docs/reference/access-authn-authz/rbac/++[Role-based access control (RBAC)]. Some of the operator features require interacting with resources in other namespaces. In that case, the operator must be installed with correct `ClusterRole` definitions.
 
@@ -53,13 +54,13 @@ spec:
       mountPath: "/logs"
 ----
 
-The following table lists configurable parameters of the `OpenLibertyApplication` CRD. For complete OpenAPI v3 representation of these values please see link:++../deploy/crds/openliberty.io_openlibertyapplications_crd.yaml++[`OpenLibertyApplication` CRD].
+The following table lists configurable fields of the `OpenLibertyApplication` CRD. For complete OpenAPI v3 representation of these values please see link:++../deploy/crds/openliberty.io_openlibertyapplications_crd.yaml++[`OpenLibertyApplication` CRD].
 
-Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Specifying other parameters is optional.
+Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Specifying other fields is optional.
 
 .Custom Resource Definition
 |===
-| Parameter | Description
+| Field | Description
 | `applicationVersion` | The current version of the application. Label `app.kubernetes.io/version` will be added to all resources when the version is defined.
 | `serviceAccountName` | The name of the OpenShift service account to be used during deployment.
 | `applicationImage` | The absolute name of the image to be deployed, containing the registry and the tag. On OpenShift, it can also be set to `<project name>/<image stream name>[:tag]` to reference an image from an image stream. If `<project name>` and `<tag>` values are not defined, they default to the namespace of the CR and the value of `latest`, respectively.
@@ -76,7 +77,7 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `service.type` | The Kubernetes link:++https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types++[Service Type].
 | `service.nodePort` | Node proxies this port into your service. Please note once this port is set to a non-zero value it cannot be reset to zero.
 | `service.annotations` | Annotations to be added to the service.
-| `service.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be mounted in the pod.
+| `service.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be mounted in the pod. The following keys are valid in the secret: `ca.crt`, `tls.crt`, and `tls.key`.
 | `createKnativeService`   | A boolean to toggle the creation of Knative resources and usage of Knative serving.
 | `expose`   | A boolean that toggles the external exposure of this deployment via a Route or a Knative Route resource.
 | `deployment.updateStrategy`   | A field to specify the update strategy of the deployment. For more information, see link:++https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy++[updateStrategy]
@@ -111,17 +112,18 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `route.annotations` | Annotations to be added to the Route.
 | `route.host`   | Hostname to be used for the Route.
 | `route.path`   | Path to be used for Route.
+| `route.pathType`   | Path type to be used. Required field for Ingress. See link:++https://kubernetes.io/docs/concepts/services-networking/ingress/#path-types++[Ingress path types].
 | `route.termination`   | TLS termination policy. Can be one of `edge`, `reencrypt` and `passthrough`.
 | `route.insecureEdgeTerminationPolicy`   | HTTP traffic policy with TLS enabled. Can be one of `Allow`, `Redirect` and `None`.
-| `route.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be used in the route. Also can contain destination CA certificate. The following keys are valid in the secret: `ca.crt`, `destCA.crt`, `tls.crt`, and `tls.key`.
+| `route.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be used in the route. It can also contain destination CA certificate. The following keys are valid in the secret: `ca.crt`, `destCA.crt`, `tls.crt`, and `tls.key`.
 | `affinity.nodeAffinity` | A YAML object that represents a link:++https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#nodeaffinity-v1-core++[NodeAffinity].
 | `affinity.nodeAffinityLabels` | A YAML object that contains set of required labels and their values.
 | `affinity.podAffinity` | A YAML object that represents a link:++https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#podaffinity-v1-core++[PodAffinity].
 | `affinity.podAntiAffinity` | A YAML object that represents a link:++https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#podantiaffinity-v1-core++[PodAntiAffinity].
 | `affinity.architecture` | An array of architectures to be considered for deployment. Their position in the array indicates preference.
 | `sso`   | Specifies the configuration for single sign-on providers to authenticate with. Specify sensitive fields, such as _clientId_ and _clientSecret_, for the selected providers by using the `Secret`. For more information, see link:++#single-sign-on-sso++[Single Sign-On (SSO)].
-| `sso.mapToUserRegistry`   | Specifies whether to map a user identifier to a registry user. This parameter applies to all providers.
-| `sso.redirectToRPHostAndPort`   | Specifies a callback protocol, host and port number, such as https://myfrontend.mycompany.com. This parameter applies to all providers. 
+| `sso.mapToUserRegistry`   | Specifies whether to map a user identifier to a registry user. This field applies to all providers.
+| `sso.redirectToRPHostAndPort`   | Specifies a callback protocol, host and port number, such as https://myfrontend.mycompany.com. This field applies to all providers. 
 | `sso.github.hostname`   | Specifies the host name of your enterprise GitHub, such as _github.mycompany.com_. The default is _github.com_, which is the public Github.
 | `sso.oidc`   | The list of OpenID Connect (OIDC) providers to authenticate with. Required fields: _discoveryEndpoint_. Specify sensitive fields, such as _clientId_  and _clientSecret_, by using the `Secret`.
 | `sso.oidc[].discoveryEndpoint`   | Specifies a discovery endpoint URL for the OpenID Connect provider. Required field.
@@ -138,8 +140,8 @@ Each `OpenLibertyApplication` CR must specify `applicationImage` parameter. Spec
 | `sso.oauth2[].authorizationEndpoint`   | Specifies an authorization endpoint URL for the OAuth 2.0 provider. Required field.
 | `sso.oauth2[].tokenEndpoint`   | Specifies a token endpoint URL for the OAuth 2.0 provider. Required field.
 | `sso.oauth2[].accessTokenHeaderName`   | Name of the header to use when an OAuth access token is forwarded.
-| `sso.oauth2[].accessTokenRequired`   | Determines whether the access token that is provided in the request is used for authentication. If the parameter is set to true, the client must provide a valid access token.
-| `sso.oauth2[].accessTokenSupported`   | Determines whether to support access token authentication if an access token is provided in the request. If the parameter is set to true and an access token is provided in the request, then the access token is used as an authentication token.
+| `sso.oauth2[].accessTokenRequired`   | Determines whether the access token that is provided in the request is used for authentication. If the field is set to true, the client must provide a valid access token.
+| `sso.oauth2[].accessTokenSupported`   | Determines whether to support access token authentication if an access token is provided in the request. If the field is set to true and an access token is provided in the request, then the access token is used as an authentication token.
 | `sso.oauth2[].displayName`   | The name of the social login configuration for display.
 | `sso.oauth2[].groupNameAttribute`   | Specifies the name of the claim. Use its value as the user group membership.
 | `sso.oauth2[].id`   | Specifies the unique ID for the provider. The default value is _oauth2_.
@@ -197,9 +199,8 @@ RuntimeComponent` must be replaced with `Kind: OpenLibertyApplication`.
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#Monitoring++[Monitoring]
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#Knative-support++[Knative Support]
 - link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#Exposing-service-externally++[Exposing Service]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#kubernetes-application-navigator-kappnav-support++[Kubernetes Application Navigator]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#certificate-manager-integration++[Certificate Manager]
-- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide.adoc#affinity++[Affinity]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#certificates++[Certificates]
+- link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#affinity++[Affinity]
 
 For functionality that is unique to the Open Liberty Operator, see the following sections.
 
@@ -269,13 +270,13 @@ data:
   oauth2-userApiToken: dGhlbGF1Z2hpbmdjb3c=
 ----
 
-Next, configure single sign-on in `OpenLibertyApplication` CR. At minimum, `sso: {}` should be set in order for the operator to pass the values from the above `Secret` to your application. Refer to the link:++#custom-resource-definition-crd++[parameters list] for additional configurations for `sso`.
+Next, configure single sign-on in `OpenLibertyApplication` CR. At minimum, `.spec.sso: {}` should be set in order for the operator to pass the values from the above `Secret` to your application. Refer to the link:++#custom-resource-definition-crd++[field list] for additional configurations for Single sign-on.
 
-In addition, single sign-on requires secured Service and secured Route configured with necessary certificates. Refer to link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#certificate-manager-integration++[Certificate Manager Integration] for more information.
+In addition, single sign-on requires secured Service and secured Route configured with necessary certificates. Refer to link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc#certificates++[Certificates] for more information.
 
 To automatically trust certificates from well known identity providers, including social login providers such as Google and Facebook, set environment variable `SEC_TLS_TRUSTDEFAULTCERTS` to `true`. To automatically trust certificates issued by the Kubernetes cluster, set environment variable `SEC_IMPORT_K8S_CERTS` to `true`. Alternatively, you could include the necessary certificates manually when building application image or mounting them using a volume when deploying your application.
 
-In the following example, a self-signed certificate is used for secured Service and Route.
+Example:
 
 [source,yaml]
 ----
@@ -301,27 +302,19 @@ spec:
     oidc:
       - discoveryEndpoint: specify-required-value        
   service:
-    certificate:
-      isCA: true
-      issuerRef:
-        kind: ClusterIssuer
-        name: self-signed
+    certificateSecretRef: mycompany-service-cert
     port: 9443
     type: ClusterIP
   expose: true
   route:
-    certificate:
-      isCA: true
-      issuerRef:
-        kind: ClusterIssuer
-        name: self-signed
+    certificateSecretRef: mycompany-route-cert
     termination: reencrypt
 ----
 
 
 ==== Using automatic registration with OIDC providers
 
-The operator can request a client Id and client Secret from providers, rather than requiring them in advance. This can simplify deployment, as the provider's administrator can supply the information needed for registration once, instead of supplying clientIds and secrets repetitively.  The callback URL from provider to client is supplied by the operator, so doesn't need to be known in advance. Additional attributes named `<provider_name>-autoreg-<field_name>` are added to the Kubernetes secret shown below.  First the operator will make an https request to the `sso.oidc[].discoveryEndpoint` to obtain URLs for subsequent REST calls.  Next it will make additional REST calls to the provider and obtain a client Id and client Secret. The Kubernetes secret will be updated with the obtained values. This is tested on OpenShift with Red Hat Single Sign-on (RH-SSO) and IBM Security Verify. See the following example. 
+The operator can request a client Id and client Secret from providers, rather than requiring them in advance. This can simplify deployment, as the provider's administrator can supply the information needed for registration once, instead of supplying clientIds and secrets repetitively.  The callback URL from provider to client is supplied by the operator, so doesn't need to be known in advance. Additional attributes named `<provider_name>-autoreg-<field_name>` are added to the Kubernetes secret shown below.  First the operator will make an https request to the `.spec.sso.oidc[].discoveryEndpoint` to obtain URLs for subsequent REST calls.  Next it will make additional REST calls to the provider and obtain a client Id and client Secret. The Kubernetes secret will be updated with the obtained values. This is tested on OpenShift with Red Hat Single Sign-on (RH-SSO) and IBM Security Verify. See the following example. 
 
 [source,yaml]
 ----
@@ -364,7 +357,7 @@ data:
   # oidc-autoreg-insecureTLS: dHJ1ZQ==
 ----
 
-Note: For RH-SSO, optionally set the `sso.oidc[].userNameAttribute` parameter to _preferred_username_ to obtain the user ID that was used to log in. For IBM Security Verify, set the parameter to _given_name_.
+Note: For RH-SSO, optionally set the `.spec.sso.oidc[].userNameAttribute` field to _preferred_username_ to obtain the user ID that was used to log in. For IBM Security Verify, set the field to _given_name_.
 
 ==== Using multiple OIDC and OAuth 2.0 providers (Advanced)
 
@@ -387,7 +380,7 @@ You can use multiple OIDC and OAuth 2.0 providers to authenticate with. First, c
         tokenEndpoint: specify-required-value
 ----
 
-Next, use the provider name in SSO `Secret` to specify its client ID and secret. For example, `provider1-clientSecret: dGhlbGF1Z2hpbmdjb3c=`. To configure a parameter for the corresponding provider in `OpenLibertyApplication` CR, use `sso.oidc[].id` or `sso.oauth2[].id` parameter as in the following example.
+Next, use the provider name in SSO `Secret` to specify its client ID and secret. For example, `provider1-clientSecret: dGhlbGF1Z2hpbmdjb3c=`. To configure a field for the corresponding provider in `OpenLibertyApplication` CR, use `.spec.sso.oidc[].id` or `.spec.sso.oauth2[].id` field as in the following example.
 
 [source,yaml]
 ----
@@ -417,7 +410,7 @@ data:
 
 The operator makes it easy to use a single storage for serviceability related operations, such as gatherig server traces or dumps (see link:++#day-2-operations++[Day-2 Operations]). The single storage will be shared by all Pods of an `OpenLibertyApplication` instance. This way you don't need to mount a separate storage for each Pod. Your cluster must be configured to automatically bind the `PersistentVolumeClaim` (PVC) to a `PersistentVolume` or you must bind it manually.
 
-You can specify the size of the persisted storage to request using `serviceability.size` parameter. You can also specify which storage class to request using `serviceability.storageClassName` parameter if you don't want to use the default storage class. The operator will automatically create a `PersistentVolumeClaim` with the specified size and access modes `ReadWriteMany` and `ReadWriteOnce`. It will be mounted at `/serviceability` inside all Pods of the `OpenLibertyApplication` instance.
+You can specify the size of the persisted storage to request using `.spec.serviceability.size` field. You can also specify which storage class to request using `.spec.serviceability.storageClassName` field if you don't want to use the default storage class. The operator will automatically create a `PersistentVolumeClaim` with the specified size and access modes `ReadWriteMany` and `ReadWriteOnce`. It will be mounted at `/serviceability` inside all Pods of the `OpenLibertyApplication` instance.
 
 [source,yaml]
 ----
@@ -429,10 +422,9 @@ spec:
   applicationImage: quay.io/my-repo/my-app:1.0
   serviceability:
     size: 1Gi
-    storageClassName: nfs
 ----
 
-You can also create the `PersistentVolumeClaim` yourself and specify its name using `serviceability.volumeClaimName` parameter. You must create it in the same namespace as the `OpenLibertyApplication` instance.
+You can also create the `PersistentVolumeClaim` yourself and specify its name using `.spec.serviceability.volumeClaimName` field. You must create it in the same namespace as the `OpenLibertyApplication` instance.
 
 [source,yaml]
 ----
@@ -482,11 +474,11 @@ Additionally, each day-2 operation CRD has the following annotation which illust
 
 You can request a snapshot of the server status including different types of server dumps, from an instance of Liberty server running inside a `Pod`, using Open Liberty Operator and `OpenLibertyDump` custom resource (CR). To use this feature the `OpenLibertyApplication` needs to have link:++#storage-for-serviceability++[storage for serviceability] already configured. Also, the `OpenLibertyDump` CR must be created in the same namespace as the `Pod` to operate on.
 
-The configurable parameters are:
+The configurable fields are:
 
-.Configurable Dump Parameters
+.Configurable Dump Fields
 |===
-| Parameter | Description
+| Field | Description
 | `podName` | The name of the Pod, which must be in the same namespace as the `OpenLibertyDump` CR.
 | `include` | Optional. List of memory dump types to request: _thread,heap,system_
 |===
@@ -520,11 +512,11 @@ _System dump might not work on certain Kubernetes versions, such as OpenShift 4.
 
 You can request server traces, from an instance of Liberty server running inside a `Pod`, using Open Liberty Operator and `OpenLibertyTrace` custom resource (CR). To use this feature the `OpenLibertyApplication` must already have link:++#storage-for-serviceability++[storage for serviceability] configured. Also, the `OpenLibertyTrace` CR must be created in the same namespace as the `Pod` to operate on.
 
-The configurable parameters are:
+The configurable fields are:
 
-.Configurable Trace Parameters
+.Configurable Trace Fields
 |===
-| Parameter | Description
+| Field | Description
 | `podName` | The name of the Pod, which must be in the same namespace as the `OpenLibertyTrace` CR.
 | `traceSpecification` | The trace string to be used to selectively enable trace. The default is *=info.
 | `maxFileSize` | The maximum size (in MB) that a log file can reach before it is rolled. To disable this attribute, set the value to 0. By default, the value is 20. This setting does not apply to the `console.log` file.
@@ -549,9 +541,11 @@ spec:
 
 Generated trace files, along with _messages.log_ files, will be in the folder using format _/serviceability/NAMESPACE/POD_NAME/_
 
-Once the trace has started, it can be stopped by setting the `disable` parameter to `true`. Deleting the CR will also stop the tracing. Changing the `podName` will first stop the tracing on the old Pod before enabling traces on the new Pod.
+Once the trace has started, it can be stopped by setting the `.spec.disable` field to `true`. Deleting the CR will also stop the tracing. Changing the `podName` will first stop the tracing on the old Pod before enabling traces on the new Pod.
 
 You can check the status of a trace operation using the `status` field inside the CR YAML. You can also run the command `oc get oltrace -o wide` to see the status of all trace operations in the current namespace.
+
+**Important**: _Liberty server must allow configuration dropins. The following configuration should not be set on the server: `<config updateTrigger=“disabled”/>`. Otherwise, OpenLibertyTrace operation will not work on the server._
 
 Note:
 _The operator doesn't monitor the Pods. If the Pod is restarted or deleted after the trace is enabled, then the tracing wouldn't be automatically enabled when the Pod comes back up. In that case, the status of the trace operation may not correctly report whether the trace is enabled or not._

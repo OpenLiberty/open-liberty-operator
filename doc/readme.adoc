@@ -1,5 +1,6 @@
 = Documentation
 
-* See the link:++user-guide.adoc++[user guide], for information on how to use the Open Liberty Operator.
+* See the link:++user-guide-v1beta2.adoc++[user guide], for information on how to use the Open Liberty Operator. This applies for operator versions **0.8.0 and above**.
+** For operator versions **0.7.1 and below**, refer to this link:++user-guide.adoc++[user guide].
 * See the link:++troubleshooting.adoc++[troubleshooting guide] for information on how to investigate and resolve deployment problems.
 * See the link:++observability-deployment.adoc++[Observability with Open Liberty], for information on configuring and integrating your Open Liberty runtime with monitoring tools in the OpenShift cluster.
