@@ -5,7 +5,7 @@ metadata:
     app.kubernetes.io/instance: open-liberty-operator
     app.kubernetes.io/managed-by: olm
     app.kubernetes.io/name: open-liberty-operator
-  name: olo-leader-election-cluster-role-OPEN_LIBERTY_OPERATOR_NAMESPACE
+  name: olo-leader-election-cluster-role
 rules:
 - apiGroups:
   - ""
@@ -168,7 +168,7 @@ metadata:
     app.kubernetes.io/instance: open-liberty-operator
     app.kubernetes.io/managed-by: olm
     app.kubernetes.io/name: open-liberty-operator
-  name: olo-leader-election-cluster-rolebinding-OPEN_LIBERTY_OPERATOR_NAMESPACE
+  name: olo-leader-election-cluster-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -185,7 +185,7 @@ metadata:
     app.kubernetes.io/instance: open-liberty-operator
     app.kubernetes.io/managed-by: olm
     app.kubernetes.io/name: open-liberty-operator
-  name: olo-manager-cluster-rolebinding-OPEN_LIBERTY_OPERATOR_NAMESPACE
+  name: olo-manager-cluster-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
