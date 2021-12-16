@@ -48,10 +48,6 @@ static-scan:
     chmod -x "$WORKSPACE"/open-liberty-operator/sonar-project.properties
     #echo "$SONAR_PASS" >> /tmp/sonarqube-token
     "${ONE_PIPELINE_PATH}"/internal/sonarqube/sonarqube_run
-    set_env ibmcloud-api-orig $(get_env ibmcloud-api)
-    set_env ibmcloud-api-key-orig $(get_env ibmcloud-api-key)
-    set_env ibmcloud-api cloud.ibm.com
-    set_env ibmcloud-api-key $(get_env ibmcloud-api-key-prod)
 
 containerize:
   dind: true
@@ -65,8 +61,7 @@ containerize:
       env
       set -x
     fi
-    set_env ibmcloud-api $(get_env ibmcloud-api-orig)
-    set_env ibmcloud-api-key $(get_env ibmcloud-api-key-orig)    
+
     # Download and configure golang
     wget --header "Accept: application/octet-stream"  "https://golang.org/dl/go1.16.linux-amd64.tar.gz"
     rm -rf /usr/local/go && tar -C /usr/local -xf go1.16.linux-amd64.tar.gz
