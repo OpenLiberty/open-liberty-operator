@@ -113,6 +113,7 @@ spec:
                 type: array
                 x-kubernetes-list-type: atomic
               dumpFile:
+                description: Location of the generated dump file
                 type: string
             type: object
         type: object

@@ -341,7 +341,8 @@ spec:
       kind: OpenLibertyDump
       name: openlibertydumps.apps.openliberty.io
       statusDescriptors:
-      - displayName: Dump File Path
+      - description: Location of the generated dump file
+        displayName: Dump File Path
         path: dumpFile
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
