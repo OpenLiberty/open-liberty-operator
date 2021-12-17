@@ -330,10 +330,10 @@ spec:
     Run multiple instances of your application for high availability. Either specify a static number of replicas or easily configure horizontal auto scaling to create (and delete) instances based on resource consumption.
 
     #### Persistence and advanced storage
-    Enable persistence for your application by specifying simple requirements: just tell us the size of the storage and where you would like it to be mounted and We will create and manage that storage for you.
+    Enable persistence for your application by specifying simple requirements: just tell us the size of the storage and where you would like it to be mounted and we will create and manage that storage for you.
     This toggles a StatefulSet resource instead of a Deployment resource, so your container can recover transactions and state upon a pod restart.
     We offer an advanced mode where the user specifies a built-in PersistentVolumeClaim, allowing them to configure many details of the persistent volume, such as its storage class and access mode.
-    You can also easily configure and use a single storage for serviceability related Day-2 operations, such as gatherig server traces and dumps.
+    You can also easily configure and use a single storage for serviceability related Day-2 operations, such as gathering server traces and dumps.
 
     #### Service Binding
     Your runtime components can expose services by a simple toggle. We take care of the heavy lifting such as creating kubernetes Secrets with information other services can use to bind. We also keep the bindable information synchronized, so your applications can dynamically reconnect to its required services without any intervention or interruption.
