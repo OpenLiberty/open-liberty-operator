@@ -10,28 +10,13 @@ The Open Liberty Operator is tested and built on the following CPU architectures
 
 * amd64
 
-The operator will run on any cluster that has Kubernetes v1.19 or higher.
+OpenShift 4.6 or higher is supported. The operator is also supported on any cluster that has Kubernetes v1.19 or higher.
 
 == Installation
 
-=== Option 1: Install using Operator Lifecycle Manager (OLM)
+=== Option 1: Install using Operator Lifecycle Manager (OLM) on OpenShift
 
-* Create the `CatalogSource` to add Open Liberty Operator.
-
-[source,yaml]
-----
-apiVersion: operators.coreos.com/v1alpha1
-kind: CatalogSource
-metadata:
-   name: open-liberty-operator-catalog
-   namespace: openshift-marketplace
-spec:
-   displayName: Open Liberty Operator
-   sourceType: grpc
-   image: openliberty/operator:catalog-0.8.0
-----
-
-* From the integrated OperatorHub, filter by selecting `Open Liberty Operator` checkbox under `Source`. Click on the tile with `Open Liberty` to install the operator.
+Open Liberty Operator is available from Red Hat's Certified OpenShift Operators catalog. From the integrated OperatorHub in OpenShift, filter by selecting `Certified` checkbox under `Source`. Search for `Open Liberty`. Click on the tile with `Open Liberty` to install the operator. Additional information is link:++https://catalog.redhat.com/software/operators/detail/5e987455e1ad57318e25093f#deploy-instructions/++[here].
 
 === Option 2: Install using kustomize
 
