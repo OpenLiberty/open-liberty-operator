@@ -1,0 +1,72 @@
+
+== Installation
+
+The Open Liberty Operator can be installed to:
+
+* watch own namespace
+* watch another namespace
+* watch all namespaces in the cluster
+
+Appropriate roles and bindings are required to watch another namespace or watch all namespaces.
+
+---
+
+. Install Custom Resource Definitions (CRDs) for `OpenLibertyApplication` and day-2 operations `OpenLibertyTrace` and `OpenLibertyDump`. This needs to be done only ONCE per cluster:
++
+[source,sh]
+----
+    kubectl apply -f https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/0.8.0/openliberty-app-crd.yaml
+----
+
+. Install the Open Liberty Operator:
+
+.. Set operator namespace and the namespace to watch:
++
+NOTE: Ensure that you replace  `<SPECIFY_OPERATOR_NAMESPACE_HERE>` and `<SPECIFY_WATCH_NAMESPACE_HERE>` with proper values. The namespaces must already exist. The commands below will not create the namespaces.
++
+  * To watch all namespaces in the cluster, set `WATCH_NAMESPACE='""'`
++
+
+[source,sh]
+----
+    OPERATOR_NAMESPACE=<SPECIFY_OPERATOR_NAMESPACE_HERE>
+    WATCH_NAMESPACE=<SPECIFY_WATCH_NAMESPACE_HERE>
+----
+
+.. _Optional_: Install roles and bindings to watch another namespace or all namespaces.  This step can be skipped if the operator is only watching own namespace.
+
+... To watch all namespaces, install cluster-level role-based access:
++
+[source,sh]
+----
+    curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/0.8.0/openliberty-app-rbac-watch-all.yaml \
+      | sed -e "s/OPEN_LIBERTY_OPERATOR_NAMESPACE/${OPERATOR_NAMESPACE}/" \
+      | kubectl apply -f -
+----
+
+... To watch another namespace, install role with access to another namespace:
++
+[source,sh]
+----
+    curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/0.8.0/openliberty-app-rbac-watch-another.yaml \
+      | sed -e "s/OPEN_LIBERTY_OPERATOR_NAMESPACE/${OPERATOR_NAMESPACE}/" \
+      | sed -e "s/OPEN_LIBERTY_WATCH_NAMESPACE/${WATCH_NAMESPACE}/" \
+      | kubectl apply -f -
+----
+
+.. Install the operator:
++
+[source,sh]
+----
+    curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/0.8.0/openliberty-app-operator.yaml \
+      | sed -e "s/OPEN_LIBERTY_WATCH_NAMESPACE/${WATCH_NAMESPACE}/" \
+      | kubectl apply -n ${OPERATOR_NAMESPACE} -f -
+----
+
+== Uninstallation
+
+To uninstall the operator, run commands from Step 2c first and then Step 2b (if applicable), but after replacing `kubectl apply` with `kubectl delete`.
+
+To delete the CRD, run command from Step 1, but after replacing `kubectl apply` with `kubectl delete`.
+
+_Deleting the CRD will also delete all `OpenLibertyApplication` in the cluster_
