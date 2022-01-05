@@ -192,6 +192,7 @@ release:
     #!/usr/bin/env bash
     echo "release"
     set_env ibmcloud-api-key $(get_env ibmcloud-api-key-prod)
+    echo -n "$(get_env ibmcloud-api-key-prod)" > /config/ibmcloud-api-key
     set_env ibmcloud-api "cloud.ibm.com"
 
 #owasp-zap-api:
