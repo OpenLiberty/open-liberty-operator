@@ -1,20 +1,9 @@
-apiVersion: v1
-kind: Secret
-type: kubernetes.io/tls
-metadata:
-  name: route-tls-secret
-data:
-  ca.crt: Y2FjZXJ0dXBkYXRl
-  destCA.crt: ZGVzdENBY3J0Cg==
-  tls.crt: dGxzY3J0Cg==
-  tls.key: dGxza2V5Cg==
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: route-with-cert-lib-app
 status:
-  observedGeneration: 2
+  observedGeneration: 3
   replicas: 1
   readyReplicas: 1
   updatedReplicas: 1
@@ -26,4 +15,3 @@ spec:
             - name: WLP_LOGGING_CONSOLE_LOGLEVEL
             - name: WLP_LOGGING_CONSOLE_SOURCE
             - name: WLP_LOGGING_CONSOLE_FORMAT
-            - name: ROUTE_CERT_SECRET_RESOURCE_VERSION
