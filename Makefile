@@ -234,6 +234,9 @@ docker-login:
 build-manifest: setup-manifest
 	./scripts/build-manifest.sh --image "${PUBLISH_REGISTRY}/${OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
 
+minikube-test-e2e:
+	./scripts/e2e-minikube.sh --test-tag "${TRAVIS_BUILD_NUMBER}"
+
 test-e2e:
 	./scripts/e2e-release.sh --registry-name default-route --registry-namespace openshift-image-registry \
                      --test-tag "${TRAVIS_BUILD_NUMBER}" --target "${RELEASE_TARGET}"
