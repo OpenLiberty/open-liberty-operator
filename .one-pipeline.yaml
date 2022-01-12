@@ -86,6 +86,9 @@ containerize:
     export PIPELINE_PASSWORD=$(get_env ibmcloud-api-key)
     PIPELINE_REGISTRY=$(get_env pipeline-registry)
     PIPELINE_OPERATOR_IMAGE=$(get_env pipeline-operator-image)
+    echo "TRIGGER_TYPE=$TRIGGER_TYPE"
+    export RELEASE_TARGET=$TRIGGER_BRANCH
+    export PR_NUMBER=1234
     # Build amd64 image
     make build-pipeline-releases
     # Build ppc64le and s390x images

@@ -55,7 +55,13 @@ main() {
     readonly release_tag="${RELEASE}"
   fi
 
-  readonly full_image="${IMAGE}:${release_tag}-${arch}"
+  if [[ -z "${PR_NUMBER}" ]]; then
+    readonly full_image="${IMAGE}:${release_tag}-${arch}"
+  else
+    readonly full_image="${IMAGE}:${PR_NUMBER}-${release_tag}"
+  fi
+
+  echo "full_image=$full_image"
 
   ## login to docker
   if [[ -z "${REGISTRY}" ]]; then 
