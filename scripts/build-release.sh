@@ -55,10 +55,20 @@ main() {
     readonly release_tag="${RELEASE}"
   fi
 
-  readonly full_image="${IMAGE}:${release_tag}-${arch}"
+  if [[ -z "${PR_NUMBER}" ]]; then
+    readonly full_image="${IMAGE}:${release_tag}-${arch}"
+  else
+    readonly full_image="${IMAGE}:${PR_NUMBER}-${release_tag}"
+  fi
+
+  echo "full_image=$full_image"
 
   ## login to docker
-  echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
+  if [[ -z "${REGISTRY}" ]]; then 
+    echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
+  else
+    echo "${DOCKER_PASSWORD}" | docker login "${REGISTRY}" -u "${DOCKER_USERNAME}" --password-stdin
+  fi   
 
   ## build or push latest main branch
   echo "****** Building release: ${RELEASE}"
@@ -98,6 +108,10 @@ parse_args() {
     -p)
       shift
       readonly DOCKER_PASSWORD="${1}"
+      ;;
+    --registry)
+      shift
+      readonly REGISTRY="${1}"
       ;;
     --image)
       shift
