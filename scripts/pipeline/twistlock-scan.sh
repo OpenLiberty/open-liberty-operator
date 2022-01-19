@@ -14,7 +14,7 @@
 # Install Twistlock
 install_twistlock
 
-IBMCLOUD_API_KEY=$(twistlock-ibmcloud-api-key)
+IBMCLOUD_API_KEY=$(get_env twistlock-ibmcloud-api-key)
 
 # loop through listed artifact images and scan each amd64 image
 for artifact_image in $(list_artifacts); do
