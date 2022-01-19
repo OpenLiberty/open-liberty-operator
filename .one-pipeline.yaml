@@ -48,8 +48,6 @@ static-scan:
     chmod -x "$WORKSPACE"/open-liberty-operator/sonar-project.properties
     #echo "$SONAR_PASS" >> /tmp/sonarqube-token
     "${ONE_PIPELINE_PATH}"/internal/sonarqube/sonarqube_run
-    set_env ibmcloud-api-orig $(get_env ibmcloud-api)
-    set_env ibmcloud-api cloud.ibm.com
 
 containerize:
   dind: true
@@ -63,7 +61,7 @@ containerize:
       env
       set -x
     fi
-    set_env ibmcloud-api $(get_env ibmcloud-api-orig)
+
     # Download and configure golang
     wget --header "Accept: application/octet-stream"  "https://golang.org/dl/go1.16.linux-amd64.tar.gz"
     rm -rf /usr/local/go && tar -C /usr/local -xf go1.16.linux-amd64.tar.gz
@@ -83,7 +81,7 @@ containerize:
     fi
     # Build images
     export PIPELINE_USERNAME=$(get_env ibmcloud-api-user)
-    export PIPELINE_PASSWORD=$(get_env ibmcloud-api-key)
+    export PIPELINE_PASSWORD=$(get_env ibmcloud-api-key-staging)
     PIPELINE_REGISTRY=$(get_env pipeline-registry)
     PIPELINE_OPERATOR_IMAGE=$(get_env pipeline-operator-image)
     echo "TRIGGER_TYPE=$TRIGGER_TYPE"
@@ -155,7 +153,7 @@ acceptance-test:
     apt-get update
     apt-get -y install build-essential
     export PIPELINE_USERNAME=$(get_env ibmcloud-api-user)
-    export PIPELINE_PASSWORD=$(get_env ibmcloud-api-key)
+    export PIPELINE_PASSWORD=$(get_env ibmcloud-api-key-staging)
     export DOCKER_USERNAME=$(get_env docker-username)
     export DOCKER_PASSWORD=$(get_env docker-password)
     export CLUSTER_URL=$(get_env test-cluster-url)
@@ -194,9 +192,6 @@ release:
   script: |
     #!/usr/bin/env bash
     echo "release"
-    set_env ibmcloud-api-key $(get_env ibmcloud-api-key-prod)
-    echo -n "$(get_env ibmcloud-api-key-prod)" > /config/ibmcloud-api-key
-    set_env ibmcloud-api "cloud.ibm.com"
 
 #owasp-zap-api:
 #  dind: true
