@@ -1,6 +1,6 @@
 # cloud.google.com/go v0.65.0
 cloud.google.com/go/compute/metadata
-# github.com/application-stacks/runtime-component-operator v0.8.0-20211124-0830
+# github.com/application-stacks/runtime-component-operator v0.8.1-0.20220124145716-73885bed49ff
 ## explicit
 github.com/application-stacks/runtime-component-operator/api/v1beta2
 github.com/application-stacks/runtime-component-operator/common
