@@ -10,6 +10,11 @@ status:
 spec:
   template:
     spec:
+      containers:
+      - volumeMounts:
+        - name: svc-certificate
+          mountPath: /etc/x509/certs
+          readOnly: true
       volumes:
       - name: svc-certificate
         secret:
