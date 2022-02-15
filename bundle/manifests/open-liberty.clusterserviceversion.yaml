@@ -48,7 +48,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: openliberty/operator:daily
-    createdAt: "2021-11-25T14:00:00Z"
+    createdAt: 22-01-26T09:20:09Z
     description: Deploy and manage applications running on Liberty
     operators.operatorframework.io/builder: operator-sdk-v1.6.1+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
@@ -487,7 +487,13 @@ spec:
           - deployments
           - statefulsets
           verbs:
-          - '*'
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - apps
           resources:
@@ -502,7 +508,13 @@ spec:
           - openlibertyapplications/finalizers
           - openlibertyapplications/status
           verbs:
-          - '*'
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - apps.openliberty.io
           resources:
@@ -510,7 +522,13 @@ spec:
           - openlibertydumps/finalizers
           - openlibertydumps/status
           verbs:
-          - '*'
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - apps.openliberty.io
           resources:
@@ -518,13 +536,25 @@ spec:
           - openlibertytraces/finalizers
           - openlibertytraces/status
           verbs:
-          - '*'
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - autoscaling
           resources:
           - horizontalpodautoscalers
           verbs:
-          - '*'
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - ""
           resources:
@@ -534,14 +564,26 @@ spec:
           - serviceaccounts
           - services
           verbs:
-          - '*'
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - ""
           resources:
           - pods
           - pods/exec
           verbs:
-          - '*'
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - image.openshift.io
           resources:
@@ -556,26 +598,50 @@ spec:
           resources:
           - servicemonitors
           verbs:
-          - '*'
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - networking.k8s.io
           resources:
           - ingresses
           verbs:
-          - '*'
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - route.openshift.io
           resources:
           - routes
           - routes/custom-host
           verbs:
-          - '*'
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - serving.knative.dev
           resources:
           - services
           verbs:
-          - '*'
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
         serviceAccountName: olo-controller-manager
     strategy: deployment
   installModes:
