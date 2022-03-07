@@ -62,7 +62,7 @@ build_manifest() {
   # TODO: Add back in linux/s390x and linux/ppc64le once build platforms are back up
   # --platforms "linux/amd64,linux/s390x,linux/ppc64le" \
   manifest-tool push from-args \
-    --platforms "linux/amd64" \
+    --platforms "linux/amd64,linux/s390x,linux/ppc64le" \
     --template "${target}-ARCH" \
     --target "${target}" \
     || echo "*** WARN: Target architectures not available"
@@ -70,6 +70,7 @@ build_manifest() {
 
 # Build manifest for previous releases
 build_manifests() {
+  git fetch --tags
   tags="$(git tag -l)"
   while read -r tag; do
     if [[ -z "${tag}" ]]; then
