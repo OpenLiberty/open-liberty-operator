@@ -1,0 +1,33 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: olo-watched-role
+  namespace: olo-watched-ns2
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: olo-watched-rolebinding
+  namespace: olo-watched-ns2
+subjects:
+- kind: ServiceAccount
+  name: olo-controller-manager
+  namespace: olo-ns2
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: olo-leader-election-watched-role
+  namespace: olo-watched-ns2
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: olo-leader-election-watched-rolebinding
+  namespace: olo-watched-ns2
+subjects:
+- kind: ServiceAccount
+  name: olo-controller-manager
+  namespace: olo-ns2
+---
+

@@ -7,8 +7,9 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: openliberty/operator:daily
-    createdAt: "2021-11-25T14:00:00Z"
+    createdAt: "2022-03-01T09:00:00Z"
     description: Deploy and manage applications running on Liberty
+    olm.skipRange: <0.8.1
     repository: https://github.com/OpenLiberty/open-liberty-operator
     support: IBM
   name: open-liberty.v0.0.0
