@@ -47,6 +47,7 @@ main() {
 }
 
 build_releases() {
+  git fetch --tags
   tags="$(git tag -l)"
   while read -r tag; do
     if [[ -z "${tag}" ]]; then
