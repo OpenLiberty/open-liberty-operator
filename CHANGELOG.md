@@ -11,9 +11,15 @@ All notable changes to this project will be documented in this file.
 
 ## [0.8.1]
 
+### Fixed
+
+- Fix to allow multiple /'s in application image ([#327](https://github.com/OpenLiberty/open-liberty-operator/pull/327))
+- Fix to allow insecureEdgeTerminationPolicy set to redirect on passthrough ([#293](https://github.com/application-stacks/runtime-component-operator/pull/293)) ([#329](https://github.com/OpenLiberty/open-liberty-operator/pull/329))
+- Fix to not create deployment without a pull secret ([#343](https://github.com/application-stacks/runtime-component-operator/pull/343)) ([#329](https://github.com/OpenLiberty/open-liberty-operator/pull/329))
+
 ### Added
 
-- Added p and z-linux images to Docker Hub ([#332](https://github.com/OpenLiberty/open-liberty-operator/pull/323))
+- Added p and z-linux images to Docker Hub to support install options with kubectl or kustomize. OLM install option only supports amd64. ([#332](https://github.com/OpenLiberty/open-liberty-operator/pull/323))
 
 ## [0.8.0]
 

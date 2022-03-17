@@ -2,13 +2,15 @@
 
 == Changelog
 
-All notable changes are documented in the link:++https://github.com/OpenLiberty/open-liberty-operator/blob/main/CHANGELOG.md#080++[Changelog].
+All notable changes are documented in the link:++https://github.com/OpenLiberty/open-liberty-operator/blob/main/CHANGELOG.md#081++[Changelog].
 
 == Supported Environments
 
 The Open Liberty Operator is tested and built on the following CPU architectures:
 
-* amd64
+* amd64 (Supported with Installation options 1, 2 and 3)
+* ppc64le (IBM Power. Supported with Installation options 2 and 3 only)
+* s390x (IBM Z Linux. Supported with Installation options 2 and 3 only)
 
 OpenShift 4.6 or higher is supported. The operator is also supported on any cluster that has Kubernetes v1.19 or higher.
 
