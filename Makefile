@@ -38,7 +38,7 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 CREATEDAT ?= AUTO
 
 ifeq ($(CREATEDAT), AUTO)
-CREATEDAT := $(shell date +%y-%m-%dT%TZ)
+CREATEDAT := $(shell date +%Y-%m-%dT%TZ)
 endif
 
 # IMAGE_TAG_BASE defines the docker.io namespace and part of the image name for remote images.
