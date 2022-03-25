@@ -3,7 +3,7 @@ kind: OpenLibertyDump
 metadata:
   name: test-dump
 spec:
-  podName: my-liberty-app-0
+  podName: dump-ol-0
   include:
     - thread
     - heap

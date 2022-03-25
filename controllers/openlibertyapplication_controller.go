@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	networkingv1 "k8s.io/api/networking/v1"
 
@@ -200,7 +201,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				if image.DockerImageReference != "" {
 					instance.Status.ImageReference = image.DockerImageReference
 				}
-			} else if err != nil && !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) {
+			} else if err != nil && !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) && !strings.Contains(isTagName, "/") {
 				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 			}
 		}
@@ -236,6 +237,13 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			reqLogger.Error(err, "Failed to delete ServiceAccount")
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
+	}
+
+	// Check if the ServiceAccount has a valid pull secret before creating the deployment/statefulset
+	// or setting up knative. Otherwise the pods can go into an ImagePullBackOff loop
+	saErr := oputils.ServiceAccountPullSecretExists(instance, r.GetClient())
+	if saErr != nil {
+		return r.ManageError(saErr, common.StatusConditionTypeReconciled, instance)
 	}
 
 	isKnativeSupported, err := r.IsGroupVersionSupported(servingv1.SchemeGroupVersion.String(), "Service")
