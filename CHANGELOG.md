@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.1]
+
+### Fixed
+
+- Fix to allow multiple /'s in application image ([#327](https://github.com/OpenLiberty/open-liberty-operator/pull/327))
+- Fix to allow insecureEdgeTerminationPolicy set to redirect on passthrough ([#293](https://github.com/application-stacks/runtime-component-operator/pull/293)) ([#329](https://github.com/OpenLiberty/open-liberty-operator/pull/329))
+- Fix to not create deployment without a pull secret ([#343](https://github.com/application-stacks/runtime-component-operator/pull/343)) ([#329](https://github.com/OpenLiberty/open-liberty-operator/pull/329))
+
+### Added
+
+- Added p and z-linux images to Docker Hub to support install options with kubectl or kustomize. OLM install option only supports amd64. ([#332](https://github.com/OpenLiberty/open-liberty-operator/pull/323))
+
 ## [0.8.0]
 
 **Breaking changes:** API version of the custom resources (CRs) `OpenLibertyApplication`, `OpenLibertyDump` and `OpenLibertyTrace` have changed. Custom resources with `apiVersion: openliberty.io/v1beta1` are not handled by Open Liberty Operator versions 0.8.0 and above. You must delete existing custom resources with `apiVersion: openliberty.io/v1beta1` and create new custom resources with `apiVersion: apps.openliberty.io/v1beta2`.
@@ -128,7 +140,8 @@ See the [new user guide](https://github.com/OpenLiberty/open-liberty-operator/bl
 
 The initial release of the helm-based Open Liberty Operator.
 
-[Unreleased]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/OpenLiberty/open-liberty-operator/releases/tag/v0.8.1
 [0.8.0]: https://github.com/OpenLiberty/open-liberty-operator/releases/tag/v0.8.0
 [0.7.1]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.6.0...v0.7.1
 [0.7.0]: https://github.com/OpenLiberty/open-liberty-operator/compare/v0.6.0...v0.7.0

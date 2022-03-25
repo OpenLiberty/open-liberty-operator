@@ -13,7 +13,10 @@ metadata:
           "spec": {
             "applicationImage": "registry.connect.redhat.com/ibm/open-liberty-samples:springPetClinic",
             "expose": true,
-            "replicas": 1
+            "replicas": 1,
+            "service": {
+              "port": 9080
+            }
           }
         },
         {
@@ -48,13 +51,13 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: openliberty/operator:daily
-    createdAt: 22-01-26T09:20:09Z
+    createdAt: 22-03-07T11:38:02Z
     description: Deploy and manage applications running on Liberty
     operators.operatorframework.io/builder: operator-sdk-v1.6.1+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/OpenLiberty/open-liberty-operator
     support: IBM
-  name: open-liberty.v0.8.0
+  name: open-liberty.v0.8.1
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -681,4 +684,4 @@ spec:
   maturity: beta
   provider:
     name: IBM
-  version: 0.8.0
+  version: 0.8.1
