@@ -409,6 +409,8 @@ func CustomizePodSpec(pts *corev1.PodTemplateSpec, ba common.BaseComponent) {
 	appContainer.VolumeMounts = ba.GetVolumeMounts()
 	pts.Spec.Volumes = ba.GetVolumes()
 
+	appContainer.SecurityContext = getSecurityContext(ba)
+
 	if ba.GetService().GetCertificateSecretRef() != nil {
 		secretName := obj.GetName() + "-svc-tls"
 		if ba.GetService().GetCertificateSecretRef() != nil {
@@ -899,7 +901,8 @@ func CustomizeIngress(ing *networkingv1.Ingress, ba common.BaseComponent) {
 	servicePort := strconv.Itoa(int(ba.GetService().GetPort())) + "-tcp"
 	host := ""
 	path := ""
-	var pathType networkingv1.PathType
+	pathType := networkingv1.PathType("")
+
 	rt := ba.GetRoute()
 	if rt != nil {
 		host = rt.GetHost()
@@ -920,6 +923,10 @@ func CustomizeIngress(ing *networkingv1.Ingress, ba common.BaseComponent) {
 	if host == "" {
 		l := log.WithValues("Request.Namespace", obj.GetNamespace(), "Request.Name", obj.GetName())
 		l.Info("No Ingress hostname is provided. Ingress might not function correctly without hostname. It is recommended to set Ingress host or to provide default value through operator's config map.")
+	}
+
+	if pathType == "" {
+		pathType = networkingv1.PathTypeImplementationSpecific
 	}
 
 	ing.Spec.Rules = []networkingv1.IngressRule{
@@ -1082,4 +1089,47 @@ func ServiceAccountPullSecretExists(ba common.BaseComponent, client client.Clien
 		return saErr
 	}
 	return nil
+}
+
+// Get security context from CR and apply customization to default settings
+func getSecurityContext(ba common.BaseComponent) *corev1.SecurityContext {
+	baSecurityContext := ba.GetSecurityContext()
+
+	valFalse := false
+	valTrue := true
+
+	cap := make([]corev1.Capability, 1)
+	cap[0] = "ALL"
+
+	// Set default security context
+	secContext := &corev1.SecurityContext{
+		AllowPrivilegeEscalation: &valFalse,
+		Capabilities: &corev1.Capabilities{
+			Drop: cap,
+		},
+		Privileged:             &valFalse,
+		ReadOnlyRootFilesystem: &valFalse,
+		RunAsNonRoot:           &valTrue,
+	}
+
+	// Customize security context
+	if baSecurityContext != nil {
+		if baSecurityContext.AllowPrivilegeEscalation == nil {
+			baSecurityContext.AllowPrivilegeEscalation = secContext.AllowPrivilegeEscalation
+		}
+		if baSecurityContext.Capabilities == nil {
+			baSecurityContext.Capabilities = secContext.Capabilities
+		}
+		if baSecurityContext.Privileged == nil {
+			baSecurityContext.Privileged = secContext.Privileged
+		}
+		if baSecurityContext.ReadOnlyRootFilesystem == nil {
+			baSecurityContext.ReadOnlyRootFilesystem = secContext.ReadOnlyRootFilesystem
+		}
+		if baSecurityContext.RunAsNonRoot == nil {
+			baSecurityContext.RunAsNonRoot = secContext.RunAsNonRoot
+		}
+		return baSecurityContext
+	}
+	return secContext
 }
