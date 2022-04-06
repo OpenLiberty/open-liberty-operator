@@ -1,0 +1,10 @@
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: ingress
+spec:
+  # Add fields here
+  route:
+    host: myapp.mycompany.com
+    path: "/"
+    pathType:

@@ -51,7 +51,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: openliberty/operator:daily
-    createdAt: 22-03-07T11:38:02Z
+    createdAt: "2022-04-05T15:01:49Z"
     description: Deploy and manage applications running on Liberty
     operators.operatorframework.io/builder: operator-sdk-v1.6.1+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
@@ -257,6 +257,9 @@ spec:
         path: statefulSet.storage.mountPath
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Security context for the application container.
+        displayName: Security Context
+        path: securityContext
       - description: A YAML object that represents a volumeClaimTemplate component of a StatefulSet.
         displayName: Storage Volume Claim Template
         path: statefulSet.storage.volumeClaimTemplate
