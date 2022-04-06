@@ -3,7 +3,7 @@ module github.com/OpenLiberty/open-liberty-operator
 go 1.16
 
 require (
-	github.com/application-stacks/runtime-component-operator v0.8.1-0.20220405182540-00ecc1f1f51d
+	github.com/application-stacks/runtime-component-operator v0.8.1-0.20220406013638-131565c1b2b8
 	github.com/coreos/prometheus-operator v0.41.1
 	github.com/go-logr/logr v0.3.0
 	github.com/openshift/api v0.0.0-20201019163320-c6a5ec25f267
