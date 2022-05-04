@@ -1,0 +1,24 @@
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: service-types-lib
+spec:
+  # Add fields here
+  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
+  replicas: 1
+  service:
+    bindable: true
+    port: 8080
+    portName: test-port
+    targetPort: 8081
+    ports:
+      - name: test-port1
+        port: 8082
+        protocol: TCP
+      - name: test-port2
+        port: 8083
+        protocol: TCP
+    type:
+    nodePort:
+    annotations:
+      name: NodePort

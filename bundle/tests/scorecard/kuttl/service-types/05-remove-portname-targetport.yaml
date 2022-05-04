@@ -1,0 +1,21 @@
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: service-types-lib
+spec:
+  # Add fields here
+  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
+  replicas: 1
+  service:
+    bindable: true
+    port: 8082
+    portName:
+    targetPort:
+    ports:
+      - name: test-port1
+        port: 8081
+        protocol: TCP
+        targetPort: 8083
+    type: LoadBalancer
+    annotations:
+      name: LoadBalancerService
