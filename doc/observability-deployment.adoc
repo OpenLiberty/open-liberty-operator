@@ -1,6 +1,6 @@
 = Observability with Open Liberty
 
-The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in a Kubernetes environment. This document has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2, 4.3, 4.4, 4.5, 4.6 and 4.7.
+The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in a Kubernetes environment. This document has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2, 4.3, 4.4, 4.5, 4.6 and 4.7, 4.8, 4.9, and 4.10.
 
 == How to deploy Kibana dashboards to monitor Open Liberty logging events
 
@@ -37,7 +37,7 @@ The following steps outline how to manually create and modify a server.xml to ad
 <?xml version="1.0" encoding="UTF-8"?>
 <server>
    <featureManager>
-       <feature>mpMetrics-2.3</feature>
+       <feature>mpMetrics-4.0</feature>
        <!-- include the monitor-1.0 feature below if you are using an mpMetrics version below 2.3
        <feature>monitor-1.0</feature> 
        --> 
@@ -123,12 +123,11 @@ Readiness check allows third party services to know if the service is ready to p
 Liveness check allows third party services to determine if the service is running. This means that if this procedure fails the service can be discarded (terminated, shutdown). It reports an individual service's status at the endpoints and indicates the overall status as UP if all the services are UP. A service orchestrator can then use these health check statuses to make decisions.
 
 
-=== MicroProfile Health 2.x
+=== MicroProfile Health
 
- The following steps outline how to manually create and modify a server.xml to add the mpHealth-2.x feature that will be built as part of your Open Liberty image.
+ The following steps outline how to manually create and modify a server.xml to add the MicroProfile Health feature that will be built as part of your Open Liberty image. 
 
-
-Configure mpHealth-2.x feature in server.xml:
+Configure the MicroProfile Health feature in your server.xml:
 
 
 . Create an XML file named `server_mpHealth.xml`, with the following contents and place it in the same directory as your DockerFile:
@@ -138,7 +137,7 @@ Configure mpHealth-2.x feature in server.xml:
 <?xml version="1.0" encoding="UTF-8"?>
 <server>
    <featureManager>
-       <feature>mpHealth-2.2</feature>
+       <feature>mpHealth-4.0</feature>
    </featureManager>
 </server>
 ----
@@ -152,17 +151,17 @@ COPY --chown=1001:0 server_mpHealth.xml /config/configDropins/overrides/
 ----
 
 
-== Configure the Kubernetes Liveness and Readiness Probes to use the MicroProfile Health REST Endpoints
+== Configure the Kubernetes Liveness, Readiness, and Startup Probes to use the MicroProfile Health REST Endpoints
 
 
-Kubernetes provides liveness and readiness probes that are used to check the health of your containers. These probes can check certain files in your containers, check a TCP socket, or make HTTP requests.
+Kubernetes provides liveness, readiness, and startup probes that are used to check the health of your containers. These probes can check certain files in your containers, check a TCP socket, make HTTP requests, or protect slow starting containers.
 
-Configure the readiness and liveness probe's fields to point to the MicroProfile Health REST endpoints.
+Configure the readiness, liveness, and startup probes' fields to point to the MicroProfile Health REST endpoints. MicroProfile Health versions starting from mpHealth-3.1 include the addition of Kubernetes startup probes. 
 
 === For mpHealth-2.x
 
 
-Modify the readiness and liveness probe's fields, if not configured, to point to the MicroProfile Health REST endpoints, in the OpenLibertyApplication Custom Resource (CR):
+Modify the readiness and liveness probes' fields, if not configured, to point to the MicroProfile Health REST endpoints, in the OpenLibertyApplication Custom Resource (CR):
 
 
 [source,yaml]
@@ -183,6 +182,38 @@ spec:
     failureThreshold: 12
     httpGet:
       path: /health/live
+      port: 9443
+      scheme: HTTPS
+    initialDelaySeconds: 30
+    periodSeconds: 2
+    timeoutSeconds: 10
+  startupProbe:
+    failureThreshold: 12
+    httpGet:
+      path: /health/started
+      port: 9443
+      scheme: HTTPS
+    initialDelaySeconds: 30
+    periodSeconds: 2
+    timeoutSeconds: 10
+...
+----
+
+=== For mpHealth-3.1+
+
+
+Modify the startup probe's fields, if not configured, to point to the MicroProfile Health REST endpoints, in the OpenLibertyApplication Custom Resource (CR):
+
+
+[source,yaml]
+----
+spec:
+  applicationImage:
+  ...
+  startupProbe:
+    failureThreshold: 12
+    httpGet:
+      path: /health/started
       port: 9443
       scheme: HTTPS
     initialDelaySeconds: 30

@@ -3,6 +3,10 @@ Here you can find Kibana dashboards to use with JSON logs from Liberty servers.
 
 If you are using AppNav, please use the dashboards under the /AppNav directory.
 
+If you are using RHOCP 4.2-4.6, please use the dashboards under the /RHOCP_4.2-4.6 directory.
+
+If you are using RHOCP 4.7+, please use the dashboards under the /RHOCP_4.7+ directory.
+
 ## open-liberty-kibana\<version\>-traffic
 
 Prior to Open Liberty 20.0.0.8, access logs that were included in the JSON logs used a fixed set of fields. Open Liberty 20.0.0.8 adds the option for you to use the fields specified in the `accessLogging` `logFormat` attribute in the JSON logs.
