@@ -41,7 +41,7 @@ spec:
 ----
 +
 
-. Under Observe > Metrics, confirm that your service is being monitored by inserting your own queries specific to your app's metrics.
+. Under Observe > Metrics (formerly Monitoring > Metrics), confirm that your service is being monitored by inserting your own queries specific to your app's metrics.
 
 . To deploy an additional Grafana instance for creating custom dashboards, follow this RedHat blog link:++https://www.redhat.com/en/blog/custom-grafana-dashboards-red-hat-openshift-container-platform-4++[Custom Grafana dashboards for Red Hat OpenShift Container Platform 4]. This Grafana instance will be connected to OpenShift monitoring in the `openshift-monitoring` namespace and additional Grafana dashboards will increase the load on the Prometheus service, so pay attention to Prometheus' CPU and memory usage when deploying dashboards.  
 
