@@ -11,7 +11,7 @@ metadata:
             "name": "openliberty-app-sample"
           },
           "spec": {
-            "applicationImage": "registry.connect.redhat.com/ibm/open-liberty-samples:springPetClinic",
+            "applicationImage": "icr.io/appcafe/open-liberty/samples/getting-started",
             "expose": true,
             "replicas": 1,
             "service": {
