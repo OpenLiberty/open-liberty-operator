@@ -52,12 +52,12 @@ metadata:
     certified: "true"
     createdAt: "2022-03-01T09:00:00Z"
     description: Deploy and manage applications running on Liberty
-    olm.skipRange: <0.8.1
+    olm.skipRange: <0.8.2
     operators.operatorframework.io/builder: operator-sdk-v1.6.1+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/OpenLiberty/open-liberty-operator
     support: IBM
-  name: open-liberty.v0.8.1
+  name: open-liberty.v0.8.2
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -602,4 +602,4 @@ spec:
   maturity: beta
   provider:
     name: IBM
-  version: 0.8.1
+  version: 0.8.2
