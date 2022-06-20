@@ -80,8 +80,8 @@ setup_test() {
     kubectl krew install kuttl
 
     ## Add tests for minikube
-    # mv bundle/tests/scorecard/minikube-kuttl/ingress bundle/tests/scorecard/kuttl/
-    # mv bundle/tests/scorecard/minikube-kuttl/ingress-certificate bundle/tests/scorecard/kuttl/
+    mv bundle/tests/scorecard/minikube-kuttl/ingress             bundle/tests/scorecard/kuttl/
+    mv bundle/tests/scorecard/minikube-kuttl/ingress-certificate bundle/tests/scorecard/kuttl/
     
     ## Remove tests that do not apply for minikube
     mv bundle/tests/scorecard/kuttl/routes            bundle/tests/scorecard/minikube-kuttl/
@@ -100,8 +100,8 @@ setup_test() {
 
 cleanup_test() {
     ## Restore tests
-    # mv bundle/tests/scorecard/kuttl/ingress bundle/tests/scorecard/minikube-kuttl/
-    # mv bundle/tests/scorecard/kuttl/ingress-certificate bundle/tests/scorecard/minikube-kuttl/
+    mv bundle/tests/scorecard/kuttl/ingress             bundle/tests/scorecard/minikube-kuttl/
+    mv bundle/tests/scorecard/kuttl/ingress-certificate bundle/tests/scorecard/minikube-kuttl/
     
     mv bundle/tests/scorecard/minikube-kuttl/routes            bundle/tests/scorecard/kuttl/ 
     mv bundle/tests/scorecard/minikube-kuttl/route-certificate bundle/tests/scorecard/kuttl/ 
