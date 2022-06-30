@@ -5,12 +5,9 @@ OPERATOR_SDK_RELEASE_VERSION ?= v1.6.4
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 0.8.0
+VERSION ?= 0.8.1
 
 OPERATOR_IMAGE ?= openliberty/operator
-PIPELINE_REGISTRY ?= cp.stg.icr.io
-PIPELINE_REGISTRY_NAMESPACE ?= cp
-PIPELINE_OPERATOR_IMAGE ?= ${PIPELINE_REGISTRY_NAMESPACE}/olo-operator
 
 # Type of release. Can be "daily", "releases", or a release tag.
 RELEASE_TARGET := $(or ${RELEASE_TARGET}, ${TRAVIS_TAG}, daily)
@@ -37,6 +34,12 @@ ifneq ($(origin DEFAULT_CHANNEL), undefined)
 BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
 endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
+
+CREATEDAT ?= AUTO
+
+ifeq ($(CREATEDAT), AUTO)
+CREATEDAT := $(shell date +%Y-%m-%dT%TZ)
+endif
 
 # IMAGE_TAG_BASE defines the docker.io namespace and part of the image name for remote images.
 # This variable is used to construct full image tags for bundle and catalog images.
@@ -165,9 +168,11 @@ endef
 
 .PHONY: bundle
 bundle: manifests setup kustomize ## Generate bundle manifests and metadata, then validate generated files.
+	sed -i.bak "s,IMAGE,${IMG},g;s,CREATEDAT,${CREATEDAT},g" config/manifests/patches/csvAnnotations.yaml
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	mv config/manifests/patches/csvAnnotations.yaml.bak config/manifests/patches/csvAnnotations.yaml
 	operator-sdk bundle validate ./bundle
 
 .PHONY: bundle-build
@@ -234,40 +239,21 @@ unit-test: ## Run unit tests
 docker-login:
 	docker login -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}"
 
-build-pipeline-multiarch-image: ## Build operator image
-	./scripts/build-releases.sh -u "${PIPELINE_USERNAME}" -p "${PIPELINE_PASSWORD}" --registry "${PIPELINE_REGISTRY}" --image "${PIPELINE_OPERATOR_IMAGE}"
-
-push-pipeline-multiarch-image: ## Push operator image
-	./scripts/build-releases.sh --push -u "${PIPELINE_USERNAME}" -p "${PIPELINE_PASSWORD}" --registry "${PIPELINE_REGISTRY}" --image "${PIPELINE_OPERATOR_IMAGE}"
-
 build-manifest: setup-manifest
 	./scripts/build-manifest.sh --image "${PUBLISH_REGISTRY}/${OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
 
-build-pipeline-manifest: setup-manifest
-	./scripts/build-manifest.sh -u "${PIPELINE_USERNAME}" -p "${PIPELINE_PASSWORD}" --registry "${PIPELINE_REGISTRY}" --image "${PIPELINE_REGISTRY}/${PIPELINE_OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
+minikube-test-e2e:
+	./scripts/e2e-minikube.sh --test-tag "${TRAVIS_BUILD_NUMBER}"
 
 test-e2e:
 	./scripts/e2e-release.sh --registry-name default-route --registry-namespace openshift-image-registry \
                      --test-tag "${TRAVIS_BUILD_NUMBER}" --target "${RELEASE_TARGET}"
 
-test-pipeline-e2e:
-	./scripts/pipeline/fyre-e2e.sh -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" \
-                     --cluster-url "${CLUSTER_URL}" --cluster-token "${CLUSTER_TOKEN}" \
-                     --registry-name "${PIPELINE_REGISTRY}" --registry-namespace "${PIPELINE_REGISTRY_NAMESPACE}" \
-                     --registry-user "${PIPELINE_USERNAME}" --registry-password "${PIPELINE_PASSWORD}" \
-                     --test-tag "${TRAVIS_BUILD_NUMBER}" --release "${RELEASE_TARGET}"
-
 build-releases:
 	./scripts/build-releases.sh --image "${PUBLISH_REGISTRY}/${OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
 
-build-pipeline-releases:
-	./scripts/build-releases.sh -u "${PIPELINE_USERNAME}" -p "${PIPELINE_PASSWORD}" --registry "${PIPELINE_REGISTRY}" --image "${PIPELINE_REGISTRY}/${PIPELINE_OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
-
 bundle-releases:
 	./scripts/bundle-releases.sh --image "${PUBLISH_REGISTRY}/${OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
-
-bundle-pipeline-releases:
-	./scripts/bundle-releases.sh -u "${PIPELINE_USERNAME}" -p "${PIPELINE_PASSWORD}" --registry "${PIPELINE_REGISTRY}" --image "${PIPELINE_REGISTRY}/${PIPELINE_OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
 
 install-podman:
 	./scripts/installers/install-podman.sh
@@ -285,7 +271,4 @@ build-catalog:
 	opm index add --bundles "${BUNDLE_IMG}" --tag "${CATALOG_IMG}"
 
 push-catalog: docker-login
-	podman push --format=docker "${CATALOG_IMG}"
-
-push-pipeline-catalog:
 	podman push --format=docker "${CATALOG_IMG}"
