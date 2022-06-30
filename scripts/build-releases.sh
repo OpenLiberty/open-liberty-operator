@@ -36,26 +36,18 @@ main() {
     exit 1
   fi
 
-  ## login to docker
-  if [[ -z "${REGISTRY}" ]]; then
-    echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
-  else
-    echo "${DOCKER_PASSWORD}" | docker login "${REGISTRY}" -u "${DOCKER_USERNAME}" --password-stdin
-  fi
+  echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
 
   # Build target release(s)
   if [[ "${TARGET}" != "releases" ]]; then
-    if [[ -z "${REGISTRY}" ]]; then 
-      "${script_dir}/build-release.sh" -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" --release "${TARGET}" --image "${IMAGE}"
-    else
-      "${script_dir}/build-release.sh" -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" --release "${TARGET}" --image "${IMAGE}" --registry "${REGISTRY}"
-    fi  
+    "${script_dir}/build-release.sh" -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" --release "${TARGET}" --image "${IMAGE}"
   else
     build_releases
   fi
 }
 
 build_releases() {
+  git fetch --tags
   tags="$(git tag -l)"
   while read -r tag; do
     if [[ -z "${tag}" ]]; then
@@ -72,33 +64,6 @@ build_releases() {
   done <<< "${tags}"
 }
 
-build_release() {
-  local release="$1"
-  local full_image="${IMAGE}:${release}-${arch}"
-  echo "*** Building ${full_image} for ${arch}"
-  docker build -t "${full_image}" .
-  if [[ -n "${REGISTRY}" ]]; then
-    docker tag "${full_image}" "${REGISTRY}/${full_image}"
-  fi
-  return $?
-}
-
-push_release() {
-  local release="$1"
-
-  if [[ "${TRAVIS}" = "true" && "${TRAVIS_PULL_REQUEST}" = "false" && "${TRAVIS_BRANCH}" = "master" ]]; then
-    echo "****** Pushing image: ${IMAGE}:${release}-${arch}"
-    docker push "${IMAGE}:${release}-${arch}"
-  else
-    echo "****** Skipping push for branch ${TRAVIS_BRANCH}"
-  fi
-
-  if [[ -n "${REGISTRY}" ]]; then
-    echo "****** Pushing image to scan: ${IMAGE}:${release}-${arch}"
-    docker push "${REGISTRY}/${IMAGE}:${release}-${arch}"
-  fi
-}
-
 parse_args() {
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -109,10 +74,6 @@ parse_args() {
     -p)
       shift
       readonly DOCKER_PASSWORD="${1}"
-      ;;
-    --registry)
-      shift
-      readonly REGISTRY="${1}"
       ;;
     --image)
       shift

@@ -36,11 +36,7 @@ main() {
     exit 1
   fi
 
-  if [[ -z "${REGISTRY}" ]]; then  
-    echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
-  else
-    echo "${DOCKER_PASSWORD}" | docker login "${REGISTRY}" -u "${DOCKER_USERNAME}" --password-stdin
-  fi 
+  echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
 
   # Bundle target release(s)
   if [[ "${TARGET}" != "releases" ]]; then
@@ -71,11 +67,7 @@ bundle_release() {
 
   # Build the catalog
   local catalog_ref="${IMAGE}:catalog-${release_tag}"
-  if [[ -z "${REGISTRY}" ]]; then 
-    make build-catalog push-catalog IMG="${operator_ref}" BUNDLE_IMG="${bundle_ref}" CATALOG_IMG="${catalog_ref}"
-  else
-    make build-catalog push-pipeline-catalog IMG="${operator_ref}" BUNDLE_IMG="${bundle_ref}" CATALOG_IMG="${catalog_ref}"    
-  fi
+  make build-catalog push-catalog IMG="${operator_ref}" BUNDLE_IMG="${bundle_ref}" CATALOG_IMG="${catalog_ref}"
 }
 
 bundle_releases() {
@@ -105,10 +97,6 @@ parse_args() {
     -p)
       shift
       readonly DOCKER_PASSWORD="${1}"
-      ;;
-    --registry)
-      shift
-      readonly REGISTRY="${1}"
       ;;
     --image)
       shift

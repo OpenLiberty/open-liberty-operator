@@ -55,20 +55,10 @@ main() {
     readonly release_tag="${RELEASE}"
   fi
 
-  if [[ -z "${PR_NUMBER}" ]]; then
-    readonly full_image="${IMAGE}:${release_tag}-${arch}"
-  else
-    readonly full_image="${IMAGE}:${PR_NUMBER}-${release_tag}"
-  fi
-
-  echo "full_image=$full_image"
+  readonly full_image="${IMAGE}:${release_tag}-${arch}"
 
   ## login to docker
-  if [[ -z "${REGISTRY}" ]]; then 
-    echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
-  else
-    echo "${DOCKER_PASSWORD}" | docker login "${REGISTRY}" -u "${DOCKER_USERNAME}" --password-stdin
-  fi   
+  echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
 
   ## build or push latest main branch
   echo "****** Building release: ${RELEASE}"
@@ -89,7 +79,7 @@ build_release() {
     git checkout -q "${RELEASE}"
   fi
 
-  docker build -t "${full_image}" .
+  docker build -t "${full_image}" --build-arg GO_ARCH=${arch} .
   return $?
 }
 
@@ -108,10 +98,6 @@ parse_args() {
     -p)
       shift
       readonly DOCKER_PASSWORD="${1}"
-      ;;
-    --registry)
-      shift
-      readonly REGISTRY="${1}"
       ;;
     --image)
       shift
