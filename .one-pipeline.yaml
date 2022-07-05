@@ -1,0 +1,242 @@
+version: '1'
+
+setup:
+  image: icr.io/continuous-delivery/pipeline/pipeline-base-image:2.12@sha256:ff4053b0bca784d6d105fee1d008cfb20db206011453071e86b69ca3fde706a4
+  script: |
+    #!/usr/bin/env bash
+    echo "setup"
+  
+test:
+  dind: true
+  abort_on_failure: true
+  image: icr.io/continuous-delivery/pipeline/pipeline-base-image:2.12@sha256:ff4053b0bca784d6d105fee1d008cfb20db206011453071e86b69ca3fde706a4
+  script: |
+    #!/usr/bin/env bash
+    # Download and configure golang
+    wget --header "Accept: application/octet-stream"  "https://golang.org/dl/go1.16.linux-amd64.tar.gz" 
+    rm -rf /usr/local/go && tar -C /usr/local -xf go1.16.linux-amd64.tar.gz
+    export PATH=$PATH:/usr/local/go/bin
+    apt-get update
+    apt-get -y install build-essential
+    # Run unit tests
+    #export DOCKER_USERNAME=$(get_env docker-username)
+    #export DOCKER_PASSWORD=$(get_env docker-password)
+    make unit-test
+    #make docker-login
+    #make build-image
+
+static-scan:
+  dind: true
+  abort_on_failure: false
+  image: icr.io/continuous-delivery/pipeline/pipeline-base-image:2.12@sha256:ff4053b0bca784d6d105fee1d008cfb20db206011453071e86b69ca3fde706a4
+  script: |
+    #!/usr/bin/env bash
+    read -r SONAR_HOST_URL <<< "$(get_env sonarqube | jq -r '.parameters.dashboard_url' | sed 's:/*$::')"
+    read -r SONAR_USER <<< "$(get_env sonarqube | jq -r '.parameters.user_login')"
+    SONARQUBE_INSTANCE_ID=$(get_env sonarqube | jq -r '.instance_id')
+    read -r SONAR_PASS <<< "$(jq -r --arg sonar_instance "$SONARQUBE_INSTANCE_ID" '[.services[] | select(."service_id"=="sonarqube")][] | select(."instance_id"==$sonar_instance) | .parameters.user_password' /toolchain/toolchain.json)"  
+    touch "$WORKSPACE"/open-liberty-operator/sonar-project.properties   
+    cat << EOF > "$WORKSPACE"/open-liberty-operator/sonar-project.properties
+    sonar.projectKey=open-liberty-operator
+    sonar.host.url=$SONAR_HOST_URL
+    sonar.sources=.
+    sonar.login=$SONAR_USER
+    sonar.password=$SONAR_PASS
+    sonar.c.file.suffixes=-
+    sonar.cpp.file.suffixes=-
+    sonar.objc.file.suffixes=-
+    EOF
+    chmod -x "$WORKSPACE"/open-liberty-operator/sonar-project.properties
+    #echo "$SONAR_PASS" >> /tmp/sonarqube-token
+    "${COMMONS_PATH}"/static-scan/run.sh
+    ## Perform static lint
+    ./scripts/pipeline/static-linter-scan.sh --git-token $(get_env git-token) --static-linter-version $(get_env static-linter-version)
+
+containerize:
+  dind: true
+  abort_on_failure: true
+  image: icr.io/continuous-delivery/pipeline/pipeline-base-image:2.12@sha256:ff4053b0bca784d6d105fee1d008cfb20db206011453071e86b69ca3fde706a4
+  script: |
+    #!/usr/bin/env bash
+
+    if [[ "$PIPELINE_DEBUG" == 1 ]]; then
+      trap env EXIT
+      env
+      set -x
+    fi
+    set_env ibmcloud-api $(get_env ibmcloud-api-orig)
+    # Download and configure golang
+    wget --header "Accept: application/octet-stream"  "https://golang.org/dl/go1.16.linux-amd64.tar.gz"
+    rm -rf /usr/local/go && tar -C /usr/local -xf go1.16.linux-amd64.tar.gz
+    export PATH=$PATH:/usr/local/go/bin
+    apt-get update
+    apt-get -qq -y install build-essential software-properties-common uidmap
+    # Download and install skopeo
+    if ! command -v skopeo &> /dev/null; then
+      if [ ! -f "/apt/sources.list.d/devel:kubic:libcontainers:stable.list" ]; then
+        sudo sh -c "echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_18.04/ /' > /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list"
+        wget --no-check-certificate -nv https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/xUbuntu_18.04/Release.key -O- | sudo apt-key add -
+        sudo apt-get update -qq
+      fi
+      sudo apt-get -y install skopeo
+    else
+      skopeo --version
+    fi
+    # Build images
+    export PIPELINE_USERNAME=$(get_env ibmcloud-api-user)
+    export PIPELINE_PASSWORD=$(get_env ibmcloud-api-key)
+    PIPELINE_REGISTRY=$(get_env pipeline-registry)
+    PIPELINE_OPERATOR_IMAGE=$(get_env pipeline-operator-image)
+    echo "TRIGGER_TYPE=$TRIGGER_TYPE"
+    export RELEASE_TARGET=$(get_env branch)
+    export PR_NUMBER=1234
+    # Build amd64 image
+    make build-pipeline-releases
+    # Build ppc64le and s390x images
+    # ./scripts/pipeline/launch-travis.sh -t $(get_env travis-token) -r "https://github.com/OpenLiberty/open-liberty-operator" -b $(get_env branch) -l
+    # Build manifest
+    make build-pipeline-manifest
+    # Build bundle image
+    ./scripts/pipeline/launch-catalog-build.sh -t $(get_env travis-token) -r "https://github.com/OpenLiberty/open-liberty-operator" -b $(get_env branch) -l
+    # Save artifacts
+    # declare -a tags=("daily-amd64" "daily-ppc64le" "daily-s390x")
+    declare -a tags=("daily-amd64")
+    for i in "${tags[@]}"
+    do
+      IMAGE=$PIPELINE_REGISTRY/$PIPELINE_OPERATOR_IMAGE:$i
+      DIGEST="$(skopeo inspect docker://$IMAGE | grep Digest | grep -o 'sha[^\"]*')"
+      ARCH=$(echo $i | cut -d'-' -f 2)
+      echo "Saving artifact $i name=$IMAGE digest=$DIGEST"
+      save_artifact $i type=image name="$IMAGE" "digest=$DIGEST" "arch=$ARCH"
+    done
+    declare -a catalogs=("catalog-daily")
+    for i in "${catalogs[@]}"
+    do
+      IMAGE=$PIPELINE_REGISTRY/$PIPELINE_OPERATOR_IMAGE:$i
+      DIGEST="$(skopeo inspect docker://$IMAGE | grep Digest | grep -o 'sha[^\"]*')"
+      ARCH=$(echo $i | cut -d'-' -f 2)
+      echo "Saving artifact $i name=$IMAGE digest=$DIGEST"
+      save_artifact $i type=image name="$IMAGE" "digest=$DIGEST" "arch=$ARCH"
+    done
+
+deploy:
+  image: icr.io/continuous-delivery/pipeline/pipeline-base-image:2.12@sha256:ff4053b0bca784d6d105fee1d008cfb20db206011453071e86b69ca3fde706a4
+  script: |
+    #!/usr/bin/env bash
+    if [[ "$PIPELINE_DEBUG" == 1 ]]; then
+      trap env EXIT
+      env
+      set -x
+    fi
+    echo "deploy"
+
+dynamic-scan: 
+  abort_on_failure: false
+  image: icr.io/continuous-delivery/pipeline/pipeline-base-image:2.12@sha256:ff4053b0bca784d6d105fee1d008cfb20db206011453071e86b69ca3fde706a4
+  script: |
+    #!/usr/bin/env bash
+    echo "dynamic-scan"
+
+acceptance-test:
+  dind: true  
+  abort_on_failure: true
+  image: icr.io/continuous-delivery/pipeline/pipeline-base-image:2.12@sha256:ff4053b0bca784d6d105fee1d008cfb20db206011453071e86b69ca3fde706a4
+  script: |
+    #!/usr/bin/env bash
+    echo "acceptance-test"
+    # Download and configure golang
+    wget --header "Accept: application/octet-stream"  "https://golang.org/dl/go1.16.linux-amd64.tar.gz"
+    rm -rf /usr/local/go && tar -C /usr/local -xf go1.16.linux-amd64.tar.gz
+    export PATH=$PATH:/usr/local/go/bin
+    apt-get update
+    apt-get -y install build-essential
+    export PIPELINE_USERNAME=$(get_env ibmcloud-api-user)
+    export PIPELINE_PASSWORD=$(get_env ibmcloud-api-key)
+    export DOCKER_USERNAME=$(get_env docker-username)
+    export DOCKER_PASSWORD=$(get_env docker-password)
+    export CLUSTER_URL=$(get_env test-cluster-url)
+    export CLUSTER_TOKEN=$(get_env test-cluster-token)
+    export TRAVIS_BUILD_NUMBER=$BUILD_NUMBER
+    make setup
+    make test-pipeline-e2e
+
+scan-artifact:
+  abort_on_failure: false
+  image: icr.io/continuous-delivery/pipeline/pipeline-base-image:2.6@sha256:7f588468622a981f89cf5e1212aaf75fface9da6169b5345ca52ab63d8215907
+  script: |
+    #!/usr/bin/env bash
+    echo "twistlock-scan"
+    ./scripts/pipeline/twistlock-scan.sh
+    echo "VA scan"
+    . scripts/pipeline/va_scan
+    if which list_artifacts >/dev/null; then
+      list_artifacts | while IFS= read -r artifact; do
+        image="$(load_artifact "$artifact" "name")"
+        type="$(load_artifact "$artifact" "type")"
+        digest="$(load_artifact "$artifact" "digest")"
+        name="$(echo "$artifact" | awk '{print $1}')"
+
+        if [[ "$type" == "image" ]]; then
+          if [[ "$image" == *"icr.io"* ]]; then
+            start_va_scan "$name" "$image" "$digest"
+          fi
+        fi
+      done
+    fi
+
+    echo "aqua scan"
+    # install docker
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sudo sh get-docker.sh
+    # get aqua scan executables
+    git clone https://$(get_env git-token)@github.ibm.com/CICD-CPP/cpp-pipelines.git
+    chmod -R +x cpp-pipelines
+    # setup and execute aqua scan
+    cd cpp-pipelines
+    export CUSTOM_SCRIPTS_PATH=/workspace/app/one-pipeline-config-repo/cpp-pipelines
+    ./commons/aqua/aqua-local-scan
+
+release:
+  abort_on_failure: false
+  image: icr.io/continuous-delivery/pipeline/pipeline-base-image:2.12@sha256:ff4053b0bca784d6d105fee1d008cfb20db206011453071e86b69ca3fde706a4
+  script: |
+    #!/usr/bin/env bash
+    RELEASE_FLAG=$(get_env release "false")
+    if [[ $RELEASE_FLAG != "true" ]]; then
+      echo "Skipping release stage; environment property 'release' is set to $RELEASE_FLAG"
+      exit 0
+    fi
+    SKIP_ALL_CHECKS=$(get_env SKIP_ALL_CHECKS "false")
+    ./scripts/pipeline/evaluator.sh      
+    if [[ $? == 0 || $SKIP_ALL_CHECKS == "true" ]]; then
+      if [[  $SKIP_ALL_CHECKS == "true" ]]; then
+        echo "Skipping image scan checks"
+      fi
+      APP_REPO=$(pwd)
+      echo "Application Repository: $APP_REPO"
+      INVENTORY_REPO=$(get_env inventory-repo)
+      echo "Cloning inventory repository: $INVENTORY_REPO"
+      cd "$WORKSPACE"
+      APP_TOKEN_PATH="$WORKSPACE/secrets/app-token"
+      . "${ONE_PIPELINE_PATH}"/git/clone_repo \
+        "$INVENTORY_REPO" \
+        "master"  \
+        "" \
+        "$APP_TOKEN_PATH"
+      REPO=${INVENTORY_REPO##*/}
+      NAME=${REPO%.*}
+      echo "Inventory name: $NAME"
+      cd $WORKSPACE/$NAME
+      if [ "$(ls )" ]; then
+        echo "Clearing inventory repository: $INVENTORY_REPO"
+        git config --global user.email "tekton@example.com"
+        git config --global user.name "Tekton"
+        git rm *
+        git commit -m "Delete contents of inventory repository - $PIPELINE_RUN_ID"
+        git push origin master
+      fi
+      cd $APP_REPO
+      ./scripts/pipeline/release.sh
+    else
+      echo "Errors found.  images will not be released"
+    fi
