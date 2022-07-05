@@ -4,9 +4,9 @@ The following guide has been tested with Red Hat OpenShift Container Platform (R
 
 ## Prerequisites
 
-Prior to installing application monitoring on RHOCP, ensure that there is a running application that has a service endpoint for outputting metrics in Prometheus format.
+Prior to installing application monitoring on RHOCP, ensure that there is a running application that has a service endpoint for outputting metrics in Prometheus format inside your project namespace. This guide assumes the service endpoint that outputs Prometheus format metrics is exposed on path `/metrics`.
 
-It is assumed such a running application has been deployed to the RHOCP cluster inside a project/namespace called `myapp`, and that the Prometheus metrics endpoint is exposed on path `/metrics`.
+This guide assumes a running application has been deployed to the RHOCP cluster inside a project/namespace called `myapp`, and that its Prometheus metrics endpoint is exposed on path `/metrics`.
 
 # Application Monitoring on RHOCP 4.6+
 
@@ -18,26 +18,17 @@ There is no separate Grafana deployment that comes with enabling user-defined mo
 
 . To enable monitoring for user-defined projects, follow the OpenShift guide link:++https://docs.openshift.com/container-platform/4.10/monitoring/enabling-monitoring-for-user-defined-projects.html++[Enabling monitoring for user-defined projects].
 
-. Deploy a Service Monitor inside the `myapp` namespace to define the service endpoint that will be monitored by the Prometheus instance using the following YAML:
+. Deploy a Service Monitor inside the `myapp` namespace to define the service endpoint that will be monitored by the Prometheus instance. Add the following YAML to your OpenLibertyApplication Custom Resource (CR):
 
 +
 [source,yaml]
 ----
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-    name: myapp-monitor
-    labels:
-        k8s-app: myapp-monitor
-    namespace: myapp
+kind: OpenLibertyApplication
 spec:
-    selector:
-        matchLabels:
-            app: example-app
+  …
+  monitoring:
     endpoints:
-        - interval: 30s
-          path: /metrics
-          port: 9080-tcp
+      - interval: 30s
 ----
 +
 
