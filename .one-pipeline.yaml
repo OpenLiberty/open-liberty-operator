@@ -5,6 +5,13 @@ setup:
   script: |
     #!/usr/bin/env bash
     echo "setup"
+    export SKIP_KIND_E2E_TEST=$(get_env SKIP_KIND_E2E_TEST)
+    echo "SKIP_KIND_E2E_TEST=$SKIP_KIND_E2E_TEST"
+    if [[ $SKIP_KIND_E2E_TEST != "true" ]]; then
+      echo "doing acceptance tests"
+    else
+      echo "not doing acceptance tests"
+    fi
   
 test:
   dind: true
