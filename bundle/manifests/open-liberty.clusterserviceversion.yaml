@@ -11,7 +11,7 @@ metadata:
             "name": "openliberty-app-sample"
           },
           "spec": {
-            "applicationImage": "registry.connect.redhat.com/ibm/open-liberty-samples:springPetClinic",
+            "applicationImage": "icr.io/appcafe/open-liberty/samples/getting-started",
             "expose": true,
             "replicas": 1,
             "service": {
@@ -51,7 +51,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: openliberty/operator:daily
-    createdAt: "2022-04-05T15:01:49Z"
+    createdAt: "2022-07-21T11:05:23Z"
     description: Deploy and manage applications running on Liberty
     operators.operatorframework.io/builder: operator-sdk-v1.6.1+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
