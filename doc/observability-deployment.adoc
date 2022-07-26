@@ -2,7 +2,13 @@
 
 The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in a Kubernetes environment. This document has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2, 4.3, 4.4, 4.5, 4.6 and 4.7, 4.8, 4.9, and 4.10.
 
-== How to deploy Kibana dashboards to monitor Open Liberty logging events
+== How to analyze Open Liberty logs
+
+Open Liberty logs inside a Kubernetes environment can be managed by deploying log aggregation tools onto a Kubernetes cluster. Log aggregation tools help you persist, search, and visualize the log data that is gathered from the pods across the cluster. 
+
+One choice for application logging with log aggregation is the open source Elasticsearch, Fluentd, and Kibana (EFK) stack. If you use the EFK stack, you can customize and deploy Kibana dashboards to monitor Open Liberty logging events.
+
+=== Deploying Kibana dashboards to monitor Open Liberty logging events
 
 Kibana dashboards are provided for visualizing events from the Open Liberty runtime.
 
@@ -86,18 +92,21 @@ You will need to deploy Prometheus using the Prometheus Operator which will then
 
 After deploying Prometheus, you must configure your application's Service Monitor to use the basic authentication credentials specified in your `server.xml` when accessing the `/metrics` endpoint. Use the Service Monitor's `basicAuth` definition with a secret that contains those credentials; this should be the same secret you created earlier in Step 1 of <<Using environment variables for basic authentication credentials>>.
 
-Add the following `basicAuth` section to your ServiceMonitor YAML, and replace `basic-auth` with your secret:
+Add the following `basicAuth` section to your OpenLibertyApplication CR under the `monitoring` definition, and replace `basic-auth` with your secret:
 [source,yaml]
 ----
 spec:
-  endpoints:
-  - basicAuth:
-      password:
-        name: basic-auth
-        key: password
-      username:
-        name: basic-auth
-        key: username
+…
+  monitoring:
+    endpoints:
+      - basicAuth:
+          username:
+            key: username
+            name: basic-auth
+          password:
+            key: password
+            name: basic-auth
+        interval: 30s
 ----
 
 
