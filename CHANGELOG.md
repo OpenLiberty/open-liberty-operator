@@ -13,12 +13,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-- Fix to prevent deployments being created before the pull secret for the service account. ([#329](https://github.com/OpenLiberty/open-liberty-operator/pull/329))
-- Increase memory limit for manager deployment ([#352](https://github.com/OpenLiberty/open-liberty-operator/pull/352))
-
-### Added
-
-- If TLS termination is set to Passthrough, also set InsecureEdgeTerminationPolicy as Redirect is only possible option (Included in updated RuntimeComponent Operator module via [#329](https://github.com/OpenLiberty/open-liberty-operator/pull/329))
+- Check for secrets only if service account pull secrets exist ([#377](https://github.com/application-stacks/runtime-component-operator/pull/377))([#352](https://github.com/OpenLiberty/open-liberty-operator/pull/352))
 
 ## [0.8.1]
 
