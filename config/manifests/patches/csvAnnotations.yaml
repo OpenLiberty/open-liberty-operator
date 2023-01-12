@@ -4,5 +4,5 @@ metadata:
   name: open-liberty.v0.0.0
   namespace: placeholder
   annotations:
-    containerImage: IMAGE
-    createdAt: CREATEDAT
+    containerImage: openliberty/operator:daily
+    createdAt: 2023-01-09T15:45:33Z

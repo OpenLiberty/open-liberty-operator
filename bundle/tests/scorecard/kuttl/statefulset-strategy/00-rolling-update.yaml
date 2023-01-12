@@ -1,0 +1,16 @@
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: statefulset-strategy-ol
+spec:
+  # Add fields here
+  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
+  replicas: 3
+  statefulSet:
+    updateStrategy:
+      type: RollingUpdate
+      rollingUpdate:
+        partition: 0
+    storage:
+      size: 100Mi
+      mountPath: /data

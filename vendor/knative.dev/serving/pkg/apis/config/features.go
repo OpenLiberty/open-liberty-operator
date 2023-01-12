@@ -23,6 +23,7 @@ import (
 	cm "knative.dev/pkg/configmap"
 )
 
+// Flag is a string value which can be either Enabled, Disabled, or Allowed.
 type Flag string
 
 const (
@@ -40,16 +41,27 @@ const (
 
 func defaultFeaturesConfig() *Features {
 	return &Features{
-		MultiContainer:          Enabled,
-		PodSpecAffinity:         Disabled,
-		PodSpecDryRun:           Allowed,
-		PodSpecFieldRef:         Disabled,
-		PodSpecNodeSelector:     Disabled,
-		PodSpecRuntimeClassName: Disabled,
-		PodSpecSecurityContext:  Disabled,
-		PodSpecTolerations:      Disabled,
-		ResponsiveRevisionGC:    Allowed,
-		TagHeaderBasedRouting:   Disabled,
+		MultiContainer:                   Enabled,
+		PodSpecAffinity:                  Disabled,
+		PodSpecTopologySpreadConstraints: Disabled,
+		PodSpecDryRun:                    Allowed,
+		PodSpecHostAliases:               Disabled,
+		PodSpecFieldRef:                  Disabled,
+		PodSpecNodeSelector:              Disabled,
+		PodSpecRuntimeClassName:          Disabled,
+		PodSpecSecurityContext:           Disabled,
+		PodSpecPriorityClassName:         Disabled,
+		PodSpecSchedulerName:             Disabled,
+		ContainerSpecAddCapabilities:     Disabled,
+		PodSpecTolerations:               Disabled,
+		PodSpecVolumesEmptyDir:           Disabled,
+		PodSpecPersistentVolumeClaim:     Disabled,
+		PodSpecPersistentVolumeWrite:     Disabled,
+		PodSpecInitContainers:            Disabled,
+		PodSpecDNSPolicy:                 Disabled,
+		PodSpecDNSConfig:                 Disabled,
+		TagHeaderBasedRouting:            Disabled,
+		AutoDetectHTTP2:                  Disabled,
 	}
 }
 
@@ -60,14 +72,25 @@ func NewFeaturesConfigFromMap(data map[string]string) (*Features, error) {
 	if err := cm.Parse(data,
 		asFlag("multi-container", &nc.MultiContainer),
 		asFlag("kubernetes.podspec-affinity", &nc.PodSpecAffinity),
+		asFlag("kubernetes.podspec-topologyspreadconstraints", &nc.PodSpecTopologySpreadConstraints),
 		asFlag("kubernetes.podspec-dryrun", &nc.PodSpecDryRun),
+		asFlag("kubernetes.podspec-hostaliases", &nc.PodSpecHostAliases),
 		asFlag("kubernetes.podspec-fieldref", &nc.PodSpecFieldRef),
 		asFlag("kubernetes.podspec-nodeselector", &nc.PodSpecNodeSelector),
 		asFlag("kubernetes.podspec-runtimeclassname", &nc.PodSpecRuntimeClassName),
 		asFlag("kubernetes.podspec-securitycontext", &nc.PodSpecSecurityContext),
+		asFlag("kubernetes.podspec-priorityclassname", &nc.PodSpecPriorityClassName),
+		asFlag("kubernetes.podspec-schedulername", &nc.PodSpecSchedulerName),
+		asFlag("kubernetes.containerspec-addcapabilities", &nc.ContainerSpecAddCapabilities),
 		asFlag("kubernetes.podspec-tolerations", &nc.PodSpecTolerations),
-		asFlag("responsive-revision-gc", &nc.ResponsiveRevisionGC),
-		asFlag("tag-header-based-routing", &nc.TagHeaderBasedRouting)); err != nil {
+		asFlag("kubernetes.podspec-volumes-emptydir", &nc.PodSpecVolumesEmptyDir),
+		asFlag("kubernetes.podspec-init-containers", &nc.PodSpecInitContainers),
+		asFlag("kubernetes.podspec-persistent-volume-claim", &nc.PodSpecPersistentVolumeClaim),
+		asFlag("kubernetes.podspec-persistent-volume-write", &nc.PodSpecPersistentVolumeWrite),
+		asFlag("kubernetes.podspec-dnspolicy", &nc.PodSpecDNSPolicy),
+		asFlag("kubernetes.podspec-dnsconfig", &nc.PodSpecDNSConfig),
+		asFlag("tag-header-based-routing", &nc.TagHeaderBasedRouting),
+		asFlag("autodetect-http2", &nc.AutoDetectHTTP2)); err != nil {
 		return nil, err
 	}
 	return nc, nil
@@ -80,16 +103,27 @@ func NewFeaturesConfigFromConfigMap(config *corev1.ConfigMap) (*Features, error)
 
 // Features specifies which features are allowed by the webhook.
 type Features struct {
-	MultiContainer          Flag
-	PodSpecAffinity         Flag
-	PodSpecDryRun           Flag
-	PodSpecFieldRef         Flag
-	PodSpecNodeSelector     Flag
-	PodSpecRuntimeClassName Flag
-	PodSpecSecurityContext  Flag
-	PodSpecTolerations      Flag
-	ResponsiveRevisionGC    Flag
-	TagHeaderBasedRouting   Flag
+	MultiContainer                   Flag
+	PodSpecAffinity                  Flag
+	PodSpecTopologySpreadConstraints Flag
+	PodSpecDryRun                    Flag
+	PodSpecFieldRef                  Flag
+	PodSpecHostAliases               Flag
+	PodSpecNodeSelector              Flag
+	PodSpecRuntimeClassName          Flag
+	PodSpecSecurityContext           Flag
+	PodSpecPriorityClassName         Flag
+	PodSpecSchedulerName             Flag
+	ContainerSpecAddCapabilities     Flag
+	PodSpecTolerations               Flag
+	PodSpecVolumesEmptyDir           Flag
+	PodSpecInitContainers            Flag
+	PodSpecPersistentVolumeClaim     Flag
+	PodSpecPersistentVolumeWrite     Flag
+	PodSpecDNSPolicy                 Flag
+	PodSpecDNSConfig                 Flag
+	TagHeaderBasedRouting            Flag
+	AutoDetectHTTP2                  Flag
 }
 
 // asFlag parses the value at key as a Flag into the target, if it exists.

@@ -16,39 +16,18 @@ limitations under the License.
 
 package networking
 
+import "knative.dev/pkg/kmap"
+
 const (
 	// GroupName is the name for the networking API group.
 	GroupName = "networking.internal.knative.dev"
 
-	// IngressClassAnnotationKey is the annotation for the
-	// explicit class of Ingress that a particular resource has
-	// opted into. For example,
-	//
-	//    networking.knative.dev/ingress.class: some-network-impl
-	//
-	// This uses a different domain because unlike the resource, it is
-	// user-facing.
-	//
-	// The parent resource may use its own annotations to choose the
-	// annotation value for the Ingress it uses.  Based on such
-	// value a different reconciliation logic may be used (for examples,
-	// Istio-based Ingress will reconcile into a VirtualService).
-	IngressClassAnnotationKey = "networking.knative.dev/ingress.class"
+	// CertifcateUIDLabelKey is used to specify a label selector for informers listing ingress secrets.
+	CertificateUIDLabelKey = GroupName + "/certificate-uid"
 
-	// DisableAutoTLSAnnotationKey is the label key attached to a namespace to indicate that
-	// AutoTLS should not be enabled for it.
-	DisableAutoTLSAnnotationKey = "networking.knative.dev/disableAutoTLS"
 	// IngressLabelKey is the label key attached to underlying network programming
 	// resources to indicate which Ingress triggered their creation.
 	IngressLabelKey = GroupName + "/ingress"
-
-	// SKSLabelKey is the label key that SKS Controller attaches to the
-	// underlying resources it controls.
-	SKSLabelKey = GroupName + "/serverlessservice"
-
-	// ServiceTypeKey is the label key attached to a service specifying the type of service.
-	// e.g. Public, Private.
-	ServiceTypeKey = GroupName + "/serviceType"
 
 	// OriginSecretNameLabelKey is the label key attached to the TLS secret to indicate
 	// the name of the origin secret that the TLS secret is copied from.
@@ -57,6 +36,15 @@ const (
 	// OriginSecretNamespaceLabelKey is the label key attached to the TLS secret
 	// to indicate the namespace of the origin secret that the TLS secret is copied from.
 	OriginSecretNamespaceLabelKey = GroupName + "/originSecretNamespace"
+
+	// RolloutAnnotationKey is the annotation key for storing
+	// the rollout state in the Annotations of the Kingress or Route.Status.
+	RolloutAnnotationKey = GroupName + "/rollout"
+)
+
+const (
+	// PublicGroupName is the name for hte public networking API group
+	PublicGroupName = "networking.knative.dev"
 
 	// CertificateClassAnnotationKey is the annotation for the
 	// explicit class of Certificate that a particular resource has
@@ -71,39 +59,100 @@ const (
 	// annotation value for the Certificate it uses.  Based on such
 	// value a different reconciliation logic may be used (for examples,
 	// Cert-Manager-based Certificate will reconcile into a Cert-Manager Certificate).
-	CertificateClassAnnotationKey = "networking.knative.dev/certificate.class"
+	CertificateClassAnnotationKey = PublicGroupName + "/certificate.class"
 
-	// ActivatorServiceName is the name of the activator Kubernetes service.
-	ActivatorServiceName = "activator-service"
+	// CertificateClassAnnotationAltKey is an alternative casing to CertificateClassAnnotationKey
+	//
+	// This annotation is meant to be applied to Knative Services or Routes. Serving
+	// will translate this to original casing for better compatibility with different
+	// certificate providers
+	CertificateClassAnnotationAltKey = PublicGroupName + "/certificate-class"
 
-	// DeprecatedDisableWildcardCertLabelKey is the deprecated label key attached to a namespace to indicate that
-	// a wildcard certificate should be not created for it.
-	DeprecatedDisableWildcardCertLabelKey = GroupName + "/disableWildcardCert"
+	// DisableAutoTLSAnnotationKey is the annotation key attached to a Knative Service/DomainMapping
+	// to indicate that AutoTLS should not be enabled for it.
+	DisableAutoTLSAnnotationKey = PublicGroupName + "/disableAutoTLS"
 
-	// DisableWildcardCertLabelKey is the label key attached to a namespace to indicate that
-	// a wildcard certificate should be not created for it.
-	DisableWildcardCertLabelKey = "networking.knative.dev/disableWildcardCert"
+	// DisableAutoTLSAnnotationAltKey is an alternative casing to DisableAutoTLSAnnotationKey
+	DisableAutoTLSAnnotationAltKey = PublicGroupName + "/disable-auto-tls"
+
+	// HTTPOptionAnnotationKey is the annotation key attached to a Knative Service/DomainMapping
+	// to indicate the HTTP option of it.
+	HTTPOptionAnnotationKey = PublicGroupName + "/httpOption"
+
+	// HTTPProtocolAnnotationKey is an alternative to HTTPOptionAnnotationKey
+	HTTPProtocolAnnotationKey = PublicGroupName + "/http-protocol"
+
+	// IngressClassAnnotationKey is the annotation for the
+	// explicit class of Ingress that a particular resource has
+	// opted into. For example,
+	//
+	//    networking.knative.dev/ingress.class: some-network-impl
+	//
+	// This uses a different domain because unlike the resource, it is
+	// user-facing.
+	//
+	// The parent resource may use its own annotations to choose the
+	// annotation value for the Ingress it uses.  Based on such
+	// value a different reconciliation logic may be used (for examples,
+	// Istio-based Ingress will reconcile into a VirtualService).
+	IngressClassAnnotationKey = PublicGroupName + "/ingress.class"
+
+	// IngressClassAnnotationAltKey is an alternative casing to IngressClassAnnotationKey
+	//
+	// This annotation is meant to be applied to Knative Services or Routes. Serving
+	// will translate this to original casing for better compatibility with different
+	// ingress providers
+	IngressClassAnnotationAltKey = PublicGroupName + "/ingress-class"
 
 	// WildcardCertDomainLabelKey is the label key attached to a certificate to indicate the
 	// domain for which it was issued.
-	WildcardCertDomainLabelKey = "networking.knative.dev/wildcardDomain"
-)
+	WildcardCertDomainLabelKey = PublicGroupName + "/wildcardDomain"
 
-// ServiceType is the enumeration type for the Kubernetes services
-// that we have in our system, classified by usage purpose.
-type ServiceType string
-
-const (
-	// ServiceTypePrivate is the label value for internal only services
-	// for user applications.
-	ServiceTypePrivate ServiceType = "Private"
-	// ServiceTypePublic is the label value for externally reachable
-	// services for user applications.
-	ServiceTypePublic ServiceType = "Public"
+	// VisibilityLabelKey is the label to indicate visibility of Route
+	// and KServices.  It can be an annotation too but since users are
+	// already using labels for domain, it probably best to keep this
+	// consistent.
+	VisibilityLabelKey = PublicGroupName + "/visibility"
 )
 
 // Pseudo-constants
 var (
 	// DefaultRetryCount will be set if Attempts not specified.
 	DefaultRetryCount = 3
+
+	IngressClassAnnotation = kmap.KeyPriority{
+		IngressClassAnnotationKey,
+		IngressClassAnnotationAltKey,
+	}
+
+	CertificateClassAnnotation = kmap.KeyPriority{
+		CertificateClassAnnotationKey,
+		CertificateClassAnnotationAltKey,
+	}
+
+	DisableAutoTLSAnnotation = kmap.KeyPriority{
+		DisableAutoTLSAnnotationKey,
+		DisableAutoTLSAnnotationAltKey,
+	}
+
+	HTTPProtocolAnnotation = kmap.KeyPriority{
+		HTTPOptionAnnotationKey,
+		HTTPProtocolAnnotationKey,
+	}
 )
+
+func GetIngressClass(annotations map[string]string) (val string) {
+	return IngressClassAnnotation.Value(annotations)
+}
+
+func GetCertificateClass(annotations map[string]string) (val string) {
+	return CertificateClassAnnotation.Value(annotations)
+}
+
+func GetHTTPProtocol(annotations map[string]string) (val string) {
+	return HTTPProtocolAnnotation.Value(annotations)
+}
+
+func GetDisableAutoTLS(annotations map[string]string) (val string) {
+	return DisableAutoTLSAnnotation.Value(annotations)
+}

@@ -33,9 +33,10 @@ import (
 	"github.com/OpenLiberty/open-liberty-operator/controllers"
 
 	"github.com/application-stacks/runtime-component-operator/utils"
-	prometheusv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
+	prometheusv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	// +kubebuilder:scaffold:imports
 )
@@ -57,6 +58,8 @@ func init() {
 	utilruntime.Must(imagev1.AddToScheme(scheme))
 
 	utilruntime.Must(servingv1.AddToScheme(scheme))
+
+	utilruntime.Must(certmanagerv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -124,6 +127,8 @@ func main() {
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
+
+	utils.CreateConfigMap(controllers.OperatorName)
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

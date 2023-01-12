@@ -93,7 +93,12 @@ func (r *ReconcilerBase) applyDefaultValuesToExpose(secret *corev1.Secret, ba co
 		secretData["host"] = host
 	}
 	if protocol, found = secretData["protocol"]; !found {
-		protocol = []byte("http")
+		if ba.GetManageTLS() == nil || *ba.GetManageTLS() {
+			protocol = []byte("https")
+
+		} else {
+			protocol = []byte("http")
+		}
 		secretData["protocol"] = protocol
 	}
 	if basePath, found = secretData["basePath"]; !found {
@@ -101,7 +106,7 @@ func (r *ReconcilerBase) applyDefaultValuesToExpose(secret *corev1.Secret, ba co
 		secretData["basePath"] = basePath
 	}
 	if port, found = secretData["port"]; !found {
-		if ba.GetCreateKnativeService() == nil || *(ba.GetCreateKnativeService()) == false {
+		if ba.GetCreateKnativeService() == nil || !*ba.GetCreateKnativeService() {
 			port = []byte(strconv.Itoa(int(ba.GetService().GetPort())))
 		}
 		secretData["port"] = port
@@ -120,6 +125,26 @@ func (r *ReconcilerBase) applyDefaultValuesToExpose(secret *corev1.Secret, ba co
 		secretData["uri"] = uri
 	}
 
+	if _, found = secretData["certificates"]; !found && ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName] != "" {
+
+		certSecret := &corev1.Secret{}
+		err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName], Namespace: mObj.GetNamespace()}, certSecret)
+		if err == nil {
+			caCert := certSecret.Data["ca.crt"]
+			tlsCrt := certSecret.Data["tls.crt"]
+			chain := string(tlsCrt) + string(caCert)
+			if chain != "" {
+				secretData["certificates"] = []byte(chain)
+			}
+		}
+	}
+
+	if _, found = secretData["ingress-uri"]; !found && ba.GetExpose() != nil && *ba.GetExpose() {
+
+		host, path, protocol := r.GetIngressInfo(ba)
+		secretData["ingress-uri"] = []byte(fmt.Sprintf("%s://%s%s%s", protocol, host, path, string(basePath)))
+
+	}
 	secret.Data = secretData
 }
 

@@ -45,11 +45,12 @@ func defaultConfig() *autoscalerconfig.Config {
 		ContainerConcurrencyTargetFraction: defaultTargetUtilization,
 		ContainerConcurrencyTargetDefault:  100,
 		// TODO(#1956): Tune target usage based on empirical data.
-		TargetUtilization:             defaultTargetUtilization,
-		RPSTargetDefault:              200,
-		MaxScaleUpRate:                1000,
-		MaxScaleDownRate:              2,
-		TargetBurstCapacity:           200,
+		TargetUtilization: defaultTargetUtilization,
+		RPSTargetDefault:  200,
+		MaxScaleUpRate:    1000,
+		MaxScaleDownRate:  2,
+		// TODO(#11926): Consider changing to -1 to default to activator always in path unless overridden
+		TargetBurstCapacity:           211,
 		PanicWindowPercentage:         10,
 		ActivatorCapacity:             100,
 		PanicThresholdPercentage:      200,
@@ -60,6 +61,7 @@ func defaultConfig() *autoscalerconfig.Config {
 		PodAutoscalerClass:            autoscaling.KPA,
 		AllowZeroInitialScale:         false,
 		InitialScale:                  1,
+		MinScale:                      0,
 		MaxScale:                      0,
 		MaxScaleLimit:                 0,
 	}
@@ -86,6 +88,7 @@ func NewConfigFromMap(data map[string]string) (*autoscalerconfig.Config, error) 
 		cm.AsFloat64("panic-threshold-percentage", &lc.PanicThresholdPercentage),
 
 		cm.AsInt32("initial-scale", &lc.InitialScale),
+		cm.AsInt32("min-scale", &lc.MinScale),
 		cm.AsInt32("max-scale", &lc.MaxScale),
 		cm.AsInt32("max-scale-limit", &lc.MaxScaleLimit),
 
@@ -109,8 +112,8 @@ func NewConfigFromMap(data map[string]string) (*autoscalerconfig.Config, error) 
 }
 
 func validate(lc *autoscalerconfig.Config) (*autoscalerconfig.Config, error) {
-	if lc.ScaleToZeroGracePeriod < autoscaling.WindowMin {
-		return nil, fmt.Errorf("scale-to-zero-grace-period must be at least %v, was: %v", autoscaling.WindowMin, lc.ScaleToZeroGracePeriod)
+	if lc.ScaleToZeroGracePeriod <= 0 {
+		return nil, fmt.Errorf("scale-to-zero-grace-period must be positive, was: %v", lc.ScaleToZeroGracePeriod)
 	}
 
 	if lc.ScaleDownDelay < 0 {
@@ -154,7 +157,7 @@ func validate(lc *autoscalerconfig.Config) (*autoscalerconfig.Config, error) {
 	}
 
 	// We can't permit stable window be less than our aggregation window for correctness.
-	// Or too big, so that our desisions are too imprecise.
+	// Or too big, so that our decisions are too imprecise.
 	if lc.StableWindow < autoscaling.WindowMin || lc.StableWindow > autoscaling.WindowMax {
 		return nil, fmt.Errorf("stable-window = %v, must be in [%v; %v] range", lc.StableWindow,
 			autoscaling.WindowMin, autoscaling.WindowMax)
@@ -176,13 +179,29 @@ func validate(lc *autoscalerconfig.Config) (*autoscalerconfig.Config, error) {
 		return nil, fmt.Errorf("initial-scale = %v, must be at least 0 (or at least 1 when allow-zero-initial-scale is false)", lc.InitialScale)
 	}
 
-	if lc.MaxScale < 0 || (lc.MaxScaleLimit > 0 && lc.MaxScale > lc.MaxScaleLimit) {
-		return nil, fmt.Errorf("max-scale = %v, must be in [0, max-scale-limit] range", lc.MaxScale)
+	if lc.MinScale < 0 {
+		return nil, fmt.Errorf("min-scale = %v, must be at least 0", lc.MinScale)
+	}
+
+	var minMaxScale int32
+	if lc.MaxScaleLimit > 0 {
+		// Default maxScale must be set if maxScaleLimit is set.
+		minMaxScale = 1
+	}
+
+	if lc.MaxScale < minMaxScale || (lc.MaxScaleLimit > 0 && lc.MaxScale > lc.MaxScaleLimit) {
+		return nil, fmt.Errorf("max-scale = %d, must be in [%d, max-scale-limit(%d)] range",
+			lc.MaxScale, minMaxScale, lc.MaxScaleLimit)
 	}
 
 	if lc.MaxScaleLimit < 0 {
 		return nil, fmt.Errorf("max-scale-limit = %v, must be at least 0", lc.MaxScaleLimit)
 	}
+
+	if lc.MinScale > lc.MaxScale && lc.MaxScale > 0 {
+		return nil, fmt.Errorf("min-scale (%d) must be less than max-scale (%d)", lc.MinScale, lc.MaxScale)
+	}
+
 	return lc, nil
 }
 

@@ -95,7 +95,10 @@ func (i *impl) TrackReference(ref Reference, obj interface{}) error {
 	invalidFields := map[string][]string{
 		"APIVersion": validation.IsQualifiedName(ref.APIVersion),
 		"Kind":       validation.IsCIdentifier(ref.Kind),
-		"Namespace":  validation.IsDNS1123Label(ref.Namespace),
+	}
+	// Allow namespace to be empty for cluster-scoped references.
+	if ref.Namespace != "" {
+		invalidFields["Namespace"] = validation.IsDNS1123Label(ref.Namespace)
 	}
 	var selector labels.Selector
 	fieldErrors := []string{}
@@ -216,9 +219,18 @@ func isExpired(expiry time.Time) bool {
 
 // OnChanged implements Interface.
 func (i *impl) OnChanged(obj interface{}) {
+	observers := i.GetObservers(obj)
+
+	for _, observer := range observers {
+		i.cb(observer)
+	}
+}
+
+// GetObservers implements Interface.
+func (i *impl) GetObservers(obj interface{}) []types.NamespacedName {
 	item, err := kmeta.DeletionHandlingAccessor(obj)
 	if err != nil {
-		return
+		return nil
 	}
 
 	or := kmeta.ObjectReference(item)
@@ -229,14 +241,9 @@ func (i *impl) OnChanged(obj interface{}) {
 		Name:       or.Name,
 	}
 
-	i.m.Lock()
-	// Call the callbacks without the lock held.
 	var keys []types.NamespacedName
-	defer func(cb func(types.NamespacedName)) {
-		for _, key := range keys {
-			cb(key)
-		}
-	}(i.cb) // read i.cb with the lock held
+
+	i.m.Lock()
 	defer i.m.Unlock()
 
 	// Handle exact matches.
@@ -274,6 +281,8 @@ func (i *impl) OnChanged(obj interface{}) {
 			delete(i.exact, ref)
 		}
 	}
+
+	return keys
 }
 
 // OnChanged implements Interface.

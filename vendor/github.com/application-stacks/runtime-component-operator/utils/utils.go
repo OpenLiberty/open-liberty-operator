@@ -11,15 +11,20 @@ import (
 	"strconv"
 	"strings"
 
+	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	clientcfg "sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/application-stacks/runtime-component-operator/common"
-	prometheusv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	prometheusv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	appstacksv1beta2 "github.com/application-stacks/runtime-component-operator/api/v1beta2"
 	routev1 "github.com/openshift/api/route/v1"
@@ -34,6 +39,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 )
+
+var APIVersionNotFoundError = errors.New("APIVersion is not available")
 
 // CustomizeDeployment ...
 func CustomizeDeployment(deploy *appsv1.Deployment, ba common.BaseComponent) {
@@ -147,6 +154,17 @@ func CustomizeRoute(route *routev1.Route, ba common.BaseComponent, key string, c
 	if ba.GetRoute() == nil || ba.GetRoute().GetTermination() == nil {
 		route.Spec.TLS = nil
 	}
+	if ba.GetManageTLS() == nil || *ba.GetManageTLS() {
+		if route.Spec.TLS == nil {
+			route.Spec.TLS = &routev1.TLSConfig{}
+			route.Spec.TLS.Termination = routev1.TLSTerminationReencrypt
+			route.Spec.TLS.Certificate = crt
+			route.Spec.TLS.CACertificate = ca
+			route.Spec.TLS.DestinationCACertificate = destCACert
+			route.Spec.TLS.Key = key
+		}
+	}
+
 	route.Spec.To.Kind = "Service"
 	route.Spec.To.Name = obj.GetName()
 	weight := int32(100)
@@ -243,100 +261,340 @@ func CustomizeService(svc *corev1.Service, ba common.BaseComponent) {
 	}
 }
 
-// CustomizeAffinity ...
-func CustomizeAffinity(affinity *corev1.Affinity, ba common.BaseComponent) {
+func CustomizeProbes(container *corev1.Container, ba common.BaseComponent) {
+	probesConfig := ba.GetProbes()
 
-	var archs []string
-
-	if ba.GetAffinity() != nil {
-		affinity.NodeAffinity = ba.GetAffinity().GetNodeAffinity()
-		affinity.PodAffinity = ba.GetAffinity().GetPodAffinity()
-		affinity.PodAntiAffinity = ba.GetAffinity().GetPodAntiAffinity()
-
-		archs = ba.GetAffinity().GetArchitecture()
-
-		if len(ba.GetAffinity().GetNodeAffinityLabels()) > 0 {
-			if affinity.NodeAffinity == nil {
-				affinity.NodeAffinity = &corev1.NodeAffinity{}
-			}
-			if affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution == nil {
-				affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = &corev1.NodeSelector{}
-			}
-			nodeSelector := affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution
-
-			if len(nodeSelector.NodeSelectorTerms) == 0 {
-				nodeSelector.NodeSelectorTerms = append(nodeSelector.NodeSelectorTerms, corev1.NodeSelectorTerm{})
-			}
-			labels := ba.GetAffinity().GetNodeAffinityLabels()
-
-			keys := make([]string, 0, len(labels))
-			for k := range labels {
-				keys = append(keys, k)
-			}
-			sort.Strings(keys)
-
-			for i := range nodeSelector.NodeSelectorTerms {
-
-				for _, key := range keys {
-					values := strings.Split(labels[key], ",")
-					for i := range values {
-						values[i] = strings.TrimSpace(values[i])
-					}
-
-					requirement := corev1.NodeSelectorRequirement{
-						Key:      key,
-						Operator: corev1.NodeSelectorOpIn,
-						Values:   values,
-					}
-
-					nodeSelector.NodeSelectorTerms[i].MatchExpressions = append(nodeSelector.NodeSelectorTerms[i].MatchExpressions, requirement)
-				}
-
-			}
-		}
+	// Probes not defined -- reset all probesConfig to nil
+	if probesConfig == nil {
+		container.ReadinessProbe = nil
+		container.LivenessProbe = nil
+		container.StartupProbe = nil
+		return
 	}
 
-	if len(archs) > 0 {
-		if affinity.NodeAffinity == nil {
-			affinity.NodeAffinity = &corev1.NodeAffinity{}
-		}
-		if affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution == nil {
-			affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = &corev1.NodeSelector{}
-		}
+	container.ReadinessProbe = customizeProbe(probesConfig.GetReadinessProbe(), probesConfig.GetDefaultReadinessProbe, ba)
+	container.LivenessProbe = customizeProbe(probesConfig.GetLivenessProbe(), probesConfig.GetDefaultLivenessProbe, ba)
+	container.StartupProbe = customizeProbe(probesConfig.GetStartupProbe(), probesConfig.GetDefaultStartupProbe, ba)
+}
 
-		nodeSelector := affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+func customizeProbe(config *corev1.Probe, defaultProbeCallback func(ba common.BaseComponent) *corev1.Probe, ba common.BaseComponent) *corev1.Probe {
+	// Probe not defined -- set probe to nil
+	if config == nil {
+		return nil
+	}
 
-		if len(nodeSelector.NodeSelectorTerms) == 0 {
-			nodeSelector.NodeSelectorTerms = append(nodeSelector.NodeSelectorTerms, corev1.NodeSelectorTerm{})
-		}
+	// Probe handler is defined in config so use probe as is
+	if config.ProbeHandler != (corev1.ProbeHandler{}) {
+		return config
+	}
 
-		for i := range nodeSelector.NodeSelectorTerms {
-			nodeSelector.NodeSelectorTerms[i].MatchExpressions = append(nodeSelector.NodeSelectorTerms[i].MatchExpressions,
-				corev1.NodeSelectorRequirement{
-					Key:      "kubernetes.io/arch",
-					Operator: corev1.NodeSelectorOpIn,
-					Values:   archs,
-				},
-			)
-		}
+	// Probe handler is not defined so use default values for the probe if values not set in probe config
+	return customizeProbeDefaults(config, defaultProbeCallback(ba))
+}
 
-		for i := range archs {
-			term := corev1.PreferredSchedulingTerm{
-				Weight: int32(len(archs)) - int32(i),
-				Preference: corev1.NodeSelectorTerm{
-					MatchExpressions: []corev1.NodeSelectorRequirement{
-						{
-							Key:      "kubernetes.io/arch",
-							Operator: corev1.NodeSelectorOpIn,
-							Values:   []string{archs[i]},
-						},
+func customizeProbeDefaults(config *corev1.Probe, defaultProbe *corev1.Probe) *corev1.Probe {
+	probe := defaultProbe
+	if config.InitialDelaySeconds != 0 {
+		probe.InitialDelaySeconds = config.InitialDelaySeconds
+	}
+	if config.TimeoutSeconds != 0 {
+		probe.TimeoutSeconds = config.TimeoutSeconds
+	}
+	if config.PeriodSeconds != 0 {
+		probe.PeriodSeconds = config.PeriodSeconds
+	}
+	if config.SuccessThreshold != 0 {
+		probe.SuccessThreshold = config.SuccessThreshold
+	}
+	if config.FailureThreshold != 0 {
+		probe.FailureThreshold = config.FailureThreshold
+	}
+
+	return probe
+}
+
+// CustomizeNetworkPolicy configures the network policy.
+func CustomizeNetworkPolicy(networkPolicy *networkingv1.NetworkPolicy, isOpenShift bool, ba common.BaseComponent) {
+	obj := ba.(metav1.Object)
+	networkPolicy.Labels = ba.GetLabels()
+	networkPolicy.Annotations = MergeMaps(networkPolicy.Annotations, ba.GetAnnotations())
+
+	networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress}
+
+	networkPolicy.Spec.PodSelector = metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			common.GetComponentNameLabel(ba): obj.GetName(),
+		},
+	}
+
+	config := ba.GetNetworkPolicy()
+	isExposed := ba.GetExpose() != nil && *ba.GetExpose()
+	var rule networkingv1.NetworkPolicyIngressRule
+
+	if config.GetNamespaceLabels() != nil && len(config.GetNamespaceLabels()) == 0 &&
+		config.GetFromLabels() != nil && len(config.GetFromLabels()) == 0 {
+		rule = createAllowAllNetworkPolicyIngressRule()
+	} else if isOpenShift {
+		rule = createOpenShiftNetworkPolicyIngressRule(ba.GetApplicationName(), networkPolicy.Namespace, isExposed, config)
+	} else {
+		rule = createKubernetesNetworkPolicyIngressRule(ba.GetApplicationName(), networkPolicy.Namespace, isExposed, config)
+	}
+
+	customizeNetworkPolicyPorts(&rule, ba)
+	networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{rule}
+}
+
+func createOpenShiftNetworkPolicyIngressRule(appName string, namespace string, isExposed bool, config common.BaseComponentNetworkPolicy) networkingv1.NetworkPolicyIngressRule {
+	rule := networkingv1.NetworkPolicyIngressRule{}
+
+	// Add peer to allow traffic from the OpenShift router
+	if isExposed {
+		rule.From = append(rule.From,
+			networkingv1.NetworkPolicyPeer{
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"policy-group.network.openshift.io/ingress": "",
 					},
 				},
-			}
-			affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution = append(affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution, term)
-		}
+			},
+			// Legacy label still required on OCP 4.6
+			networkingv1.NetworkPolicyPeer{
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"network.openshift.io/policy-group": "ingress",
+					},
+				},
+			},
+		)
 	}
 
+	rule.From = append(rule.From,
+		// Add peer to allow traffic from other pods belonging to the app
+		createNetworkPolicyPeer(appName, namespace, config),
+
+		// Add peer to allow traffic from OpenShift monitoring
+		networkingv1.NetworkPolicyPeer{
+			NamespaceSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"network.openshift.io/policy-group": "monitoring",
+				},
+			},
+		},
+	)
+
+	return rule
+}
+
+func createKubernetesNetworkPolicyIngressRule(appName string, namespace string, isExposed bool, config common.BaseComponentNetworkPolicy) networkingv1.NetworkPolicyIngressRule {
+	if isExposed {
+		return createAllowAllNetworkPolicyIngressRule()
+	}
+
+	rule := networkingv1.NetworkPolicyIngressRule{}
+	rule.From = []networkingv1.NetworkPolicyPeer{
+		createNetworkPolicyPeer(appName, namespace, config),
+	}
+	return rule
+}
+
+func createAllowAllNetworkPolicyIngressRule() networkingv1.NetworkPolicyIngressRule {
+	return networkingv1.NetworkPolicyIngressRule{
+		From: []networkingv1.NetworkPolicyPeer{{
+			NamespaceSelector: &metav1.LabelSelector{},
+		}},
+	}
+}
+
+func createNetworkPolicyPeer(appName string, namespace string, networkPolicy common.BaseComponentNetworkPolicy) networkingv1.NetworkPolicyPeer {
+	peer := networkingv1.NetworkPolicyPeer{
+		NamespaceSelector: &metav1.LabelSelector{},
+		PodSelector:       &metav1.LabelSelector{},
+	}
+
+	if nsLabels := networkPolicy.GetNamespaceLabels(); nsLabels == nil {
+		peer.NamespaceSelector.MatchLabels = map[string]string{
+			"kubernetes.io/metadata.name": namespace,
+		}
+	} else {
+		peer.NamespaceSelector.MatchLabels = nsLabels
+	}
+
+	if podLabels := networkPolicy.GetFromLabels(); podLabels == nil {
+		peer.PodSelector.MatchLabels = map[string]string{
+			"app.kubernetes.io/part-of": appName,
+		}
+	} else {
+		peer.PodSelector.MatchLabels = podLabels
+	}
+
+	return peer
+}
+
+func customizeNetworkPolicyPorts(ingress *networkingv1.NetworkPolicyIngressRule, ba common.BaseComponent) {
+	var ports []int32
+	ports = append(ports, ba.GetService().GetPort())
+	for _, port := range ba.GetService().GetPorts() {
+		ports = append(ports, port.Port)
+	}
+
+	currentLen := len(ingress.Ports)
+	desiredLen := len(ba.GetService().GetPorts()) + 1 // Add one for normal port
+
+	// Shrink if needed
+	if currentLen > desiredLen {
+		ingress.Ports = ingress.Ports[:desiredLen]
+		currentLen = desiredLen
+	}
+
+	// Add additional ports needed
+	for currentLen < desiredLen {
+		ingress.Ports = append(ingress.Ports, networkingv1.NetworkPolicyPort{})
+		currentLen++
+	}
+
+	for i, port := range ports {
+		newPort := &intstr.IntOrString{Type: intstr.Int, IntVal: port}
+		ingress.Ports[i].Port = newPort
+	}
+}
+
+// CustomizeAffinity ...
+func CustomizeAffinity(affinity *corev1.Affinity, ba common.BaseComponent) {
+	affinityConfig := ba.GetAffinity()
+	if isCustomAffinityDefined(affinityConfig) {
+		customizeAffinity(affinity, ba.GetAffinity())
+	} else {
+		obj := ba.(metav1.Object)
+		customizeDefaultAffinity(affinity, obj.GetName())
+	}
+	customizeAffinityArchitectures(affinity, affinityConfig)
+}
+
+// isCustomAffinityDefined returns true if everything but .spec.affinity.architecture is not defined.
+func isCustomAffinityDefined(affinityConfig common.BaseComponentAffinity) bool {
+	return affinityConfig != nil &&
+		(affinityConfig.GetNodeAffinity() != nil ||
+			affinityConfig.GetPodAffinity() != nil ||
+			affinityConfig.GetPodAntiAffinity() != nil ||
+			affinityConfig.GetNodeAffinityLabels() != nil ||
+			len(affinityConfig.GetNodeAffinityLabels()) > 0)
+}
+
+func customizeAffinity(affinity *corev1.Affinity, affinityConfig common.BaseComponentAffinity) {
+	affinity.NodeAffinity = affinityConfig.GetNodeAffinity()
+	affinity.PodAffinity = affinityConfig.GetPodAffinity()
+	affinity.PodAntiAffinity = affinityConfig.GetPodAntiAffinity()
+
+	if len(affinityConfig.GetNodeAffinityLabels()) == 0 {
+		return
+	}
+
+	if affinity.NodeAffinity == nil {
+		affinity.NodeAffinity = &corev1.NodeAffinity{}
+	}
+	if affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution == nil {
+		affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = &corev1.NodeSelector{}
+	}
+	nodeSelector := affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+
+	if len(nodeSelector.NodeSelectorTerms) == 0 {
+		nodeSelector.NodeSelectorTerms = append(nodeSelector.NodeSelectorTerms, corev1.NodeSelectorTerm{})
+	}
+	labels := affinityConfig.GetNodeAffinityLabels()
+
+	keys := make([]string, 0, len(labels))
+	for k := range labels {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for i := range nodeSelector.NodeSelectorTerms {
+		for _, key := range keys {
+			values := strings.Split(labels[key], ",")
+			for i := range values {
+				values[i] = strings.TrimSpace(values[i])
+			}
+
+			requirement := corev1.NodeSelectorRequirement{
+				Key:      key,
+				Operator: corev1.NodeSelectorOpIn,
+				Values:   values,
+			}
+
+			nodeSelector.NodeSelectorTerms[i].MatchExpressions = append(nodeSelector.NodeSelectorTerms[i].MatchExpressions, requirement)
+		}
+	}
+}
+
+func customizeDefaultAffinity(affinity *corev1.Affinity, name string) {
+	if affinity.PodAntiAffinity == nil {
+		affinity.PodAntiAffinity = &corev1.PodAntiAffinity{}
+	}
+	term := []corev1.WeightedPodAffinityTerm{
+		{
+			Weight: 50,
+			PodAffinityTerm: corev1.PodAffinityTerm{
+				TopologyKey: "kubernetes.io/hostname",
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app.kubernetes.io/instance": name,
+					},
+				},
+			},
+		},
+	}
+	affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution = term
+}
+
+func customizeAffinityArchitectures(affinity *corev1.Affinity, affinityConfig common.BaseComponentAffinity) {
+	if affinityConfig == nil {
+		return
+	}
+
+	archs := affinityConfig.GetArchitecture()
+
+	if len(archs) <= 0 {
+		return
+	}
+
+	if affinity.NodeAffinity == nil {
+		affinity.NodeAffinity = &corev1.NodeAffinity{}
+	}
+	if affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution == nil {
+		affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = &corev1.NodeSelector{}
+	}
+
+	nodeSelector := affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+
+	if len(nodeSelector.NodeSelectorTerms) == 0 {
+		nodeSelector.NodeSelectorTerms = append(nodeSelector.NodeSelectorTerms, corev1.NodeSelectorTerm{})
+	}
+
+	for i := range nodeSelector.NodeSelectorTerms {
+		nodeSelector.NodeSelectorTerms[i].MatchExpressions = append(nodeSelector.NodeSelectorTerms[i].MatchExpressions,
+			corev1.NodeSelectorRequirement{
+				Key:      "kubernetes.io/arch",
+				Operator: corev1.NodeSelectorOpIn,
+				Values:   archs,
+			},
+		)
+	}
+
+	for i := range archs {
+		term := corev1.PreferredSchedulingTerm{
+			Weight: int32(len(archs)) - int32(i),
+			Preference: corev1.NodeSelectorTerm{
+				MatchExpressions: []corev1.NodeSelectorRequirement{
+					{
+						Key:      "kubernetes.io/arch",
+						Operator: corev1.NodeSelectorOpIn,
+						Values:   []string{archs[i]},
+					},
+				},
+			},
+		}
+		affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution = append(affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution, term)
+	}
 }
 
 // CustomizePodSpec ...
@@ -388,15 +646,7 @@ func CustomizePodSpec(pts *corev1.PodTemplateSpec, ba common.BaseComponent) {
 		appContainer.Resources = *ba.GetResourceConstraints()
 	}
 
-	if ba.GetProbes() != nil {
-		appContainer.ReadinessProbe = ba.GetProbes().GetReadinessProbe()
-		appContainer.LivenessProbe = ba.GetProbes().GetLivenessProbe()
-		appContainer.StartupProbe = ba.GetProbes().GetStartupProbe()
-	} else {
-		appContainer.ReadinessProbe = nil
-		appContainer.LivenessProbe = nil
-		appContainer.StartupProbe = nil
-	}
+	CustomizeProbes(&appContainer, ba)
 
 	if ba.GetPullPolicy() != nil {
 		appContainer.ImagePullPolicy = *ba.GetPullPolicy()
@@ -409,13 +659,11 @@ func CustomizePodSpec(pts *corev1.PodTemplateSpec, ba common.BaseComponent) {
 	appContainer.VolumeMounts = ba.GetVolumeMounts()
 	pts.Spec.Volumes = ba.GetVolumes()
 
-	appContainer.SecurityContext = getSecurityContext(ba)
+	appContainer.SecurityContext = GetSecurityContext(ba)
 
-	if ba.GetService().GetCertificateSecretRef() != nil {
-		secretName := obj.GetName() + "-svc-tls"
-		if ba.GetService().GetCertificateSecretRef() != nil {
-			secretName = *ba.GetService().GetCertificateSecretRef()
-		}
+	if ba.GetManageTLS() == nil || *ba.GetManageTLS() || ba.GetService().GetCertificateSecretRef() != nil {
+
+		secretName := ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName]
 		appContainer.Env = append(appContainer.Env, corev1.EnvVar{Name: "TLS_DIR", Value: "/etc/x509/certs"})
 		pts.Spec.Volumes = append(pts.Spec.Volumes, corev1.Volume{
 			Name: "svc-certificate",
@@ -432,6 +680,12 @@ func CustomizePodSpec(pts *corev1.PodTemplateSpec, ba common.BaseComponent) {
 		})
 	}
 
+	// This ensures that the pods are updated if the service account is updated
+	saRV := ba.GetStatus().GetReferences()[common.StatusReferenceSAResourceVersion]
+	if saRV != "" {
+		appContainer.Env = append(appContainer.Env, corev1.EnvVar{Name: "SA_RESOURCE_VERSION", Value: saRV})
+	}
+
 	pts.Spec.Containers = append([]corev1.Container{appContainer}, ba.GetSidecarContainers()...)
 
 	if ba.GetServiceAccountName() != nil && *ba.GetServiceAccountName() != "" {
@@ -442,12 +696,8 @@ func CustomizePodSpec(pts *corev1.PodTemplateSpec, ba common.BaseComponent) {
 	pts.Spec.RestartPolicy = corev1.RestartPolicyAlways
 	pts.Spec.DNSPolicy = corev1.DNSClusterFirst
 
-	if ba.GetAffinity() != nil {
-		pts.Spec.Affinity = &corev1.Affinity{}
-		CustomizeAffinity(pts.Spec.Affinity, ba)
-	} else {
-		pts.Spec.Affinity = nil
-	}
+	pts.Spec.Affinity = &corev1.Affinity{}
+	CustomizeAffinity(pts.Spec.Affinity, ba)
 }
 
 // CustomizePersistence ...
@@ -477,6 +727,10 @@ func CustomizePersistence(statefulSet *appsv1.StatefulSet, ba common.BaseCompone
 					},
 				}
 				pvc.Annotations = MergeMaps(pvc.Annotations, ba.GetAnnotations())
+				if ss.GetStorage().GetClassName() != "" {
+					storageClassName := ss.GetStorage().GetClassName()
+					pvc.Spec.StorageClassName = &storageClassName
+				}
 			}
 			statefulSet.Spec.VolumeClaimTemplates = append(statefulSet.Spec.VolumeClaimTemplates, *pvc)
 		}
@@ -503,18 +757,64 @@ func CustomizePersistence(statefulSet *appsv1.StatefulSet, ba common.BaseCompone
 }
 
 // CustomizeServiceAccount ...
-func CustomizeServiceAccount(sa *corev1.ServiceAccount, ba common.BaseComponent) {
+func CustomizeServiceAccount(sa *corev1.ServiceAccount, ba common.BaseComponent, client client.Client) error {
 	sa.Labels = ba.GetLabels()
 	sa.Annotations = MergeMaps(sa.Annotations, ba.GetAnnotations())
 
-	if ba.GetPullSecret() != nil {
+	psr := ba.GetStatus().GetReferences()[common.StatusReferencePullSecretName]
+	if psr != "" && (ba.GetPullSecret() == nil || *ba.GetPullSecret() != psr) {
+		// There is a reference to a pull secret but it doesn't match the one
+		// from the CR (which is empty or different)
+		// so delete the refered pull secret from the service account
+		removePullSecret(sa, psr)
+	}
+
+	if ba.GetPullSecret() == nil {
+		// There is no pull secret so delete the status reference
+		// This has to happen after the reference has been used to remove the pull
+		// secret from the service account
+		delete(ba.GetStatus().GetReferences(), common.StatusReferencePullSecretName)
+	} else {
+		// Add the pull secret from the CR to the service account. First check that it is valid
+		ps := *ba.GetPullSecret()
+		err := client.Get(context.TODO(), types.NamespacedName{Name: ps, Namespace: ba.(metav1.Object).GetNamespace()}, &corev1.Secret{})
+		if err != nil {
+			return err
+		}
+		ba.GetStatus().SetReference(common.StatusReferencePullSecretName, ps)
 		if len(sa.ImagePullSecrets) == 0 {
 			sa.ImagePullSecrets = append(sa.ImagePullSecrets, corev1.LocalObjectReference{
-				Name: *ba.GetPullSecret(),
+				Name: ps,
 			})
 		} else {
-			sa.ImagePullSecrets[0].Name = *ba.GetPullSecret()
+			pullSecretName := ps
+			found := false
+			for _, obj := range sa.ImagePullSecrets {
+				if obj.Name == pullSecretName {
+					found = true
+					break
+				}
+			}
+			if !found {
+				sa.ImagePullSecrets = append(sa.ImagePullSecrets, corev1.LocalObjectReference{
+					Name: pullSecretName,
+				})
+			}
 		}
+	}
+	return nil
+}
+
+func removePullSecret(sa *corev1.ServiceAccount, pullSecretName string) {
+	index := -1
+	for i, obj := range sa.ImagePullSecrets {
+		if obj.Name == pullSecretName {
+			index = i
+			break
+		}
+	}
+	if index != -1 {
+		sa.ImagePullSecrets = append(sa.ImagePullSecrets[:index], sa.ImagePullSecrets[index+1:]...)
 	}
 }
 
@@ -554,17 +854,9 @@ func CustomizeKnativeService(ksvc *servingv1.Service, ba common.BaseComponent) {
 
 	ksvc.Spec.Template.Spec.Containers[0].Image = ba.GetStatus().GetImageReference()
 	// Knative sets its own resource constraints
-	//ksvc.Spec.Template.Spec.Containers[0].Resources = *cr.Spec.ResourceConstraints
+	// ksvc.Spec.Template.Spec.Containers[0].Resources = *cr.Spec.ResourceConstraints
 
-	if ba.GetProbes() != nil {
-		ksvc.Spec.Template.Spec.Containers[0].ReadinessProbe = ba.GetProbes().GetReadinessProbe()
-		ksvc.Spec.Template.Spec.Containers[0].LivenessProbe = ba.GetProbes().GetLivenessProbe()
-		ksvc.Spec.Template.Spec.Containers[0].StartupProbe = ba.GetProbes().GetStartupProbe()
-	} else {
-		ksvc.Spec.Template.Spec.Containers[0].ReadinessProbe = nil
-		ksvc.Spec.Template.Spec.Containers[0].LivenessProbe = nil
-		ksvc.Spec.Template.Spec.Containers[0].StartupProbe = nil
-	}
+	CustomizeProbes(&ksvc.Spec.Template.Spec.Containers[0], ba)
 
 	ksvc.Spec.Template.Spec.Containers[0].ImagePullPolicy = *ba.GetPullPolicy()
 	ksvc.Spec.Template.Spec.Containers[0].Env = ba.GetEnv()
@@ -670,6 +962,9 @@ func CustomizeServiceMonitor(sm *prometheusv1.ServiceMonitor, ba common.BaseComp
 	}
 	sm.Spec.Endpoints[0].Port = ""
 	sm.Spec.Endpoints[0].TargetPort = nil
+	sm.Spec.Endpoints[0].TLSConfig = nil
+	sm.Spec.Endpoints[0].Scheme = ""
+
 	if len(ba.GetMonitoring().GetEndpoints()) > 0 {
 		port := ba.GetMonitoring().GetEndpoints()[0].Port
 		targetPort := ba.GetMonitoring().GetEndpoints()[0].TargetPort
@@ -731,6 +1026,19 @@ func CustomizeServiceMonitor(sm *prometheusv1.ServiceMonitor, ba common.BaseComp
 		sm.Spec.Endpoints[0].MetricRelabelConfigs = endpoints[0].MetricRelabelConfigs
 		sm.Spec.Endpoints[0].HonorTimestamps = endpoints[0].HonorTimestamps
 		sm.Spec.Endpoints[0].HonorLabels = endpoints[0].HonorLabels
+	}
+	if ba.GetManageTLS() == nil || *ba.GetManageTLS() {
+		if len(ba.GetMonitoring().GetEndpoints()) == 0 || ba.GetMonitoring().GetEndpoints()[0].TLSConfig == nil {
+			sm.Spec.Endpoints[0].Scheme = "HTTPS"
+			if sm.Spec.Endpoints[0].TLSConfig == nil {
+				sm.Spec.Endpoints[0].TLSConfig = &prometheusv1.TLSConfig{}
+			}
+			sm.Spec.Endpoints[0].TLSConfig.CA = prometheusv1.SecretOrConfigMap{}
+			sm.Spec.Endpoints[0].TLSConfig.CA.Secret = &corev1.SecretKeySelector{}
+			sm.Spec.Endpoints[0].TLSConfig.CA.Secret.Name = ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName]
+			sm.Spec.Endpoints[0].TLSConfig.CA.Secret.Key = "tls.crt"
+			sm.Spec.Endpoints[0].TLSConfig.ServerName = obj.GetName() + "." + obj.GetNamespace() + ".svc"
+		}
 
 	}
 
@@ -1027,11 +1335,11 @@ func GetWatchNamespace() (string, error) {
 
 // GetOperatorNamespace returns the Namespace the operator installed in
 func GetOperatorNamespace() (string, error) {
-	var podNamespaceEnvVar = "POD_NAMESPACE"
+	var operatorNamespaceEnvVar = "OPERATOR_NAMESPACE"
 
-	ns, found := os.LookupEnv(podNamespaceEnvVar)
+	ns, found := os.LookupEnv(operatorNamespaceEnvVar)
 	if !found {
-		return "", fmt.Errorf("%s must be set", podNamespaceEnvVar)
+		return "", fmt.Errorf("%s must be set", operatorNamespaceEnvVar)
 	}
 	return ns, nil
 }
@@ -1072,27 +1380,26 @@ func ServiceAccountPullSecretExists(ba common.BaseComponent, client client.Clien
 		return getErr
 	}
 	secrets := sa.ImagePullSecrets
-	found := false
 	if len(secrets) > 0 {
 		// if this is our service account there will be one image pull secret
 		// For others there could be more. either way, just use the first?
 		sName := secrets[0].Name
 		err := client.Get(context.TODO(), types.NamespacedName{Name: sName, Namespace: ns}, &corev1.Secret{})
 		if err != nil {
-			return err
+			saErr := errors.New("Service account " + saName + " isn't ready. Reason: " + err.Error())
+			return saErr
 		}
-		found = true
+	}
 
-	}
-	if !found {
-		saErr := errors.New("Service account " + saName + " isn't ready")
-		return saErr
-	}
+	// Set a reference in the CR to the service account version. This is done here as
+	// the service account has been retrieved whether it is ours or a user provided one
+	ba.GetStatus().SetReference(common.StatusReferenceSAResourceVersion, sa.ResourceVersion)
+
 	return nil
 }
 
 // Get security context from CR and apply customization to default settings
-func getSecurityContext(ba common.BaseComponent) *corev1.SecurityContext {
+func GetSecurityContext(ba common.BaseComponent) *corev1.SecurityContext {
 	baSecurityContext := ba.GetSecurityContext()
 
 	valFalse := false
@@ -1132,4 +1439,134 @@ func getSecurityContext(ba common.BaseComponent) *corev1.SecurityContext {
 		return baSecurityContext
 	}
 	return secContext
+}
+
+func AddOCPCertAnnotation(ba common.BaseComponent, svc *corev1.Service) {
+	bao := ba.(metav1.Object)
+
+	if ba.GetCreateKnativeService() != nil && *ba.GetCreateKnativeService() {
+		if val := svc.Annotations["service.beta.openshift.io/serving-cert-secret-name"]; val == bao.GetName()+"-svc-tls-ocp" {
+			delete(svc.Annotations, "service.beta.openshift.io/serving-cert-secret-name")
+			delete(svc.Annotations, "service.beta.openshift.io/serving-cert-signed-by")
+			delete(svc.Annotations, "service.alpha.openshift.io/serving-cert-signed-by")
+
+		}
+		return
+	}
+
+	if ba.GetManageTLS() != nil && !*ba.GetManageTLS() || ba.GetService() != nil && ba.GetService().GetCertificateSecretRef() != nil {
+		if val := svc.Annotations["service.beta.openshift.io/serving-cert-secret-name"]; val == bao.GetName()+"-svc-tls-ocp" {
+			delete(svc.Annotations, "service.beta.openshift.io/serving-cert-secret-name")
+			delete(svc.Annotations, "service.beta.openshift.io/serving-cert-signed-by")
+			delete(svc.Annotations, "service.alpha.openshift.io/serving-cert-signed-by")
+		}
+		return
+	}
+
+	val, ok := svc.Annotations["service.beta.openshift.io/serving-cert-secret-name"]
+	if !ok {
+		val, ok = svc.Annotations["service.alpha.openshift.io/serving-cert-secret-name"]
+		if ok {
+			ba.GetStatus().SetReference(common.StatusReferenceCertSecretName, val)
+			return
+		}
+	} else {
+		ba.GetStatus().SetReference(common.StatusReferenceCertSecretName, val)
+		return
+	}
+
+	svc.Annotations["service.beta.openshift.io/serving-cert-secret-name"] = bao.GetName() + "-svc-tls-ocp"
+	ba.GetStatus().SetReference(common.StatusReferenceCertSecretName, bao.GetName()+"-svc-tls-ocp")
+
+}
+
+func CustomizePodWithSVCCertificate(pts *corev1.PodTemplateSpec, ba common.BaseComponent, client client.Client) error {
+
+	if ba.GetManageTLS() == nil || *ba.GetManageTLS() || ba.GetService().GetCertificateSecretRef() != nil {
+		obj := ba.(metav1.Object)
+		secretName := ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName]
+		if secretName != "" {
+			return addSecretResourceVersionAsEnvVar(pts, obj, client, secretName, "SERVICE_CERT")
+		} else {
+			return errors.New("Service certifcate secret name must not be empty")
+		}
+	}
+	return nil
+}
+func addSecretResourceVersionAsEnvVar(pts *corev1.PodTemplateSpec, object metav1.Object, client client.Client, secretName string, envNamePrefix string) error {
+	secret := &corev1.Secret{}
+	err := client.Get(context.Background(), types.NamespacedName{Name: secretName, Namespace: object.GetNamespace()}, secret)
+	if err != nil {
+		return fmt.Errorf("Secret %q was not found in namespace %q, %w", secretName, object.GetNamespace(), err)
+	}
+	pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, corev1.EnvVar{
+		Name:  envNamePrefix + "_SECRET_RESOURCE_VERSION",
+		Value: secret.ResourceVersion})
+	return nil
+}
+
+// This should only be called once from main.go on operator start
+// It checks for the presence of the operators config map and
+// creates it if it doesn't exist
+func CreateConfigMap(mapName string) {
+	utilsLog := ctrl.Log.WithName("utils-setup")
+	// This function is called from main, so the normal client isn't setup properly
+	client, clerr := client.New(clientcfg.GetConfigOrDie(), client.Options{})
+	if clerr != nil {
+		utilsLog.Error(clerr, "Couldn't create a client for config map creation")
+		return
+	}
+
+	operatorNs, _ := GetOperatorNamespace()
+	if operatorNs == "" {
+		// This should only happen when running locally in development
+		// Probably best to just return. The operator global config map is tried
+		// again in the reconcile loop, and don't want to duplicate logic to
+		// guess what the namespace should be
+		utilsLog.Info("Couldn't create operator config map as operator namespace was not found")
+		return
+	}
+	configMap := &corev1.ConfigMap{}
+	err := client.Get(context.TODO(), types.NamespacedName{Name: mapName, Namespace: operatorNs}, configMap)
+	if err != nil {
+		utilsLog.Error(err, "The operator config map was not found. Attempting to create it")
+	} else {
+		utilsLog.Info("Existing operator config map was found")
+		return
+	}
+
+	newConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: mapName, Namespace: operatorNs}}
+	// The config map doesn't exist, so need to initialize the default config data, and then
+	// store it in a new map
+	common.Config = common.DefaultOpConfig()
+	_, cerr := controllerutil.CreateOrUpdate(context.TODO(), client, newConfigMap, func() error {
+		newConfigMap.Data = common.Config
+		return nil
+	})
+	if cerr != nil {
+		utilsLog.Error(cerr, "Couldn't create config map in namespace "+operatorNs)
+	} else {
+		utilsLog.Info("Operator Config map created in namespace " + operatorNs)
+	}
+}
+
+func GetIssuerResourceVersion(client client.Client, certificate *certmanagerv1.Certificate) (string, error) {
+	issuer := &certmanagerv1.Issuer{}
+	err := client.Get(context.Background(), types.NamespacedName{Name: certificate.Spec.IssuerRef.Name,
+		Namespace: certificate.Namespace}, issuer)
+	if err != nil {
+		return "", err
+	}
+	if issuer.Spec.CA != nil {
+		caSecret := &corev1.Secret{}
+		err = client.Get(context.Background(), types.NamespacedName{Name: issuer.Spec.CA.SecretName,
+			Namespace: certificate.Namespace}, caSecret)
+		if err != nil {
+			return "", err
+		} else {
+			return issuer.ResourceVersion + "," + caSecret.ResourceVersion, nil
+		}
+	} else {
+		return issuer.ResourceVersion, nil
+	}
 }

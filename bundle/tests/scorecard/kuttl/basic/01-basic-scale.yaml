@@ -1,0 +1,7 @@
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: example-liberty-component
+spec:
+  replicas: 2
+

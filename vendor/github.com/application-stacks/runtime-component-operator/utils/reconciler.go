@@ -2,11 +2,15 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
-	appstacksv1beta2 "github.com/application-stacks/runtime-component-operator/api/v1beta2"
+	networkingv1 "k8s.io/api/networking/v1"
+
 	"github.com/application-stacks/runtime-component-operator/common"
+	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	certmanagermetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -40,7 +44,7 @@ type ReconcilerBase struct {
 	controller controller.Controller
 }
 
-//NewReconcilerBase creates a new ReconcilerBase
+// NewReconcilerBase creates a new ReconcilerBase
 func NewReconcilerBase(apiReader client.Reader, client client.Client, scheme *runtime.Scheme, restConfig *rest.Config, recorder record.EventRecorder) ReconcilerBase {
 	return ReconcilerBase{
 		apiReader:  apiReader,
@@ -73,7 +77,8 @@ func (r *ReconcilerBase) GetClient() client.Client {
 // with Get, but some resources such as the ImageStreamTag kind does not
 // implement the Watch verb, which caused errors.
 // Here is an example of how the error would look like:
-//  `Failed to watch *v1.ImageStreamTag: the server does not allow this method on the requested resource (get imagestreamtags.image.openshift.io)`
+//
+//	`Failed to watch *v1.ImageStreamTag: the server does not allow this method on the requested resource (get imagestreamtags.image.openshift.io)`
 func (r *ReconcilerBase) GetAPIReader() client.Reader {
 	return r.apiReader
 }
@@ -178,27 +183,30 @@ func (r *ReconcilerBase) ManageError(issue error, conditionType common.StatusCon
 	r.GetRecorder().Event(obj, "Warning", "ProcessingError", issue.Error())
 
 	oldCondition := s.GetCondition(conditionType)
-	if oldCondition == nil {
-		oldCondition = &appstacksv1beta2.StatusCondition{}
-	}
 
-	lastStatus := oldCondition.GetStatus()
-
-	// Keep the old `LastTransitionTime` when status has not changed
-	nowTime := metav1.Now()
-	transitionTime := oldCondition.GetLastTransitionTime()
-	if lastStatus == corev1.ConditionTrue {
-		transitionTime = &nowTime
-	}
-
-	newCondition := s.NewCondition()
-	newCondition.SetLastTransitionTime(transitionTime)
+	newCondition := s.NewCondition(conditionType)
 	newCondition.SetReason(string(apierrors.ReasonForError(issue)))
-	newCondition.SetType(conditionType)
 	newCondition.SetMessage(issue.Error())
 	newCondition.SetStatus(corev1.ConditionFalse)
-
 	s.SetCondition(newCondition)
+
+	if conditionType != common.StatusConditionTypeResourcesReady {
+		//Check Application status (reconciliation & resource status & endpoint status)
+		r.CheckApplicationStatus(ba)
+	} else {
+		// If the new condition type is ResourcesReady (false), make sure the
+		// conditions for Ready and Reconciled are set to false
+		readyNewCondition := s.NewCondition(common.StatusConditionTypeReady)
+		readyNewCondition.SetStatus(corev1.ConditionFalse)
+		readyNewCondition.SetMessage("Resources are not ready.")
+		readyNewCondition.SetReason("")
+		s.SetCondition(readyNewCondition)
+		reconciledNewCondition := s.NewCondition(common.StatusConditionTypeReconciled)
+		reconciledNewCondition.SetStatus(corev1.ConditionFalse)
+		reconciledNewCondition.SetMessage("Resources are not ready.")
+		reconciledNewCondition.SetReason("")
+		s.SetCondition(reconciledNewCondition)
+	}
 
 	err := r.UpdateStatus(obj)
 	if err != nil {
@@ -213,14 +221,9 @@ func (r *ReconcilerBase) ManageError(issue error, conditionType common.StatusCon
 		}, nil
 	}
 
-	// StatusReasonInvalid means the requested create or update operation cannot be
-	// completed due to invalid data provided as part of the request. Don't retry.
-	// if apierrors.IsInvalid(issue) {
-	// 	return reconcile.Result{}, nil
-	// }
-
 	var retryInterval time.Duration
-	if lastStatus == corev1.ConditionTrue {
+	// If the application was reconciled and now it is not
+	if oldCondition == nil || oldCondition.GetStatus() == corev1.ConditionTrue {
 		retryInterval = time.Second
 	} else {
 		retryInterval = 5 * time.Second
@@ -236,26 +239,16 @@ func (r *ReconcilerBase) ManageError(issue error, conditionType common.StatusCon
 // ManageSuccess ...
 func (r *ReconcilerBase) ManageSuccess(conditionType common.StatusConditionType, ba common.BaseComponent) (reconcile.Result, error) {
 	s := ba.GetStatus()
-	oldCondition := s.GetCondition(conditionType)
-	if oldCondition == nil {
-		oldCondition = &appstacksv1beta2.StatusCondition{}
-	}
 
-	// Keep the old `LastTransitionTime` when status has not changed
-	nowTime := metav1.Now()
-	transitionTime := oldCondition.GetLastTransitionTime()
-	if oldCondition.GetStatus() == corev1.ConditionFalse {
-		transitionTime = &nowTime
-	}
-
-	statusCondition := s.NewCondition()
-	statusCondition.SetLastTransitionTime(transitionTime)
+	statusCondition := s.NewCondition(conditionType)
 	statusCondition.SetReason("")
 	statusCondition.SetMessage("")
 	statusCondition.SetStatus(corev1.ConditionTrue)
-	statusCondition.SetType(conditionType)
-
 	s.SetCondition(statusCondition)
+
+	//Check application status (reconciliation & resource status & endpoint status)
+	readyStatus := r.CheckApplicationStatus(ba)
+
 	err := r.UpdateStatus(ba.(client.Object))
 	if err != nil {
 		log.Error(err, "Unable to update status")
@@ -264,7 +257,17 @@ func (r *ReconcilerBase) ManageSuccess(conditionType common.StatusConditionType,
 			Requeue:      true,
 		}, nil
 	}
-	return reconcile.Result{RequeueAfter: ReconcileInterval * time.Second}, nil
+
+	var retryInterval time.Duration
+
+	// If resources are not ready
+	if readyStatus != corev1.ConditionTrue {
+		retryInterval = time.Second
+	} else {
+		retryInterval = ReconcileInterval * time.Second
+	}
+
+	return reconcile.Result{RequeueAfter: retryInterval}, nil
 }
 
 // IsGroupVersionSupported ...
@@ -311,12 +314,9 @@ func (r *ReconcilerBase) IsOpenShift() bool {
 func (r *ReconcilerBase) GetRouteTLSValues(ba common.BaseComponent) (key string, cert string, ca string, destCa string, err error) {
 	key, cert, ca, destCa = "", "", "", ""
 	mObj := ba.(metav1.Object)
-	if ba.GetService() != nil && ba.GetService().GetCertificateSecretRef() != nil {
+	if ba.GetManageTLS() == nil || *ba.GetManageTLS() || ba.GetService() != nil && ba.GetService().GetCertificateSecretRef() != nil {
 		tlsSecret := &corev1.Secret{}
-		secretName := mObj.GetName() + "-svc-tls"
-		if ba.GetService().GetCertificateSecretRef() != nil {
-			secretName = *ba.GetService().GetCertificateSecretRef()
-		}
+		secretName := ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName]
 		err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: mObj.GetNamespace()}, tlsSecret)
 		if err != nil {
 			r.ManageError(err, common.StatusConditionTypeReconciled, ba)
@@ -356,4 +356,245 @@ func (r *ReconcilerBase) GetRouteTLSValues(ba common.BaseComponent) (key string,
 		}
 	}
 	return key, cert, ca, destCa, nil
+}
+
+func (r *ReconcilerBase) GenerateCMIssuer(namespace string, prefix string, CACommonName string, operatorName string) error {
+	if ok, err := r.IsGroupVersionSupported(certmanagerv1.SchemeGroupVersion.String(), "Issuer"); err != nil {
+		return err
+	} else if !ok {
+		return APIVersionNotFoundError
+	}
+
+	issuer := &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
+		Name:      prefix + "-self-signed",
+		Namespace: namespace,
+	}}
+	err := r.CreateOrUpdate(issuer, nil, func() error {
+		issuer.Spec.SelfSigned = &certmanagerv1.SelfSignedIssuer{}
+		issuer.Labels = MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	caCert := &certmanagerv1.Certificate{ObjectMeta: metav1.ObjectMeta{
+		Name:      prefix + "-ca-cert",
+		Namespace: namespace,
+	}}
+
+	err = r.CreateOrUpdate(caCert, nil, func() error {
+		caCert.Labels = MergeMaps(caCert.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
+		caCert.Spec.CommonName = CACommonName
+		caCert.Spec.IsCA = true
+		caCert.Spec.SecretName = prefix + "-ca-tls"
+		caCert.Spec.IssuerRef = certmanagermetav1.ObjectReference{
+			Name: prefix + "-self-signed",
+		}
+
+		duration, err := time.ParseDuration(common.Config[common.OpConfigCMCADuration])
+		if err != nil {
+			return err
+		}
+		caCert.Spec.Duration = &metav1.Duration{Duration: duration}
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+	CustomCACert := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name:      prefix + "-custom-ca-tls",
+		Namespace: namespace,
+	}}
+	customCACertFound := false
+	err = r.GetClient().Get(context.Background(), types.NamespacedName{Name: CustomCACert.GetName(),
+		Namespace: CustomCACert.GetNamespace()}, CustomCACert)
+	if err == nil {
+		customCACertFound = true
+	}
+
+	issuer = &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
+		Name:      prefix + "-ca-issuer",
+		Namespace: namespace,
+	}}
+	err = r.CreateOrUpdate(issuer, nil, func() error {
+		issuer.Labels = MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
+		issuer.Spec.CA = &certmanagerv1.CAIssuer{}
+		issuer.Spec.CA.SecretName = prefix + "-ca-tls"
+		if issuer.Annotations == nil {
+			issuer.Annotations = map[string]string{}
+		}
+		if customCACertFound {
+			issuer.Spec.CA.SecretName = CustomCACert.Name
+
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	for i := range issuer.Status.Conditions {
+		if issuer.Status.Conditions[i].Type == certmanagerv1.IssuerConditionReady && issuer.Status.Conditions[i].Status == certmanagermetav1.ConditionFalse {
+			return errors.New("Certificate is not ready")
+		}
+	}
+	return nil
+}
+
+func (r *ReconcilerBase) GenerateSvcCertSecret(ba common.BaseComponent, prefix string, CACommonName string, operatorName string) (bool, error) {
+
+	delete(ba.GetStatus().GetReferences(), common.StatusReferenceCertSecretName)
+	cleanup := func() {
+		if ok, err := r.IsGroupVersionSupported(certmanagerv1.SchemeGroupVersion.String(), "Certificate"); err != nil {
+			return
+		} else if ok {
+			obj := ba.(metav1.Object)
+			svcCert := &certmanagerv1.Certificate{}
+			svcCert.Name = obj.GetName() + "-svc-tls-cm"
+			svcCert.Namespace = obj.GetNamespace()
+			r.client.Delete(context.Background(), svcCert)
+		}
+	}
+
+	if ba.GetCreateKnativeService() != nil && *ba.GetCreateKnativeService() {
+		cleanup()
+		return false, nil
+	}
+	if ba.GetService() != nil && ba.GetService().GetCertificateSecretRef() != nil {
+		cleanup()
+		return false, nil
+	}
+	if ba.GetManageTLS() != nil && !*ba.GetManageTLS() {
+		cleanup()
+		return false, nil
+	}
+	if ba.GetService() != nil && ba.GetService().GetAnnotations() != nil {
+		if _, ok := ba.GetService().GetAnnotations()["service.beta.openshift.io/serving-cert-secret-name"]; ok {
+			cleanup()
+			return false, nil
+		}
+		if _, ok := ba.GetService().GetAnnotations()["service.alpha.openshift.io/serving-cert-secret-name"]; ok {
+			cleanup()
+			return false, nil
+		}
+	}
+	if ok, err := r.IsGroupVersionSupported(certmanagerv1.SchemeGroupVersion.String(), "Certificate"); err != nil {
+		return false, err
+	} else if ok {
+		bao := ba.(metav1.Object)
+
+		err = r.GenerateCMIssuer(bao.GetNamespace(), prefix, CACommonName, operatorName)
+		if err != nil {
+			if errors.Is(err, APIVersionNotFoundError) {
+				return false, nil
+			}
+			return true, err
+		}
+		svcCertSecretName := bao.GetName() + "-svc-tls-cm"
+
+		svcCert := &certmanagerv1.Certificate{ObjectMeta: metav1.ObjectMeta{
+			Name:      svcCertSecretName,
+			Namespace: bao.GetNamespace(),
+		}}
+
+		customIssuer := &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
+			Name:      prefix + "-custom-issuer",
+			Namespace: bao.GetNamespace(),
+		}}
+
+		customIssuerFound := false
+		err = r.GetClient().Get(context.Background(), types.NamespacedName{Name: customIssuer.Name,
+			Namespace: customIssuer.Namespace}, customIssuer)
+		if err == nil {
+			customIssuerFound = true
+		}
+
+		shouldRefreshCertSecret := false
+		err = r.CreateOrUpdate(svcCert, bao, func() error {
+			svcCert.Labels = ba.GetLabels()
+
+			svcCert.Spec.CommonName = bao.GetName() + "." + bao.GetNamespace() + ".svc"
+			svcCert.Spec.DNSNames = make([]string, 2)
+			svcCert.Spec.DNSNames[0] = bao.GetName() + "." + bao.GetNamespace() + ".svc"
+			svcCert.Spec.DNSNames[1] = bao.GetName() + "." + bao.GetNamespace() + ".svc.cluster.local"
+			svcCert.Spec.IsCA = false
+			svcCert.Spec.IssuerRef = certmanagermetav1.ObjectReference{
+				Name: prefix + "-ca-issuer",
+			}
+			if customIssuerFound {
+				svcCert.Spec.IssuerRef.Name = customIssuer.Name
+			}
+
+			rVersion, _ := GetIssuerResourceVersion(r.client, svcCert)
+			if svcCert.Spec.SecretTemplate == nil {
+				svcCert.Spec.SecretTemplate = &certmanagerv1.CertificateSecretTemplate{
+					Annotations: map[string]string{},
+				}
+			}
+
+			if svcCert.Spec.SecretTemplate.Annotations[ba.GetGroupName()+"/cm-issuer-version"] != rVersion {
+				if svcCert.Spec.SecretTemplate.Annotations == nil {
+					svcCert.Spec.SecretTemplate.Annotations = map[string]string{}
+				}
+				svcCert.Spec.SecretTemplate.Annotations[ba.GetGroupName()+"/cm-issuer-version"] = rVersion
+				shouldRefreshCertSecret = true
+			}
+
+			svcCert.Spec.SecretName = svcCertSecretName
+
+			duration, err := time.ParseDuration(common.Config[common.OpConfigCMCertDuration])
+			if err != nil {
+				return err
+			}
+			svcCert.Spec.Duration = &metav1.Duration{Duration: duration}
+
+			return nil
+		})
+		if err != nil {
+			return true, err
+		}
+		if shouldRefreshCertSecret {
+			r.DeleteResource(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: svcCertSecretName, Namespace: svcCert.Namespace}})
+		}
+		ba.GetStatus().SetReference(common.StatusReferenceCertSecretName, svcCertSecretName)
+	} else {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (r *ReconcilerBase) GetIngressInfo(ba common.BaseComponent) (host string, path string, protocol string) {
+	mObj := ba.(metav1.Object)
+	protocol = "http"
+	if ok, err := r.IsGroupVersionSupported(routev1.SchemeGroupVersion.String(), "Route"); err != nil {
+		r.ManageError(err, common.StatusConditionTypeReconciled, ba)
+	} else if ok {
+		route := &routev1.Route{}
+		r.GetClient().Get(context.Background(), types.NamespacedName{Name: mObj.GetName(), Namespace: mObj.GetNamespace()}, route)
+		host = route.Spec.Host
+		path = route.Spec.Path
+		if route.Spec.TLS != nil {
+			protocol = "https"
+		}
+		return host, path, protocol
+	} else {
+		if ok, err := r.IsGroupVersionSupported(networkingv1.SchemeGroupVersion.String(), "Ingress"); err != nil {
+			r.ManageError(err, common.StatusConditionTypeReconciled, ba)
+		} else if ok {
+			ingress := &networkingv1.Ingress{}
+			r.GetClient().Get(context.Background(), types.NamespacedName{Name: mObj.GetName(), Namespace: mObj.GetNamespace()}, ingress)
+			if len(ingress.Spec.Rules) > 0 && ingress.Spec.Rules[0].Host != "" {
+				host = ingress.Spec.Rules[0].Host
+				if len(ingress.Spec.TLS) > 0 && len(ingress.Spec.TLS[0].Hosts) > 0 && ingress.Spec.TLS[0].Hosts[0] != "" {
+					protocol = "https"
+				}
+				if ingress.Spec.Rules[0].IngressRuleValue.HTTP.Paths != nil && len(ingress.Spec.Rules[0].IngressRuleValue.HTTP.Paths) != 0 {
+					path = ingress.Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Path
+				}
+				return host, path, protocol
+			}
+		}
+	}
+	return host, path, protocol
 }

@@ -26,29 +26,18 @@ const (
 	// HTTP/2 endpoints.
 	ServiceHTTP2Port = 81
 
-	// BackendHTTPPort is the backend, i.e. `targetPort` that we setup for HTTP services.
-	BackendHTTPPort = 8012
-
-	// BackendHTTP2Port is the backend, i.e. `targetPort` that we setup for HTTP services.
-	BackendHTTP2Port = 8013
-
-	// QueueAdminPort specifies the port number for
-	// health check and lifecycle hooks for queue-proxy.
-	QueueAdminPort = 8022
-
-	// AutoscalingQueueMetricsPort specifies the port number for metrics emitted
-	// by queue-proxy for autoscaler.
-	AutoscalingQueueMetricsPort = 9090
-
-	// UserQueueMetricsPort specifies the port number for metrics emitted
-	// by queue-proxy for end user.
-	UserQueueMetricsPort = 9091
+	// ServiceHTTPSPort is the port that we setup our Serving and Activator K8s services for
+	// HTTPS endpoints.
+	ServiceHTTPSPort = 443
 
 	// ServicePortNameHTTP1 is the name of the external port of the service for HTTP/1.1
 	ServicePortNameHTTP1 = "http"
 
 	// ServicePortNameH2C is the name of the external port of the service for HTTP/2
 	ServicePortNameH2C = "http2"
+
+	// ServicePortNameHTTPS is the name of the external port of the service for HTTPS
+	ServicePortNameHTTPS = "https"
 )
 
 // ServicePortName returns the port for the app level protocol.

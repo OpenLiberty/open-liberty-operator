@@ -1,0 +1,16 @@
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: storage-ol
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pvc-storage-ol-0
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Mi
+  volumeMode: Filesystem

@@ -1,0 +1,8 @@
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: env-ol
+spec:
+  # Add fields here
+  env:
+  envFrom:

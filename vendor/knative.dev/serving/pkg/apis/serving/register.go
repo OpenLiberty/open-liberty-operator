@@ -16,7 +16,10 @@ limitations under the License.
 
 package serving
 
-import "k8s.io/apimachinery/pkg/runtime/schema"
+import (
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"knative.dev/pkg/kmap"
+)
 
 const (
 	// GroupName is the group name for knative labels and annotations
@@ -51,6 +54,12 @@ const (
 	// referenced by one or many routes. The value is a comma separated list of Route names.
 	RoutesAnnotationKey = GroupName + "/routes"
 
+	// RolloutDurationKey is an annotation attached to a Route to indicate the duration
+	// of the rollout of the latest revision. The value must be a valid positive
+	// Golang time.Duration value serialized to string.
+	// The value can be specified with at most with a second precision.
+	RolloutDurationKey = GroupName + "/rollout-duration"
+
 	// RoutingStateLabelKey is the label attached to a Revision indicating
 	// its state in relation to serving a Route.
 	RoutingStateLabelKey = GroupName + "/routingState"
@@ -71,9 +80,28 @@ const (
 	// its unique identifier
 	RevisionUID = GroupName + "/revisionUID"
 
+	// ConfigurationUIDLabelKey is the label key attached to a pod to reference its
+	// Knative Configuration by its unique UID
+	ConfigurationUIDLabelKey = GroupName + "/configurationUID"
+
+	// ServiceUIDLabelKey is the label key attached to a pod to reference its
+	// Knative Service by its unique UID
+	ServiceUIDLabelKey = GroupName + "/serviceUID"
+
 	// ServiceLabelKey is the label key attached to a Route and Configuration indicating by
 	// which Service they are created.
 	ServiceLabelKey = GroupName + "/service"
+
+	// DomainMappingUIDLabelKey is the label key attached to Ingress resources to indicate
+	// which DomainMapping triggered their creation.
+	// This uses a uid rather than a name because domain mapping names can exceed
+	// a label's 63 character limit.
+	DomainMappingUIDLabelKey = GroupName + "/domainMappingUID"
+
+	// DomainMappingNamespaceLabelKey is the label key attached to Ingress
+	// resources created by a DomainMapping to indicate which namespace the
+	// DomainMapping was created in.
+	DomainMappingNamespaceLabelKey = GroupName + "/domainMappingNamespace"
 
 	// ConfigurationGenerationLabelKey is the label key attached to a Revision indicating the
 	// metadata generation of the Configuration that created this revision
@@ -86,18 +114,17 @@ const (
 	// last updated the resource.
 	UpdaterAnnotation = GroupName + "/lastModifier"
 
-	// QueueSideCarResourcePercentageAnnotation is the percentage of user container resources to be used for queue-proxy
+	// QueueSidecarResourcePercentageAnnotationKey is the percentage of user container resources to be used for queue-proxy
 	// It has to be in [0.1,100]
-	QueueSideCarResourcePercentageAnnotation = "queue.sidecar." + GroupName + "/resourcePercentage"
-
-	// VisibilityLabelKeyObsolete is the obsolete VisibilityLabelKey.
-	// This will move over to VisibilityLabelKey in networking repo..
-	VisibilityLabelKeyObsolete = "serving.knative.dev/visibility"
+	QueueSidecarResourcePercentageAnnotationKey = "queue.sidecar." + GroupName + "/resource-percentage"
 
 	// VisibilityClusterLocal is the label value for VisibilityLabelKey
 	// that will result to the Route/KService getting a cluster local
 	// domain suffix.
 	VisibilityClusterLocal = "cluster-local"
+
+	// ProgressDeadlineAnnotationKey is the label key for the per revision progress deadline to set for the deployment
+	ProgressDeadlineAnnotationKey = GroupName + "/progress-deadline"
 )
 
 var (
@@ -123,5 +150,19 @@ var (
 	RoutesResource = schema.GroupResource{
 		Group:    GroupName,
 		Resource: "routes",
+	}
+)
+
+var (
+	RolloutDurationAnnotation = kmap.KeyPriority{
+		RolloutDurationKey,
+		GroupName + "/rolloutDuration",
+	}
+	QueueSidecarResourcePercentageAnnotation = kmap.KeyPriority{
+		QueueSidecarResourcePercentageAnnotationKey,
+		"queue.sidecar." + GroupName + "/resourcePercentage",
+	}
+	ProgressDeadlineAnnotation = kmap.KeyPriority{
+		ProgressDeadlineAnnotationKey,
 	}
 )

@@ -3,7 +3,7 @@
 apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
-  name: autoscaling2-liberty
+  name: scale2-liberty-component
 spec:
   resources:
     requests:

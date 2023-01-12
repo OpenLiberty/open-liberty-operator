@@ -1,0 +1,10 @@
+# Test to see that if no affinity specified the default affinity is applied
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: affinity-ol
+spec:
+  affinity:
+    nodeAffinityLabels:
+    architecture:
+      - amd64

@@ -1,0 +1,8 @@
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: network-policy-ol
+spec:
+  networkPolicy:
+  service:
+    ports: []

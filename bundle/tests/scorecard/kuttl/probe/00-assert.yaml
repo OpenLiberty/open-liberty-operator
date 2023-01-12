@@ -1,21 +1,34 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: probes-liberty
+  name: probes-ol
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/instance: probes-liberty
+      app.kubernetes.io/instance: probes-ol
   template:
     spec:
       containers:
         - readinessProbe:
             initialDelaySeconds: 1
+            httpGet:
+              path: "/"
+              port: 3000
           livenessProbe:
-            initialDelaySeconds: 8
+            initialDelaySeconds: 4
+            httpGet:
+              path: "/"
+              port: 3000
           startupProbe:
             failureThreshold: 10
             periodSeconds: 5
+            httpGet:
+              path: "/"
+              port: 3000
 status:
   replicas: 1
   readyReplicas: 1

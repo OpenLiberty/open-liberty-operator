@@ -1,11 +1,15 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 60
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: probes-liberty
+  name: probes-ol
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/instance: probes-liberty
+      app.kubernetes.io/instance: probes-ol
   template:
     spec:
       containers:

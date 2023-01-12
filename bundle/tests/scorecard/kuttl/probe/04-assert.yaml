@@ -1,0 +1,49 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: probes-ol
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: probes-ol
+  template:
+    spec:
+      containers:
+        - livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 9443
+              scheme: HTTPS
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 9443
+              scheme: HTTPS
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 5
+          startupProbe:
+            httpGet:
+              path: /health/started
+              port: 9443
+              scheme: HTTPS
+            periodSeconds: 10
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 5
+
+status:
+  readyReplicas: 1
+  replicas: 1
+  updatedReplicas: 1
