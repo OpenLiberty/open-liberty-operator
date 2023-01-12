@@ -4,7 +4,7 @@ metadata:
   name: service-with-cert-ol
 spec:
   # Add fields here
-  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
+  applicationImage: k8s.gcr.io/pause:2.0
   replicas: 1
   service:
     certificateSecretRef: service-tls-secret
