@@ -32,6 +32,7 @@ rules:
   - list
   - update
   - watch
+  - patch
 - apiGroups:
   - apps
   resources:
@@ -52,6 +53,7 @@ rules:
   - list
   - update
   - watch
+  - patch
 - apiGroups:
   - apps.openliberty.io
   resources:
@@ -65,6 +67,7 @@ rules:
   - list
   - update
   - watch
+  - patch
 - apiGroups:
   - apps.openliberty.io
   resources:
@@ -78,6 +81,7 @@ rules:
   - list
   - update
   - watch
+  - patch
 - apiGroups:
   - autoscaling
   resources:
@@ -89,6 +93,7 @@ rules:
   - list
   - update
   - watch
+  - patch
 - apiGroups:
   - cert-manager.io
   resources:
@@ -101,6 +106,7 @@ rules:
   - list
   - update
   - watch
+  - patch
 - apiGroups:
   - ""
   resources:
@@ -116,6 +122,7 @@ rules:
   - list
   - update
   - watch
+  - patch
 - apiGroups:
   - ""
   resources:
@@ -128,6 +135,7 @@ rules:
   - list
   - update
   - watch
+  - patch
 - apiGroups:
   - image.openshift.io
   resources:
@@ -137,6 +145,7 @@ rules:
   - get
   - list
   - watch
+  - patch
 - apiGroups:
   - monitoring.coreos.com
   resources:
@@ -148,6 +157,7 @@ rules:
   - list
   - update
   - watch
+  - patch
 - apiGroups:
   - networking.k8s.io
   resources:
@@ -160,6 +170,7 @@ rules:
   - list
   - update
   - watch
+  - patch
 - apiGroups:
   - route.openshift.io
   resources:
@@ -172,6 +183,7 @@ rules:
   - list
   - update
   - watch
+  - patch
 - apiGroups:
   - serving.knative.dev
   resources:
@@ -183,3 +195,4 @@ rules:
   - list
   - update
   - watch
+  - patch
