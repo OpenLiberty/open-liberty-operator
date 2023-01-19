@@ -3,7 +3,7 @@ kind: OpenLibertyApplication
 metadata:
   name: security-context-ol
 spec:
-  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
+  applicationImage: k8s.gcr.io/pause:2.0
   replicas: 1
   securityContext:
     allowPrivilegeEscalation: true

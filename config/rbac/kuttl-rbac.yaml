@@ -142,6 +142,7 @@ rules:
   - imagestreams
   - imagestreamtags
   verbs:
+  - create
   - get
   - list
   - watch

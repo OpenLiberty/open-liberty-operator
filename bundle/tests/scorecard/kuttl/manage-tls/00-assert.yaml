@@ -7,9 +7,9 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   labels:
-    app.kubernetes.io/managed-by: runtime-component-operator
+    app.kubernetes.io/managed-by: open-liberty-operator
 spec:
-  commonName: Runtime Component Operator
+  commonName: Open Liberty Operator
   isCA: true
 ---
 apiVersion: cert-manager.io/v1

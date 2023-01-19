@@ -1,6 +1,6 @@
 #!/bin/bash
 
-readonly usage="Usage: e2e-minikube.sh --test-tag <test-id>
+readonly usage="Usage: e2e-minikube.sh --test-tag <test-id>"
 readonly OP_DIR=$(pwd)
 
 readonly LOCAL_REGISTRY="localhost:5000"
@@ -40,7 +40,7 @@ build_push() {
 # install_olo: Kustomize and install Open-Liberty-Operator
 install_olo() {
     echo "****** Installing OLO in namespace: ${TEST_NAMESPACE}"
-    
+
     make kustomize-build KUSTOMIZE_NAMESPACE=${TEST_NAMESPACE}
     sed -i "s/image: ${DAILY_IMAGE}/image: ${LOCAL_REGISTRY}\/${BUILD_IMAGE}/" deploy/kustomize/daily/base/open-liberty-operator.yaml
     kubectl apply -k deploy/kustomize/daily/base
@@ -81,7 +81,7 @@ setup_test() {
     mv bundle/tests/scorecard/minikube-kuttl/ingress bundle/tests/scorecard/kuttl/
     mv bundle/tests/scorecard/minikube-kuttl/ingress-certificate bundle/tests/scorecard/kuttl/
     mv bundle/tests/scorecard/minikube-kuttl/ingress-manage-tls bundle/tests/scorecard/kuttl/
-
+    
     ## Remove tests that do not apply for minikube
     mv bundle/tests/scorecard/kuttl/network-policy bundle/tests/scorecard/minikube-kuttl/
     mv bundle/tests/scorecard/kuttl/network-policy-multiple-apps bundle/tests/scorecard/minikube-kuttl/
@@ -105,7 +105,7 @@ cleanup_test() {
     mv bundle/tests/scorecard/kuttl/ingress bundle/tests/scorecard/minikube-kuttl/
     mv bundle/tests/scorecard/kuttl/ingress-certificate bundle/tests/scorecard/minikube-kuttl/
     mv bundle/tests/scorecard/kuttl/ingress-manage-tls bundle/tests/scorecard/minikube-kuttl/
-
+    
     mv bundle/tests/scorecard/minikube-kuttl/network-policy bundle/tests/scorecard/kuttl/
     mv bundle/tests/scorecard/minikube-kuttl/network-policy-multiple-apps bundle/tests/scorecard/kuttl/
     mv bundle/tests/scorecard/minikube-kuttl/routes bundle/tests/scorecard/kuttl/ 
@@ -156,6 +156,25 @@ main() {
 
     return $result
 }
+
+parse_args() {
+    while [ $# -gt 0 ]; do
+        case "$1" in
+        --test-tag)
+            shift
+            readonly TEST_TAG="${1}"
+            ;;
+        *)
+            echo "Error: Invalid argument - $1"
+            echo "$usage"
+            exit 1
+            ;;
+        esac
+        shift
+    done
+}
+
+main "$@"
 
 parse_args() {
     while [ $# -gt 0 ]; do

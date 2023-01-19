@@ -1,4 +1,4 @@
-# Clean up the Runtime Component and PVC as you cannot change the Persistent Storage once created
+# Clean up the Open Liberty and PVC as you cannot change the Persistent Storage once created
 apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 delete:

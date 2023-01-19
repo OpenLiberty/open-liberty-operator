@@ -7,9 +7,9 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   labels:
-    app.kubernetes.io/managed-by: runtime-component-operator
+    app.kubernetes.io/managed-by: open-liberty-operator
 spec:
-  commonName: Runtime Component Operator
+  commonName: Open Liberty Operator
   isCA: true
 ---
 apiVersion: cert-manager.io/v1
@@ -44,6 +44,9 @@ spec:
           value: /etc/x509/certs
         - name: SA_RESOURCE_VERSION
         - name: SERVICE_CERT_SECRET_RESOURCE_VERSION
+        - name: WLP_LOGGING_CONSOLE_LOGLEVEL
+        - name: WLP_LOGGING_CONSOLE_SOURCE
+        - name: WLP_LOGGING_CONSOLE_FORMAT
         volumeMounts:
         - name: svc-certificate
           mountPath: /etc/x509/certs
