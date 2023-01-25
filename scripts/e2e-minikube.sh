@@ -63,7 +63,6 @@ install_tools() {
 
 ## cleanup_env : Delete generated resources that are not bound to a test TEST_NAMESPACE.
 cleanup_env() {
-    kubectl delete namespace "${TEST_NAMESPACE}"
     minikube stop && minikube delete
 }
 
