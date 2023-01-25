@@ -9,9 +9,6 @@ status:
 ---
 apiVersion: v1
 kind: Pod
-metadata:
-  labels:
-    app.kubernetes.io/instance: sidecar-liberty-component
 spec:
   containers:
   - name: app

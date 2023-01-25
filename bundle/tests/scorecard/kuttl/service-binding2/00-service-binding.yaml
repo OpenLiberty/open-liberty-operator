@@ -4,7 +4,7 @@ metadata:
   name: service-binding-ol
 spec:
   # Add fields here
-  applicationImage: k8s.gcr.io/pause:2.0
+  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
   replicas: 1
   service:
     bindable: true

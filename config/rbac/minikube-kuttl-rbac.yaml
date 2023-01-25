@@ -21,89 +21,182 @@ metadata:
   name: scorecard-kuttl
 rules:
 - apiGroups:
-  - ""
-  resources:
-  - secrets
-  - serviceaccounts
-  verbs:
-  - get
-  - list
-  - create
-  - delete
-  - patch
-- apiGroups:
-  - ""
-  resources:
-  - namespaces
-  - pods
-  - services
-  - routes
-  verbs:
-  - get
-  - list
-- apiGroups:
   - apps
   resources:
   - deployments
   - statefulsets
   verbs:
-  - get
   - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+  - patch
+- apiGroups:
+  - apps
+  resources:
+  - deployments/finalizers
+  - statefulsets
+  verbs:
+  - update
+- apiGroups:
+  - apps.openliberty.io
+  resources:
+  - openlibertyapplications
+  - openlibertyapplications/finalizers
+  - openlibertyapplications/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+  - patch
+- apiGroups:
+  - apps.openliberty.io
+  resources:
+  - openlibertydumps
+  - openlibertydumps/finalizers
+  - openlibertydumps/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+  - patch
+- apiGroups:
+  - apps.openliberty.io
+  resources:
+  - openlibertytraces
+  - openlibertytraces/finalizers
+  - openlibertytraces/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+  - patch
 - apiGroups:
   - autoscaling
   resources:
   - horizontalpodautoscalers
   verbs:
+  - create
+  - delete
   - get
+  - list
+  - update
+  - watch
+  - patch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  - issuers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - persistentvolumeclaims
+  - secrets
+  - serviceaccounts
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - pods/exec
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+  - patch
+- apiGroups:
+  - image.openshift.io
+  resources:
+  - imagestreams
+  - imagestreamtags
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - patch
 - apiGroups:
   - monitoring.coreos.com
   resources:
   - servicemonitors
   verbs:
-  - get
-- apiGroups:
-  - image.openshift.io
-  resources:
-  - imagestreams
-  verbs:
-  - get
-  - list
   - create
-  - patch
   - delete
-- apiGroups:
-  - events.k8s.io
-  resources:
-  - events
-  verbs:
   - get
   - list
+  - update
+  - watch
+  - patch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  - networkpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+  - patch
+- apiGroups:
+  - route.openshift.io
+  resources:
+  - routes
+  - routes/custom-host
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+  - patch
 - apiGroups:
   - serving.knative.dev
   resources:
   - services
   verbs:
-  - get
-- apiGroups:
-  - apps.openliberty.io
-  resources:
-  - openlibertyapplications
-  - openlibertydumps
-  - openlibertytraces
-  verbs:
+  - create
+  - delete
   - get
   - list
-  - create
+  - update
+  - watch
   - patch
-  - delete
-- apiGroups:
-    - route.openshift.io
-  resources:
-    - routes
-  verbs:
-    - get
-    - list
-    - delete
 - apiGroups:
     - extensions
   resources:

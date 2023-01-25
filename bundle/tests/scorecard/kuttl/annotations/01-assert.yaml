@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: lib-deployment-annotations
+  name: rc-deployment-annotations
   annotations:
     bar2: foo2
     foo1: bar1  
@@ -21,7 +21,7 @@ status:
 apiVersion: v1
 kind: Service
 metadata:
-  name: lib-deployment-annotations
+  name: rc-deployment-annotations
   annotations:
     foo1: bar1
 ---
@@ -33,5 +33,5 @@ metadata:
     foo1: bar1
     conflict: statefulSet
   labels:
-    app.kubernetes.io/instance: lib-deployment-annotations
+    app.kubernetes.io/instance: rc-deployment-annotations
 

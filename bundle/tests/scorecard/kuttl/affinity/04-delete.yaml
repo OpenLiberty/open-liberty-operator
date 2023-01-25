@@ -1,0 +1,9 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+delete:
+  - apiVersion: apps.openliberty.io/v1beta2
+    kind: OpenLibertyApplication
+    name: affinity-ol
+  - apiVersion: apps.openliberty.io/v1beta2
+    kind: OpenLibertyApplication
+    name: anti-affinity-ol

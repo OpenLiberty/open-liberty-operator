@@ -3,7 +3,7 @@ kind: OpenLibertyApplication
 metadata:
   name: init-liberty-deployment
 spec:
-  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
+  # Add fields here
   initContainers:
   - image: alpine:3.14
     command: ["echo"]

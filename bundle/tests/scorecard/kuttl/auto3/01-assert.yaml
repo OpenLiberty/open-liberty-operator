@@ -1,7 +1,11 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 60
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: autoscaling3-liberty
+  name: scale3-liberty-component
 status:
   replicas: 3
   readyReplicas: 3
@@ -10,7 +14,7 @@ status:
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
 metadata:
-  name: autoscaling3-liberty
+  name: scale3-liberty-component
 spec:
   maxReplicas: 5
   minReplicas: 3
