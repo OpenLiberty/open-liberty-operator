@@ -1,6 +1,6 @@
 = Observability with Open Liberty
 
-The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in a Kubernetes environment. This document has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2, 4.3, 4.4, 4.5, 4.6 and 4.7, 4.8, 4.9, and 4.10.
+The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in a Kubernetes environment. This document has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2, 4.3, 4.4, 4.5, 4.6 and 4.7, 4.8, 4.9, 4.10, and 4.12.
 
 == How to analyze Open Liberty logs
 
@@ -107,6 +107,8 @@ spec:
             key: password
             name: basic-auth
         interval: 30s
+        tlsConfig:
+          insecureSkipVerify: true
 ----
 
 
@@ -170,7 +172,7 @@ Configure the readiness, liveness, and startup probes' fields to point to the Mi
 === For mpHealth-2.x
 
 
-Modify the readiness and liveness probes' fields, if not configured, to point to the MicroProfile Health REST endpoints, in the OpenLibertyApplication Custom Resource (CR):
+Modify the readiness and liveness probes' fields, if not configured, to point to the MicroProfile Health REST endpoints, in the OpenLibertyApplication Custom Resource (CR) for the link:++https://github.com/application-stacks/runtime-component-operator/blob/main/doc/user-guide-v1beta2.adoc++[Runtime Component Operator v0.8.0+]:
 
 
 [source,yaml]
@@ -178,24 +180,25 @@ Modify the readiness and liveness probes' fields, if not configured, to point to
 spec:
   applicationImage:
   ...
-  readinessProbe:
-    failureThreshold: 12
-    httpGet:
-      path: /health/ready
-      port: 9443
-      scheme: HTTPS
-    initialDelaySeconds: 30
-    periodSeconds: 2
-    timeoutSeconds: 10
-  livenessProbe:
-    failureThreshold: 12
-    httpGet:
-      path: /health/live
-      port: 9443
-      scheme: HTTPS
-    initialDelaySeconds: 30
-    periodSeconds: 2
-    timeoutSeconds: 10
+  probes:
+    liveness:
+      failureThreshold: 12
+      httpGet:
+        path: /health/ready
+        port: 9443
+        scheme: HTTPS
+      initialDelaySeconds: 30
+      periodSeconds: 2
+      timeoutSeconds: 10
+    readiness:
+      failureThreshold: 12
+      httpGet:
+        path: /health/live
+        port: 9443
+        scheme: HTTPS
+      initialDelaySeconds: 30
+      periodSeconds: 2
+      timeoutSeconds: 10
 ...
 ----
 
@@ -210,15 +213,16 @@ Modify the startup probe's fields, if not configured, to point to the MicroProfi
 spec:
   applicationImage:
   ...
-  startupProbe:
-    failureThreshold: 12
-    httpGet:
-      path: /health/started
-      port: 9443
-      scheme: HTTPS
-    initialDelaySeconds: 30
-    periodSeconds: 2
-    timeoutSeconds: 10
+  probes:
+    startup:
+      failureThreshold: 12
+      httpGet:
+        path: /health/started
+        port: 9443
+        scheme: HTTPS
+      initialDelaySeconds: 30
+      periodSeconds: 2
+      timeoutSeconds: 10
 ...
 ----
 
