@@ -2,7 +2,7 @@
 apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
-  name: volume-ol
+  name: volume-liberty
 spec:
   statefulSet: {}
   volumeMounts:

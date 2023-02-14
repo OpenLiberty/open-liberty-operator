@@ -1,7 +1,7 @@
 apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
-  name: autoscaling1-ol
+  name: autoscaling1-liberty
 spec:
   autoscaling:
     maxReplicas: 1

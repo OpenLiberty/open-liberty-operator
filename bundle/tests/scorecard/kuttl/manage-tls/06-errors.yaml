@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: manage-tls-ol
+  name: manage-tls-liberty
 spec:
   template:
     spec:
@@ -19,12 +19,12 @@ spec:
       volumes:
       - name: svc-certificate
         secret:
-          secretName: manage-tls-ol-svc-tls-ocp
+          secretName: manage-tls-liberty-svc-tls-ocp
 ---
 # Verify removal of the OCP Service annotation
 kind: Service
 apiVersion: v1
 metadata:
   annotations:
-    service.beta.openshift.io/serving-cert-secret-name: manage-tls-ol-svc-tls-ocp
-  name: manage-tls-ol
+    service.beta.openshift.io/serving-cert-secret-name: manage-tls-liberty-svc-tls-ocp
+  name: manage-tls-liberty

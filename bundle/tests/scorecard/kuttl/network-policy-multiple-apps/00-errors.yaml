@@ -1,7 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: network-policy-backend-ol
+  name: network-policy-backend-liberty
 spec:
   ingress:
     - from:

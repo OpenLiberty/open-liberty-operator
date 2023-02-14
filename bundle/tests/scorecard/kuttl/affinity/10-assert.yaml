@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: affinity-ol
+  name: affinity-liberty
 spec:
   template:
     spec:
@@ -20,7 +20,7 @@ spec:
               podAffinityTerm:
                 labelSelector:
                   matchLabels:
-                    app.kubernetes.io/instance: affinity-ol
+                    app.kubernetes.io/instance: affinity-liberty
                 topologyKey: kubernetes.io/hostname
 status:
   replicas: 1

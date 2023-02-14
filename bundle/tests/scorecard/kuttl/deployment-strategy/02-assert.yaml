@@ -5,7 +5,7 @@ timeout: 60
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: deployment-strategy-ol
+  name: deployment-strategy-lib-app
 spec:
   strategy:
     type: RollingUpdate

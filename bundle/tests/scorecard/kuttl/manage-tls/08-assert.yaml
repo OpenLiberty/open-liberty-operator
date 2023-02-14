@@ -6,7 +6,7 @@ timeout: 60
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: manage-tls-ol
+  name: manage-tls-liberty
 status:
   replicas: 1
   readyReplicas: 1
@@ -37,17 +37,17 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: manage-tls-ol
+  name: manage-tls-liberty
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: manage-tls-ol
+  name: manage-tls-liberty
 spec:
   host: openlibertyoperator.test
   to:
     kind: Service
-    name: manage-tls-ol
+    name: manage-tls-liberty
     weight: 100
   port:
     targetPort: 9443-tcp

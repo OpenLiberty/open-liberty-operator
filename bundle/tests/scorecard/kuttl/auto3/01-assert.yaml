@@ -5,7 +5,7 @@ timeout: 60
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: scale3-liberty-component
+  name: autoscaling3-liberty
 status:
   replicas: 3
   readyReplicas: 3
@@ -14,7 +14,7 @@ status:
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
 metadata:
-  name: scale3-liberty-component
+  name: autoscaling3-liberty
 spec:
   maxReplicas: 5
   minReplicas: 3

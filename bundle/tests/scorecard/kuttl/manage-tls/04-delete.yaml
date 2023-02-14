@@ -4,4 +4,4 @@ delete:
 - apiVersion: apps.openliberty.io/v1beta2
   kind: OpenLibertyApplication
   metadata:
-    name: manage-tls-ol
+    name: manage-tls-liberty

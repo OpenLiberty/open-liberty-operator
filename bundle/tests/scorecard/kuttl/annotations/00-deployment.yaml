@@ -1,7 +1,7 @@
 apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
-  name: rc-deployment-annotations
+  name: ol-deployment-annotations
   annotations:
     foo1: bar1
     conflict: component

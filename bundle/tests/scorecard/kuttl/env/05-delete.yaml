@@ -4,10 +4,10 @@ kind: TestStep
 delete:
 - apiVersion: v1
   kind: ConfigMap
-  name: env-ol-configmap
+  name: env-liberty-configmap
 - apiVersion: v1
   kind: Secret
-  name: env-ol-secret
+  name: env-liberty-secret
 - apiVersion: apps.openliberty.io/v1beta2
   kind: OpenLibertyApplication
-  name: env-ol
+  name: env-liberty

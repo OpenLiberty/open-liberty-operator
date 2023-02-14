@@ -1,8 +1,8 @@
 apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
-  name: sa-name-ol
+  name: sa-name-liberty
 spec:
   # Add fields here
-  serviceAccountName: new-sa-name-ol
+  serviceAccountName: new-sa-name-liberty
   statefulSet: {}

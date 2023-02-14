@@ -2,6 +2,6 @@
 apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
-  name: affinity-ol
+  name: affinity-liberty
 spec:
   affinity:

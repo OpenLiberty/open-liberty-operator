@@ -1,7 +1,7 @@
 apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
-  name: imagestream-ol
+  name: imagestream-liberty
 spec:
   # Add fields here
   applicationImage: navidsh/demo-day

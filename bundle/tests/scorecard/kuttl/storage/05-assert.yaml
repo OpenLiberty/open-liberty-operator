@@ -7,7 +7,7 @@ timeout: 60
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: storage-ol
+  name: storage-liberty
 status:
   replicas: 1
 #  readyReplicas: 1
@@ -16,7 +16,7 @@ status:
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: pvc-storage-ol-0
+  name: pvc-storage-liberty-0
 spec:
   accessModes:
     - ReadWriteOnce

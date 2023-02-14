@@ -2,4 +2,4 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: manage-tls-ol
+  name: manage-tls-liberty

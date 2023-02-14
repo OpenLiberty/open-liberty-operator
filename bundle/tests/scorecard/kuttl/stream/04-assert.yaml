@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: imagestream-ol
+  name: imagestream-liberty
 spec:
   template:
     spec:
@@ -19,4 +19,4 @@ spec:
   - image: navidsh/demo-day
 metadata:
   labels:
-    app.kubernetes.io/instance: imagestream-ol
+    app.kubernetes.io/instance: imagestream-liberty

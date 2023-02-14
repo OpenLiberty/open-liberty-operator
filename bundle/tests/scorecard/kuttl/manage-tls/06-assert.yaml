@@ -5,7 +5,7 @@ timeout: 60
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: manage-tls-ol
+  name: manage-tls-liberty
 status:
   replicas: 1
   readyReplicas: 1
@@ -14,4 +14,4 @@ status:
 kind: Service
 apiVersion: v1
 metadata:
-  name: manage-tls-ol
+  name: manage-tls-liberty

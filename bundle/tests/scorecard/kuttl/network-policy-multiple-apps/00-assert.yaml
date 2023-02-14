@@ -5,7 +5,7 @@ timeout: 60
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: network-policy-frontend-ol
+  name: network-policy-frontend-liberty
 spec:
   ingress:
     - from:
@@ -28,14 +28,14 @@ spec:
           protocol: TCP
   podSelector:
     matchLabels:
-      apps.openliberty.io/name: network-policy-frontend-ol
+      apps.openliberty.io/name: network-policy-frontend-liberty
   policyTypes:
     - Ingress
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: network-policy-backend-ol
+  name: network-policy-backend-liberty
 spec:
   ingress:
     - from:
@@ -52,6 +52,6 @@ spec:
           protocol: TCP
   podSelector:
     matchLabels:
-      apps.openliberty.io/name: network-policy-backend-ol
+      apps.openliberty.io/name: network-policy-backend-liberty
   policyTypes:
     - Ingress

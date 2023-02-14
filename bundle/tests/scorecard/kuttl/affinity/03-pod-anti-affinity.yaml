@@ -2,7 +2,7 @@
 apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
-  name: anti-affinity-ol
+  name: anti-affinity-liberty
 spec:
   applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
   replicas: 1
@@ -16,5 +16,5 @@ spec:
             - key: app.kubernetes.io/instance
               operator: In
               values:
-                - affinity-ol
+                - affinity-liberty
           topologyKey: kubernetes.io/hostname

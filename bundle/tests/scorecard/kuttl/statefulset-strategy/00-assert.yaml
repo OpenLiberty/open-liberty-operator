@@ -5,7 +5,7 @@ timeout: 90
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: statefulset-strategy-ol
+  name: statefulset-strategy-liberty
 spec:
   updateStrategy:
     type: RollingUpdate

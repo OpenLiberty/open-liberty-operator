@@ -5,4 +5,4 @@ kind: TestStep
 delete:
 - apiVersion: v1
   kind: PersistentVolumeClaim
-  name: pvc-storage-ol-0
+  name: pvc-storage-liberty-0

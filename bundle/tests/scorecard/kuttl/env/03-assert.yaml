@@ -5,7 +5,7 @@ timeout: 60
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: env-ol
+  name: env-liberty
 spec:
   template:
     spec:
@@ -31,9 +31,9 @@ spec:
             - name: WLP_LOGGING_CONSOLE_FORMAT
           envFrom:
             - configMapRef:
-                name: env-ol-configmap
+                name: env-liberty-configmap
             - secretRef:
-                name: env-ol-secret
+                name: env-liberty-secret
 status:
   replicas: 1
   readyReplicas: 1

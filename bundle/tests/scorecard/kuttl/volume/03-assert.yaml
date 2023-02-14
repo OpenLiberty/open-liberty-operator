@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: volume-ol
+  name: volume-liberty
 spec:
   template:
     spec:

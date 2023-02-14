@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: env-ol
+  name: env-liberty
 spec:
   template:
     spec:
@@ -21,6 +21,6 @@ spec:
                   resource: requests.cpu
           envFrom:
             - configMapRef:
-                name: env-ol-configmap
+                name: env-liberty-configmap
             - secretRef:
-                name: env-ol-secret
+                name: env-liberty-secret

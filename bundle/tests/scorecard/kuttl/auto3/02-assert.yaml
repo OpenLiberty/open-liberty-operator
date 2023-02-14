@@ -5,7 +5,7 @@ timeout: 60
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: scale3-liberty-component
+  name: autoscaling3-liberty
 status:
   replicas: 1
   readyReplicas: 1

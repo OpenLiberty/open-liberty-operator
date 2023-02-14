@@ -1,7 +1,7 @@
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: pvc-storage-ol-0
+  name: pvc-storage-liberty-0
 spec:
   accessModes:
     - ReadWriteOnce

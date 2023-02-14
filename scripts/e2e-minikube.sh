@@ -174,22 +174,3 @@ parse_args() {
 }
 
 main "$@"
-
-parse_args() {
-    while [ $# -gt 0 ]; do
-        case "$1" in
-        --test-tag)
-            shift
-            readonly TEST_TAG="${1}"
-            ;;
-        *)
-            echo "Error: Invalid argument - $1"
-            echo "$usage"
-            exit 1
-            ;;
-        esac
-        shift
-    done
-}
-
-main "$@"

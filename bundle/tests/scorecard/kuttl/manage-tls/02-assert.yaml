@@ -6,15 +6,15 @@ timeout: 60
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: manage-tls-ol-svc-tls-cm
+  name: manage-tls-liberty-svc-tls-cm
 spec:
-  secretName: manage-tls-ol-svc-tls-cm
+  secretName: manage-tls-liberty-svc-tls-cm
 ---
 # Verify the pod template spec defaults and that secretName uses *-cm naming convention
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: manage-tls-ol
+  name: manage-tls-liberty
 status:
   replicas: 1
   readyReplicas: 1
@@ -41,9 +41,9 @@ spec:
       - name: svc-certificate
         secret:
           defaultMode: 420
-          secretName: manage-tls-ol-svc-tls-cm
+          secretName: manage-tls-liberty-svc-tls-cm
 ---
 kind: Service
 apiVersion: v1
 metadata:
-  name: manage-tls-ol
+  name: manage-tls-liberty

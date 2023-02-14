@@ -5,11 +5,11 @@ timeout: 60
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: probes-ol
+  name: probes-liberty
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/instance: probes-ol
+      app.kubernetes.io/instance: probes-liberty
   template:
     spec:
       containers:

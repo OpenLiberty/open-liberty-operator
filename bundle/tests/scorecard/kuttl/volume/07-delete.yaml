@@ -7,4 +7,4 @@ delete:
   name: test-volume-secret
 - apiVersion: apps.openliberty.io/v1beta2
   kind: OpenLibertyApplication
-  name: volume-ol
+  name: volume-liberty

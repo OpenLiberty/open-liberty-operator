@@ -2,13 +2,13 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: manage-tls-ol-svc-tls-cm
+  name: manage-tls-liberty-svc-tls-cm
 ---
 # Verify that the pod template spec does not manage TLS
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: manage-tls-ol
+  name: manage-tls-liberty
 status:
   replicas: 1
   readyReplicas: 1
@@ -30,4 +30,4 @@ spec:
       - name: svc-certificate
         secret:
           defaultMode: 420
-          secretName: manage-tls-ol-svc-tls-cm
+          secretName: manage-tls-liberty-svc-tls-cm

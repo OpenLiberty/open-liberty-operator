@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: anti-affinity-ol
+  name: anti-affinity-liberty
 spec:
   template:
     spec:
@@ -15,7 +15,7 @@ spec:
                     - key: app.kubernetes.io/instance
                       operator: In
                       values:
-                        - affinity-ol
+                        - affinity-liberty
                 topologyKey: kubernetes.io/hostname
 status:
   replicas: 1

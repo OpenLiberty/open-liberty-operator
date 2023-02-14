@@ -1,7 +1,7 @@
 apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
-  name: network-policy-ol
+  name: network-policy-liberty
 spec:
   expose: false
   service:
