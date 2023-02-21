@@ -314,7 +314,7 @@ bundle-push-podman:
 	podman push --format=docker "${BUNDLE_IMG}"
 
 build-catalog:
-	opm index add  --skip-tls --bundles "${BUNDLE_IMG}" --tag "${CATALOG_IMG}"
+	opm index add --bundles "${BUNDLE_IMG}" --tag "${CATALOG_IMG}"
 
 push-catalog: 
 	podman push --format=docker "${CATALOG_IMG}"
