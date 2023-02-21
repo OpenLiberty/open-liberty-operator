@@ -64,6 +64,23 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+# Use docker if available. Otherwise default to podman. 
+# Override choice by setting CONTAINER_COMMAND
+CHECK_DOCKER_RC=$(shell docker -v > /dev/null 2>&1; echo $$?)
+ifneq (0, $(CHECK_DOCKER_RC))
+CONTAINER_COMMAND ?= podman
+# Setup parameters for TLS verify, default if unspecified is true
+ifeq (false, $(TLS_VERIFY))
+PODMAN_SKIP_TLS_VERIFY="--tls-verify=false"
+SKIP_TLS_VERIFY=--skip-tls
+else
+TLS_VERIFY ?= true
+PODMAN_SKIP_TLS_VERIFY="--tls-verify=true"
+endif
+else
+CONTAINER_COMMAND ?= docker
+endif
+
 all: build
 
 ##@ General
@@ -111,10 +128,10 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} .
+	$(CONTAINER_COMMAND)  build . -t ${IMG}
 
 docker-push: ## Push docker image with the manager.
-	docker push ${IMG}
+	$(CONTAINER_COMMAND) push $(PODMAN_SKIP_TLS_VERIFY) ${IMG}
 
 ##@ Deployment
 
@@ -177,11 +194,40 @@ bundle: manifests setup kustomize ## Generate bundle manifests and metadata, the
 
 .PHONY: bundle-build
 bundle-build: ## Build the bundle image.
-	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+	$(CONTAINER_COMMAND) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
 .PHONY: bundle-push
-bundle-push: ## Push the bundle image.
-	$(MAKE) docker-push IMG=$(BUNDLE_IMG)
+
+bundle-push: 
+	$(CONTAINER_COMMAND) push $(PODMAN_SKIP_TLS_VERIFY) "${BUNDLE_IMG}"
+.PHONY: opm
+OPM = ./bin/opm
+opm: ## Download opm locally if necessary.
+ifeq (,$(wildcard $(OPM)))
+ifeq (,$(shell which opm 2>/dev/null))
+	@{ \
+	set -e ;\
+	mkdir -p $(dir $(OPM)) ;\
+	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
+	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.15.1/$${OS}-$${ARCH}-opm ;\
+	chmod +x $(OPM) ;\
+	}
+else
+OPM = $(shell which opm)
+endif
+endif
+
+# A comma-separated list of bundle images (e.g. make catalog-build BUNDLE_IMGS=example.com/operator-bundle:v0.1.0,example.com/operator-bundle:v0.2.0).
+# These images MUST exist in a registry and be pull-able.
+BUNDLE_IMGS ?= $(BUNDLE_IMG)
+
+# The image tag given to the resulting catalog image (e.g. make catalog-build CATALOG_IMG=example.com/operator-catalog:v0.2.0).
+CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:v$(VERSION)
+
+# Set CATALOG_BASE_IMG to an existing catalog image tag to add $BUNDLE_IMGS to that image.
+ifneq ($(origin CATALOG_BASE_IMG), undefined)
+FROM_INDEX_OPT := --from-index $(CATALOG_BASE_IMG)
+endif
 
 .PHONY: opm
 OPM = ./bin/opm
@@ -268,7 +314,22 @@ bundle-push-podman:
 	podman push --format=docker "${BUNDLE_IMG}"
 
 build-catalog:
-	opm index add --bundles "${BUNDLE_IMG}" --tag "${CATALOG_IMG}"
+	opm index add  --skip-tls --bundles "${BUNDLE_IMG}" --tag "${CATALOG_IMG}"
 
-push-catalog: docker-login
+push-catalog: 
 	podman push --format=docker "${CATALOG_IMG}"
+
+# Build a catalog image by adding bundle images to an empty catalog using the operator package manager tool, 'opm'.
+# This recipe invokes 'opm' in 'semver' bundle add mode. For more information on add modes, see:
+# https://github.com/operator-framework/community-operators/blob/7f1438c/docs/packaging-operator.md#updating-your-existing-operator
+.PHONY: catalog-build
+catalog-build: opm ## Build a catalog image.
+	$(OPM) index add $(SKIP_TLS_VERIFY) --container-tool $(CONTAINER_COMMAND)  --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT) --permissive
+
+# Push the catalog image.
+.PHONY: catalog-push
+catalog-push: ## Push a catalog image.
+	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+
+dev: 
+	./scripts/dev.sh all
