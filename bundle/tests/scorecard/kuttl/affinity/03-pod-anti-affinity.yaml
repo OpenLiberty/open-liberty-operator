@@ -1,0 +1,20 @@
+# Check if there is a matching pod anti-affinity a correct deployment is created and status has a readied pod
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: anti-affinity-liberty
+spec:
+  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
+  replicas: 1
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: app.kubernetes.io/instance
+              operator: In
+              values:
+                - affinity-liberty
+          topologyKey: kubernetes.io/hostname

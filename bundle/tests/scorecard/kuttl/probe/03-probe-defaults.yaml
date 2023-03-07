@@ -1,0 +1,15 @@
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: probes-liberty
+spec:
+  # Add fields here
+  applicationImage: icr.io/appcafe/open-liberty/samples/getting-started
+  manageTLS: false
+  service:
+    port: 9443
+  replicas: 1
+  probes:
+    startup: {}
+    liveness: {}
+    readiness: {}

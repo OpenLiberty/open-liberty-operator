@@ -1,0 +1,26 @@
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: network-policy-frontend-liberty
+spec:
+  applicationName: network-policy-test
+  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
+  expose: true
+  service:
+    port: 9080
+    ports:
+      - port: 9443
+        protocol: TCP
+---
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: network-policy-backend-liberty
+spec:
+  applicationName: network-policy-test
+  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
+  service:
+    port: 9080
+    ports:
+      - port: 9443
+        protocol: TCP

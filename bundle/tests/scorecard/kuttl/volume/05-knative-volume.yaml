@@ -1,0 +1,16 @@
+# Creating Knative service with volume
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: volume-liberty
+spec:
+  createKnativeService: true
+  statefulSet:
+  volumeMounts:
+    - name: test-volume
+      mountPath: /test
+      subPath: test
+  volumes:
+    - name: test-volume
+      secret:
+        secretName: test-volume-secret

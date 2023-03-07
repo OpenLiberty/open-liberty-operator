@@ -51,7 +51,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: openliberty/operator:daily
-    createdAt: "2022-07-21T11:05:23Z"
+    createdAt: "2023-01-25T12:02:56Z"
     description: Deploy and manage applications running on Liberty
     operators.operatorframework.io/builder: operator-sdk-v1.6.1+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
@@ -72,6 +72,9 @@ spec:
         name: ""
         version: v1
       - kind: HorizontalPodAutoscaler
+        name: ""
+        version: v1
+      - kind: NetworkPolicy
         name: ""
         version: v1
       - kind: Route
@@ -143,6 +146,11 @@ spec:
       - description: Expose the application externally via a Route, a Knative Route or an Ingress resource.
         displayName: Expose
         path: expose
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Enable management of TLS certificates. Defaults to true.
+        displayName: Manage TLS
+        path: manageTLS
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Number of pods to create. Not applicable when .spec.autoscaling or .spec.createKnativeService is specified.
@@ -252,6 +260,13 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:text
       - displayName: Affinity
         path: affinity
+      - displayName: Network Policy
+        path: networkPolicy
+      - description: A convenient field to request the storage class of the persisted storage. The name can not be specified or updated after the storage is created.
+        displayName: Storage Class Name
+        path: statefulSet.storage.className
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       - description: The directory inside the container where this persisted storage will be bound to.
         displayName: Storage Mount Path
         path: statefulSet.storage.mountPath
@@ -315,14 +330,29 @@ spec:
         path: route.certificateSecretRef
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Disable the creation of the network policy. Defaults to false.
+        displayName: Disable
+        path: networkPolicy.disable
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: TLS termination policy. Can be one of edge, reencrypt and passthrough.
         displayName: Termination
         path: route.termination
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Specify the labels of namespaces that incoming traffic is allowed from.
+        displayName: Namespace Labels
+        path: networkPolicy.namespaceLabels
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       - description: HTTP traffic policy with TLS enabled. Can be one of Allow, Redirect and None.
         displayName: Insecure Edge Termination Policy
         path: route.insecureEdgeTerminationPolicy
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Specify the labels of pod(s) that incoming traffic is allowed from.
+        displayName: From Labels
+        path: networkPolicy.fromLabels
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
       - description: Periodic probe of container liveness. Container will be restarted if the probe fails.
@@ -475,7 +505,7 @@ spec:
                 resources:
                   limits:
                     cpu: 200m
-                    memory: 256Mi
+                    memory: 512Mi
                   requests:
                     cpu: 100m
                     memory: 64Mi
@@ -518,7 +548,6 @@ spec:
           - delete
           - get
           - list
-          - patch
           - update
           - watch
         - apiGroups:
@@ -539,7 +568,6 @@ spec:
           - delete
           - get
           - list
-          - patch
           - update
           - watch
         - apiGroups:
@@ -553,7 +581,6 @@ spec:
           - delete
           - get
           - list
-          - patch
           - update
           - watch
         - apiGroups:
@@ -567,7 +594,6 @@ spec:
           - delete
           - get
           - list
-          - patch
           - update
           - watch
         - apiGroups:
@@ -579,7 +605,18 @@ spec:
           - delete
           - get
           - list
-          - patch
+          - update
+          - watch
+        - apiGroups:
+          - cert-manager.io
+          resources:
+          - certificates
+          - issuers
+          verbs:
+          - create
+          - delete
+          - get
+          - list
           - update
           - watch
         - apiGroups:
@@ -595,7 +632,6 @@ spec:
           - delete
           - get
           - list
-          - patch
           - update
           - watch
         - apiGroups:
@@ -608,7 +644,6 @@ spec:
           - delete
           - get
           - list
-          - patch
           - update
           - watch
         - apiGroups:
@@ -629,19 +664,18 @@ spec:
           - delete
           - get
           - list
-          - patch
           - update
           - watch
         - apiGroups:
           - networking.k8s.io
           resources:
           - ingresses
+          - networkpolicies
           verbs:
           - create
           - delete
           - get
           - list
-          - patch
           - update
           - watch
         - apiGroups:
@@ -654,7 +688,6 @@ spec:
           - delete
           - get
           - list
-          - patch
           - update
           - watch
         - apiGroups:
@@ -666,7 +699,6 @@ spec:
           - delete
           - get
           - list
-          - patch
           - update
           - watch
         serviceAccountName: olo-controller-manager

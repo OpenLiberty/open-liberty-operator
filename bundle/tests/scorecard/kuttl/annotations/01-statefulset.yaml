@@ -1,0 +1,12 @@
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: ol-deployment-annotations
+  annotations:
+    foo1: bar1
+spec:
+  # Add fields here
+  statefulSet:
+    annotations:
+      bar2: foo2
+      conflict: statefulSet

@@ -1,7 +1,11 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 60
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: my-liberty-app
+  name: example-liberty-app
 status:
   replicas: 2
   readyReplicas: 2

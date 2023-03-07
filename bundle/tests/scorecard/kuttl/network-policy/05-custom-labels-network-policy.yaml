@@ -1,0 +1,16 @@
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: network-policy-liberty
+spec:
+  expose: false
+  networkPolicy:
+    namespaceLabels:
+      namespace: test
+    fromLabels:
+      foo: bar
+  service:
+    port: 8080
+    ports:
+      - port: 9090
+        protocol: TCP

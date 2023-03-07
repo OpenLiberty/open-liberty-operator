@@ -1,0 +1,14 @@
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: manage-tls-liberty
+spec:
+  applicationImage: k8s.gcr.io/pause:2.0
+  replicas: 1
+  expose: true
+  manageTLS: false # Deletes the *-svc-tls-cm CertManager Certificate
+  service:
+    port: 9443
+  route:
+    host: openlibertyoperator.test
+    termination: reencrypt

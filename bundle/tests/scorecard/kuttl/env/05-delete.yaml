@@ -1,0 +1,13 @@
+# Need to manually delete resources as kuttl does not automatically delete these at the end of the test
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+delete:
+- apiVersion: v1
+  kind: ConfigMap
+  name: env-liberty-configmap
+- apiVersion: v1
+  kind: Secret
+  name: env-liberty-secret
+- apiVersion: apps.openliberty.io/v1beta2
+  kind: OpenLibertyApplication
+  name: env-liberty

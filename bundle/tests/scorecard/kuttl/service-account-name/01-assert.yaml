@@ -5,11 +5,11 @@ timeout: 60
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: sa-name-ol
+  name: sa-name-liberty
 spec:
   template:
     spec:
-      serviceAccountName: new-sa-name-ol
+      serviceAccountName: new-sa-name-liberty
 status:
   replicas: 1
   readyReplicas: 1
@@ -18,4 +18,4 @@ status:
 kind: ServiceAccount
 apiVersion: v1
 metadata:
-  name: new-sa-name-ol
+  name: new-sa-name-liberty

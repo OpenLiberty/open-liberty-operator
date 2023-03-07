@@ -1,0 +1,8 @@
+# Removing volumes field should remove statefulset's volume
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: volume-liberty
+spec:
+  volumeMounts:
+  volumes:
