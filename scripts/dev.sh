@@ -206,7 +206,7 @@ cat << EOF > $OG_FILE
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
-  name: rco-operator-group
+  name: ol-operator-group
   namespace: $NAMESPACE
 spec:
   targetNamespaces:
