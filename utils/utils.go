@@ -29,7 +29,7 @@ import (
 
 var log = logf.Log.WithName("openliberty_utils")
 
-//Constant Values
+// Constant Values
 const serviceabilityMountPath = "/serviceability"
 const ssoEnvVarPrefix = "SEC_SSO_"
 
@@ -141,9 +141,14 @@ func addSecretResourceVersionAsEnvVar(pts *corev1.PodTemplateSpec, la *openliber
 	if err != nil {
 		return errors.Wrapf(err, "Secret %q was not found in namespace %q", secretName, la.GetNamespace())
 	}
-	pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, corev1.EnvVar{
-		Name:  envNamePrefix + "_SECRET_RESOURCE_VERSION",
-		Value: secret.ResourceVersion})
+
+	envList := pts.Spec.Containers[0].Env
+	envName := envNamePrefix + "_SECRET_RESOURCE_VERSION"
+	if _, found := findEnvVar(envName, envList); !found {
+		pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, corev1.EnvVar{
+			Name:  envName,
+			Value: secret.ResourceVersion})
+	}
 	return nil
 }
 

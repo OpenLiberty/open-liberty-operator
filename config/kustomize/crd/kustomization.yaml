@@ -1,0 +1,6 @@
+# Labels to add to all resources and selectors.
+commonLabels:
+  app.kubernetes.io/instance: open-liberty-operator
+  app.kubernetes.io/name: open-liberty-operator
+bases:
+- ../../crd

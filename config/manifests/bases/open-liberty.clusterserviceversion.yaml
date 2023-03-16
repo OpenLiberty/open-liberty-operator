@@ -28,6 +28,9 @@ spec:
       - kind: HorizontalPodAutoscaler
         name: ""
         version: v1
+      - kind: NetworkPolicy
+        name: ""
+        version: v1
       - kind: Route
         name: ""
         version: v1
@@ -97,6 +100,11 @@ spec:
       - description: Expose the application externally via a Route, a Knative Route or an Ingress resource.
         displayName: Expose
         path: expose
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Enable management of TLS certificates. Defaults to true.
+        displayName: Manage TLS
+        path: manageTLS
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Number of pods to create. Not applicable when .spec.autoscaling or .spec.createKnativeService is specified.
@@ -206,6 +214,13 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:text
       - displayName: Affinity
         path: affinity
+      - displayName: Network Policy
+        path: networkPolicy
+      - description: A convenient field to request the storage class of the persisted storage. The name can not be specified or updated after the storage is created.
+        displayName: Storage Class Name
+        path: statefulSet.storage.className
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       - description: The directory inside the container where this persisted storage will be bound to.
         displayName: Storage Mount Path
         path: statefulSet.storage.mountPath
@@ -269,14 +284,29 @@ spec:
         path: route.certificateSecretRef
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Disable the creation of the network policy. Defaults to false.
+        displayName: Disable
+        path: networkPolicy.disable
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: TLS termination policy. Can be one of edge, reencrypt and passthrough.
         displayName: Termination
         path: route.termination
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Specify the labels of namespaces that incoming traffic is allowed from.
+        displayName: Namespace Labels
+        path: networkPolicy.namespaceLabels
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       - description: HTTP traffic policy with TLS enabled. Can be one of Allow, Redirect and None.
         displayName: Insecure Edge Termination Policy
         path: route.insecureEdgeTerminationPolicy
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Specify the labels of pod(s) that incoming traffic is allowed from.
+        displayName: From Labels
+        path: networkPolicy.fromLabels
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
       - description: Periodic probe of container liveness. Container will be restarted if the probe fails.

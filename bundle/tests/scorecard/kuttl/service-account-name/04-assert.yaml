@@ -5,11 +5,11 @@ timeout: 60
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: sa-name-ol
+  name: sa-name-liberty
 spec:
   template:
     spec:
-      serviceAccountName: sa-name-ol
+      serviceAccountName: sa-name-liberty
 status:
   replicas: 1
   readyReplicas: 1
@@ -18,4 +18,4 @@ status:
 kind: ServiceAccount
 apiVersion: v1
 metadata:
-  name: sa-name-ol
+  name: sa-name-liberty

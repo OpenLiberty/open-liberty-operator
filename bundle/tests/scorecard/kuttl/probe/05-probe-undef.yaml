@@ -1,0 +1,13 @@
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: probes-liberty
+spec:
+  # Add fields here
+  service:
+    port: 9443
+  probes:
+    startup:
+      failureThreshold: 20
+    liveness:
+    readiness:

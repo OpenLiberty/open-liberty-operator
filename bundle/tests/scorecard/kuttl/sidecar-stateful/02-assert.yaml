@@ -5,4 +5,4 @@ spec:
   - name: app
 metadata:
   labels:
-    app.kubernetes.io/instance: sidecar-liberty-component
+    app.kubernetes.io/instance: sidecar-liberty-app

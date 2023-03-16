@@ -55,7 +55,7 @@ BUNDLE_IMG ?= $(IMAGE_TAG_BASE):bundle-daily
 # Image URL to use all building/pushing image targets
 IMG ?= openliberty/operator:daily
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:crdVersions=v1,trivialVersions=true,preserveUnknownFields=false,generateEmbeddedObjectMeta=true"
+CRD_OPTIONS ?= "crd:crdVersions=v1,generateEmbeddedObjectMeta=true"
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -81,6 +81,26 @@ else
 CONTAINER_COMMAND ?= docker
 endif
 
+# Use docker if available. Otherwise default to podman. 
+# Override choice by setting CONTAINER_COMMAND
+CHECK_DOCKER_RC=$(shell docker -v > /dev/null 2>&1; echo $$?)
+ifneq (0, $(CHECK_DOCKER_RC))
+CONTAINER_COMMAND ?= podman
+# Setup parameters for TLS verify, default if unspecified is true
+ifeq (false, $(TLS_VERIFY))
+PODMAN_SKIP_TLS_VERIFY="--tls-verify=false"
+SKIP_TLS_VERIFY=--skip-tls
+else
+TLS_VERIFY ?= true
+PODMAN_SKIP_TLS_VERIFY="--tls-verify=true"
+endif
+else
+CONTAINER_COMMAND ?= docker
+endif
+
+# Produce files under deploy/kustomize/daily with default namespace
+KUSTOMIZE_NAMESPACE = default
+
 all: build
 
 ##@ General
@@ -100,6 +120,10 @@ help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 ##@ Development
+
+# Kustomize build controller, and roles & role bindings
+kustomize-build: manifests kustomize
+	cd deploy/kustomize/daily/base && $(KUSTOMIZE) edit set namespace ${KUSTOMIZE_NAMESPACE}
 
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
@@ -133,6 +157,10 @@ docker-build: test ## Build docker image with the manager.
 docker-push: ## Push docker image with the manager.
 	$(CONTAINER_COMMAND) push $(PODMAN_SKIP_TLS_VERIFY) ${IMG}
 
+## Location to install dependencies to
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
 ##@ Deployment
 
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
@@ -150,24 +178,20 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 # find or download controller-gen
 # download controller-gen if necessary
-controller-gen:
-ifeq (, $(shell which controller-gen))
-	@{ \
-	set -e ;\
-	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$CONTROLLER_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.6.0 ;\
-	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
-	}
-CONTROLLER_GEN=$(GOBIN)/controller-gen
-else
-CONTROLLER_GEN=$(shell which controller-gen)
-endif
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 
-KUSTOMIZE = $(shell pwd)/bin/kustomize
-kustomize: ## Download kustomize locally if necessary.
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
+.PHONY: controller-gen
+controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
+$(CONTROLLER_GEN): $(LOCALBIN)
+	test -s $(LOCALBIN)/controller-gen || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0
+
+KUSTOMIZE ?= $(LOCALBIN)/kustomize
+KUSTOMIZE_VERSION ?= 3.8.7
+KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/release-kustomize-v3.8/hack/install_kustomize.sh"
+.PHONY: kustomize
+kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
+$(KUSTOMIZE): $(LOCALBIN)
+	test -s $(LOCALBIN)/kustomize || curl -s $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s $(KUSTOMIZE_VERSION) $(LOCALBIN)
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -185,10 +209,16 @@ endef
 
 .PHONY: bundle
 bundle: manifests setup kustomize ## Generate bundle manifests and metadata, then validate generated files.
+	scripts/update-sample.sh
 	sed -i.bak "s,IMAGE,${IMG},g;s,CREATEDAT,${CREATEDAT},g" config/manifests/patches/csvAnnotations.yaml
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+
+	$(KUSTOMIZE) build config/kustomize/crd -o deploy/kustomize/daily/base/open-liberty-crd.yaml
+	cd config/kustomize/operator && $(KUSTOMIZE) edit set namespace $(KUSTOMIZE_NAMESPACE)
+	$(KUSTOMIZE) build config/kustomize/operator -o deploy/kustomize/daily/base/open-liberty-operator.yaml
+
 	mv config/manifests/patches/csvAnnotations.yaml.bak config/manifests/patches/csvAnnotations.yaml
 	operator-sdk bundle validate ./bundle
 

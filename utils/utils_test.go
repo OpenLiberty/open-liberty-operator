@@ -53,11 +53,6 @@ func TestCustomizeLibertyEnv(t *testing.T) {
 	spec := openlibertyv1beta2.OpenLibertyApplicationSpec{Service: svc}
 	pts := &corev1.PodTemplateSpec{}
 
-	targetEnv := []corev1.EnvVar{
-		{Name: "WLP_LOGGING_CONSOLE_LOGLEVEL", Value: "info"},
-		{Name: "WLP_LOGGING_CONSOLE_SOURCE", Value: "message,accessLog,ffdc,audit"},
-		{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: "json"},
-	}
 	// Always call CustomizePodSpec to populate Containers & simulate real behaviour
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	objs, s := []runtime.Object{openliberty}, scheme.Scheme
@@ -71,8 +66,15 @@ func TestCustomizeLibertyEnv(t *testing.T) {
 	oputils.CustomizePodSpec(pts, openliberty)
 	CustomizeLibertyEnv(pts, openliberty, rb.GetClient())
 
+	targetEnv := []corev1.EnvVar{
+		{Name: "TLS_DIR", Value: "/etc/x509/certs"},
+		{Name: "WLP_LOGGING_CONSOLE_LOGLEVEL", Value: "info"},
+		{Name: "WLP_LOGGING_CONSOLE_SOURCE", Value: "message,accessLog,ffdc,audit"},
+		{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: "json"},
+	}
+
 	testEnv := []Test{
-		{"Test environment defaults", pts.Spec.Containers[0].Env, targetEnv},
+		{"Test environment defaults", targetEnv, pts.Spec.Containers[0].Env},
 	}
 
 	if err := verifyTests(testEnv); err != nil {
@@ -80,14 +82,14 @@ func TestCustomizeLibertyEnv(t *testing.T) {
 	}
 
 	// test with env variables set by user
-	targetEnv = []corev1.EnvVar{
+	setupEnv := []corev1.EnvVar{
 		{Name: "WLP_LOGGING_CONSOLE_LOGLEVEL", Value: "error"},
 		{Name: "WLP_LOGGING_CONSOLE_SOURCE", Value: "trace,accessLog,ffdc"},
 		{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: "basic"},
 	}
 
 	spec = openlibertyv1beta2.OpenLibertyApplicationSpec{
-		Env:     targetEnv,
+		Env:     setupEnv,
 		Service: svc,
 	}
 	pts = &corev1.PodTemplateSpec{}
@@ -97,8 +99,12 @@ func TestCustomizeLibertyEnv(t *testing.T) {
 
 	CustomizeLibertyEnv(pts, openliberty, rb.GetClient())
 
+	targetEnv = append(
+		setupEnv, corev1.EnvVar{Name: "TLS_DIR", Value: "/etc/x509/certs"},
+	)
+
 	testEnv = []Test{
-		{"Test environment config", pts.Spec.Containers[0].Env, targetEnv},
+		{"Test environment config", targetEnv, pts.Spec.Containers[0].Env},
 	}
 	if err := verifyTests(testEnv); err != nil {
 		t.Fatalf("%v", err)

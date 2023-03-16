@@ -4,8 +4,6 @@ metadata:
   name: init-liberty-stateful
 spec:
   # Add fields here
-  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
-  replicas: 1
   initContainers:
   - image: alpine:3.14
     command: ["echo"]

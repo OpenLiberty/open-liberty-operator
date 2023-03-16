@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.16 as builder
+FROM golang:1.19 as builder
 
 ARG GO_ARCH=amd64
 

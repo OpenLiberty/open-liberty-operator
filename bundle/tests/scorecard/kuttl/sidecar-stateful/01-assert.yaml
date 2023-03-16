@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: sidecar-liberty-component
+  name: sidecar-liberty-app
 status:
   replicas: 1
   readyReplicas: 1
@@ -9,9 +9,6 @@ status:
 ---
 apiVersion: v1
 kind: Pod
-metadata:
-  labels:
-    app.kubernetes.io/instance: sidecar-liberty-component
 spec:
   containers:
   - name: app

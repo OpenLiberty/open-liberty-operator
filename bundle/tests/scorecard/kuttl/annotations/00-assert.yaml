@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: lib-deployment-annotations
+  name: ol-deployment-annotations
   annotations:
     bar2: foo2
     foo1: bar1  
@@ -21,7 +21,7 @@ status:
 apiVersion: v1
 kind: Service
 metadata:
-  name: lib-deployment-annotations
+  name: ol-deployment-annotations
   annotations:
     foo1: bar1
     conflict: component
@@ -34,4 +34,4 @@ metadata:
     foo1: bar1
     conflict: deployment
   labels:
-    app.kubernetes.io/instance: lib-deployment-annotations
+    app.kubernetes.io/instance: ol-deployment-annotations

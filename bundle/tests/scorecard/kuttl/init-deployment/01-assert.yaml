@@ -9,9 +9,6 @@ status:
 ---
 apiVersion: v1
 kind: Pod
-metadata:
-  labels:
-    app.kubernetes.io/instance: init-liberty-deployment
 spec:
   initContainers:
   - name: init1

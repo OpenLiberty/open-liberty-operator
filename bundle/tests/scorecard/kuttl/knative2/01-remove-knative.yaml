@@ -1,0 +1,10 @@
+# Check that the knative service is removed when the appropriate
+# field is updated to false
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: knative2-lib-app
+spec:
+  # Add fields here
+  createKnativeService: false
+
