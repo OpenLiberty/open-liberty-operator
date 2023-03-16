@@ -1,7 +1,9 @@
-# generatorOptions:
-#   disableNameSuffixHash: true
 resources:
 - manager.yaml
+
+# generatorOptions:
+#   disableNameSuffixHash: true
+
 # configMapGenerator:
 # - files:
 #   - controller_manager_config.yaml
@@ -10,5 +12,5 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
 - name: controller
-  newName: default-route-openshift-image-registry.apps.psx50.cp.fyre.ibm.com/open-liberty-operator/operator
-  newTag: latest
+  newName: openliberty/operator
+  newTag: daily
