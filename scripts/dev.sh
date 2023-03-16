@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script to build & install the runtime component operator to a private registry of an OCP cluster
+# Script to build & install the open liberty operator to a private registry of an OCP cluster
 
 # -----------------------------------------------------
 # Prereqs to running this script
@@ -68,7 +68,7 @@ main() {
   SCRIPT_DIR="$(dirname "$0")"
 
   # Set defaults unless overridden. 
-  NAMESPACE=${NAMESPACE:="runtime-component-operator"}
+  NAMESPACE=${NAMESPACE:="open-liberty-operator"}
   
   OCP_REGISTRY_URL=${OCP_REGISTRY_URL:=$(oc get route default-route -n openshift-image-registry --template='{{ .spec.host }}')}  > /dev/null 2>&1 && true
 
@@ -162,13 +162,13 @@ cat << EOF > $CATALOG_FILE
     apiVersion: operators.coreos.com/v1alpha1
     kind: CatalogSource
     metadata:
-      name: runtime-component-operator-catalog
+      name: open-liberty-operator-catalog
       namespace: $NAMESPACE
     spec:
       sourceType: grpc
       image: $CATALOG_IMG
       imagePullPolicy: Always
-      displayName: Runtime Component Catalog
+      displayName: Open Liberty Catalog
       updateStrategy:
         registryPoll:
           interval: 1m
@@ -185,12 +185,12 @@ cat << EOF > $SUBCRIPTION_FILE
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
-  name: runtime-component-operator-operator-subscription
+  name: open-liberty-operator-subscription
   namespace: $NAMESPACE
 spec:
   channel:  beta2
-  name: runtime-component-operator
-  source: runtime-component-operator-catalog
+  name: open-liberty
+  source: open-liberty-operator-catalog
   sourceNamespace: $NAMESPACE
   installPlanApproval: Automatic
 EOF
@@ -255,7 +255,7 @@ bundle() {
     # Special case, Makefile make bundle only handles semantic versioning
     if [[ "$VERSION" == "latest" ]]; then
         make -C  $MAKEFILE_DIR bundle IMG=$IMG VERSION=9.9.9
-        sed -i 's/$OCP_REGISTRY_URL\/$NAMESPACE\/$OPERATOR_NAME:v9.9.9/$OCP_REGISTRY_URL\/$NAMESPACE\/$OPERATOR_NAME:latest/g' $MAKEFILE_DIR/bundle/manifests/runtime-component.clusterserviceversion.yaml
+        sed -i 's/$OCP_REGISTRY_URL\/$NAMESPACE\/$OPERATOR_NAME:v9.9.9/$OCP_REGISTRY_URL\/$NAMESPACE\/$OPERATOR_NAME:latest/g' $MAKEFILE_DIR/bundle/manifests/open-liberty.clusterserviceversion.yaml
     else
         make -C  $MAKEFILE_DIR bundle IMG=$IMG VERSION=$VERSION
     fi
