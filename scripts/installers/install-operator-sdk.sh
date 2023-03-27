@@ -4,7 +4,7 @@ set -o errexit
 set -o nounset
 
 main() {
-  DEFAULT_RELEASE_VERSION=v1.6.4
+  DEFAULT_RELEASE_VERSION=v1.24.0
   RELEASE_VERSION=${1:-$DEFAULT_RELEASE_VERSION}
 
   if [[ -x "$(command -v operator-sdk)" ]]; then
@@ -14,12 +14,6 @@ main() {
     else
       echo "****** Another operator-sdk version detected"
     fi
-  fi
-
-  ## doesn't support zLinux yet
-  if [[ $(uname -p) = "s390x" ]]; then
-    echo "****** zLinux build detected, skipping operator-sdk install"
-    exit 0
   fi
 
   if [[ "$(uname)" = "Darwin" ]]; then
