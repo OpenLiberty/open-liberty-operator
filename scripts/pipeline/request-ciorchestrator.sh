@@ -3,7 +3,7 @@
 GH_API_ROOT="https://api.github.com"
 GH_BRANCH="main"
 GH_REPOSITORY="open-liberty-operator"
-GH_ORG="WASdev"
+GH_ORG="OpenLiberty"
 CI_TRIGGER="olodocker"
 CI_CONFIG_FILE=".ci-orchestrator/open-liberty-operator-build.yml"
 pipelineName="Open Liberty Operator Docker Build"
