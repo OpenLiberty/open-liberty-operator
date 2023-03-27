@@ -139,9 +139,9 @@ LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
-CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 # find or download controller-gen
 # download controller-gen if necessary
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
 $(CONTROLLER_GEN): $(LOCALBIN)
@@ -180,6 +180,9 @@ setup: ## Ensure Operator SDK is installed.
 setup-manifest: ## Install manifest tool.
 	./scripts/installers/install-manifest-tool.sh
 
+setup-minikube:
+	./scripts/installers/install-minikube.sh
+
 # Install Podman.
 install-podman:
 	./scripts/installers/install-podman.sh
@@ -200,6 +203,7 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 
 .PHONY: bundle
 bundle: manifests setup kustomize ## Generate bundle manifests and metadata, then validate generated files.
+	scripts/update-sample.sh
 	sed -i.bak "s,IMAGE,${IMG},g;s,CREATEDAT,${CREATEDAT},g" config/manifests/patches/csvAnnotations.yaml
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
