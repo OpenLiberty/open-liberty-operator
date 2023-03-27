@@ -1,5 +1,5 @@
 # Check that if there is a matching node affinity lab a pod is created
-apiVersion: apps.openliberty.io/v1beta2
+apiVersion: apps.openliberty.io/v1
 kind: OpenLibertyApplication
 metadata:
   name: affinity-liberty
@@ -9,7 +9,7 @@ spec:
       kuttlTest: test1
 ---
 # Check if there is a matching pod affinity a correct statefulset is created and status has a readied pod
-apiVersion: apps.openliberty.io/v1beta2
+apiVersion: apps.openliberty.io/v1
 kind: OpenLibertyApplication
 metadata:
   name: affinity-other-liberty

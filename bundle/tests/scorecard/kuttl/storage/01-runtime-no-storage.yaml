@@ -1,6 +1,6 @@
 # Removing the storage, and the operator should
 # move from a stateful set back to a deployment
-apiVersion: apps.openliberty.io/v1beta2
+apiVersion: apps.openliberty.io/v1
 kind: OpenLibertyApplication
 metadata:
   name: storage-liberty
