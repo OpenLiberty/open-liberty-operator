@@ -98,7 +98,6 @@ replace (
 	github.com/otiai10/mint => github.com/otiai10/mint v1.3.0
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.1
 	golang.org/x/text => golang.org/x/text v0.4.0
-
 	k8s.io/api => k8s.io/api v0.24.2
 	k8s.io/apimachinery => k8s.io/apimachinery v0.24.2
 	k8s.io/client-go => k8s.io/client-go v0.24.2

@@ -1,4 +1,4 @@
-package v1beta2
+package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,11 +32,14 @@ const (
 type OpenLibertyDumpStatus struct {
 	// +listType=atomic
 	Conditions []OperationStatusCondition `json:"conditions,omitempty"`
-	DumpFile   string                     `json:"dumpFile,omitempty"`
+	// Location of the generated dump file
+	// +operator-sdk:csv:customresourcedefinitions:type=status,displayName="Dump File Path",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	DumpFile string `json:"dumpFile,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:storageversion
 // +kubebuilder:resource:path=openlibertydumps,scope=Namespaced,shortName=oldump;oldumps
 // +kubebuilder:printcolumn:name="Started",type="string",JSONPath=".status.conditions[?(@.type=='Started')].status",priority=0,description="Indicates if dump operation has started"
 // +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.type=='Started')].reason",priority=1,description="Reason for dump operation failing to start"
