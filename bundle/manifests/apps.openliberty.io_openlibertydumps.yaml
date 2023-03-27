@@ -2,7 +2,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.8.0
+    controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
   labels:
     app.kubernetes.io/instance: open-liberty-operator
@@ -60,10 +60,14 @@ spec:
         description: Day-2 operation for generating server dumps
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -71,7 +75,8 @@ spec:
             description: OpenLibertyDumpSpec defines the desired state of OpenLibertyDump
             properties:
               include:
-                description: 'Optional. List of memory dump types to request: thread, heap, system.'
+                description: 'Optional. List of memory dump types to request: thread,
+                  heap, system.'
                 items:
                   description: Defines the possible values for dump types
                   enum:
@@ -82,7 +87,8 @@ spec:
                 type: array
                 x-kubernetes-list-type: set
               podName:
-                description: The name of the Pod, which must be in the same namespace as the OpenLibertyDump CR.
+                description: The name of the Pod, which must be in the same namespace
+                  as the OpenLibertyDump CR.
                 type: string
             required:
             - podName
@@ -125,5 +131,5 @@ status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: []
-  storedVersions: []
+  conditions: null
+  storedVersions: null

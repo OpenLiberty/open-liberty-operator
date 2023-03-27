@@ -149,7 +149,7 @@ main() {
     }
     result=$?
 
-    echo "****** Cleaning up test environment..."
+    # echo "****** Cleaning up test environment..."
     cleanup_test
     cleanup_env
 
