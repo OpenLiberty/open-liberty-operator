@@ -14,7 +14,7 @@ triggers:
 steps:
 - stepName: Z Build
   workType: Jenkins
-  projectName: ebcDockerBuilderWLO
+  projectName: ebcDockerBuilderOLO
   timeoutInMinutes: 1440
   # Need properties for Makefile or build script for WLO
   properties:  
@@ -23,7 +23,7 @@ steps:
 
 - stepName: P Build
   workType: Jenkins
-  projectName: ebcDockerBuilderWLO
+  projectName: ebcDockerBuilderOLO
   timeoutInMinutes: 1440
   # Need properties for Makefile or build script for WLO
   properties:  
