@@ -14,7 +14,7 @@ import (
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
 	oputils "github.com/application-stacks/runtime-component-operator/utils"
 
-	openlibertyv1beta2 "github.com/OpenLiberty/open-liberty-operator/api/v1beta2"
+	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
@@ -106,7 +106,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	// Fetch the OpenLiberty instance
-	instance := &openlibertyv1beta2.OpenLibertyApplication{}
+	instance := &openlibertyv1.OpenLibertyApplication{}
 	var ba common.BaseComponent = instance
 	err = r.GetClient().Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
@@ -581,8 +581,8 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 
-	mgr.GetFieldIndexer().IndexField(context.Background(), &openlibertyv1beta2.OpenLibertyApplication{}, indexFieldImageStreamName, func(obj client.Object) []string {
-		instance := obj.(*openlibertyv1beta2.OpenLibertyApplication)
+	mgr.GetFieldIndexer().IndexField(context.Background(), &openlibertyv1.OpenLibertyApplication{}, indexFieldImageStreamName, func(obj client.Object) []string {
+		instance := obj.(*openlibertyv1.OpenLibertyApplication)
 		image, err := imageutil.ParseDockerImageReference(instance.Spec.ApplicationImage)
 		if err == nil {
 			imageNamespace := image.Namespace
@@ -654,7 +654,7 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 		},
 	}
 
-	b := ctrl.NewControllerManagedBy(mgr).For(&openlibertyv1beta2.OpenLibertyApplication{}, builder.WithPredicates(pred)).
+	b := ctrl.NewControllerManagedBy(mgr).For(&openlibertyv1.OpenLibertyApplication{}, builder.WithPredicates(pred)).
 		Owns(&corev1.Service{}, builder.WithPredicates(predSubResource)).
 		Owns(&corev1.Secret{}, builder.WithPredicates(predSubResource)).
 		Owns(&appsv1.Deployment{}, builder.WithPredicates(predSubResWithGenCheck)).
@@ -693,12 +693,12 @@ func getMonitoringEnabledLabelName(ba common.BaseComponent) string {
 	return "monitor." + ba.GetGroupName() + "/enabled"
 }
 
-func (r *ReconcileOpenLiberty) finalizeOpenLibertyApplication(reqLogger logr.Logger, olapp *openlibertyv1beta2.OpenLibertyApplication, pvcName string, pvcNamespace string) error {
+func (r *ReconcileOpenLiberty) finalizeOpenLibertyApplication(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, pvcName string, pvcNamespace string) error {
 	r.deletePVC(reqLogger, pvcName, pvcNamespace)
 	return nil
 }
 
-func (r *ReconcileOpenLiberty) addFinalizer(reqLogger logr.Logger, olapp *openlibertyv1beta2.OpenLibertyApplication) error {
+func (r *ReconcileOpenLiberty) addFinalizer(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication) error {
 	reqLogger.Info("Adding Finalizer for OpenLibertyApplication")
 	olapp.SetFinalizers(append(olapp.GetFinalizers(), applicationFinalizer))
 

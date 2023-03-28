@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	openlibertyv1beta2 "github.com/OpenLiberty/open-liberty-operator/api/v1beta2"
+	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	rcoutils "github.com/application-stacks/runtime-component-operator/utils"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
@@ -34,7 +34,7 @@ const serviceabilityMountPath = "/serviceability"
 const ssoEnvVarPrefix = "SEC_SSO_"
 
 // Validate if the OpenLibertyApplication is valid
-func Validate(olapp *openlibertyv1beta2.OpenLibertyApplication) (bool, error) {
+func Validate(olapp *openlibertyv1.OpenLibertyApplication) (bool, error) {
 	// Serviceability validation
 	if olapp.GetServiceability() != nil {
 		if olapp.GetServiceability().GetVolumeClaimName() == "" && olapp.GetServiceability().GetSize() == "" {
@@ -97,7 +97,7 @@ func ExecuteCommandInContainer(config *rest.Config, podName, podNamespace, conta
 }
 
 // CustomizeLibertyEnv adds configured env variables appending configured liberty settings
-func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *openlibertyv1beta2.OpenLibertyApplication, client client.Client) error {
+func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *openlibertyv1.OpenLibertyApplication, client client.Client) error {
 	// ENV variables have already been set, check if they exist before setting defaults
 	targetEnv := []corev1.EnvVar{
 		{Name: "WLP_LOGGING_CONSOLE_LOGLEVEL", Value: "info"},
@@ -135,7 +135,7 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *openlibertyv1beta2.Ope
 	return nil
 }
 
-func addSecretResourceVersionAsEnvVar(pts *corev1.PodTemplateSpec, la *openlibertyv1beta2.OpenLibertyApplication, client client.Client, secretName string, envNamePrefix string) error {
+func addSecretResourceVersionAsEnvVar(pts *corev1.PodTemplateSpec, la *openlibertyv1.OpenLibertyApplication, client client.Client, secretName string, envNamePrefix string) error {
 	secret := &corev1.Secret{}
 	err := client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: la.GetNamespace()}, secret)
 	if err != nil {
@@ -152,7 +152,7 @@ func addSecretResourceVersionAsEnvVar(pts *corev1.PodTemplateSpec, la *openliber
 	return nil
 }
 
-func CustomizeLibertyAnnotations(pts *corev1.PodTemplateSpec, la *openlibertyv1beta2.OpenLibertyApplication) {
+func CustomizeLibertyAnnotations(pts *corev1.PodTemplateSpec, la *openlibertyv1.OpenLibertyApplication) {
 	libertyAnnotations := map[string]string{
 		"libertyOperator": "Open Liberty",
 	}
@@ -170,7 +170,7 @@ func findEnvVar(name string, envList []corev1.EnvVar) (*corev1.EnvVar, bool) {
 }
 
 // CreateServiceabilityPVC creates PersistentVolumeClaim for Serviceability
-func CreateServiceabilityPVC(instance *openlibertyv1beta2.OpenLibertyApplication) *corev1.PersistentVolumeClaim {
+func CreateServiceabilityPVC(instance *openlibertyv1.OpenLibertyApplication) *corev1.PersistentVolumeClaim {
 	persistentVolume := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        instance.Name + "-serviceability",
@@ -197,7 +197,7 @@ func CreateServiceabilityPVC(instance *openlibertyv1beta2.OpenLibertyApplication
 }
 
 // ConfigureServiceability setups the shared-storage for serviceability
-func ConfigureServiceability(pts *corev1.PodTemplateSpec, la *openlibertyv1beta2.OpenLibertyApplication) {
+func ConfigureServiceability(pts *corev1.PodTemplateSpec, la *openlibertyv1.OpenLibertyApplication) {
 	if la.GetServiceability() != nil {
 		name := "serviceability"
 
@@ -279,7 +279,7 @@ func writeSSOSecretIfNeeded(client client.Client, ssoSecret *corev1.Secret, ssoS
 }
 
 // CustomizeEnvSSO Process the configuration for SSO login providers
-func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1beta2.OpenLibertyApplication, client client.Client, isOpenShift bool) error {
+func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1.OpenLibertyApplication, client client.Client, isOpenShift bool) error {
 	const ssoSecretNameSuffix = "-olapp-sso"
 	const autoregFragment = "-autoreg-"
 	secretName := instance.GetName() + ssoSecretNameSuffix
