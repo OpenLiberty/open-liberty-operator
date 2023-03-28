@@ -1,7 +1,7 @@
 #!/bin/bash
 
 GH_API_ROOT="https://api.github.com"
-GH_BRANCH="main"
+GH_BRANCH="multi-arch-davec"
 GH_REPOSITORY="open-liberty-operator"
 GH_ORG="OpenLiberty"
 CI_TRIGGER="olodocker"
