@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	openlibertyv1beta2 "github.com/OpenLiberty/open-liberty-operator/api/v1beta2"
+	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	oputils "github.com/application-stacks/runtime-component-operator/utils"
 	routev1 "github.com/openshift/api/route/v1"
 	v1 "github.com/openshift/api/route/v1"
@@ -49,14 +49,14 @@ func TestCustomizeLibertyEnv(t *testing.T) {
 	os.Setenv("WATCH_NAMESPACE", namespace)
 
 	// Test default values no config
-	svc := &openlibertyv1beta2.OpenLibertyApplicationService{Port: 8080, Type: &clusterType}
-	spec := openlibertyv1beta2.OpenLibertyApplicationSpec{Service: svc}
+	svc := &openlibertyv1.OpenLibertyApplicationService{Port: 8080, Type: &clusterType}
+	spec := openlibertyv1.OpenLibertyApplicationSpec{Service: svc}
 	pts := &corev1.PodTemplateSpec{}
 
 	// Always call CustomizePodSpec to populate Containers & simulate real behaviour
 	openliberty := createOpenLibertyApp(name, namespace, spec)
 	objs, s := []runtime.Object{openliberty}, scheme.Scheme
-	s.AddKnownTypes(openlibertyv1beta2.GroupVersion, openliberty)
+	s.AddKnownTypes(openlibertyv1.GroupVersion, openliberty)
 
 	cl := fakeclient.NewFakeClient(objs...)
 	rcl := fakeclient.NewFakeClient(objs...)
@@ -88,7 +88,7 @@ func TestCustomizeLibertyEnv(t *testing.T) {
 		{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: "basic"},
 	}
 
-	spec = openlibertyv1beta2.OpenLibertyApplicationSpec{
+	spec = openlibertyv1.OpenLibertyApplicationSpec{
 		Env:     setupEnv,
 		Service: svc,
 	}
@@ -115,11 +115,11 @@ func TestCustomizeEnvSSO(t *testing.T) {
 	logger := zap.New()
 	logf.SetLogger(logger)
 	os.Setenv("WATCH_NAMESPACE", namespace)
-	svc := &openlibertyv1beta2.OpenLibertyApplicationService{Port: 8080, Type: &clusterType}
-	spec := openlibertyv1beta2.OpenLibertyApplicationSpec{Service: svc}
+	svc := &openlibertyv1.OpenLibertyApplicationService{Port: 8080, Type: &clusterType}
+	spec := openlibertyv1.OpenLibertyApplicationSpec{Service: svc}
 	liberty := createOpenLibertyApp(name, namespace, spec)
 	objs, s := []runtime.Object{liberty}, scheme.Scheme
-	s.AddKnownTypes(openlibertyv1beta2.GroupVersion, liberty)
+	s.AddKnownTypes(openlibertyv1.GroupVersion, liberty)
 
 	cl := fakeclient.NewFakeClient(objs...)
 	rcl := fakeclient.NewFakeClient(objs...)
@@ -133,15 +133,15 @@ func TestCustomizeEnvSSO(t *testing.T) {
 		{Name: "SEC_IMPORT_K8S_CERTS", Value: "true"},
 	}
 	spec.Expose = &expose
-	spec.Route = &openlibertyv1beta2.OpenLibertyApplicationRoute{
+	spec.Route = &openlibertyv1.OpenLibertyApplicationRoute{
 		Host:        "myapp.mycompany.com",
 		Termination: &terminationPolicy,
 	}
-	spec.SSO = &openlibertyv1beta2.OpenLibertyApplicationSSO{
+	spec.SSO = &openlibertyv1.OpenLibertyApplicationSSO{
 		RedirectToRPHostAndPort: "redirectvalue",
 		MapToUserRegistry:       &expose,
-		Github:                  &openlibertyv1beta2.GithubLogin{Hostname: "github.com"},
-		OIDC: []openlibertyv1beta2.OidcClient{
+		Github:                  &openlibertyv1.GithubLogin{Hostname: "github.com"},
+		OIDC: []openlibertyv1.OidcClient{
 			{
 				DiscoveryEndpoint:           "myapp.mycompany.com",
 				ID:                          "custom3",
@@ -155,7 +155,7 @@ func TestCustomizeEnvSSO(t *testing.T) {
 				HostNameVerificationEnabled: &expose,
 			},
 		},
-		Oauth2: []openlibertyv1beta2.OAuth2Client{
+		Oauth2: []openlibertyv1.OAuth2Client{
 			{
 				ID:                    "custom1",
 				AuthorizationEndpoint: "specify-required-value",
@@ -258,8 +258,8 @@ func envSliceToMap(env []corev1.EnvVar, data map[string][]byte, t *testing.T) ma
 	}
 	return out
 }
-func createOpenLibertyApp(n, ns string, spec openlibertyv1beta2.OpenLibertyApplicationSpec) *openlibertyv1beta2.OpenLibertyApplication {
-	app := &openlibertyv1beta2.OpenLibertyApplication{
+func createOpenLibertyApp(n, ns string, spec openlibertyv1.OpenLibertyApplicationSpec) *openlibertyv1.OpenLibertyApplication {
+	app := &openlibertyv1.OpenLibertyApplication{
 		ObjectMeta: metav1.ObjectMeta{Name: n, Namespace: ns},
 		Spec:       spec,
 	}

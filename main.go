@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	openlibertyv1beta2 "github.com/OpenLiberty/open-liberty-operator/api/v1beta2"
+	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	"github.com/OpenLiberty/open-liberty-operator/controllers"
 
 	"github.com/application-stacks/runtime-component-operator/utils"
@@ -50,7 +50,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(openlibertyv1beta2.AddToScheme(scheme))
+	utilruntime.Must(openlibertyv1.AddToScheme(scheme))
 
 	utilruntime.Must(routev1.AddToScheme(scheme))
 
@@ -141,7 +141,7 @@ func main() {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
-  
+
 	utils.CreateConfigMap(controllers.OperatorName)
 
 	setupLog.Info("starting manager")

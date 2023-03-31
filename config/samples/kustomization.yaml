@@ -3,4 +3,7 @@ resources:
 - apps.openliberty.io_v1beta2_openlibertyapplications.yaml
 - apps.openliberty.io_v1beta2_openlibertydumps.yaml
 - apps.openliberty.io_v1beta2_openlibertytraces.yaml
+- apps.openliberty.io_v1_openlibertyapplications.yaml
+- apps.openliberty.io_v1_openlibertydumps.yaml
+- apps.openliberty.io_v1_openlibertytraces.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

@@ -1,5 +1,5 @@
 # Check that if voulmeClaimTemplate exists it overrides storage.size and storage.className
-apiVersion: apps.openliberty.io/v1beta2
+apiVersion: apps.openliberty.io/v1
 kind: OpenLibertyApplication
 metadata:
   name: storage-liberty

@@ -1,5 +1,5 @@
 # Test to see that if affinity is setup but there is no matching label, no pod is readied
-apiVersion: apps.openliberty.io/v1beta2
+apiVersion: apps.openliberty.io/v1
 kind: OpenLibertyApplication
 metadata:
   name: affinity-liberty

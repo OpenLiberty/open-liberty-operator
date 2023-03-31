@@ -24,7 +24,7 @@ setup_env() {
     kubectl config set-context $(kubectl config current-context) --namespace="${TEST_NAMESPACE}"
 
     ## Create service account for Kuttl tests
-    kubectl apply -f config/rbac/minikube-kuttl-rbac.yaml
+    kubectl create -f config/rbac/minikube-kuttl-rbac.yaml
     
     ## Add label to node for affinity test
     kubectl label node "minikube" kuttlTest=test1
@@ -43,19 +43,19 @@ install_olo() {
 
     make kustomize-build KUSTOMIZE_NAMESPACE=${TEST_NAMESPACE}
     sed -i "s/image: ${DAILY_IMAGE}/image: ${LOCAL_REGISTRY}\/${BUILD_IMAGE}/" deploy/kustomize/daily/base/open-liberty-operator.yaml
-    kubectl apply -k deploy/kustomize/daily/base
+    kubectl create -k deploy/kustomize/daily/base
 }
 
 install_tools() {
     echo "****** Installing Prometheus"
-    kubectl apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/bundle.yaml
+    kubectl create -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/bundle.yaml
 
     echo "****** Installing Knative"
-    kubectl apply -f https://github.com/knative/serving/releases/download/knative-v1.3.0/serving-crds.yaml
-    kubectl apply -f https://github.com/knative/eventing/releases/download/knative-v1.3.0/eventing-crds.yaml
+    kubectl create -f https://github.com/knative/serving/releases/download/knative-v1.3.0/serving-crds.yaml
+    kubectl create -f https://github.com/knative/eventing/releases/download/knative-v1.3.0/eventing-crds.yaml
 
     echo "****** Installing Cert Manager"
-    kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.8.0/cert-manager.yaml
+    kubectl create -f https://github.com/cert-manager/cert-manager/releases/download/v1.8.0/cert-manager.yaml
 
     echo "****** Enabling Ingress"
     minikube addons enable ingress
@@ -149,7 +149,7 @@ main() {
     }
     result=$?
 
-    echo "****** Cleaning up test environment..."
+    # echo "****** Cleaning up test environment..."
     cleanup_test
     cleanup_env
 
