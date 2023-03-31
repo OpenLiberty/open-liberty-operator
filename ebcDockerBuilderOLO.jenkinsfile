@@ -5,8 +5,6 @@ properties([
       string(name: 'ebcPriority', defaultValue: '200', description: 'EBC Priority'),
       string(name: 'ebcPlan', defaultValue: 'svl-dockerJenkins-ubuntu20_ppcle.yml', description: 'EBC plan to use when provisioning a Jenkins node'),
       string(name: 'ebcBranch', defaultValue: "${env.ecosystem_branch}", description: 'Git branch used for ebc code'),
-      // Container build relevant properties
-      //name: 'scriptBranch', defaultValue: "main", description: 'Git branch containing docker build scripts'),
       string(name: 'scriptOrg', defaultValue: "OpenLiberty", description: 'Git org containing docker build scripts'),
       string(name: 'command', defaultValue: "make build-operator-pipeline REGISTRY=cp.stg.icr.io", description: 'Build command to execute on target arch machine, e.g. make build-pipeline-releases'),
       string(name: 'PIPELINE_OPERATOR_IMAGE', defaultValue: "cp/olo-operator", description: 'namespace to push image to in registry'),
