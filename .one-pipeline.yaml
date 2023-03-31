@@ -5,15 +5,15 @@ setup:
   script: |
     #!/usr/bin/env bash
 
-    echo "setup"
 
-    # Download Go
-    GO_VERSION=$(get_env go-version)
-    if [[ -z "${GO_VERSION}" ]]; then
-      GO_VERSION="$(grep '^go [0-9]\+.[0-9]\+' go.mod | cut -d ' ' -f 2)"
-    fi
-    rm -rf /usr/local/go && wget --no-verbose --header "Accept: application/octet-stream" "https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz" -O - | tar -xz -C /usr/local/
+
+
+    echo $STAGE
+
+    ## Setup required tooling
+    make setup-go GO_RELEASE_VERSION=$(get_env go-version)
     export PATH=$PATH:/usr/local/go/bin
+    yum -y -q update
 
     go mod vendor
 
@@ -71,12 +71,16 @@ setup:
         fi 
     fi
 
+
 test:
   dind: true
   abort_on_failure: true
   image: icr.io/continuous-delivery/pipeline/pipeline-base-ubi:3.12
   script: |
     #!/usr/bin/env bash
+
+
+    echo $STAGE
 
     PERIODIC_SCAN=$(get_env periodic-rescan)
     PERIODIC_SCAN="$(echo "$PERIODIC_SCAN" | tr '[:upper:]' '[:lower:]')"
@@ -88,16 +92,10 @@ test:
 
     ## Setup required tooling
 
-    # Download Go
-    GO_VERSION=$(get_env go-version)
-    if [[ -z "${GO_VERSION}" ]]; then
-      GO_VERSION="$(grep '^go [0-9]\+.[0-9]\+' go.mod | cut -d ' ' -f 2)"
-    fi
-    rm -rf /usr/local/go && wget --no-verbose --header "Accept: application/octet-stream" "https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz" -O - | tar -xz -C /usr/local/
+    make setup-go GO_RELEASE_VERSION=$(get_env go-version)
     export PATH=$PATH:/usr/local/go/bin
-    
-    apt-get update
-    apt-get -y install build-essential
+    yum -y -q update
+
 
     make unit-test
 
@@ -138,13 +136,16 @@ static-scan:
     chmod -x "$WORKSPACE"/open-liberty-operator/sonar-project.properties
     #echo "$SONAR_PASS" >> /tmp/sonarqube-token
     "${COMMONS_PATH}"/static-scan/run.sh
+
     
 containerize:
   dind: true
   abort_on_failure: true
+
   image: icr.io/continuous-delivery/pipeline/pipeline-base-ubi:3.12
   script: |
     #!/usr/bin/env bash
+
 
     # instruct bash to exit if any command fails
     set -e
@@ -171,12 +172,12 @@ containerize:
     export W3_USERNAME=$(get_env w3_username)
     export W3_PASSWORD=$(get_env w3_password)
 
+
     # flags for P and/or Z
     export arch=$(get_env architecture)
 
     git clone https://$(get_env git-token)@github.ibm.com/websphere/operators.git
     cp -rf operators/scripts/build ./scripts/
-    
 
     echo "skopeo version"
     skopeo --version || exit 1
@@ -302,6 +303,7 @@ containerize:
     else
       declare -a tags=("${RELEASE_TARGET}" "${RELEASE_TARGET}-amd64")
     fi
+
     for i in "${tags[@]}"
     do
       IMAGE=$PIPELINE_REGISTRY/$PIPELINE_OPERATOR_IMAGE:$i
@@ -343,12 +345,16 @@ containerize:
     BUNDLE_IMAGE_WITH_DIGEST="${IMAGE}@${DIGEST}"
     ./scripts/pipeline/static-linter-scan.sh --git-token $(get_env git-token) --bundle-image $BUNDLE_IMAGE_WITH_DIGEST --static-linter-version $(get_env static-linter-version)
 
+
 sign-artifact:
   abort_on_failure: false
   image: icr.io/continuous-delivery/pipeline/image-signing:1.0.0@sha256:e9d8e354668ba3d40be2aaee08298d2aa7f0e1c8a1829cca4094ec93830e3e6a
   script: |
     #!/usr/bin/env bash
-    echo "sign-artifact"
+
+    
+    echo $STAGE
+
 
     PERIODIC_SCAN=$(get_env periodic-rescan)
     PERIODIC_SCAN="$(echo "$PERIODIC_SCAN" | tr '[:upper:]' '[:lower:]')"
@@ -363,6 +369,8 @@ deploy:
 
   script: |
     #!/usr/bin/env bash
+    
+    echo $STAGE
 
 
     PERIODIC_SCAN=$(get_env periodic-rescan)
@@ -378,14 +386,15 @@ deploy:
       env
       set -x
     fi
-    echo "deploy"
 
 dynamic-scan:
   abort_on_failure: false
   image: icr.io/continuous-delivery/pipeline/pipeline-base-ubi:3.12
   script: |
     #!/usr/bin/env bash
-    echo "dynamic-scan"
+    
+    echo $STAGE
+
     PERIODIC_SCAN=$(get_env periodic-rescan)
     PERIODIC_SCAN="$(echo "$PERIODIC_SCAN" | tr '[:upper:]' '[:lower:]')"
 
@@ -405,7 +414,6 @@ acceptance-test:
   image: icr.io/continuous-delivery/pipeline/pipeline-base-ubi:3.12
   script: |
     #!/usr/bin/env bash
-
     echo $STAGE
 
     PERIODIC_SCAN=$(get_env periodic-rescan)
@@ -442,12 +450,13 @@ acceptance-test:
     fi
 
 
+
 scan-artifact:
   abort_on_failure: false
   image: icr.io/continuous-delivery/pipeline/pipeline-base-ubi:3.12
   script: |
     #!/usr/bin/env bash
-    
+    echo $STAGE
     # ========== Security Scanner ==========
     ./scripts/pipeline/ci_to_secure_pipeline_scan.sh
 
@@ -456,6 +465,8 @@ release:
   image: icr.io/continuous-delivery/pipeline/pipeline-base-ubi:3.12
   script: |
     #!/usr/bin/env bash
+
+    echo $STAGE
     PERIODIC_SCAN=$(get_env periodic-rescan)
     PERIODIC_SCAN="$(echo "$PERIODIC_SCAN" | tr '[:upper:]' '[:lower:]')"
 

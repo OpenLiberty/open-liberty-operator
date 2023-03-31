@@ -46,10 +46,12 @@ if [[ -z "${TRIGGER_NAME}" ]]; then
     TRIGGER_NAME="Security Scan Manual Trigger Multiscan"
 fi
 
+
 #AGGREGATE_IMAGE_SCAN_ISSUES=(get_env aggregate-image-scan-issues)
 #if [[ -z "${AGGREGATE_IMAGE_SCAN_ISSUES}" ]]; then
 AGGREGATE_IMAGE_SCAN_ISSUES="squad"
 #fi
+
 
 EVIDENCE_REPO=$(get_env evidence-repo)
 INCIDENT_REPO=$(get_env incident-repo)

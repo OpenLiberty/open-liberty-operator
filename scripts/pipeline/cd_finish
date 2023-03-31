@@ -35,6 +35,7 @@ set_env ibmcloud-api "cloud.ibm.com"
 
 . "${ONE_PIPELINE_PATH}"/internal/doi/publish_acceptance_tests
 
+
 #publish_acceptance_test "$(get_env ACCEPTANCE_TESTS_TASK_NAME)" "$(get_env ACCEPTANCE_TESTS_STEP_NAME)" "com.ibm.acceptance_tests"
 
 # collector_cd
