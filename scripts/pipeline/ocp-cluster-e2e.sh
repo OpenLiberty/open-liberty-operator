@@ -2,7 +2,7 @@
 
 readonly usage="Usage: ocp-cluster-e2e.sh -u <docker-username> -p <docker-password> --cluster-url <url> --cluster-token <token> --registry-name <name> --registry-namespace <namespace> --registry-user <user> --registry-password <password> --release <daily|release-tag> --test-tag <test-id>"
 readonly OC_CLIENT_VERSION="4.6.0"
-readonly CONTROLLER_MANAGER_NAME="rco-controller-manager"
+readonly CONTROLLER_MANAGER_NAME="olo-controller-manager"
 
 # setup_env: Download oc cli, log into our persistent cluster, and create a test project
 setup_env() {
@@ -16,7 +16,7 @@ setup_env() {
     oc login "${CLUSTER_URL}" -u "${CLUSTER_USER:-kubeadmin}" -p "${CLUSTER_TOKEN}" --insecure-skip-tls-verify=true
 
     # Set variables for rest of script to use
-    readonly TEST_NAMESPACE="runtime-operator-test-${TEST_TAG}"
+    readonly TEST_NAMESPACE="open-liberty-operator-test-${TEST_TAG}"
 
     echo "****** Creating test namespace: ${TEST_NAMESPACE} for release ${RELEASE}"
     oc new-project "${TEST_NAMESPACE}" || oc project "${TEST_NAMESPACE}"
@@ -184,7 +184,7 @@ metadata:
 spec:
   sourceType: grpc
   image: $CATALOG_IMAGE
-  displayName: Runtime Component Operator Catalog
+  displayName: Open Liberty Operator Catalog
   publisher: IBM
 EOF
 
@@ -193,7 +193,7 @@ EOF
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
-  name: runtime-component-operator-group
+  name: open-liberty-operator-group
   namespace: $TEST_NAMESPACE
 spec:
   targetNamespaces:
@@ -205,11 +205,11 @@ EOF
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
-  name: runtime-component-operator-subscription
+  name: open-liberty-operator-subscription
   namespace: $TEST_NAMESPACE
 spec:
   channel: $DEFAULT_CHANNEL
-  name: runtime-component
+  name: open-liberty
   source: olo-catalog
   sourceNamespace: $TEST_NAMESPACE
   installPlanApproval: Automatic

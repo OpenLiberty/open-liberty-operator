@@ -94,7 +94,7 @@ function launch_travis() {
                 \"go\": [
                     \"1.19.x\"
                 ],
-                \"go_import_path\": \"github.com/application-stacks/runtime-component-operator\",
+                \"go_import_path\": \"github.com/OpenLiberty/open-liberty-operator\",
                 \"services\": [
                     \"docker\"
                 ],    

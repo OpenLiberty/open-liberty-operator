@@ -3,7 +3,7 @@
 readonly usage="Usage: e2e-minikube.sh --test-tag <test-id>"
 
 readonly KUBE_CLUSTER_NAME="kind-e2e-cluster"
-readonly BUILD_IMAGE="runtime-component-operator:latest"
+readonly BUILD_IMAGE="open-liberty-operator:latest"
 
 readonly RUNASUSER="\n  securityContext:\n    runAsUser: 1001"
 readonly APPIMAGE='applicationImage:\s'
@@ -28,7 +28,7 @@ main() {
   setup_env
   install_tools
   build_push
-  install_rco
+  install_olo
   setup_test
 
   if [[ "${SETUP_ONLY}" == true ]]; then
@@ -87,27 +87,27 @@ setup_env() {
 build_push() {
     ## Build Docker image and push to private registry
     docker build -t "${LOCAL_REGISTRY}/${BUILD_IMAGE}" . || {
-        echo "Error: Failed to build Runtime Component Operator"
+        echo "Error: Failed to build Open Liberty Operator"
         exit 1
     }
 
     docker save ${LOCAL_REGISTRY}/${BUILD_IMAGE} | sshpass -p "${FYRE_PASS}" ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -C ${REMOTE_CLUSTER} "docker load && docker push ${LOCAL_REGISTRY}/${BUILD_IMAGE}" || {
-      echo "Error: Failed to push Runtime Component Operator"
+      echo "Error: Failed to push Open Liberty Operator"
       exit 1
     }
 }
 
-# install_rco: Kustomize and install Runtime Component Operator
-install_rco() {
-  echo "****** Installing RCO in namespace: ${TEST_NAMESPACE}"
-  kubectl apply -f bundle/manifests/rc.app.stacks_runtimecomponents.yaml
-  kubectl apply -f bundle/manifests/rc.app.stacks_runtimeoperations.yaml
-
+# install_olo: Kustomize and install Open Liberty Operator
+install_olo() {
+  echo "****** Installing OLO in namespace: ${TEST_NAMESPACE}"
+  kubectl apply -f bundle/manifests/apps.openliberty.io_openlibertyapplications.yaml
+  kubectl apply -f bundle/manifests/apps.openliberty.io_openlibertydumps.yaml
+  kubectl apply -f bundle/manifests/apps.openliberty.io_openlibertytraces.yaml
 
   sed -i "s|image: .*|image: ${LOCAL_REGISTRY}/${BUILD_IMAGE}|
-          s|RUNTIME_COMPONENT_WATCH_NAMESPACE|${TEST_NAMESPACE}|" internal/deploy/kubectl/runtime-component-operator.yaml
+          s|default|${TEST_NAMESPACE}|" deploy/kustomize/daily/base/open-liberty-operator.yaml
 
-  kubectl apply -f internal/deploy/kubectl/runtime-component-operator.yaml -n ${TEST_NAMESPACE}
+  kubectl apply -f deploy/kustomize/daily/base/open-liberty-operator.yaml -n ${TEST_NAMESPACE}
 
   # Wait for operator deployment to be ready
   wait_for ${TEST_NAMESPACE} olo-controller-manager
