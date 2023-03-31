@@ -1,7 +1,6 @@
 #!/bin/bash
 
 readonly usage="Usage: static-linter-scan.sh --bundle-image <Bundle Image> --git-token <GHE token> --static-linter-version <Linter Version> "
-
 readonly WORK_DIR="${PWD}/linter-tool"
 
 function install_linter() {
@@ -34,7 +33,6 @@ function main() {
     echo "                                              L I N T E R  S C A N "
     echo "==========================================================================================================================="
 
-
     # Verify parameters
     if [[ -z "${GIT_TOKEN}" ]]; then
         echo "****** Missing git token, see usage"
@@ -60,7 +58,6 @@ function main() {
     install_linter "${STATIC_LINTER_VERSION}"
 
     # Run Linter
-
     if  [ "${STATIC_LINTER_VERSION}" = "3.4.0" ] || [ "${STATIC_LINTER_VERSION}" \> "3.4.0" ]; then
       echo "Executing cv lint command: 'cv lint olm-bundle -o lintOverrides.yaml --container-tool docker ${BUNDLE_IMAGE}'"
       $WORK_DIR/cv lint olm-bundle -o lintOverrides.yaml --container-tool docker $BUNDLE_IMAGE 
@@ -71,7 +68,6 @@ function main() {
 
     echo "==========================================================================================================================="
     echo "==========================================================================================================================="
-
 }
 
 parse_args() {
