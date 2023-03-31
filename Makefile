@@ -148,8 +148,8 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 	test -s $(LOCALBIN)/controller-gen || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.9.2
 
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
-KUSTOMIZE_VERSION ?= 3.8.7
-KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/release-kustomize-v3.8/hack/install_kustomize.sh"
+KUSTOMIZE_VERSION ?= 4.5.5
+KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/kustomize/v${KUSTOMIZE_VERSION}/hack/install_kustomize.sh"
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
 $(KUSTOMIZE): $(LOCALBIN)
@@ -313,6 +313,16 @@ test-e2e:
 	./scripts/e2e-release.sh --registry-name default-route --registry-namespace openshift-image-registry \
                      --test-tag "${TRAVIS_BUILD_NUMBER}" --target "${RELEASE_TARGET}"
 
+kind-e2e-test:
+	./scripts/e2e-kind.sh --test-tag "${TRAVIS_BUILD_NUMBER}"
+
+test-pipeline-e2e:
+	./scripts/pipeline/ocp-cluster-e2e.sh -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" \
+                     --cluster-url "${CLUSTER_URL}" --cluster-user "${CLUSTER_USER}" --cluster-token "${CLUSTER_TOKEN}" \
+                     --registry-name "${PIPELINE_REGISTRY}" --registry-image "${PIPELINE_OPERATOR_IMAGE}" \
+                     --registry-user "${PIPELINE_USERNAME}" --registry-password "${PIPELINE_PASSWORD}" \
+                     --test-tag "${TRAVIS_BUILD_NUMBER}" --release "${RELEASE_TARGET}" --channel "${DEFAULT_CHANNEL}"
+
 build-releases:
 	./scripts/build-releases.sh --image "${PUBLISH_REGISTRY}/${OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
 
@@ -348,3 +358,20 @@ catalog-push: ## Push a catalog image.
 
 dev: 
 	./scripts/dev.sh all
+
+## Multi-Arch changes
+.PHONY: setup-go
+setup-go: ## Ensure Go is installed.
+	./scripts/installers/install-go.sh ${GO_RELEASE_VERSION}
+
+build-operator-pipeline:
+	./scripts/build/build-operator.sh --registry "${REGISTRY}" --image "${PIPELINE_OPERATOR_IMAGE}" --tag "${RELEASE_TARGET}"
+
+build-manifest-pipeline:
+	./scripts/build/build-manifest.sh --registry "${REGISTRY}" --image "${IMAGE}" --tag "${RELEASE_TARGET}"
+
+build-bundle-pipeline:
+	./scripts/build/build-bundle.sh --prod-image "${PIPELINE_PRODUCTION_IMAGE}" --registry "${REGISTRY}" --image "${PIPELINE_OPERATOR_IMAGE}" --tag "${RELEASE_TARGET}"
+
+build-catalog-pipeline: opm ## Build a catalog image.
+	./scripts/build/build-catalog.sh -n "v${OPM_VERSION}" -b "${REDHAT_BASE_IMAGE}" -o "${OPM}" --container-tool "docker" -r "${REGISTRY}" -i "${PIPELINE_OPERATOR_IMAGE}-bundle:${RELEASE_TARGET}" -p "${PIPELINE_PRODUCTION_IMAGE}-bundle" -a "${PIPELINE_OPERATOR_IMAGE}-catalog:${RELEASE_TARGET}" -t "${PWD}/operator-build" -v "${VERSION}"
