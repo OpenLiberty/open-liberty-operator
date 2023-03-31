@@ -1,0 +1,146 @@
+# Basic semeru functional verification. Verifies when the semeruCloudCompiler is enabled, that:
+# 1. Semeru deployment is created with all correct default values.
+# 2. Semeru service is create wtih the all correct default values.
+# 3. Application deployment is created with all correct default values (including certs and jitserver config properties being set)  
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-liberty-app-semeru-compiler-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: semeru-compiler
+      app.kubernetes.io/instance: my-liberty-app-semeru-compiler-1
+      app.kubernetes.io/part-of: my-liberty-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: semeru-compiler
+        app.kubernetes.io/instance: my-liberty-app-semeru-compiler-1
+        app.kubernetes.io/managed-by: open-liberty-operator
+        app.kubernetes.io/name: my-liberty-app-semeru-compiler
+        app.kubernetes.io/part-of: my-liberty-app
+        apps.openliberty.io/semeru-compiler-generation: '1'
+    spec:
+      restartPolicy: Always
+      serviceAccountName: my-liberty-app
+      schedulerName: default-scheduler
+      containers:
+        - resources:
+            limits:
+              cpu: '2'
+              memory: 1200Mi
+            requests:
+              cpu: 100m
+              memory: 800Mi 
+          readinessProbe:
+            tcpSocket:
+              port: 38400
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          terminationMessagePath: /dev/termination-log
+          name: compiler
+          command:
+            - jitserver
+          livenessProbe:
+            tcpSocket:
+              port: 38400
+            initialDelaySeconds: 10
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          env:
+            - name: OPENJ9_JAVA_OPTIONS
+              value: >-
+                -XX:+JITServerLogConnections
+                -XX:JITServerSSLKey=/etc/x509/certs/tls.key
+                -XX:JITServerSSLCert=/etc/x509/certs/tls.crt
+            - name: SA_RESOURCE_VERSION
+            - name: TLS_SECRET_RESOURCE_VERSION
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            runAsNonRoot: true
+            readOnlyRootFilesystem: false
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 38400
+              protocol: TCP
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: certs
+              readOnly: true
+              mountPath: /etc/x509/certs
+          terminationMessagePolicy: File
+          image: 'icr.io/appcafe/open-liberty:full-java8-openj9-ubi'
+      serviceAccount: my-liberty-app
+      volumes:
+        - name: certs
+          secret:
+            secretName: my-liberty-app-semeru-compiler-1-tls-cm
+            defaultMode: 420
+      dnsPolicy: ClusterFirst
+  strategy:
+    type: Recreate
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: my-liberty-app-semeru-compiler-1
+  labels:
+    app.kubernetes.io/component: semeru-compiler
+    app.kubernetes.io/instance: my-liberty-app-semeru-compiler-1
+    app.kubernetes.io/managed-by: open-liberty-operator
+    app.kubernetes.io/name: my-liberty-app-semeru-compiler
+    app.kubernetes.io/part-of: my-liberty-app
+    apps.openliberty.io/semeru-compiler-generation: '1'
+spec:
+  ports:
+    - protocol: TCP
+      port: 38400
+      targetPort: 38400
+  sessionAffinity: ClientIP
+  selector:
+    app.kubernetes.io/component: semeru-compiler
+    app.kubernetes.io/instance: my-liberty-app-semeru-compiler-1
+    app.kubernetes.io/part-of: my-liberty-app
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: my-liberty-app
+spec:
+  template:
+    spec:
+      containers:
+        - resources: {}
+          image: 'icr.io/appcafe/open-liberty:full-java8-openj9-ubi'
+          # TODO: Need test coverage to verify jit server connection & certs
+          #args:
+          #  - /bin/bash
+          #  - '-c'
+          #  - >-
+          #    export OPENJ9_JAVA_OPTIONS="$OPENJ9_JAVA_OPTIONS -XX:+UseJITServer
+          #    -XX:+JITServerLogConnections -XX:+JITServerShareROMClasses
+          #    -XX:JITServerAddress=my-liberty-app-semeru-compiler-1.websphere-liberty.svc
+          #    -XX:JITServerSSLRootCerts=/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
+          #    && server run
+      serviceAccount: my-liberty-app
+status:
+  observedGeneration: 1
+  replicas: 1
+  updatedReplicas: 1
+  readyReplicas: 1
+  availableReplicas: 1

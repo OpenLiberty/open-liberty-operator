@@ -1,9 +1,8 @@
 apiVersion: apps.openliberty.io/v1
 kind: OpenLibertyApplication
 metadata:
-  name: route-with-cert-liberty
+  name: route-with-cert-lib-app
 spec:
-  # Add fields here
   applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
   replicas: 1
   expose: true
@@ -11,4 +10,3 @@ spec:
     host: myapp.mycompany.com
     certificateSecretRef: route-tls-secret
     termination: reencrypt
-

@@ -3428,8 +3428,8 @@ spec:
                   a global image pull secret.
                 type: string
               replicas:
-                description: Number of pods to create. Not applicable when .spec.autoscaling
-                  or .spec.createKnativeService is specified.
+                description: Number of pods to create. Defaults to 1. Not applicable
+                  when .spec.autoscaling or .spec.createKnativeService is specified.
                 format: int32
                 type: integer
               resources:
@@ -3483,7 +3483,8 @@ spec:
                     description: Path to be used for Route.
                     type: string
                   pathType:
-                    description: Path type to be used for Ingress.
+                    description: Path type to be used for Ingress. This does not apply
+                      to Route on OpenShift.
                     type: string
                   termination:
                     description: TLS termination policy. Can be one of edge, reencrypt
@@ -3647,6 +3648,47 @@ spec:
                           If set in both SecurityContext and PodSecurityContext, the
                           value specified in SecurityContext takes precedence.
                         type: string
+                    type: object
+                type: object
+              semeruCloudCompiler:
+                description: Configures the Semeru Cloud Compiler to handle Just-In-Time
+                  (JIT) compilation requests from the application.
+                properties:
+                  enable:
+                    description: Enable the Semeru Cloud Compiler. Defaults to false.
+                    type: boolean
+                  replicas:
+                    description: Number of desired pods for the Semeru Cloud Compiler.
+                      Defaults to 1.
+                    format: int32
+                    type: integer
+                  resources:
+                    description: Resource requests and limits for the Semeru Cloud
+                      Compiler. The CPU defaults to 100m with a limit of 2000m. The
+                      memory defaults to 800Mi, with a limit of 1200Mi.
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Limits describes the maximum amount of compute
+                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Requests describes the minimum amount of compute
+                          resources required. If Requests is omitted for a container,
+                          it defaults to Limits if that is explicitly specified, otherwise
+                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
                     type: object
                 type: object
               service:
@@ -5006,7 +5048,7 @@ spec:
                 - name
                 x-kubernetes-list-type: map
               sso:
-                description: Specifies the configuration for Single sign-on (SSO)
+                description: Specifies the configuration for Single Sign-On (SSO)
                   providers to authenticate with.
                 properties:
                   github:
@@ -7148,6 +7190,7 @@ spec:
                     type:
                       type: string
                     uri:
+                      description: Exposed URI of the application endpoint
                       type: string
                   type: object
                 type: array
@@ -7159,6 +7202,19 @@ spec:
                 type: object
               routeAvailable:
                 type: boolean
+              semeruCompiler:
+                description: Defines SemeruCompiler status
+                properties:
+                  serviceHostname:
+                    type: string
+                  tlsSecretName:
+                    type: string
+                type: object
+              versions:
+                properties:
+                  reconciled:
+                    type: string
+                type: object
             type: object
         type: object
     served: true
