@@ -296,47 +296,47 @@ containerize:
       fi
     fi
 
-    # Save artifacts
-    ## disabled the ppc64le and s380x save for now (see build stanza above).  Once these are built, we can move forward with this section.
-    echo "${PIPELINE_PASSWORD}" | docker login "${PIPELINE_REGISTRY}" -u "${PIPELINE_USERNAME}" --password-stdin
     echo "**** Saving Artifacts ****"
-    # declare -a tags=("${RELEASE_TARGET}" "${RELEASE_TARGET}-amd64")
-    declare -a tags=("${RELEASE_TARGET}" "${RELEASE_TARGET}-amd64" "${RELEASE_TARGET}-ppc64le" "${RELEASE_TARGET}-s390x")
+    if [[ "$arch" == "ZXP" ]]; then
+      declare -a tags=("${RELEASE_TARGET}" "${RELEASE_TARGET}-amd64" "${RELEASE_TARGET}-ppc64le" "${RELEASE_TARGET}-s390x")
+    else
+      declare -a tags=("${RELEASE_TARGET}" "${RELEASE_TARGET}-amd64")
+    fi
     for i in "${tags[@]}"
     do
       IMAGE=$PIPELINE_REGISTRY/$PIPELINE_OPERATOR_IMAGE:$i
       DIGEST="$(skopeo inspect docker://$IMAGE | grep Digest | grep -o 'sha[^\"]*')"
+      { ARCH="$(echo $i | grep -o '\(amd64\|s390x\|ppc64le\)$')" && TYPE="image"; } || { TYPE="manifest"; }
+      if [[ "$TYPE" == "manifest" ]]; then
+        echo "Saving artifact operator-$i type=$TYPE name=$IMAGE digest=$DIGEST"
+        save_artifact operator-$i type=$TYPE name="$IMAGE" "digest=$DIGEST"
+      else
+        echo "Saving artifact operator-$i type=$TYPE name=$IMAGE digest=$DIGEST arch=$ARCH"
+        save_artifact operator-$i type=$TYPE name="$IMAGE" "digest=$DIGEST" "arch=$ARCH"
+      fi
+    done
+    IMAGE=$PIPELINE_REGISTRY/$PIPELINE_OPERATOR_IMAGE-bundle:${RELEASE_TARGET}
+    DIGEST="$(skopeo inspect docker://$IMAGE | grep Digest | grep -o 'sha[^\"]*')"
+    echo "Saving artifact bundle-${RELEASE_TARGET} name=$IMAGE digest=$DIGEST"
+    save_artifact bundle-${RELEASE_TARGET} type=image name="$IMAGE" "digest=$DIGEST"
+    for i in "${tags[@]}"
+    do
+      IMAGE=$PIPELINE_REGISTRY/$PIPELINE_OPERATOR_IMAGE-catalog:$i
+      DIGEST="$(skopeo inspect docker://$IMAGE | grep Digest | grep -o 'sha[^\"]*')"
       { ARCH="$(echo $i | grep -o '\(amd64\|s390x\|ppc64le\)$')" && TYPE="image"; } || { ARCH="amd64" && TYPE="manifest"; }
-      echo "Saving artifact operator-$i name=$IMAGE digest=$DIGEST type=$TYPE"
-      save_artifact operator-$i type=$TYPE name="$IMAGE" "digest=$DIGEST" "arch=$ARCH" 
-    done
-
-    declare -a bundles=("${RELEASE_TARGET}")
-    for i in "${bundles[@]}"
-    do
-     IMAGE=$PIPELINE_REGISTRY/$PIPELINE_OPERATOR_IMAGE-bundle:$i
-     DIGEST="$(skopeo inspect docker://$IMAGE | grep Digest | grep -o 'sha[^\"]*')"
-     # ARCH=amd64
-     ARCH="$(echo $i | grep -o '\(amd64\|s390x\|ppc64le\)$' || echo 'amd64')"
-     echo "Saving artifact bundle-$i name=$IMAGE digest=$DIGEST"
-     save_artifact bundle-$i type=image name="$IMAGE" "digest=$DIGEST" "arch=$ARCH" 
-    done
-
-    declare -a catalogs=("${RELEASE_TARGET}")
-    for i in "${catalogs[@]}"
-    do
-     IMAGE=$PIPELINE_REGISTRY/$PIPELINE_OPERATOR_IMAGE-catalog:$i
-     DIGEST="$(skopeo inspect docker://$IMAGE | grep Digest | grep -o 'sha[^\"]*')"
-     # ARCH=amd64
-     ARCH="$(echo $i | grep -o '\(amd64\|s390x\|ppc64le\)$' || echo 'amd64')"
-     echo "Saving artifact catalog-$i name=$IMAGE digest=$DIGEST"
-     save_artifact catalog-$i type=image name="$IMAGE" "digest=$DIGEST" "arch=$ARCH" 
+      if [[ "$TYPE" == "manifest" ]]; then
+        echo "Saving artifact catalog-$i type=$TYPE name=$IMAGE digest=$DIGEST"
+        save_artifact catalog-$i type=$TYPE name="$IMAGE" "digest=$DIGEST"
+      else
+        echo "Saving artifact catalog-$i type=$TYPE name=$IMAGE digest=$DIGEST arch=$ARCH"
+        save_artifact catalog-$i type=$TYPE name="$IMAGE" "digest=$DIGEST" "arch=$ARCH"
+      fi
     done
 
     echo "MEND unified agent scan"
     chmod +x "${COMMONS_PATH}/whitesource/whitesource_unified_agent_scan.sh"
     source "${COMMONS_PATH}/whitesource/whitesource_unified_agent_scan.sh"
-
+    
     ## Perform lint
     IMAGE="${PIPELINE_REGISTRY}/${PIPELINE_OPERATOR_IMAGE}-bundle:${RELEASE_TARGET}"
     DIGEST="$(skopeo inspect docker://$IMAGE | grep Digest | grep -o 'sha[^\"]*')"
