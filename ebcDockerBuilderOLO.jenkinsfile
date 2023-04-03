@@ -88,7 +88,7 @@ def gitCloneAndStash() {
       git branch: "main", url: "git@github.ibm.com:websphere/operators.git"
   }
   sh "cp -rf operators/scripts/build open-liberty-operator/scripts/"
-  dir('websphere-liberty-operator') {
+  dir('open-liberty-operator') {
       stash(name: 'open-liberty-operator')
    }
    sh "ls -l"

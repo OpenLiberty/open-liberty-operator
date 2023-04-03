@@ -184,7 +184,7 @@ containerize:
 
     if [[ ! -z "$PERIODIC_SCAN" && "$PERIODIC_SCAN" != "false" && "$PERIODIC_SCAN" != "no"  ]]; then
       echo "Skipping containerize, but generating list of images. This is a periodic run that is only meant to produce CVE information."
-      RELEASE_TARGET=$(curl --silent "https://api.github.com/repos/WASdev/websphere-liberty-operator/releases/latest" | jq -r .tag_name)
+      RELEASE_TARGET=$(curl --silent "https://api.github.com/repos/WASdev/open-liberty-operator/releases/latest" | jq -r .tag_name)
       #RELEASE_TARGET=$(get_env branch)
     else
       if [[ "$PIPELINE_DEBUG" == 1 ]]; then
