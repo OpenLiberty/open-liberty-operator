@@ -17,14 +17,11 @@ then
 fi
 
 echo "sha is $SHA"
-
-files=" 
-config/samples/apps.openliberty.io_v1beta2_openlibertyapplications.yaml
-"
-
-for file in $files 
-do
-  sed -i.bak "s,getting-started@sha256:[a-zA-Z0-9]*,getting-started@$SHA," $file
-  rm $file.bak
-done
+sed -i.bak "s,getting-started@sha256:[a-zA-Z0-9]*,getting-started@$SHA," config/samples/liberty.websphere.ibm.com_v1_webspherelibertyapplications.yaml
+sed -i.bak "s,getting-started@sha256:[a-zA-Z0-9]*,getting-started@$SHA," config/manager/manager.yaml
+sed -i.bak "s,getting-started@sha256:[a-zA-Z0-9]*,getting-started@$SHA," internal/deploy/kustomize/daily/base/websphere-liberty-deployment.yaml
+# Sed on mac doesn't allow edit in place without making a backup, so need to delete afterwards
+rm config/samples/liberty.websphere.ibm.com_v1_webspherelibertyapplications.yaml.bak
+rm config/manager/manager.yaml.bak
+rm internal/deploy/kustomize/daily/base/websphere-liberty-deployment.yaml.bak
 

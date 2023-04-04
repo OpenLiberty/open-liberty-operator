@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script to build & install the open liberty operator to a private registry of an OCP cluster
+# Script to build & install the websphere liberty operator to a private registry of an OCP cluster
 
 # -----------------------------------------------------
 # Prereqs to running this script
@@ -29,7 +29,7 @@
 set -Eeo pipefail
 
 
-readonly USAGE="Usage: dev.sh all | init | login| build | catalog | subscribe | deploy | e2e | scorecard [ -host <ocp registry hostname url> -version <operator verion to build> -image <image name> -bundle <bundle image> -catalog <catalog image> -name <operator name> -namespace <namespace> -tempdir <temp dir> ]"
+readonly USAGE="Usage: dev.sh all | init | login| build | catalog | subscribe | deploy | e2e | scorecard [ -host <ocp registry hostname url> -version <operator verion to build> -image <image name> -bundle <bundle image> -catalog <catalog image> -name <operator name> -namespace <namespace> -tempdir <temp dir> -channel <channel> ]"
 
 warn() {
   echo -e "${yel}Warning:${end} $1"
@@ -68,20 +68,13 @@ main() {
   SCRIPT_DIR="$(dirname "$0")"
 
   # Set defaults unless overridden. 
-  NAMESPACE=${NAMESPACE:="open-liberty-operator"}
+  NAMESPACE=${NAMESPACE:="websphere-liberty"}
   
   OCP_REGISTRY_URL=${OCP_REGISTRY_URL:=$(oc get route default-route -n openshift-image-registry --template='{{ .spec.host }}')}  > /dev/null 2>&1 && true
 
   if [[ -z "${OCP_REGISTRY_URL}" ]]; then
      init_cluster
   fi
-
-  # Create project if needed
-  oc project $NAMESPACE > /dev/null 2>&1 && true
-  if [[ $? -ne 0 ]]; then
-     oc new-project $NAMESPACE 
-  fi
-
   VERSION=${VERSION:="latest"}
   if [[ "$VERSION" == "latest" ]]; then
       VVERSION=$VERSION
@@ -95,6 +88,7 @@ main() {
   CATALOG_IMG=${CATALOG_IMG:=$OCP_REGISTRY_URL/$NAMESPACE/$OPERATOR_NAME-catalog:$VVERSION}
   MAKEFILE_DIR=${MAKEFILE_DIR:=$SCRIPT_DIR/..}
   TEMP_DIR=${TEMP_DIR:=/tmp}
+  CHANNEL=${CHANNEL:="v1.1"}
   
   if [[ "$COMMAND" == "all" ]]; then
      login_registry
@@ -147,6 +141,10 @@ init_cluster() {
     oc patch configs.imageregistry.operator.openshift.io/cluster --patch '{"spec":{"defaultRoute":true}}' --type=merge
     OCP_REGISTRY_URL=${OCP_REGISTRY_URL:=$(oc get route default-route -n openshift-image-registry --template='{{ .spec.host }}')}
     oc patch image.config.openshift.io/cluster  --patch '{"spec":{"registrySources":{"insecureRegistries":["'$OCP_REGISTRY_URL'"]}}}' --type=merge
+    oc project $NAMESPACE > /dev/null 2>&1 && true
+    if [[ $? -ne 0 ]]; then
+      oc new-project $NAMESPACE 
+    fi
 }
 
 login_registry() {
@@ -162,13 +160,14 @@ cat << EOF > $CATALOG_FILE
     apiVersion: operators.coreos.com/v1alpha1
     kind: CatalogSource
     metadata:
-      name: open-liberty-operator-catalog
+      name: websphere-liberty-catalog
       namespace: $NAMESPACE
     spec:
       sourceType: grpc
       image: $CATALOG_IMG
       imagePullPolicy: Always
-      displayName: Open Liberty Catalog
+      displayName: WebSphere Liberty Catalog
+      publisher: IBM
       updateStrategy:
         registryPoll:
           interval: 1m
@@ -185,12 +184,12 @@ cat << EOF > $SUBCRIPTION_FILE
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
-  name: open-liberty-operator-subscription
+  name: websphere-liberty-operator-subscription
   namespace: $NAMESPACE
 spec:
-  channel:  beta2
-  name: open-liberty
-  source: open-liberty-operator-catalog
+  channel: $CHANNEL
+  name: ibm-websphere-liberty
+  source: websphere-liberty-catalog
   sourceNamespace: $NAMESPACE
   installPlanApproval: Automatic
 EOF
@@ -206,11 +205,8 @@ cat << EOF > $OG_FILE
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
-  name: ol-operator-group
+  name: websphere-operator-group
   namespace: $NAMESPACE
-spec:
-  targetNamespaces:
-    - $NAMESPACE  
 EOF
 
     oc apply -f $OG_FILE
@@ -235,9 +231,6 @@ build() {
     echo "------------"
     echo "docker-build"
     echo "------------"
-    cd $MAKEFILE_DIR
-    go mod vendor
-    cd -
     make -C  $MAKEFILE_DIR docker-build VERSION=$VVERSION IMG=$IMG IMAGE_TAG_BASE=$IMAGE_TAG_BASE BUNDLE_IMG=$BUNDLE_IMG CATALOG_IMG=$CATALOG_IMG TLS_VERIFY=false
     echo "------------"
     echo "docker-push"
@@ -255,11 +248,11 @@ bundle() {
     # Special case, Makefile make bundle only handles semantic versioning
     if [[ "$VERSION" == "latest" ]]; then
         make -C  $MAKEFILE_DIR bundle IMG=$IMG VERSION=9.9.9
-        sed -i 's/$OCP_REGISTRY_URL\/$NAMESPACE\/$OPERATOR_NAME:v9.9.9/$OCP_REGISTRY_URL\/$NAMESPACE\/$OPERATOR_NAME:latest/g' $MAKEFILE_DIR/bundle/manifests/open-liberty.clusterserviceversion.yaml
+        sed -i 's/$OCP_REGISTRY_URL\/$NAMESPACE\/$OPERATOR_NAME:v9.9.9/$OCP_REGISTRY_URL\/$NAMESPACE\/$OPERATOR_NAME:latest/g' $MAKEFILE_DIR/bundle/manifests/ibm-websphere-liberty.clusterserviceversion.yaml
     else
         make -C  $MAKEFILE_DIR bundle IMG=$IMG VERSION=$VERSION
     fi
-   
+
     echo "------------"
     echo "bundle-build"
     echo "------------"
@@ -313,7 +306,10 @@ parse_args() {
     -tempdir)
       shift
       TEMP_DIR="${1}"
-      ;;         
+      ;;
+    -channel)
+       CHANNEL="${1}"
+      ;;            
     esac
     shift
   done

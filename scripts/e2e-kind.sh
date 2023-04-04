@@ -1,9 +1,9 @@
 #!/bin/bash
 
-readonly usage="Usage: e2e-minikube.sh --test-tag <test-id>"
+readonly usage="Usage: scripts/e2e-kind.sh --test-tag <test-id> -u <fyre-user> -k <fyre-API-key> -p <fyre-root-password> -pgid <fyre-product-group-id>"
 
 readonly KUBE_CLUSTER_NAME="kind-e2e-cluster"
-readonly BUILD_IMAGE="open-liberty-operator:latest"
+readonly BUILD_IMAGE="websphere-liberty-operator:latest"
 
 readonly RUNASUSER="\n  securityContext:\n    runAsUser: 1001"
 readonly APPIMAGE='applicationImage:\s'
@@ -28,14 +28,14 @@ main() {
   setup_env
   install_tools
   build_push
-  install_olo
+  install_wlo
   setup_test
 
   if [[ "${SETUP_ONLY}" == true ]]; then
     exit 0
   fi
 
-  echo "****** Starting minikube scorecard tests..."
+  echo "****** Starting kind scorecard tests..."
   operator-sdk scorecard --verbose --kubeconfig ${HOME}/.kube/config --selector=suite=kuttlsuite --namespace "${TEST_NAMESPACE}" --service-account scorecard-kuttl --wait-time 45m ./bundle || {
       echo "****** Scorecard tests failed..."
       exit 1
@@ -57,8 +57,8 @@ setup_env() {
     sudo apt-get install -y docker-ce docker-ce-cli containerd.io sshpass jq
 
     if ! command -v kubectl &> /dev/null; then
-      echo "****** Installing kubectl v1.19.4..."
-      curl -Lo /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/v1.19.4/bin/linux/amd64/kubectl && chmod +x /usr/local/bin/kubectl
+      echo "****** Installing kubectl v1.24.2..."
+      curl -Lo /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/v1.24.2/bin/linux/amd64/kubectl && chmod +x /usr/local/bin/kubectl
     fi
 
     # Create a remote Kind cluster
@@ -87,42 +87,42 @@ setup_env() {
 build_push() {
     ## Build Docker image and push to private registry
     docker build -t "${LOCAL_REGISTRY}/${BUILD_IMAGE}" . || {
-        echo "Error: Failed to build Open Liberty Operator"
+        echo "Error: Failed to build WebSphere Liberty Operator"
         exit 1
     }
 
     docker save ${LOCAL_REGISTRY}/${BUILD_IMAGE} | sshpass -p "${FYRE_PASS}" ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -C ${REMOTE_CLUSTER} "docker load && docker push ${LOCAL_REGISTRY}/${BUILD_IMAGE}" || {
-      echo "Error: Failed to push Open Liberty Operator"
+      echo "Error: Failed to push WebSphere Liberty Operator"
       exit 1
     }
 }
 
-# install_olo: Kustomize and install Open Liberty Operator
-install_olo() {
-  echo "****** Installing OLO in namespace: ${TEST_NAMESPACE}"
-  kubectl apply -f bundle/manifests/apps.openliberty.io_openlibertyapplications.yaml
-  kubectl apply -f bundle/manifests/apps.openliberty.io_openlibertydumps.yaml
-  kubectl apply -f bundle/manifests/apps.openliberty.io_openlibertytraces.yaml
+# install_wlo: Kustomize and install WebSphere-Liberty-Operator
+install_wlo() {
+  echo "****** Installing WLO in namespace: ${TEST_NAMESPACE}"
+  kubectl apply -f bundle/manifests/liberty.websphere.ibm.com_webspherelibertyapplications.yaml
+  kubectl apply -f bundle/manifests/liberty.websphere.ibm.com_webspherelibertydumps.yaml
+  kubectl apply -f bundle/manifests/liberty.websphere.ibm.com_webspherelibertytraces.yaml
 
   sed -i "s|image: .*|image: ${LOCAL_REGISTRY}/${BUILD_IMAGE}|
-          s|default|${TEST_NAMESPACE}|" deploy/kustomize/daily/base/open-liberty-operator.yaml
+          s|WEBSPHERE_LIBERTY_WATCH_NAMESPACE|${TEST_NAMESPACE}|" internal/deploy/kubectl/websphereliberty-app-operator.yaml
 
-  kubectl apply -f deploy/kustomize/daily/base/open-liberty-operator.yaml -n ${TEST_NAMESPACE}
+  kubectl apply -f internal/deploy/kubectl/websphereliberty-app-operator.yaml -n ${TEST_NAMESPACE}
 
   # Wait for operator deployment to be ready
-  wait_for ${TEST_NAMESPACE} olo-controller-manager
+  wait_for ${TEST_NAMESPACE} wlo-controller-manager
 }
 
 install_tools() {
   echo "****** Installing Prometheus"
-  kubectl apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/bundle.yaml
+  kubectl apply --server-side -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/bundle.yaml
 
   echo "****** Installing Knative"
-  kubectl apply -f https://github.com/knative/serving/releases/download/knative-v1.3.0/serving-crds.yaml
-  kubectl apply -f https://github.com/knative/eventing/releases/download/knative-v1.3.0/eventing-crds.yaml
+  kubectl apply -f https://github.com/knative/serving/releases/download/knative-v1.7.4/serving-crds.yaml
+  kubectl apply -f https://github.com/knative/eventing/releases/download/knative-v1.7.4/eventing-crds.yaml
 
   echo "****** Installing Cert Manager"
-  kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.8.0/cert-manager.yaml
+  kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.2/cert-manager.yaml
 
   echo "****** Enabling Ingress"
   kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
@@ -139,17 +139,21 @@ setup_test() {
     export PATH="$HOME/.krew/bin:$PATH"
     kubectl krew install kuttl
 
-    ## Add tests for minikube
+    ## Add tests for kind cluster
     mv bundle/tests/scorecard/kind-kuttl/ingress bundle/tests/scorecard/kuttl/
     mv bundle/tests/scorecard/kind-kuttl/ingress-certificate bundle/tests/scorecard/kuttl/
     
-    ## Remove tests that do not apply for minikube
+    ## Remove tests that do not apply for kind cluster
     mv bundle/tests/scorecard/kuttl/network-policy bundle/tests/scorecard/kind-kuttl/
     mv bundle/tests/scorecard/kuttl/network-policy-multiple-apps bundle/tests/scorecard/kind-kuttl/
     mv bundle/tests/scorecard/kuttl/routes bundle/tests/scorecard/kind-kuttl/
     mv bundle/tests/scorecard/kuttl/route-certificate bundle/tests/scorecard/kind-kuttl/
-    mv bundle/tests/scorecard/kuttl/stream bundle/tests/scorecard/kind-kuttl/
+    mv bundle/tests/scorecard/kuttl/image-stream bundle/tests/scorecard/kind-kuttl/
     mv bundle/tests/scorecard/kuttl/manage-tls bundle/tests/scorecard/kind-kuttl/
+
+    #disable these tests for kind tests (mount permission issue)
+    mv bundle/tests/scorecard/kuttl/dump bundle/tests/scorecard/kind-kuttl/
+    mv bundle/tests/scorecard/kuttl/trace bundle/tests/scorecard/kind-kuttl/
 
     for image in "${IMAGES[@]}"; do
         files=($(grep -rwl 'bundle/tests/scorecard/kuttl/' -e $APPIMAGE$image))
@@ -203,8 +207,8 @@ parse_args() {
         exit 1
     fi
 
-    readonly TEST_NAMESPACE="olo-test"
-    readonly REMOTE_CLUSTER_NAME="olo-test-${TEST_TAG}-cluster"
+    readonly TEST_NAMESPACE="wlo-test"
+    readonly REMOTE_CLUSTER_NAME="wlo-test-${TEST_TAG}-cluster"
     readonly REMOTE_CLUSTER="${REMOTE_CLUSTER_NAME}1.fyre.ibm.com"
     readonly LOCAL_REGISTRY="localhost:5000"
 }
@@ -215,18 +219,9 @@ cleanup() {
     echo "****** Cleaning up test environment..."
     $(dirname $0)/delete-fyre-stack.sh --cluster-name ${REMOTE_CLUSTER_NAME} --user "${FYRE_USER}" --key "${FYRE_KEY}"
 
-    ## Restore tests
-    mv bundle/tests/scorecard/kuttl/ingress bundle/tests/scorecard/kind-kuttl/
-    mv bundle/tests/scorecard/kuttl/ingress-certificate bundle/tests/scorecard/kind-kuttl/
-
-    mv bundle/tests/scorecard/kind-kuttl/network-policy bundle/tests/scorecard/kuttl/
-    mv bundle/tests/scorecard/kind-kuttl/network-policy-multiple-apps bundle/tests/scorecard/kuttl/
-    mv bundle/tests/scorecard/kind-kuttl/routes bundle/tests/scorecard/kuttl/
-    mv bundle/tests/scorecard/kind-kuttl/route-certificate bundle/tests/scorecard/kuttl/
-    #mv bundle/tests/scorecard/kind-kuttl/image-stream bundle/tests/scorecard/kuttl/
-    #mv bundle/tests/scorecard/kind-kuttl/stream bundle/tests/scorecard/kuttl/
-
-    git checkout bundle/tests/scorecard internal/deploy
+    ## Restore tests and configs
+    git clean -fd bundle/tests/scorecard
+    git restore bundle/tests/scorecard internal/deploy
 }
 
 trap_cleanup() {
