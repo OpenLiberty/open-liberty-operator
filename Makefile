@@ -3,7 +3,7 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 1.1.0
+VERSION ?= 1.0.0
 OPERATOR_SDK_RELEASE_VERSION ?= v1.24.0
 
 # CHANNELS define the bundle channels used in the bundle.
@@ -11,7 +11,7 @@ OPERATOR_SDK_RELEASE_VERSION ?= v1.24.0
 # To re-generate a bundle for other specific channels without changing the standard setup, you can:
 # - use the CHANNELS as arg of the bundle target (e.g make bundle CHANNELS=preview,fast,stable)
 # - use environment variables to overwrite this value (e.g export CHANNELS="preview,fast,stable")
-CHANNELS ?= v1.1
+CHANNELS ?= v1
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
 endif
@@ -21,7 +21,7 @@ endif
 # To re-generate a bundle for any other default channel without changing the default setup, you can:
 # - use the DEFAULT_CHANNEL as arg of the bundle target (e.g make bundle DEFAULT_CHANNEL=stable)
 # - use environment variables to overwrite this value (e.g export DEFAULT_CHANNEL="stable")
-DEFAULT_CHANNEL ?= v1.1
+DEFAULT_CHANNEL ?= v1
 ifneq ($(origin DEFAULT_CHANNEL), undefined)
 BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
 endif
@@ -32,10 +32,10 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
 # openliberty.io/op-test-bundle:$VERSION and openliberty.io/op-test-catalog:$VERSION.
-IMAGE_TAG_BASE ?= icr.io/cpopen/websphere-liberty-operator
+IMAGE_TAG_BASE ?= icr.io/appcafe/open-liberty-operator
 
 # OPERATOR_IMAGE defines the docker.io namespace and part of the image name for remote images.
-OPERATOR_IMAGE ?= icr.io/cpopen/websphere-liberty-operator
+OPERATOR_IMAGE ?= icr.io/appcafe/open-liberty-operator
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
@@ -57,7 +57,7 @@ ifeq ($(USE_IMAGE_DIGESTS), true)
 endif
 
 # Image URL to use all building/pushing image targets
-IMG ?= icr.io/cpopen/websphere-liberty-operator:daily
+IMG ?= icr.io/appcafe/open-liberty-operator:daily
 
 # The image tag given to the resulting catalog image (e.g. make catalog-build CATALOG_IMG=example.com/operator-catalog:v0.2.0).
 CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:v$(VERSION)
@@ -95,7 +95,7 @@ CRD_OPTIONS ?= "crd:crdVersions=v1,generateEmbeddedObjectMeta=true"
 
 # Produce files under deploy/kustomize/daily with default namespace
 KUSTOMIZE_NAMESPACE = default
-KUSTOMIZE_IMG = cp.stg.icr.io/cp/websphere-liberty-operator:main
+KUSTOMIZE_IMG = cp.stg.icr.io/cp/open-liberty-operator:main
 
 # Use docker if available. Otherwise default to podman. 
 # Override choice by setting CONTAINER_COMMAND
@@ -196,11 +196,13 @@ bundle: manifests setup kustomize ## Generate bundle manifests and metadata, the
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle $(BUNDLE_GEN_FLAGS)
 	./scripts/csv_description_update.sh update_csv
 
-	$(KUSTOMIZE) build config/kustomize/crd -o internal/deploy/kustomize/daily/base/websphere-liberty-crd.yaml
-	cd config/kustomize/operator && $(KUSTOMIZE) edit set namespace $(KUSTOMIZE_NAMESPACE)
-	$(KUSTOMIZE) build config/kustomize/operator -o internal/deploy/kustomize/daily/base/websphere-liberty-deployment.yaml
-	sed -i.bak "s,${IMG},${KUSTOMIZE_IMG},g;s,serviceAccountName: controller-manager,serviceAccountName: websphere-liberty-controller-manager,g" internal/deploy/kustomize/daily/base/websphere-liberty-deployment.yaml
-	$(KUSTOMIZE) build config/kustomize/roles -o internal/deploy/kustomize/daily/base/websphere-liberty-roles.yaml
+	$(KUSTOMIZE) build config/kustomize/crd -o deploy/kustomize/daily/base/open-liberty-crd.yaml
+        cd config/kustomize/operator && $(KUSTOMIZE) edit set namespace $(KUSTOMIZE_NAMESPACE)
+        $(KUSTOMIZE) build config/kustomize/operator -o deploy/kustomize/daily/base/open-liberty-operator.yaml
+#	sed -i.bak "s,${IMG},${KUSTOMIZE_IMG},g;s,serviceAccountName: controller-manager,serviceAccountName: websphere-liberty-controller-manager,g" internal/deploy/kustomize/daily/base/websphere-liberty-deployment.yaml
+
+	sed -i.bak "s,${IMG},${KUSTOMIZE_IMG},g" deploy/kustomize/daily/base/open-liberty-operator.yaml
+#	$(KUSTOMIZE) build config/kustomize/roles -o internal/deploy/kustomize/daily/base/websphere-liberty-roles.yaml
 
 	mv config/manifests/patches/csvAnnotations.yaml.bak config/manifests/patches/csvAnnotations.yaml
 	rm internal/deploy/kustomize/daily/base/websphere-liberty-deployment.yaml.bak
@@ -223,7 +225,7 @@ test: manifests generate fmt vet ## Run tests.
 
 .PHONY: unit-test
 unit-test: ## Run unit tests
-	go test -v -mod=vendor -tags=unit github.com/WASdev/websphere-liberty-operator/...
+	go test -v -mod=vendor -tags=unit github.com/OpenLiberty/open-liberty-operator/...
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller against the configured Kubernetes cluster in ~/.kube/config from your host.

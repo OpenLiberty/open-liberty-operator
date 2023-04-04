@@ -3,12 +3,12 @@
 BASE_DIR="$(cd $(dirname $0) && pwd)"
 
 function update_csv() {
-    local FILE="$BASE_DIR/../bundle/manifests/ibm-websphere-liberty.clusterserviceversion.yaml"
+    local FILE="$BASE_DIR/../bundle/manifests/open-liberty.clusterserviceversion.yaml"
 
     DESCRIPTION_FILE=/tmp/description.md
     echo "  description: |" > $DESCRIPTION_FILE
     cat "$BASE_DIR/../config/manifests/description.md" | sed 's/^/    /' >> $DESCRIPTION_FILE
-    sed -i.bak '/^  displayName: IBM WebSphere Liberty/r /tmp/description.md' $FILE
+    sed -i.bak '/^  displayName: Open Liberty/r /tmp/description.md' $FILE
     rm -f "${FILE}.bak"
     rm -f $DESCRIPTION_FILE
     }
