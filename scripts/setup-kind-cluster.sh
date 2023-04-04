@@ -138,7 +138,7 @@ data:
 EOF
   fi
 
-  readonly test_namespace="wlo-test"
+  readonly test_namespace="olo-test"
   echo "****** Creating test namespace: ${test_namespace}"
   kubectl create namespace "${test_namespace}"
   kubectl config set-context kind-e2e-cluster --namespace="${test_namespace}"
