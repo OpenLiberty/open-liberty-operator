@@ -5,10 +5,10 @@ FROM registry.redhat.io/ubi8/ubi-minimal
 ARG VERSION_LABEL=1.1.0
 ARG RELEASE_LABEL=XX
 ARG VCS_REF=0123456789012345678901234567890123456789
-ARG VCS_URL="https://github.com/WASdev/websphere-liberty-operator"
-ARG NAME="websphere-liberty-operator-catalog"
-ARG SUMMARY="WebSphere Liberty Operator Catalog"
-ARG DESCRIPTION="This image contains the catalog for WebSphere Liberty Operator."
+ARG VCS_URL="https://github.com/OpenLiberty/open-liberty-operator"
+ARG NAME="open-liberty-operator-catalog"
+ARG SUMMARY="Open Liberty Operator Catalog"
+ARG DESCRIPTION="This image contains the catalog for Open Liberty Operator."
 
 ARG USER_ID=1001
 
