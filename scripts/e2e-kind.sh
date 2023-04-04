@@ -3,7 +3,7 @@
 readonly usage="Usage: scripts/e2e-kind.sh --test-tag <test-id> -u <fyre-user> -k <fyre-API-key> -p <fyre-root-password> -pgid <fyre-product-group-id>"
 
 readonly KUBE_CLUSTER_NAME="kind-e2e-cluster"
-readonly BUILD_IMAGE="websphere-liberty-operator:latest"
+readonly BUILD_IMAGE="open-liberty-operator:latest"
 
 readonly RUNASUSER="\n  securityContext:\n    runAsUser: 1001"
 readonly APPIMAGE='applicationImage:\s'
@@ -28,7 +28,7 @@ main() {
   setup_env
   install_tools
   build_push
-  install_wlo
+  install_olo
   setup_test
 
   if [[ "${SETUP_ONLY}" == true ]]; then
@@ -87,30 +87,30 @@ setup_env() {
 build_push() {
     ## Build Docker image and push to private registry
     docker build -t "${LOCAL_REGISTRY}/${BUILD_IMAGE}" . || {
-        echo "Error: Failed to build WebSphere Liberty Operator"
+        echo "Error: Failed to build Open Liberty Operator"
         exit 1
     }
 
     docker save ${LOCAL_REGISTRY}/${BUILD_IMAGE} | sshpass -p "${FYRE_PASS}" ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -C ${REMOTE_CLUSTER} "docker load && docker push ${LOCAL_REGISTRY}/${BUILD_IMAGE}" || {
-      echo "Error: Failed to push WebSphere Liberty Operator"
+      echo "Error: Failed to push Open Liberty Operator"
       exit 1
     }
 }
 
-# install_wlo: Kustomize and install WebSphere-Liberty-Operator
-install_wlo() {
-  echo "****** Installing WLO in namespace: ${TEST_NAMESPACE}"
-  kubectl apply -f bundle/manifests/liberty.websphere.ibm.com_webspherelibertyapplications.yaml
-  kubectl apply -f bundle/manifests/liberty.websphere.ibm.com_webspherelibertydumps.yaml
-  kubectl apply -f bundle/manifests/liberty.websphere.ibm.com_webspherelibertytraces.yaml
+# install_olo: Kustomize and install Open-Liberty-Operator
+install_olo() {
+  echo "****** Installing OLO in namespace: ${TEST_NAMESPACE}"
+  kubectl apply -f bundle/manifests/apps.openliberty.io_openlibertyapplications.yaml
+  kubectl apply -f bundle/manifests/apps.openliberty.io_openlibertydumps.yaml
+  kubectl apply -f bundle/manifests/apps.openliberty.io_openlibertytraces.yaml
 
   sed -i "s|image: .*|image: ${LOCAL_REGISTRY}/${BUILD_IMAGE}|
-          s|WEBSPHERE_LIBERTY_WATCH_NAMESPACE|${TEST_NAMESPACE}|" internal/deploy/kubectl/websphereliberty-app-operator.yaml
+          s|default|${TEST_NAMESPACE}|" deploy/kustomize/daily/base/open-liberty-operator.yaml
 
-  kubectl apply -f internal/deploy/kubectl/websphereliberty-app-operator.yaml -n ${TEST_NAMESPACE}
+  kubectl apply -f deploy/kustomize/daily/base/open-liberty-operator.yaml -n ${TEST_NAMESPACE}
 
   # Wait for operator deployment to be ready
-  wait_for ${TEST_NAMESPACE} wlo-controller-manager
+  wait_for ${TEST_NAMESPACE} olo-controller-manager
 }
 
 install_tools() {
@@ -148,7 +148,7 @@ setup_test() {
     mv bundle/tests/scorecard/kuttl/network-policy-multiple-apps bundle/tests/scorecard/kind-kuttl/
     mv bundle/tests/scorecard/kuttl/routes bundle/tests/scorecard/kind-kuttl/
     mv bundle/tests/scorecard/kuttl/route-certificate bundle/tests/scorecard/kind-kuttl/
-    mv bundle/tests/scorecard/kuttl/image-stream bundle/tests/scorecard/kind-kuttl/
+    mv bundle/tests/scorecard/kuttl/stream bundle/tests/scorecard/kind-kuttl/
     mv bundle/tests/scorecard/kuttl/manage-tls bundle/tests/scorecard/kind-kuttl/
 
     #disable these tests for kind tests (mount permission issue)
@@ -207,8 +207,8 @@ parse_args() {
         exit 1
     fi
 
-    readonly TEST_NAMESPACE="wlo-test"
-    readonly REMOTE_CLUSTER_NAME="wlo-test-${TEST_TAG}-cluster"
+    readonly TEST_NAMESPACE="olo-test"
+    readonly REMOTE_CLUSTER_NAME="olo-test-${TEST_TAG}-cluster"
     readonly REMOTE_CLUSTER="${REMOTE_CLUSTER_NAME}1.fyre.ibm.com"
     readonly LOCAL_REGISTRY="localhost:5000"
 }
