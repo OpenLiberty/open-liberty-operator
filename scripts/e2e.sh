@@ -3,7 +3,7 @@
 readonly usage="Usage: e2e.sh -u <docker-username> -p <docker-password> --cluster-url <url> --cluster-token <token> --registry-name <name> --registry-namespace <namespace> --release <daily|release-tag> --test-tag <test-id>"
 readonly SERVICE_ACCOUNT="travis-tests"
 readonly OC_CLIENT_VERSION="4.6.0"
-readonly CONTROLLER_MANAGER_NAME="wlo-controller-manager"
+readonly CONTROLLER_MANAGER_NAME="olo-controller-manager"
 
 # setup_env: Download oc cli, log into our persistent cluster, and create a test project
 setup_env() {
@@ -18,7 +18,7 @@ setup_env() {
 
     # Set variables for rest of script to use
     readonly DEFAULT_REGISTRY=$(oc get route "${REGISTRY_NAME}" -o jsonpath="{ .spec.host }" -n "${REGISTRY_NAMESPACE}")
-    readonly TEST_NAMESPACE="wlo-test-${TRAVIS_BUILD_NUMBER}"
+    readonly TEST_NAMESPACE="olo-test-${TRAVIS_BUILD_NUMBER}"
     readonly BUILD_IMAGE=${DEFAULT_REGISTRY}/${TEST_NAMESPACE}/operator
     readonly BUNDLE_IMAGE="${DEFAULT_REGISTRY}/${TEST_NAMESPACE}/operator-bundle:latest"
 
