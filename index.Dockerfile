@@ -13,7 +13,7 @@ ARG DESCRIPTION="This image contains the catalog for Open Liberty Operator."
 ARG USER_ID=1001
 
 LABEL name=$NAME \
-      vendor=IBM \
+      vendor="Open Liberty" \
       version=$VERSION_LABEL \
       release=$RELEASE_LABEL \
       description=$DESCRIPTION \
