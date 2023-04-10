@@ -122,6 +122,21 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+
+	isKnativeSupported, err := r.IsGroupVersionSupported(servingv1.SchemeGroupVersion.String(), "Service")
+	if err != nil {
+		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	} else if !isKnativeSupported && instance.Spec.CreateKnativeService != nil && *instance.Spec.CreateKnativeService {
+		reqLogger.V(1).Info(fmt.Sprintf("%s is not supported on the cluster", servingv1.SchemeGroupVersion.String()))
+	}
+
+	// Check if there is an existing Deployment, Statefulset or Knative service by this name
+	// not managed by this operator
+	err = oputils.CheckForNameConflicts("OpenLibertyApplication", instance.Name, instance.Namespace, r.GetClient(), request, isKnativeSupported)
+	if err != nil {
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	}
+
 	// Check if the OpenLibertyApplication instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
 	isInstanceMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
@@ -269,13 +284,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			reqLogger.Error(err, message)
 			return r.ManageError(err, common.StatusConditionTypeResourcesReady, instance)
 		}
-	}
-
-	isKnativeSupported, err := r.IsGroupVersionSupported(servingv1.SchemeGroupVersion.String(), "Service")
-	if err != nil {
-		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-	} else if !isKnativeSupported && instance.Spec.CreateKnativeService != nil && *instance.Spec.CreateKnativeService {
-		reqLogger.V(1).Info(fmt.Sprintf("%s is not supported on the cluster", servingv1.SchemeGroupVersion.String()))
 	}
 
 	if instance.Spec.CreateKnativeService != nil && *instance.Spec.CreateKnativeService {
