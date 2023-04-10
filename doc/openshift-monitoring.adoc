@@ -1,6 +1,6 @@
 # Application Monitoring on Red Hat OpenShift Container Platform (RHOCP) with Prometheus and Grafana
 
-The following guide has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2, 4.3, 4.4, 4.5, 4.6 and 4.7, 4.8, 4.9, and 4.10.
+The following guide has been tested and supported with Red Hat OpenShift Container Platform (RHOCP) versions 4.10+.
 
 ## Prerequisites
 
