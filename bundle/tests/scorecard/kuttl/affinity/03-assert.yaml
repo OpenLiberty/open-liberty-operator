@@ -1,9 +1,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: anti-affinity-pod-lib
+  name: anti-affinity-liberty
 spec:
-  # Add fields here
   template:
     spec:
       affinity:
@@ -16,7 +15,7 @@ spec:
                     - key: app.kubernetes.io/instance
                       operator: In
                       values:
-                        - node-affinity-label-lib
+                        - affinity-liberty
                 topologyKey: kubernetes.io/hostname
 status:
   replicas: 1

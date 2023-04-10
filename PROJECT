@@ -16,4 +16,13 @@ resources:
 - group: apps.openliberty.io
   kind: OpenLibertyTrace
   version: v1beta2
+- group: apps.openliberty.io
+  kind: OpenLibertyApplication
+  version: v1
+- group: apps.openliberty.io
+  kind: OpenLibertyDump
+  version: v1
+- group: apps.openliberty.io
+  kind: OpenLibertyTrace
+  version: v1
 version: "3"

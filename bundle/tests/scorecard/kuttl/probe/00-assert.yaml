@@ -1,3 +1,7 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -11,11 +15,28 @@ spec:
       containers:
         - readinessProbe:
             initialDelaySeconds: 1
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 24
+            httpGet:
+              path: "/"
+              port: 9080
           livenessProbe:
             initialDelaySeconds: 8
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 12
+            httpGet:
+              path: "/"
+              port: 9080
           startupProbe:
             failureThreshold: 10
             periodSeconds: 5
+            httpGet:
+              path: "/"
+              port: 9080
 status:
   replicas: 1
   readyReplicas: 1

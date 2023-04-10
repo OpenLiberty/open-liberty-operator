@@ -1,0 +1,13 @@
+apiVersion: apps.openliberty.io/v1
+kind: OpenLibertyApplication
+metadata:
+  name: manage-tls-liberty
+spec:
+  applicationImage: k8s.gcr.io/pause:2.0
+  replicas: 1
+  expose: true
+  manageTLS: true
+  service:
+    annotations:
+      service.beta.openshift.io/serving-cert-secret-name: manage-tls-liberty-svc-tls-ocp # Enables usage of OpenShift service CA
+    port: 9443

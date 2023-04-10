@@ -9,7 +9,7 @@ import (
 	oputils "github.com/application-stacks/runtime-component-operator/utils"
 	"github.com/go-logr/logr"
 
-	openlibertyv1beta2 "github.com/OpenLiberty/open-liberty-operator/api/v1beta2"
+	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,8 +35,8 @@ type ReconcileOpenLibertyDump struct {
 	Log        logr.Logger
 }
 
-// +kubebuilder:rbac:groups=apps.openliberty.io,resources=openlibertydumps;openlibertydumps/status;openlibertydumps/finalizers,verbs=get;list;watch;create;update;patch;delete,namespace=open-liberty-operator
-// +kubebuilder:rbac:groups=core,resources=pods;pods/exec,verbs=get;list;watch;create;update;patch;delete,namespace=open-liberty-operator
+// +kubebuilder:rbac:groups=apps.openliberty.io,resources=openlibertydumps;openlibertydumps/status;openlibertydumps/finalizers,verbs=get;list;watch;create;update;delete,namespace=open-liberty-operator
+// +kubebuilder:rbac:groups=core,resources=pods;pods/exec,verbs=get;list;watch;create;update;delete,namespace=open-liberty-operator
 
 // Reconcile reads that state of the cluster for a OpenLibertyDump object and makes changes based on the state read
 // and what is in the OpenLibertyDump.Spec
@@ -49,7 +49,7 @@ func (r *ReconcileOpenLibertyDump) Reconcile(ctx context.Context, request ctrl.R
 	reqLogger.Info("Reconciling OpenLibertyDump")
 
 	// Fetch the OpenLibertyDump instance
-	instance := &openlibertyv1beta2.OpenLibertyDump{}
+	instance := &openlibertyv1.OpenLibertyDump{}
 	err := r.Client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -63,7 +63,7 @@ func (r *ReconcileOpenLibertyDump) Reconcile(ctx context.Context, request ctrl.R
 	}
 
 	//do not reconcile if the dump already started
-	oc := openlibertyv1beta2.GetOperationCondtion(instance.Status.Conditions, openlibertyv1beta2.OperationStatusConditionTypeStarted)
+	oc := openlibertyv1.GetOperationCondtion(instance.Status.Conditions, openlibertyv1.OperationStatusConditionTypeStarted)
 	if oc != nil && oc.Status == corev1.ConditionTrue {
 		return reconcile.Result{}, err
 	}
@@ -77,13 +77,13 @@ func (r *ReconcileOpenLibertyDump) Reconcile(ctx context.Context, request ctrl.R
 		message := "Failed to find pod " + instance.Spec.PodName + " in namespace " + request.Namespace
 		reqLogger.Error(err, message)
 		r.Recorder.Event(instance, "Warning", "ProcessingError", message)
-		c := openlibertyv1beta2.OperationStatusCondition{
-			Type:    openlibertyv1beta2.OperationStatusConditionTypeStarted,
+		c := openlibertyv1.OperationStatusCondition{
+			Type:    openlibertyv1.OperationStatusConditionTypeStarted,
 			Status:  corev1.ConditionFalse,
 			Reason:  "Error",
 			Message: "Failed to find a pod or pod is not in running state",
 		}
-		instance.Status.Conditions = openlibertyv1beta2.SetOperationCondtion(instance.Status.Conditions, c)
+		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
 		r.Client.Status().Update(context.TODO(), instance)
 		return reconcile.Result{}, nil
 	}
@@ -99,12 +99,12 @@ func (r *ReconcileOpenLibertyDump) Reconcile(ctx context.Context, request ctrl.R
 		}
 	}
 
-	c := openlibertyv1beta2.OperationStatusCondition{
-		Type:   openlibertyv1beta2.OperationStatusConditionTypeStarted,
+	c := openlibertyv1.OperationStatusCondition{
+		Type:   openlibertyv1.OperationStatusConditionTypeStarted,
 		Status: corev1.ConditionTrue,
 	}
 
-	instance.Status.Conditions = openlibertyv1beta2.SetOperationCondtion(instance.Status.Conditions, c)
+	instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
 	r.Client.Status().Update(context.TODO(), instance)
 
 	_, err = utils.ExecuteCommandInContainer(r.RestConfig, pod.Name, pod.Namespace, "app", []string{"/bin/sh", "-c", dumpCmd})
@@ -112,24 +112,24 @@ func (r *ReconcileOpenLibertyDump) Reconcile(ctx context.Context, request ctrl.R
 		//handle error
 		reqLogger.Error(err, "Execute dump cmd failed ", "cmd", dumpCmd)
 		r.Recorder.Event(instance, "Warning", "ProcessingError", err.Error())
-		c = openlibertyv1beta2.OperationStatusCondition{
-			Type:    openlibertyv1beta2.OperationStatusConditionTypeCompleted,
+		c = openlibertyv1.OperationStatusCondition{
+			Type:    openlibertyv1.OperationStatusConditionTypeCompleted,
 			Status:  corev1.ConditionFalse,
 			Reason:  "Error",
 			Message: err.Error(),
 		}
-		instance.Status.Conditions = openlibertyv1beta2.SetOperationCondtion(instance.Status.Conditions, c)
+		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
 		r.Client.Status().Update(context.TODO(), instance)
 		return reconcile.Result{}, nil
 
 	}
 
-	c = openlibertyv1beta2.OperationStatusCondition{
-		Type:   openlibertyv1beta2.OperationStatusConditionTypeCompleted,
+	c = openlibertyv1.OperationStatusCondition{
+		Type:   openlibertyv1.OperationStatusConditionTypeCompleted,
 		Status: corev1.ConditionTrue,
 	}
 
-	instance.Status.Conditions = openlibertyv1beta2.SetOperationCondtion(instance.Status.Conditions, c)
+	instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
 	instance.Status.DumpFile = dumpFileName
 	r.Client.Status().Update(context.TODO(), instance)
 	return reconcile.Result{}, nil
@@ -166,6 +166,6 @@ func (r *ReconcileOpenLibertyDump) SetupWithManager(mgr ctrl.Manager) error {
 			return isClusterWide || watchNamespacesMap[e.Object.GetNamespace()]
 		},
 	}
-	return ctrl.NewControllerManagedBy(mgr).For(&openlibertyv1beta2.OpenLibertyDump{}, builder.WithPredicates(pred)).Complete(r)
+	return ctrl.NewControllerManagedBy(mgr).For(&openlibertyv1.OpenLibertyDump{}, builder.WithPredicates(pred)).Complete(r)
 
 }

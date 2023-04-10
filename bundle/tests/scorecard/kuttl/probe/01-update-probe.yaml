@@ -1,4 +1,4 @@
-apiVersion: apps.openliberty.io/v1beta2
+apiVersion: apps.openliberty.io/v1
 kind: OpenLibertyApplication
 metadata:
   name: probes-liberty
@@ -11,3 +11,4 @@ spec:
     startup:
       failureThreshold: 20
       periodSeconds: 10
+

@@ -23,14 +23,14 @@ function install_minikube() {
   sudo apt-get -qq -y install conntrack
 
   ## get kubectl
-  echo "****** Installing kubectl v1.19.4..."
-  curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.19.4/bin/linux/amd64/kubectl \
+  echo "****** Installing kubectl v1.24.2..."
+  curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.24.2/bin/linux/amd64/kubectl \
   && chmod +x kubectl \
   && sudo mv kubectl /usr/local/bin/ 
 
   ## Download minikube
-  echo "****** Installing Minikube v1.21.0..."
-  curl -Lo minikube https://storage.googleapis.com/minikube/releases/v1.21.0/minikube-linux-amd64 \
+  echo "****** Installing Minikube v1.26.1..."
+  curl -Lo minikube https://storage.googleapis.com/minikube/releases/v1.26.1/minikube-linux-amd64 \
   && chmod +x minikube \
   && sudo mv minikube /usr/local/bin/
   
@@ -48,10 +48,13 @@ function install_minikube() {
 
   mkdir -p $HOME/.kube $HOME/.minikube
   touch $KUBECONFIG
-  minikube start --profile=minikube --kubernetes-version=v1.19.4 --driver=docker --force
+  minikube start --profile=minikube --kubernetes-version=v1.24.2 --driver=docker --force
   minikube update-context --profile=minikube
 
   eval "$(minikube docker-env --profile=minikube)" && export DOCKER_CLI='docker'
+
+  ## Run Local Registry
+  docker run -d -p 5000:5000 --restart=always --name local-registry registry
 }
 
 

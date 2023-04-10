@@ -4,19 +4,17 @@ set -o errexit
 set -o nounset
 
 main() {
-  if [[ -x "$(command -v operator-sdk)" ]]; then
-    operator-sdk version
-    exit 0
-  fi
-
-  ## doesn't support zLinux yet
-  if [[ $(uname -p) = "s390x" ]]; then
-    echo "****** zLinux build detected, skipping operator-sdk install"
-    exit 0
-  fi
-
-  DEFAULT_RELEASE_VERSION=v1.6.4
+  DEFAULT_RELEASE_VERSION=v1.24.0
   RELEASE_VERSION=${1:-$DEFAULT_RELEASE_VERSION}
+
+  if [[ -x "$(command -v operator-sdk)" ]]; then
+    if operator-sdk version | grep -q "$RELEASE_VERSION"; then
+      operator-sdk version
+      exit 0
+    else
+      echo "****** Another operator-sdk version detected"
+    fi
+  fi
 
   if [[ "$(uname)" = "Darwin" ]]; then
     binary_url="https://github.com/operator-framework/operator-sdk/releases/download/$RELEASE_VERSION/operator-sdk_darwin_amd64"

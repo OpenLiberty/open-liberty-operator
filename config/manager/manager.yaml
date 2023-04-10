@@ -19,6 +19,8 @@ spec:
   replicas: 1
   template:
     metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
       labels:
         control-plane: controller-manager
     spec:
@@ -28,9 +30,30 @@ spec:
       - command:
         - /manager
         args:
+        - "--health-probe-bind-address=:8081"
         - --enable-leader-election
         image: controller:latest
         name: manager
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 8081
+            scheme: HTTP
+          initialDelaySeconds: 90
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 10
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /readyz
+            port: 8081
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 10    
         env:
           - name: OPERATOR_NAMESPACE
             valueFrom:
@@ -45,7 +68,7 @@ spec:
         resources:
           limits:
             cpu: 200m
-            memory: 256Mi
+            memory: 512Mi
           requests:
             cpu: 100m
             memory: 64Mi

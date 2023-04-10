@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/application-stacks/runtime-component-operator/common"
-	prometheusv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	routev1 "github.com/openshift/api/route/v1"
+	prometheusv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -56,7 +56,7 @@ type OpenLibertyApplicationSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=10,type=spec,displayName="Auto Scaling"
 	Autoscaling *OpenLibertyApplicationAutoScaling `json:"autoscaling,omitempty"`
 
-	// Resource requests and limits for the application container.
+	// Limits the amount of required resources.
 	// +operator-sdk:csv:customresourcedefinitions:order=11,type=spec,displayName="Resource Requirements",xDescriptors="urn:alm:descriptor:com.tectonic.ui:resourceRequirements"
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 
@@ -120,10 +120,6 @@ type OpenLibertyApplicationSpec struct {
 
 	// +operator-sdk:csv:customresourcedefinitions:order=26,type=spec,displayName="Affinity"
 	Affinity *OpenLibertyApplicationAffinity `json:"affinity,omitempty"`
-
-	// Security context for the application container.
-	// +operator-sdk:csv:customresourcedefinitions:order=27,type=spec,displayName="Security Context"
-	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
 }
 
 // Define health checks on application container to determine whether it is alive or ready to receive traffic
@@ -139,6 +135,18 @@ type OpenLibertyApplicationProbes struct {
 	// Probe to determine successful initialization. If specified, other probes are not executed until this completes successfully.
 	// +operator-sdk:csv:customresourcedefinitions:order=51,type=spec,displayName="Startup Probe"
 	Startup *corev1.Probe `json:"startup,omitempty"`
+}
+
+func (p *OpenLibertyApplicationProbes) GetDefaultLivenessProbe(common.BaseComponent) *corev1.Probe {
+	return nil
+}
+
+func (p *OpenLibertyApplicationProbes) GetDefaultReadinessProbe(common.BaseComponent) *corev1.Probe {
+	return nil
+}
+
+func (p *OpenLibertyApplicationProbes) GetDefaultStartupProbe(common.BaseComponent) *corev1.Probe {
+	return nil
 }
 
 // Configure pods to run on particular Nodes.
@@ -211,7 +219,7 @@ type OpenLibertyApplicationService struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=14,type=spec,displayName="Target Port",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
 	TargetPort *int32 `json:"targetPort,omitempty"`
 
-	// A name of a secret that already contains TLS key, certificate and CA to be mounted in the pod. The following keys are valid in the secret: ca.crt, tls.crt, and tls.key.
+	// A name of a secret that already contains TLS key, certificate and CA to be mounted in the pod.
 	// +operator-sdk:csv:customresourcedefinitions:order=15,type=spec,displayName="Certificate Secret Reference",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	CertificateSecretRef *string `json:"certificateSecretRef,omitempty"`
 
@@ -263,6 +271,10 @@ type OpenLibertyApplicationStorage struct {
 	VolumeClaimTemplate *corev1.PersistentVolumeClaim `json:"volumeClaimTemplate,omitempty"`
 }
 
+func (s *OpenLibertyApplicationStorage) GetClassName() string {
+	return ""
+}
+
 // Specifies parameters for Service Monitor.
 type OpenLibertyApplicationMonitoring struct {
 	// Labels to set on ServiceMonitor.
@@ -308,7 +320,7 @@ type OpenLibertyApplicationRoute struct {
 	// Path type to be used for Ingress.
 	PathType networkingv1.PathType `json:"pathType,omitempty"`
 
-	// A name of a secret that already contains TLS key, certificate and CA to be used in the route. It can also contain destination CA certificate. The following keys are valid in the secret: ca.crt, destCA.crt, tls.crt, and tls.key.
+	// A name of a secret that already contains TLS key, certificate and CA to be used in the route. Also can contain destination CA certificate.
 	// +operator-sdk:csv:customresourcedefinitions:order=45,type=spec,displayName="Certificate Secret Reference",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	CertificateSecretRef *string `json:"certificateSecretRef,omitempty"`
 
@@ -340,6 +352,10 @@ type StatusCondition struct {
 	Message            string                 `json:"message,omitempty"`
 	Status             corev1.ConditionStatus `json:"status,omitempty"`
 	Type               StatusConditionType    `json:"type,omitempty"`
+}
+
+func (c *StatusCondition) SetConditionFields(string, string, corev1.ConditionStatus) common.StatusCondition {
+	return c
 }
 
 // Defines the type of status condition.
@@ -705,6 +721,34 @@ func (s *OpenLibertyApplicationStatus) SetBinding(r *corev1.LocalObjectReference
 	s.Binding = r
 }
 
+func (s *OpenLibertyApplicationStatus) NewStatusEndpoint(string) common.StatusEndpoint {
+	return nil
+}
+
+func (s *OpenLibertyApplicationStatus) GetStatusEndpoint(string) common.StatusEndpoint {
+	return nil
+}
+
+func (s *OpenLibertyApplicationStatus) SetStatusEndpoint(common.StatusEndpoint) {
+	return
+}
+
+func (s *OpenLibertyApplicationStatus) RemoveStatusEndpoint(string) {
+	return
+}
+
+func (s *OpenLibertyApplicationStatus) GetReferences() common.StatusReferences {
+	return nil
+}
+
+func (s *OpenLibertyApplicationStatus) SetReferences(common.StatusReferences) {
+	return
+}
+
+func (s *OpenLibertyApplicationStatus) SetReference(string, string) {
+	return
+}
+
 // GetMinReplicas returns minimum replicas
 func (a *OpenLibertyApplicationAutoScaling) GetMinReplicas() *int32 {
 	return a.MinReplicas
@@ -871,11 +915,6 @@ func (a *OpenLibertyApplicationAffinity) GetNodeAffinityLabels() map[string]stri
 	return a.NodeAffinityLabels
 }
 
-// GetSecurityContext returns container security context
-func (cr *OpenLibertyApplication) GetSecurityContext() *corev1.SecurityContext {
-	return cr.Spec.SecurityContext
-}
-
 // Initialize sets default values
 func (cr *OpenLibertyApplication) Initialize() {
 	if cr.Spec.PullPolicy == nil {
@@ -1000,7 +1039,7 @@ func (c *StatusCondition) SetStatus(s corev1.ConditionStatus) {
 }
 
 // NewCondition returns new condition
-func (s *OpenLibertyApplicationStatus) NewCondition() common.StatusCondition {
+func (s *OpenLibertyApplicationStatus) NewCondition(common.StatusConditionType) common.StatusCondition {
 	return &StatusCondition{}
 }
 

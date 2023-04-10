@@ -1,6 +1,6 @@
 # Not all required fields are set, so autoscaling
 # should not be enabled
-apiVersion: apps.openliberty.io/v1beta2
+apiVersion: apps.openliberty.io/v1
 kind: OpenLibertyApplication
 metadata:
   name: autoscaling2-liberty

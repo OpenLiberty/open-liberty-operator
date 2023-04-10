@@ -32,9 +32,7 @@ const (
 type OpenLibertyDumpStatus struct {
 	// +listType=atomic
 	Conditions []OperationStatusCondition `json:"conditions,omitempty"`
-	// Location of the generated dump file
-	// +operator-sdk:csv:customresourcedefinitions:type=status,displayName="Dump File Path",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
-	DumpFile string `json:"dumpFile,omitempty"`
+	DumpFile   string                     `json:"dumpFile,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -47,7 +45,7 @@ type OpenLibertyDumpStatus struct {
 // +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.type=='Completed')].reason",priority=1,description="Reason for dump operation failing to complete"
 // +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Completed')].message",priority=1,description="Message for dump operation failing to complete"
 // +kubebuilder:printcolumn:name="Dump file",type="string",JSONPath=".status.dumpFile",priority=0,description="Indicates filename of the server dump"
-//+operator-sdk:csv:customresourcedefinitions:displayName="OpenLibertyDump"
+// +operator-sdk:csv:customresourcedefinitions:displayName="OpenLibertyDump"
 // Day-2 operation for generating server dumps
 type OpenLibertyDump struct {
 	metav1.TypeMeta   `json:",inline"`

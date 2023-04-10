@@ -2,18 +2,18 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestAssert
 timeout: 60
 ---
-apiVersion: apps.openliberty.io/v1beta2
+apiVersion: apps.openliberty.io/v1
 kind: OpenLibertyApplication
 metadata:
-  name: service-binding-ol
+  name: service-binding-liberty
 status:
   binding:
-    name: service-binding-ol-expose-binding
+    name: service-binding-liberty-expose-binding
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: service-binding-ol
+  name: service-binding-liberty
 spec:
   ports:
   - port: 8080
@@ -22,4 +22,4 @@ apiVersion: v1
 kind: Secret
 type: Opaque
 metadata:
-  name: service-binding-ol-expose-binding
+  name: service-binding-liberty-expose-binding

@@ -1,9 +1,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: node-affinity-label-lib
+  name: affinity-liberty
 spec:
-  # Add fields here
   template:
     spec:
       affinity:

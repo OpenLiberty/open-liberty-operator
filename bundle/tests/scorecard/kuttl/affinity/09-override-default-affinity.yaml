@@ -1,0 +1,9 @@
+# Test to see that the default affinity is overwritten if supplied with a user defined affinity
+apiVersion: apps.openliberty.io/v1
+kind: OpenLibertyApplication
+metadata:
+  name: affinity-liberty
+spec:
+  affinity:
+    nodeAffinityLabels:
+      kuttlTest: test1

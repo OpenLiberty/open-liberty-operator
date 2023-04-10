@@ -1,12 +1,10 @@
-apiVersion: apps.openliberty.io/v1beta2
+apiVersion: apps.openliberty.io/v1
 kind: OpenLibertyApplication
 metadata:
   name: sidecar-liberty-deployment
 spec:
   # Add fields here
-  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
-  replicas: 1
   sidecarContainers:
-  - image: k8s.gcr.io/pause:2.0
+  - image: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
     name: sidecar-container
 

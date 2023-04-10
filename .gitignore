@@ -1,7 +1,10 @@
 .DS_Store
+bin/controller-gen
+bin/kustomize
 # Temporary Build Files
 build/_output
 build/_test
+bundle/tests/scorecard/kuttl/kubeconfig
 # Created by https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
 ### Emacs ###
 # -*- mode: gitignore; -*-
@@ -77,3 +80,4 @@ tags
 .history
 # End of https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
 bin
+vendor

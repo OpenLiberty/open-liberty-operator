@@ -1,0 +1,13 @@
+apiVersion: apps.openliberty.io/v1
+kind: OpenLibertyApplication
+metadata:
+  name: security-context-liberty
+spec:
+  applicationImage: k8s.gcr.io/pause:2.0
+  replicas: 1
+  securityContext:
+    allowPrivilegeEscalation: null
+    capabilities: null
+    privileged: null
+    readOnlyRootFilesystem: null
+    runAsNonRoot: null
