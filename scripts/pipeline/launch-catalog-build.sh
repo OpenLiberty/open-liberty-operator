@@ -92,7 +92,7 @@ function launch_travis() {
                 \"dist\": \"focal\",
                 \"language\": \"go\",
                 \"go\": [
-                    \"1.19.x\"
+                    \"1.20.x\"
                 ],
                 \"go_import_path\": \"github.com/OpenLiberty/open-liberty-operator\",
                 \"services\": [
