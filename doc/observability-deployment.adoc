@@ -1,6 +1,6 @@
 = Observability with Open Liberty
 
-The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in a Kubernetes environment. This document has been tested with Red Hat OpenShift Container Platform (RHOCP) 4.2, 4.3, 4.4, 4.5, 4.6 and 4.7, 4.8, 4.9, 4.10, and 4.12.
+The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in a Kubernetes environment. This document has been tested and supported with Red Hat OpenShift Container Platform (RHOCP) versions 4.10+.
 
 == How to analyze Open Liberty logs
 
