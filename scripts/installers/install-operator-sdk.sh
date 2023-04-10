@@ -16,6 +16,12 @@ main() {
     fi
   fi
 
+  ## doesn't support zLinux yet
+  if [[ $(uname -p) = "s390x" ]]; then
+    echo "****** zLinux build detected, skipping operator-sdk install"
+    exit 0
+  fi
+
   if [[ "$(uname)" = "Darwin" ]]; then
     binary_url="https://github.com/operator-framework/operator-sdk/releases/download/$RELEASE_VERSION/operator-sdk_darwin_amd64"
   elif [[ "$(uname -p)" = "ppc64le" ]]; then

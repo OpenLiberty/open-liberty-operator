@@ -32,14 +32,14 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
 # openliberty.io/op-test-bundle:$VERSION and openliberty.io/op-test-catalog:$VERSION.
-IMAGE_TAG_BASE ?= openliberty/operator
+IMAGE_TAG_BASE ?= icr.io/appcafe/open-liberty-operator
 
 # OPERATOR_IMAGE defines the docker.io namespace and part of the image name for remote images.
-OPERATOR_IMAGE ?= openliberty/operator
+OPERATOR_IMAGE ?= icr.io/appcafe/open-liberty-operator
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
-BUNDLE_IMG ?= $(IMAGE_TAG_BASE):bundle-daily
+BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:daily
 
 # A comma-separated list of bundle images (e.g. make catalog-build BUNDLE_IMGS=example.com/operator-bundle:v0.1.0,example.com/operator-bundle:v0.2.0).
 # These images MUST exist in a registry and be pull-able.
@@ -57,7 +57,7 @@ ifeq ($(USE_IMAGE_DIGESTS), true)
 endif
 
 # Image URL to use all building/pushing image targets
-IMG ?= openliberty/operator:daily
+IMG ?= icr.io/appcafe/open-liberty-operator:daily
 
 # The image tag given to the resulting catalog image (e.g. make catalog-build CATALOG_IMG=example.com/operator-catalog:v0.2.0).
 CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:v$(VERSION)
@@ -79,6 +79,24 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+# Setting SHELL to bash allows bash commands to be executed by recipes.
+# This is a requirement for 'setup-envtest.sh' in the test target.
+# Options are set to exit when a recipe line exits non-zero or a piped command fails.
+SHELL = /usr/bin/env bash -o pipefail
+.SHELLFLAGS = -ec
+
+CREATEDAT ?= AUTO
+ifeq ($(CREATEDAT), AUTO)
+CREATEDAT := $(shell date +%Y-%m-%dT%TZ)
+endif
+
+# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
+CRD_OPTIONS ?= "crd:crdVersions=v1,generateEmbeddedObjectMeta=true"
+
+# Produce files under deploy/kustomize/daily with default namespace
+KUSTOMIZE_NAMESPACE = default
+KUSTOMIZE_IMG = cp.stg.icr.io/cp/open-liberty-operator:main
+
 # Use docker if available. Otherwise default to podman. 
 # Override choice by setting CONTAINER_COMMAND
 CHECK_DOCKER_RC=$(shell docker -v > /dev/null 2>&1; echo $$?)
@@ -96,23 +114,6 @@ else
 CONTAINER_COMMAND ?= docker
 endif
 
-# Setting SHELL to bash allows bash commands to be executed by recipes.
-# This is a requirement for 'setup-envtest.sh' in the test target.
-# Options are set to exit when a recipe line exits non-zero or a piped command fails.
-SHELL = /usr/bin/env bash -o pipefail
-.SHELLFLAGS = -ec
-
-CREATEDAT ?= AUTO
-ifeq ($(CREATEDAT), AUTO)
-CREATEDAT := $(shell date +%Y-%m-%dT%TZ)
-endif
-
-# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:crdVersions=v1,generateEmbeddedObjectMeta=true"
-
-# Produce files under deploy/kustomize/daily with default namespace
-KUSTOMIZE_NAMESPACE = default
-
 .PHONY: all
 all: build
 
@@ -129,6 +130,7 @@ all: build
 # More info on the awk command:
 # http://linuxcommand.org/lc3_adv_awk.php
 
+.PHONY: help
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
@@ -139,9 +141,9 @@ LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 # find or download controller-gen
 # download controller-gen if necessary
-CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
 $(CONTROLLER_GEN): $(LOCALBIN)
@@ -155,33 +157,17 @@ kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
 $(KUSTOMIZE): $(LOCALBIN)
 	test -s $(LOCALBIN)/kustomize || curl -s $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s $(KUSTOMIZE_VERSION) $(LOCALBIN)
 
-.PHONY: opm
-OPM = ./bin/opm
-opm: ## Download opm locally if necessary.
-ifeq (,$(wildcard $(OPM)))
-ifeq (,$(shell which opm 2>/dev/null))
-	@{ \
-	set -e ;\
-	mkdir -p $(dir $(OPM)) ;\
-	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
-	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.15.1/$${OS}-$${ARCH}-opm ;\
-	chmod +x $(OPM) ;\
-	}
-else
-OPM = $(shell which opm)
-endif
-endif
-
 .PHONY: setup
 setup: ## Ensure Operator SDK is installed.
 	./scripts/installers/install-operator-sdk.sh ${OPERATOR_SDK_RELEASE_VERSION}
 
+.PHONY: setup-go
+setup-go: ## Ensure Go is installed.
+	./scripts/installers/install-go.sh ${GO_RELEASE_VERSION}
+
 .PHONY: setup-manifest
 setup-manifest: ## Install manifest tool.
 	./scripts/installers/install-manifest-tool.sh
-
-setup-minikube:
-	./scripts/installers/install-minikube.sh
 
 # Install Podman.
 install-podman:
@@ -208,17 +194,19 @@ bundle: manifests setup kustomize ## Generate bundle manifests and metadata, the
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle $(BUNDLE_GEN_FLAGS)
+	./scripts/csv_description_update.sh update_csv
 
 	$(KUSTOMIZE) build config/kustomize/crd -o deploy/kustomize/daily/base/open-liberty-crd.yaml
-	cd config/kustomize/operator && $(KUSTOMIZE) edit set namespace $(KUSTOMIZE_NAMESPACE)
-	$(KUSTOMIZE) build config/kustomize/operator -o deploy/kustomize/daily/base/open-liberty-operator.yaml
+        cd config/kustomize/operator && $(KUSTOMIZE) edit set namespace $(KUSTOMIZE_NAMESPACE)
+        $(KUSTOMIZE) build config/kustomize/operator -o deploy/kustomize/daily/base/open-liberty-operator.yaml
+#	sed -i.bak "s,${IMG},${KUSTOMIZE_IMG},g;s,serviceAccountName: controller-manager,serviceAccountName: websphere-liberty-controller-manager,g" internal/deploy/kustomize/daily/base/websphere-liberty-deployment.yaml
+
+	sed -i.bak "s,${IMG},${KUSTOMIZE_IMG},g" deploy/kustomize/daily/base/open-liberty-operator.yaml
+#	$(KUSTOMIZE) build config/kustomize/roles -o internal/deploy/kustomize/daily/base/websphere-liberty-roles.yaml
 
 	mv config/manifests/patches/csvAnnotations.yaml.bak config/manifests/patches/csvAnnotations.yaml
+	rm internal/deploy/kustomize/daily/base/websphere-liberty-deployment.yaml.bak
 	operator-sdk bundle validate ./bundle
-
-.PHONY: kustomize-build
-kustomize-build: manifests kustomize ## Generate build controller, and roles & role bindings under deploy/kustomize directory.
-	cd deploy/kustomize/daily/base && $(KUSTOMIZE) edit set namespace ${KUSTOMIZE_NAMESPACE}
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -228,21 +216,21 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
-ENVTEST_ASSETS_DIR = $(shell pwd)/testbin
+ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 .PHONY: test
-test: generate fmt vet manifests ## Run tests.
-	mkdir -p $(ENVTEST_ASSETS_DIR)
+test: manifests generate fmt vet ## Run tests.
+	mkdir -p ${ENVTEST_ASSETS_DIR}
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.2/hack/setup-envtest.sh
-	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
+	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
 
 .PHONY: unit-test
-unit-test: ## Run unit tests.
+unit-test: ## Run unit tests
 	go test -v -mod=vendor -tags=unit github.com/OpenLiberty/open-liberty-operator/...
 
 .PHONY: run
-run: generate fmt vet manifests ## Run a controller against the configured Kubernetes cluster in ~/.kube/config from your host.
+run: manifests generate fmt vet ## Run a controller against the configured Kubernetes cluster in ~/.kube/config from your host.
 	go run ./main.go
-	
+
 ##@ Deployment
 
 ifndef ignore-not-found
@@ -263,7 +251,7 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 .PHONY: undeploy
-undeploy: manifests kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 ##@ Build
@@ -292,6 +280,10 @@ bundle-build: ## Build the bundle image.
 bundle-push: ## Push the bundle image.
 	$(CONTAINER_COMMAND) push $(PODMAN_SKIP_TLS_VERIFY) $(BUNDLE_IMG)
 
+.PHONY: catalog-push
+catalog-push: ## Push a catalog image.
+	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool
@@ -306,43 +298,22 @@ rm -rf $$TMP_DIR ;\
 }
 endef
 
-minikube-test-e2e:
-	./scripts/e2e-minikube.sh --test-tag "${TRAVIS_BUILD_NUMBER}"
-
-test-e2e:
-	./scripts/e2e-release.sh --registry-name default-route --registry-namespace openshift-image-registry \
-                     --test-tag "${TRAVIS_BUILD_NUMBER}" --target "${RELEASE_TARGET}"
-
-kind-e2e-test:
-	./scripts/e2e-kind.sh --test-tag "${TRAVIS_BUILD_NUMBER}"
-
-test-pipeline-e2e:
-	./scripts/pipeline/ocp-cluster-e2e.sh -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" \
-                     --cluster-url "${CLUSTER_URL}" --cluster-user "${CLUSTER_USER}" --cluster-token "${CLUSTER_TOKEN}" \
-                     --registry-name "${PIPELINE_REGISTRY}" --registry-image "${PIPELINE_OPERATOR_IMAGE}" \
-                     --registry-user "${PIPELINE_USERNAME}" --registry-password "${PIPELINE_PASSWORD}" \
-                     --test-tag "${TRAVIS_BUILD_NUMBER}" --release "${RELEASE_TARGET}" --channel "${DEFAULT_CHANNEL}"
-
-build-releases:
-	./scripts/build-releases.sh --image "${PUBLISH_REGISTRY}/${OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
-
-bundle-releases:
-	./scripts/bundle-releases.sh --image "${PUBLISH_REGISTRY}/${OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
-
-bundle-build-podman:
-	podman build -f bundle.Dockerfile -t "${BUNDLE_IMG}"
-
-bundle-push-podman:
-	podman push --format=docker "${BUNDLE_IMG}"
-
-build-manifest: setup-manifest
-	./scripts/build-manifest.sh --image "${PUBLISH_REGISTRY}/${OPERATOR_IMAGE}" --target "${RELEASE_TARGET}"
-
-build-catalog:
-	opm index add --bundles "${BUNDLE_IMG}" --tag "${CATALOG_IMG}" -c docker
-
-push-catalog: 
-	docker push "${CATALOG_IMG}"
+.PHONY: opm
+OPM = ./bin/opm
+opm: ## Download opm locally if necessary.
+ifeq (,$(wildcard $(OPM)))
+ifeq (,$(shell which opm 2>/dev/null))
+	@{ \
+	set -e ;\
+	mkdir -p $(dir $(OPM)) ;\
+	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
+	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.15.1/$${OS}-$${ARCH}-opm ;\
+	chmod +x $(OPM) ;\
+	}
+else
+OPM = $(shell which opm)
+endif
+endif
 
 # Build a catalog image by adding bundle images to an empty catalog using the operator package manager tool, 'opm'.
 # This recipe invokes 'opm' in 'semver' bundle add mode. For more information on add modes, see:
@@ -351,18 +322,11 @@ push-catalog:
 catalog-build: opm ## Build a catalog image.
 	$(OPM) index add $(SKIP_TLS_VERIFY) --container-tool $(CONTAINER_COMMAND)  --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT) --permissive
 
-# Push the catalog image.
-.PHONY: catalog-push
-catalog-push: ## Push a catalog image.
-	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+kind-e2e-test:
+	./scripts/e2e-kind.sh --test-tag "${TRAVIS_BUILD_NUMBER}"
 
-dev: 
-	./scripts/dev.sh all
-
-## Multi-Arch changes
-.PHONY: setup-go
-setup-go: ## Ensure Go is installed.
-	./scripts/installers/install-go.sh ${GO_RELEASE_VERSION}
+build-manifest: setup-manifest
+	./scripts/build/build-manifest.sh --registry "${PUBLISH_REGISTRY}" --image "${OPERATOR_IMAGE}" --tag "${RELEASE_TARGET}"
 
 build-operator-pipeline:
 	./scripts/build/build-operator.sh --registry "${REGISTRY}" --image "${PIPELINE_OPERATOR_IMAGE}" --tag "${RELEASE_TARGET}"
@@ -375,3 +339,30 @@ build-bundle-pipeline:
 
 build-catalog-pipeline: opm ## Build a catalog image.
 	./scripts/build/build-catalog.sh -n "v${OPM_VERSION}" -b "${REDHAT_BASE_IMAGE}" -o "${OPM}" --container-tool "docker" -r "${REGISTRY}" -i "${PIPELINE_OPERATOR_IMAGE}-bundle:${RELEASE_TARGET}" -p "${PIPELINE_PRODUCTION_IMAGE}-bundle" -a "${PIPELINE_OPERATOR_IMAGE}-catalog:${RELEASE_TARGET}" -t "${PWD}/operator-build" -v "${VERSION}"
+
+test-e2e:
+	./scripts/e2e-release.sh --registry-name default-route --registry-namespace openshift-image-registry \
+                     --test-tag "${TRAVIS_BUILD_NUMBER}" --target "${RELEASE_TARGET}"
+
+test-pipeline-e2e:
+	./scripts/pipeline/ocp-cluster-e2e.sh -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" \
+                     --cluster-url "${CLUSTER_URL}" --cluster-user "${CLUSTER_USER}" --cluster-token "${CLUSTER_TOKEN}" \
+                     --registry-name "${PIPELINE_REGISTRY}" --registry-image "${PIPELINE_OPERATOR_IMAGE}" \
+                     --registry-user "${PIPELINE_USERNAME}" --registry-password "${PIPELINE_PASSWORD}" \
+                     --test-tag "${TRAVIS_BUILD_NUMBER}" --release "${RELEASE_TARGET}" --channel "${DEFAULT_CHANNEL}" \
+					 --install-mode "${INSTALL_MODE}" --architecture "${ARCHITECTURE}"
+
+bundle-build-podman:
+	podman build -f bundle.Dockerfile -t "${BUNDLE_IMG}"
+
+bundle-push-podman:
+	podman push --format=docker "${BUNDLE_IMG}"
+
+build-catalog:
+	opm index add --bundles "${BUNDLE_IMG}" --tag "${CATALOG_IMG}"
+
+push-catalog: docker-login
+	podman push --format=docker "${CATALOG_IMG}"
+
+dev: 
+	./scripts/dev.sh all -channel ${DEFAULT_CHANNEL}
