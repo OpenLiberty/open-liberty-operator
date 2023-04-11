@@ -335,9 +335,9 @@ containerize:
       fi
     done
 
-    echo "MEND unified agent scan"
-    chmod +x "${COMMONS_PATH}/whitesource/whitesource_unified_agent_scan.sh"
-    source "${COMMONS_PATH}/whitesource/whitesource_unified_agent_scan.sh"
+    # echo "MEND unified agent scan"
+    # chmod +x "${COMMONS_PATH}/whitesource/whitesource_unified_agent_scan.sh"
+    # source "${COMMONS_PATH}/whitesource/whitesource_unified_agent_scan.sh"
     
     # ## Perform lint
     # IMAGE="${PIPELINE_REGISTRY}/${PIPELINE_OPERATOR_IMAGE}-bundle:${RELEASE_TARGET}"
