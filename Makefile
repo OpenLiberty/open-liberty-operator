@@ -197,8 +197,8 @@ bundle: manifests setup kustomize ## Generate bundle manifests and metadata, the
 	./scripts/csv_description_update.sh update_csv
 
 	$(KUSTOMIZE) build config/kustomize/crd -o deploy/kustomize/daily/base/open-liberty-crd.yaml
-        cd config/kustomize/operator && $(KUSTOMIZE) edit set namespace $(KUSTOMIZE_NAMESPACE)
-        $(KUSTOMIZE) build config/kustomize/operator -o deploy/kustomize/daily/base/open-liberty-operator.yaml
+	cd config/kustomize/operator && $(KUSTOMIZE) edit set namespace $(KUSTOMIZE_NAMESPACE)
+	$(KUSTOMIZE) build config/kustomize/operator -o deploy/kustomize/daily/base/open-liberty-operator.yaml
 #	sed -i.bak "s,${IMG},${KUSTOMIZE_IMG},g;s,serviceAccountName: controller-manager,serviceAccountName: websphere-liberty-controller-manager,g" internal/deploy/kustomize/daily/base/websphere-liberty-deployment.yaml
 
 	sed -i.bak "s,${IMG},${KUSTOMIZE_IMG},g" deploy/kustomize/daily/base/open-liberty-operator.yaml
