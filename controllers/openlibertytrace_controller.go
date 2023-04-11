@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// ReconcileOpenLibertyTrace reconciles a OpenLibertyTrace object
+// ReconcileOpenLibertyTrace reconciles an OpenLibertyTrace object
 type ReconcileOpenLibertyTrace struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
@@ -42,10 +42,10 @@ const traceFinalizer = "finalizer.openlibertytraces.apps.openliberty.io"
 const traceConfigFile = "/config/configDropins/overrides/add_trace.xml"
 const serviceabilityDir = "/serviceability"
 
-// +kubebuilder:rbac:groups=apps.openliberty.io,resources=openlibertytraces;openlibertytraces/status;openlibertytraces/finalizers,verbs=get;list;watch;create;update;delete,namespace=open-liberty-operator
-// +kubebuilder:rbac:groups=core,resources=pods;pods/exec,verbs=get;list;watch;create;update;delete,namespace=open-liberty-operator
+// +kubebuilder:rbac:groups=apps.openliberty.io,resources=openlibertytraces;openlibertytraces/status;openlibertytraces/finalizers,verbs=get;list;watch;create;update;patch;delete,namespace=open-liberty-operator
+// +kubebuilder:rbac:groups=core,resources=pods;pods/exec,verbs=get;list;watch;create;update;patch;delete,namespace=open-liberty-operator
 
-// Reconcile reads that state of the cluster for a OpenLibertyTrace object and makes changes based on the state read
+// Reconcile reads that state of the cluster for an OpenLibertyTrace object and makes changes based on the state read
 // and what is in the OpenLibertyTrace.Spec
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
@@ -192,6 +192,8 @@ func (r *ReconcileOpenLibertyTrace) UpdateStatus(issue error, conditionType open
 
 	s.SetCondition(statusCondition)
 
+	instance.Status.Versions.Reconciled = lutils.OperandVersion
+	
 	err := r.Client.Status().Update(context.Background(), &instance)
 	if err != nil {
 		r.Log.Error(err, "Unable to update status")

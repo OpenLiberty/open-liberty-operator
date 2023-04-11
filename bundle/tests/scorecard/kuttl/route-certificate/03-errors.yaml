@@ -1,11 +1,11 @@
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: route-with-cert-liberty
+  name: route-with-cert-lib-app
 spec:
   tls:
     caCertificate: |
-      cacrt
+      cacertupdate
     certificate: |
       tlscrt
     destinationCACertificate: |

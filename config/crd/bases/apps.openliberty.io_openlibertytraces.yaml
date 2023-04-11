@@ -115,6 +115,11 @@ spec:
                   resourceType:
                     type: string
                 type: object
+              versions:
+                properties:
+                  reconciled:
+                    type: string
+                type: object
             type: object
         type: object
     served: true

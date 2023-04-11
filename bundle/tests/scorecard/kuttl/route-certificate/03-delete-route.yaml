@@ -1,0 +1,10 @@
+apiVersion: apps.openliberty.io/v1
+kind: OpenLibertyApplication
+metadata:
+  name: route-with-cert-lib-app
+spec:
+  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
+  replicas: 1
+  expose: true
+  route:
+

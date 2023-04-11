@@ -13,16 +13,18 @@ spec:
   template:
     spec:
       containers:
-      - startupProbe:
-          httpGet:
-            path: /health/started
-            port: 9443
-            scheme: HTTPS
-          periodSeconds: 10
-          timeoutSeconds: 2
-          successThreshold: 1
-          failureThreshold: 20
+        - startupProbe:
+            httpGet:
+              path: /health/started
+              port: 9443
+              scheme: HTTPS
+            periodSeconds: 10
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 20
 status:
-  readyReplicas: 1
-  replicas: 1
+# not checking readyReplicas or replicas while replacing icr.io/appcafe/open-liberty/samples/getting-started 
+# applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi uses different default ports
+#  readyReplicas: 1
+#  replicas: 1
   updatedReplicas: 1

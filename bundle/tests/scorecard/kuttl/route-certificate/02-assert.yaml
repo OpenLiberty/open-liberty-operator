@@ -1,8 +1,26 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/tls
 metadata:
-  name: route-with-cert-liberty
-status:
-  replicas: 1
-  readyReplicas: 1
-  updatedReplicas: 1
+  name: route-tls-secret
+data:
+  ca.crt: Y2FjZXJ0dXBkYXRl
+  destCA.crt: ZGVzdENBY3J0Cg==
+  tls.crt: dGxzY3J0Cg==
+  tls.key: dGxza2V5Cg==
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: route-with-cert-lib-app
+spec:
+  host: myapp.mycompany.com
+  tls:
+    caCertificate: cacertupdate
+    certificate: |
+      tlscrt
+    destinationCACertificate: |
+      destCAcrt
+    key: |
+      tlskey
+    termination: reencrypt
