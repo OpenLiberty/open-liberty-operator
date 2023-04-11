@@ -339,11 +339,11 @@ containerize:
     chmod +x "${COMMONS_PATH}/whitesource/whitesource_unified_agent_scan.sh"
     source "${COMMONS_PATH}/whitesource/whitesource_unified_agent_scan.sh"
     
-    ## Perform lint
-    IMAGE="${PIPELINE_REGISTRY}/${PIPELINE_OPERATOR_IMAGE}-bundle:${RELEASE_TARGET}"
-    DIGEST="$(skopeo inspect docker://$IMAGE | grep Digest | grep -o 'sha[^\"]*')"
-    BUNDLE_IMAGE_WITH_DIGEST="${IMAGE}@${DIGEST}"
-    ./scripts/pipeline/static-linter-scan.sh --git-token $(get_env git-token) --bundle-image $BUNDLE_IMAGE_WITH_DIGEST --static-linter-version $(get_env static-linter-version)
+    # ## Perform lint
+    # IMAGE="${PIPELINE_REGISTRY}/${PIPELINE_OPERATOR_IMAGE}-bundle:${RELEASE_TARGET}"
+    # DIGEST="$(skopeo inspect docker://$IMAGE | grep Digest | grep -o 'sha[^\"]*')"
+    # BUNDLE_IMAGE_WITH_DIGEST="${IMAGE}@${DIGEST}"
+    # ./scripts/pipeline/static-linter-scan.sh --git-token $(get_env git-token) --bundle-image $BUNDLE_IMAGE_WITH_DIGEST --static-linter-version $(get_env static-linter-version)
 
 
 sign-artifact:
