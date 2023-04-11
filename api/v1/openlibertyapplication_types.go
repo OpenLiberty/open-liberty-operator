@@ -678,7 +678,7 @@ func (cr *OpenLibertyApplication) GetExpose() *bool {
 	return cr.Spec.Expose
 }
 
-// GetAffinity returns deployment's node and pod affinity settings
+// GetManageTLS returns deployment's node and pod affinity settings
 func (cr *OpenLibertyApplication) GetManageTLS() *bool {
 	return cr.Spec.ManageTLS
 }
@@ -722,6 +722,7 @@ func (cr *OpenLibertyApplication) GetService() common.BaseComponentService {
 	return cr.Spec.Service
 }
 
+// GetNetworkPolicy returns network policy settings
 func (cr *OpenLibertyApplication) GetNetworkPolicy() common.BaseComponentNetworkPolicy {
 	return cr.Spec.NetworkPolicy
 }
@@ -914,7 +915,7 @@ func (s *OpenLibertyApplicationService) GetPort() int32 {
 	if s != nil && s.Port != 0 {
 		return s.Port
 	}
-	return 9080
+	return 9443
 }
 
 // GetNodePort returns service nodePort
@@ -955,6 +956,7 @@ func (s *OpenLibertyApplicationService) GetBindable() *bool {
 	return s.Bindable
 }
 
+// GetNamespaceLabels returns the namespace selector labels that should be used for the ingress rule
 func (np *OpenLibertyApplicationNetworkPolicy) GetNamespaceLabels() map[string]string {
 	if np == nil || np.NamespaceLabels == nil {
 		return nil
@@ -962,6 +964,7 @@ func (np *OpenLibertyApplicationNetworkPolicy) GetNamespaceLabels() map[string]s
 	return *np.NamespaceLabels
 }
 
+// GetFromLabels returns the pod selector labels that should be used for the ingress rule
 func (np *OpenLibertyApplicationNetworkPolicy) GetFromLabels() map[string]string {
 	if np == nil || np.FromLabels == nil {
 		return nil
@@ -969,6 +972,7 @@ func (np *OpenLibertyApplicationNetworkPolicy) GetFromLabels() map[string]string
 	return *np.FromLabels
 }
 
+// IsDisabled returns whether the network policy should be created or not
 func (np *OpenLibertyApplicationNetworkPolicy) IsDisabled() bool {
 	return np != nil && np.Disable != nil && *np.Disable
 }
@@ -1097,7 +1101,11 @@ func (cr *OpenLibertyApplication) Initialize() {
 	}
 
 	if cr.Spec.Service.Port == 0 {
+		if cr.Spec.ManageTLS == nil || *cr.Spec.ManageTLS {
+			cr.Spec.Service.Port = 9443
+		} else {
 		cr.Spec.Service.Port = 9080
+		}
 	}
 
 	// If TargetPorts on Serviceports are not set, default them to the Port value in the CR
@@ -1235,6 +1243,7 @@ func (s *OpenLibertyApplicationStatus) SetCondition(c common.StatusCondition) {
 		if s.Conditions[i].GetType() == c.GetType() {
 			condition = &s.Conditions[i]
 			found = true
+			break
 		}
 	}
 

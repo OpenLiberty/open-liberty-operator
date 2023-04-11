@@ -48,7 +48,7 @@ const (
 	StatusReferenceSemeruInstancesCompleted = "semeruInstancesCompleted"
 )
 
-// Create the Deployment and Service objects for a Semeru Compiler used by a Open Liberty Application
+// Create the Deployment and Service objects for a Semeru Compiler used by an Open Liberty Application
 func (r *ReconcileOpenLiberty) reconcileSemeruCompiler(ola *openlibertyv1.OpenLibertyApplication) (error, string, bool) {
 	compilerMeta := metav1.ObjectMeta{
 		Name:      getSemeruCompilerNameWithGeneration(ola),
