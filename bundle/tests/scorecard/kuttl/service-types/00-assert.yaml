@@ -16,10 +16,10 @@ metadata:
   name: service-types-lib
 spec:
   ports:
-    - name: 9080-tcp
+    - name: 9443-tcp
       protocol: TCP
-      port: 9080
-      targetPort: 9080
+      port: 9443
+      targetPort: 9443
   type: ClusterIP
 ---
 apiVersion: v1
