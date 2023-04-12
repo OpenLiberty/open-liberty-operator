@@ -840,6 +840,11 @@ func (s *OpenLibertyApplicationService) GetCertificateSecretRef() *string {
 	return s.CertificateSecretRef
 }
 
+// GetCertificate returns a service certificate configuration
+func (s *OpenLibertyApplicationService) GetCertificate() common.BaseComponentCertificate {
+	return nil
+}
+
 // GetBindable returns whether the application should be exposable as a service
 func (s *OpenLibertyApplicationService) GetBindable() *bool {
 	return s.Bindable

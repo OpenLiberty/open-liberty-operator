@@ -227,13 +227,24 @@ type OpenLibertyApplicationService struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=15,type=spec,displayName="Certificate Secret Reference",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	CertificateSecretRef *string `json:"certificateSecretRef,omitempty"`
 
+	// Configure service certificate.
+	// +operator-sdk:csv:customresourcedefinitions:order=16,type=spec,displayName="Service Certificate"
+	Certificate *OpenLibertyApplicationCertificate `json:"certificate,omitempty"`
+
 	// An array consisting of service ports.
-	// +operator-sdk:csv:customresourcedefinitions:order=16,type=spec
+	// +operator-sdk:csv:customresourcedefinitions:order=17,type=spec
 	Ports []corev1.ServicePort `json:"ports,omitempty"`
 
 	// Expose the application as a bindable service. Defaults to false.
-	// +operator-sdk:csv:customresourcedefinitions:order=17,type=spec,displayName="Bindable",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	// +operator-sdk:csv:customresourcedefinitions:order=18,type=spec,displayName="Bindable",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
 	Bindable *bool `json:"bindable,omitempty"`
+}
+
+// Configure service certificate.
+type OpenLibertyApplicationCertificate struct {
+	// Annotations to be added to the service certificate.
+	// +operator-sdk:csv:customresourcedefinitions:order=13,type=spec,displayName="Annotations",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // Defines the network policy
@@ -724,6 +735,9 @@ func (cr *OpenLibertyApplication) GetService() common.BaseComponentService {
 
 // GetNetworkPolicy returns network policy settings
 func (cr *OpenLibertyApplication) GetNetworkPolicy() common.BaseComponentNetworkPolicy {
+	if cr.Spec.NetworkPolicy == nil {
+		return nil
+	}
 	return cr.Spec.NetworkPolicy
 }
 
@@ -951,6 +965,19 @@ func (s *OpenLibertyApplicationService) GetCertificateSecretRef() *string {
 	return s.CertificateSecretRef
 }
 
+// GetCertificate returns a service certificate configuration
+func (s *OpenLibertyApplicationService) GetCertificate() common.BaseComponentCertificate {
+	if s.Certificate == nil {
+		return nil
+	}
+	return s.Certificate
+}
+
+// GetAnnotations returns annotations to be added to certificate request
+func (c *OpenLibertyApplicationCertificate) GetAnnotations() map[string]string {
+	return c.Annotations
+}
+
 // GetBindable returns whether the application should be exposable as a service
 func (s *OpenLibertyApplicationService) GetBindable() *bool {
 	return s.Bindable
@@ -958,23 +985,23 @@ func (s *OpenLibertyApplicationService) GetBindable() *bool {
 
 // GetNamespaceLabels returns the namespace selector labels that should be used for the ingress rule
 func (np *OpenLibertyApplicationNetworkPolicy) GetNamespaceLabels() map[string]string {
-	if np == nil || np.NamespaceLabels == nil {
-		return nil
+	if np.NamespaceLabels != nil {
+		return *np.NamespaceLabels
 	}
-	return *np.NamespaceLabels
+	return nil
 }
 
 // GetFromLabels returns the pod selector labels that should be used for the ingress rule
 func (np *OpenLibertyApplicationNetworkPolicy) GetFromLabels() map[string]string {
-	if np == nil || np.FromLabels == nil {
-		return nil
+	if np.FromLabels != nil {
+		return *np.FromLabels
 	}
-	return *np.FromLabels
+	return nil
 }
 
 // IsDisabled returns whether the network policy should be created or not
 func (np *OpenLibertyApplicationNetworkPolicy) IsDisabled() bool {
-	return np != nil && np.Disable != nil && *np.Disable
+	return np.Disable != nil && *np.Disable
 }
 
 // GetLabels returns labels to be added on ServiceMonitor
@@ -1104,7 +1131,7 @@ func (cr *OpenLibertyApplication) Initialize() {
 		if cr.Spec.ManageTLS == nil || *cr.Spec.ManageTLS {
 			cr.Spec.Service.Port = 9443
 		} else {
-		cr.Spec.Service.Port = 9080
+			cr.Spec.Service.Port = 9080
 		}
 	}
 
