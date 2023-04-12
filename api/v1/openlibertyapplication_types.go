@@ -227,13 +227,24 @@ type OpenLibertyApplicationService struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=15,type=spec,displayName="Certificate Secret Reference",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	CertificateSecretRef *string `json:"certificateSecretRef,omitempty"`
 
+	// Configure service certificate.
+	// +operator-sdk:csv:customresourcedefinitions:order=16,type=spec,displayName="Service Certificate"
+	Certificate *OpenLibertyApplicationCertificate `json:"certificate,omitempty"`
+
 	// An array consisting of service ports.
-	// +operator-sdk:csv:customresourcedefinitions:order=16,type=spec
+	// +operator-sdk:csv:customresourcedefinitions:order=17,type=spec
 	Ports []corev1.ServicePort `json:"ports,omitempty"`
 
 	// Expose the application as a bindable service. Defaults to false.
-	// +operator-sdk:csv:customresourcedefinitions:order=17,type=spec,displayName="Bindable",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	// +operator-sdk:csv:customresourcedefinitions:order=18,type=spec,displayName="Bindable",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
 	Bindable *bool `json:"bindable,omitempty"`
+}
+
+// Configure service certificate.
+type OpenLibertyApplicationCertificate struct {
+	// Annotations to be added to the service certificate.
+	// +operator-sdk:csv:customresourcedefinitions:order=13,type=spec,displayName="Annotations",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // Defines the network policy
@@ -951,6 +962,19 @@ func (s *OpenLibertyApplicationService) GetCertificateSecretRef() *string {
 	return s.CertificateSecretRef
 }
 
+// GetCertificate returns a service certificate configuration
+func (s *OpenLibertyApplicationService) GetCertificate() common.BaseComponentCertificate {
+	if s.Certificate == nil {
+		return nil
+	}
+	return s.Certificate
+}
+
+// GetAnnotations returns annotations to be added to certificate request
+func (c *OpenLibertyApplicationCertificate) GetAnnotations() map[string]string {
+	return c.Annotations
+}
+
 // GetBindable returns whether the application should be exposable as a service
 func (s *OpenLibertyApplicationService) GetBindable() *bool {
 	return s.Bindable
@@ -1104,7 +1128,7 @@ func (cr *OpenLibertyApplication) Initialize() {
 		if cr.Spec.ManageTLS == nil || *cr.Spec.ManageTLS {
 			cr.Spec.Service.Port = 9443
 		} else {
-		cr.Spec.Service.Port = 9080
+			cr.Spec.Service.Port = 9080
 		}
 	}
 
