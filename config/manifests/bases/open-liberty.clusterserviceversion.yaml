@@ -13,6 +13,11 @@ metadata:
     operators.openshift.io/infrastructure-features: '["disconnected"]'
     repository: https://github.com/OpenLiberty/open-liberty-operator
     support: IBM
+  labels:
+    operatorframework.io/arch.amd64: supported
+    operatorframework.io/arch.ppc64le: supported
+    operatorframework.io/arch.s390x: supported
+    operatorframework.io/os.linux: supported
   name: open-liberty.v0.0.0
   namespace: placeholder
 spec:

@@ -89,7 +89,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2023-04-12T16:15:11Z"
+    createdAt: "2023-04-12T16:35:44Z"
     description: Deploy and manage applications running on Liberty
     olm.skipRange: '>=0.8.0 <1.2.0'
     operators.openshift.io/infrastructure-features: '["disconnected"]'
@@ -97,6 +97,11 @@ metadata:
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/OpenLiberty/open-liberty-operator
     support: IBM
+  labels:
+    operatorframework.io/arch.amd64: supported
+    operatorframework.io/arch.ppc64le: supported
+    operatorframework.io/arch.s390x: supported
+    operatorframework.io/os.linux: supported
   name: open-liberty.v1.2.0
   namespace: placeholder
 spec:
