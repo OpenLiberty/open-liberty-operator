@@ -735,6 +735,9 @@ func (cr *OpenLibertyApplication) GetService() common.BaseComponentService {
 
 // GetNetworkPolicy returns network policy settings
 func (cr *OpenLibertyApplication) GetNetworkPolicy() common.BaseComponentNetworkPolicy {
+	if cr.Spec.NetworkPolicy == nil {
+		return nil
+	}
 	return cr.Spec.NetworkPolicy
 }
 
@@ -982,23 +985,23 @@ func (s *OpenLibertyApplicationService) GetBindable() *bool {
 
 // GetNamespaceLabels returns the namespace selector labels that should be used for the ingress rule
 func (np *OpenLibertyApplicationNetworkPolicy) GetNamespaceLabels() map[string]string {
-	if np == nil || np.NamespaceLabels == nil {
-		return nil
+	if np.NamespaceLabels != nil {
+		return *np.NamespaceLabels
 	}
-	return *np.NamespaceLabels
+	return nil
 }
 
 // GetFromLabels returns the pod selector labels that should be used for the ingress rule
 func (np *OpenLibertyApplicationNetworkPolicy) GetFromLabels() map[string]string {
-	if np == nil || np.FromLabels == nil {
-		return nil
+	if np.FromLabels != nil {
+		return *np.FromLabels
 	}
-	return *np.FromLabels
+	return nil
 }
 
 // IsDisabled returns whether the network policy should be created or not
 func (np *OpenLibertyApplicationNetworkPolicy) IsDisabled() bool {
-	return np != nil && np.Disable != nil && *np.Disable
+	return np.Disable != nil && *np.Disable
 }
 
 // GetLabels returns labels to be added on ServiceMonitor
