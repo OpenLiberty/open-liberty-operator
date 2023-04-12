@@ -12,11 +12,7 @@ metadata:
           },
           "spec": {
             "applicationImage": "icr.io/appcafe/open-liberty/samples/getting-started@sha256:9a6f6352bee814302fcf939dd640b7d3b3e02307330f82bc32b782e7a9feb8a3",
-            "expose": true,
-            "replicas": 1,
-            "service": {
-              "port": 9080
-            }
+            "manageTLS": true
           }
         },
         {
@@ -93,8 +89,10 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2023-04-12T15:32:20Z"
+    createdAt: "2023-04-12T16:15:11Z"
     description: Deploy and manage applications running on Liberty
+    olm.skipRange: '>=0.8.0 <1.2.0'
+    operators.openshift.io/infrastructure-features: '["disconnected"]'
     operators.operatorframework.io/builder: operator-sdk-v1.24.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/OpenLiberty/open-liberty-operator
@@ -1054,6 +1052,17 @@ spec:
                 app.kubernetes.io/name: open-liberty-operator
                 control-plane: controller-manager
             spec:
+              affinity:
+                nodeAffinity:
+                  requiredDuringSchedulingIgnoredDuringExecution:
+                    nodeSelectorTerms:
+                    - matchExpressions:
+                      - key: kubernetes.io/arch
+                        operator: In
+                        values:
+                        - amd64
+                        - ppc64le
+                        - s390x
               containers:
               - args:
                 - --health-probe-bind-address=:8081
@@ -1069,6 +1078,8 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
+                - name: RELATED_IMAGE_LIBERTY_SAMPLE_APP
+                  value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:9a6f6352bee814302fcf939dd640b7d3b3e02307330f82bc32b782e7a9feb8a3
                 image: icr.io/appcafe/open-liberty-operator:daily
                 livenessProbe:
                   failureThreshold: 3
@@ -1093,13 +1104,19 @@ spec:
                   timeoutSeconds: 10
                 resources:
                   limits:
-                    cpu: 200m
+                    cpu: 400m
                     memory: 512Mi
                   requests:
-                    cpu: 100m
-                    memory: 64Mi
+                    cpu: 200m
+                    memory: 128Mi
                 securityContext:
                   allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+                  privileged: false
+                  readOnlyRootFilesystem: true
+                  runAsNonRoot: true
               securityContext:
                 runAsNonRoot: true
               serviceAccountName: olo-controller-manager
@@ -1341,4 +1358,7 @@ spec:
   maturity: beta
   provider:
     name: IBM
+  relatedImages:
+  - image: icr.io/appcafe/open-liberty/samples/getting-started@sha256:9a6f6352bee814302fcf939dd640b7d3b3e02307330f82bc32b782e7a9feb8a3
+    name: liberty-sample-app
   version: 1.2.0

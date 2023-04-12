@@ -19,11 +19,15 @@ spec:
   replicas: 1
   template:
     metadata:
-      annotations:
-        kubectl.kubernetes.io/default-container: manager
       labels:
         control-plane: controller-manager
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+
     spec:
+      hostIPC: false
+      hostPID: false
+      hostNetwork: false
       securityContext:
         runAsNonRoot: true
       containers:
@@ -63,14 +67,33 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.annotations['olm.targetNamespaces']
+          - name: RELATED_IMAGE_LIBERTY_SAMPLE_APP
+            value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:9a6f6352bee814302fcf939dd640b7d3b3e02307330f82bc32b782e7a9feb8a3
         securityContext:
           allowPrivilegeEscalation: false
+          privileged: false
+          runAsNonRoot: true
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
         resources:
           limits:
-            cpu: 200m
+            cpu: 400m
             memory: 512Mi
           requests:
-            cpu: 100m
-            memory: 64Mi
+            cpu: 200m
+            memory: 128Mi
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - amd64
+                - ppc64le
+                - s390x
