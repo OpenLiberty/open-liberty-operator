@@ -25,10 +25,11 @@ spec:
                   resource: requests.cpu
             - name: TLS_DIR
             - name: SA_RESOURCE_VERSION
-            - name: SERVICE_CERT_SECRET_RESOURCE_VERSION
             - name: WLP_LOGGING_CONSOLE_LOGLEVEL
             - name: WLP_LOGGING_CONSOLE_SOURCE
             - name: WLP_LOGGING_CONSOLE_FORMAT
+            - name: SEC_IMPORT_K8S_CERTS
+            - name: SERVICE_CERT_SECRET_RESOURCE_VERSION
           envFrom:
             - configMapRef:
                 name: env-liberty-configmap

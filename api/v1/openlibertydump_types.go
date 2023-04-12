@@ -32,11 +32,15 @@ const (
 type OpenLibertyDumpStatus struct {
 	// +listType=atomic
 	Conditions []OperationStatusCondition `json:"conditions,omitempty"`
+	Versions   DumpStatusVersions         `json:"versions,omitempty"`
 	// Location of the generated dump file
 	// +operator-sdk:csv:customresourcedefinitions:type=status,displayName="Dump File Path",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	DumpFile string `json:"dumpFile,omitempty"`
 }
 
+type DumpStatusVersions struct {
+	Reconciled string `json:"reconciled,omitempty"`
+}
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion

@@ -22,7 +22,7 @@ spec:
   endpoints:
   - path: "/path"
     scheme: "myScheme"
-    port: 3000-tcp
+    port: 9443-tcp
     params:
       params:
       - param1

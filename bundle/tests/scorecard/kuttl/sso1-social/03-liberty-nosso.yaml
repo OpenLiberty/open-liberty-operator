@@ -5,6 +5,7 @@ metadata:
 spec:
   applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
   replicas: 1
+  manageTLS: false
   expose: true
   env:
   sso:

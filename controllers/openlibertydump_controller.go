@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// ReconcileOpenLibertyDump reconciles a OpenLibertyDump object
+// ReconcileOpenLibertyDump reconciles an OpenLibertyDump object
 type ReconcileOpenLibertyDump struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
@@ -35,10 +35,10 @@ type ReconcileOpenLibertyDump struct {
 	Log        logr.Logger
 }
 
-// +kubebuilder:rbac:groups=apps.openliberty.io,resources=openlibertydumps;openlibertydumps/status;openlibertydumps/finalizers,verbs=get;list;watch;create;update;delete,namespace=open-liberty-operator
-// +kubebuilder:rbac:groups=core,resources=pods;pods/exec,verbs=get;list;watch;create;update;delete,namespace=open-liberty-operator
+// +kubebuilder:rbac:groups=apps.openliberty.io,resources=openlibertydumps;openlibertydumps/status;openlibertydumps/finalizers,verbs=get;list;watch;create;update;patch;delete,namespace=open-liberty-operator
+// +kubebuilder:rbac:groups=core,resources=pods;pods/exec,verbs=get;list;watch;create;update;patch;delete,namespace=open-liberty-operator
 
-// Reconcile reads that state of the cluster for a OpenLibertyDump object and makes changes based on the state read
+// Reconcile reads that state of the cluster for an OpenLibertyDump object and makes changes based on the state read
 // and what is in the OpenLibertyDump.Spec
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
@@ -84,6 +84,7 @@ func (r *ReconcileOpenLibertyDump) Reconcile(ctx context.Context, request ctrl.R
 			Message: "Failed to find a pod or pod is not in running state",
 		}
 		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+		instance.Status.Versions.Reconciled = utils.OperandVersion
 		r.Client.Status().Update(context.TODO(), instance)
 		return reconcile.Result{}, nil
 	}
@@ -131,6 +132,7 @@ func (r *ReconcileOpenLibertyDump) Reconcile(ctx context.Context, request ctrl.R
 
 	instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
 	instance.Status.DumpFile = dumpFileName
+	instance.Status.Versions.Reconciled = utils.OperandVersion
 	r.Client.Status().Update(context.TODO(), instance)
 	return reconcile.Result{}, nil
 }

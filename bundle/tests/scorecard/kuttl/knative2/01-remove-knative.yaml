@@ -7,4 +7,4 @@ metadata:
 spec:
   # Add fields here
   createKnativeService: false
-
+  replicas: 1
