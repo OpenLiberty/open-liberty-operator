@@ -129,7 +129,7 @@ containerize:
 
 
     # instruct bash to exit if any command fails
-    set -e
+    # set -e
 
     echo $STAGE
 
