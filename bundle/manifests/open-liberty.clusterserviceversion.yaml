@@ -93,13 +93,13 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2023-04-12T12:22:46Z"
+    createdAt: "2023-04-12T15:32:20Z"
     description: Deploy and manage applications running on Liberty
     operators.operatorframework.io/builder: operator-sdk-v1.24.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/OpenLiberty/open-liberty-operator
     support: IBM
-  name: open-liberty.v1.0.0
+  name: open-liberty.v1.2.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -1341,4 +1341,4 @@ spec:
   maturity: beta
   provider:
     name: IBM
-  version: 1.0.0
+  version: 1.2.0

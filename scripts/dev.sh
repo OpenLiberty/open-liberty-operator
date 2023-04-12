@@ -188,7 +188,7 @@ metadata:
   name: open-liberty-operator-subscription
   namespace: $NAMESPACE
 spec:
-  channel:  beta2
+  channel: v1.2
   name: open-liberty
   source: open-liberty-operator-catalog
   sourceNamespace: $NAMESPACE
