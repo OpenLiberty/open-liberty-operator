@@ -849,17 +849,15 @@ spec:
   - OLO
   links:
   - name: Documentation
-    url: https://github.com/OpenLiberty/open-liberty-operator/tree/main/doc
+    url: https://ibm.biz/olo-docs
   - name: Open Liberty
     url: https://openliberty.io/
   - name: Open Liberty Container Images
-    url: https://github.com/OpenLiberty/ci.docker
+    url: https://ibm.biz/ol-images
   maintainers:
-  - email: arturdzm@ibm.com
-    name: Artur Dzmitryieu
-  - email: leojc@ca.ibm.com
-    name: Leo Christy Jesuraj
-  maturity: beta
+  - email: support@ibm.com
+    name: IBM Support
+  maturity: stable
   provider:
     name: IBM
   version: 0.0.0

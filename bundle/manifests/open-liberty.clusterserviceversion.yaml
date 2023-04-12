@@ -89,7 +89,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2023-04-12T16:35:44Z"
+    createdAt: "2023-04-12T16:46:44Z"
     description: Deploy and manage applications running on Liberty
     olm.skipRange: '>=0.8.0 <1.2.0'
     operators.openshift.io/infrastructure-features: '["disconnected"]'
@@ -1350,17 +1350,15 @@ spec:
   - OLO
   links:
   - name: Documentation
-    url: https://github.com/OpenLiberty/open-liberty-operator/tree/main/doc
+    url: https://ibm.biz/olo-docs
   - name: Open Liberty
     url: https://openliberty.io/
   - name: Open Liberty Container Images
-    url: https://github.com/OpenLiberty/ci.docker
+    url: https://ibm.biz/ol-images
   maintainers:
-  - email: arturdzm@ibm.com
-    name: Artur Dzmitryieu
-  - email: leojc@ca.ibm.com
-    name: Leo Christy Jesuraj
-  maturity: beta
+  - email: support@ibm.com
+    name: IBM Support
+  maturity: stable
   provider:
     name: IBM
   relatedImages:
