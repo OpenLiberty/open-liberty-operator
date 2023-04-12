@@ -320,6 +320,7 @@ containerize:
     chmod +x "${COMMONS_PATH}/whitesource/whitesource_unified_agent_scan.sh"
     source "${COMMONS_PATH}/whitesource/whitesource_unified_agent_scan.sh"
     
+    echo "start static linting"
     ## Perform lint
     IMAGE="${PIPELINE_REGISTRY}/${PIPELINE_OPERATOR_IMAGE}-bundle:${RELEASE_TARGET}"
     DIGEST="$(skopeo inspect docker://$IMAGE | grep Digest | grep -o 'sha[^\"]*')"
