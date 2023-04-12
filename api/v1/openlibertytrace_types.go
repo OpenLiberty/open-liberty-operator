@@ -30,8 +30,12 @@ type OpenLibertyTraceStatus struct {
 	// +listType=atomic
 	Conditions       []OperationStatusCondition `json:"conditions,omitempty"`
 	OperatedResource OperatedResource           `json:"operatedResource,omitempty"`
+	Versions         TraceStatusVersions        `json:"versions,omitempty"`
 }
 
+type TraceStatusVersions struct {
+	Reconciled string `json:"reconciled,omitempty"`
+}
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion

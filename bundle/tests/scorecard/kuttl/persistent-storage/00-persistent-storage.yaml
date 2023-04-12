@@ -5,6 +5,7 @@ metadata:
 spec:
   applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
   replicas: 1
+  expose: false
   volumeMounts:
     - name: pvc
       mountPath: /data
@@ -18,3 +19,22 @@ spec:
           resources:
             requests:
               storage: 15Mi
+  probes:
+    readiness:
+      httpGet:
+        path: /
+        port: 9080
+      initialDelaySeconds: 1
+      timeoutSeconds: 1
+      periodSeconds: 5
+      successThreshold: 1
+      failureThreshold: 24
+    liveness:
+      httpGet:
+        path: /
+        port: 9080
+      initialDelaySeconds: 8
+      timeoutSeconds: 1
+      periodSeconds: 5
+      successThreshold: 1
+      failureThreshold: 12

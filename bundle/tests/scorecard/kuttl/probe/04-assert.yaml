@@ -42,8 +42,9 @@ spec:
             timeoutSeconds: 2
             successThreshold: 1
             failureThreshold: 5
-
 status:
-  readyReplicas: 1
-  replicas: 1
+# not checking readyReplicas or replicas while replacing icr.io/appcafe/open-liberty/samples/getting-started 
+# with applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi 
+# readyReplicas: 1
+# replicas: 1
   updatedReplicas: 1

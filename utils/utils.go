@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
+	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	rcoutils "github.com/application-stacks/runtime-component-operator/utils"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
@@ -32,9 +32,10 @@ var log = logf.Log.WithName("openliberty_utils")
 // Constant Values
 const serviceabilityMountPath = "/serviceability"
 const ssoEnvVarPrefix = "SEC_SSO_"
+const OperandVersion = "1.0.0"
 
 // Validate if the OpenLibertyApplication is valid
-func Validate(olapp *openlibertyv1.OpenLibertyApplication) (bool, error) {
+func Validate(olapp *olv1.OpenLibertyApplication) (bool, error) {
 	// Serviceability validation
 	if olapp.GetServiceability() != nil {
 		if olapp.GetServiceability().GetVolumeClaimName() == "" && olapp.GetServiceability().GetSize() == "" {
@@ -97,7 +98,7 @@ func ExecuteCommandInContainer(config *rest.Config, podName, podNamespace, conta
 }
 
 // CustomizeLibertyEnv adds configured env variables appending configured liberty settings
-func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *openlibertyv1.OpenLibertyApplication, client client.Client) error {
+func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, client client.Client) error {
 	// ENV variables have already been set, check if they exist before setting defaults
 	targetEnv := []corev1.EnvVar{
 		{Name: "WLP_LOGGING_CONSOLE_LOGLEVEL", Value: "info"},
@@ -113,6 +114,11 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *openlibertyv1.OpenLibe
 		)
 	}
 
+	// If manageTLS is true or not set, and SEC_IMPORT_K8S_CERTS is not set then default it to "true"
+	if la.GetManageTLS() == nil || *la.GetManageTLS() {
+		targetEnv = append(targetEnv, corev1.EnvVar{Name: "SEC_IMPORT_K8S_CERTS", Value: "true"})
+	}
+
 	envList := pts.Spec.Containers[0].Env
 	for _, v := range targetEnv {
 		if _, found := findEnvVar(v.Name, envList); !found {
@@ -120,39 +126,36 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *openlibertyv1.OpenLibe
 		}
 	}
 
-	if la.GetService() != nil && la.GetService().GetCertificateSecretRef() != nil {
-		if err := addSecretResourceVersionAsEnvVar(pts, la, client, *la.GetService().GetCertificateSecretRef(), "SERVICE_CERT"); err != nil {
-			return err
+	/*
+		if la.GetService() != nil && la.GetService().GetCertificateSecretRef() != nil {
+			if err := addSecretResourceVersionAsEnvVar(pts, la, client, *la.GetService().GetCertificateSecretRef(), "SERVICE_CERT"); err != nil {
+				return err
+			}
 		}
-	}
 
-	if la.GetRoute() != nil && la.GetRoute().GetCertificateSecretRef() != nil {
-		if err := addSecretResourceVersionAsEnvVar(pts, la, client, *la.GetRoute().GetCertificateSecretRef(), "ROUTE_CERT"); err != nil {
-			return err
+		if la.GetRoute() != nil && la.GetRoute().GetCertificateSecretRef() != nil {
+			if err := addSecretResourceVersionAsEnvVar(pts, la, client, *la.GetRoute().GetCertificateSecretRef(), "ROUTE_CERT"); err != nil {
+				return err
+			}
 		}
-	}
+	*/
 
 	return nil
 }
 
-func addSecretResourceVersionAsEnvVar(pts *corev1.PodTemplateSpec, la *openlibertyv1.OpenLibertyApplication, client client.Client, secretName string, envNamePrefix string) error {
+func AddSecretResourceVersionAsEnvVar(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, client client.Client, secretName string, envNamePrefix string) error {
 	secret := &corev1.Secret{}
 	err := client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: la.GetNamespace()}, secret)
 	if err != nil {
 		return errors.Wrapf(err, "Secret %q was not found in namespace %q", secretName, la.GetNamespace())
 	}
-
-	envList := pts.Spec.Containers[0].Env
-	envName := envNamePrefix + "_SECRET_RESOURCE_VERSION"
-	if _, found := findEnvVar(envName, envList); !found {
-		pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, corev1.EnvVar{
-			Name:  envName,
-			Value: secret.ResourceVersion})
-	}
+	pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, corev1.EnvVar{
+		Name:  envNamePrefix + "_SECRET_RESOURCE_VERSION",
+		Value: secret.ResourceVersion})
 	return nil
 }
 
-func CustomizeLibertyAnnotations(pts *corev1.PodTemplateSpec, la *openlibertyv1.OpenLibertyApplication) {
+func CustomizeLibertyAnnotations(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication) {
 	libertyAnnotations := map[string]string{
 		"libertyOperator": "Open Liberty",
 	}
@@ -170,7 +173,7 @@ func findEnvVar(name string, envList []corev1.EnvVar) (*corev1.EnvVar, bool) {
 }
 
 // CreateServiceabilityPVC creates PersistentVolumeClaim for Serviceability
-func CreateServiceabilityPVC(instance *openlibertyv1.OpenLibertyApplication) *corev1.PersistentVolumeClaim {
+func CreateServiceabilityPVC(instance *olv1.OpenLibertyApplication) *corev1.PersistentVolumeClaim {
 	persistentVolume := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        instance.Name + "-serviceability",
@@ -186,7 +189,6 @@ func CreateServiceabilityPVC(instance *openlibertyv1.OpenLibertyApplication) *co
 			},
 			AccessModes: []corev1.PersistentVolumeAccessMode{
 				corev1.ReadWriteMany,
-				corev1.ReadWriteOnce,
 			},
 		},
 	}
@@ -197,7 +199,7 @@ func CreateServiceabilityPVC(instance *openlibertyv1.OpenLibertyApplication) *co
 }
 
 // ConfigureServiceability setups the shared-storage for serviceability
-func ConfigureServiceability(pts *corev1.PodTemplateSpec, la *openlibertyv1.OpenLibertyApplication) {
+func ConfigureServiceability(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication) {
 	if la.GetServiceability() != nil {
 		name := "serviceability"
 
@@ -279,7 +281,7 @@ func writeSSOSecretIfNeeded(client client.Client, ssoSecret *corev1.Secret, ssoS
 }
 
 // CustomizeEnvSSO Process the configuration for SSO login providers
-func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *openlibertyv1.OpenLibertyApplication, client client.Client, isOpenShift bool) error {
+func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *olv1.OpenLibertyApplication, client client.Client, isOpenShift bool) error {
 	const ssoSecretNameSuffix = "-olapp-sso"
 	const autoregFragment = "-autoreg-"
 	secretName := instance.GetName() + ssoSecretNameSuffix

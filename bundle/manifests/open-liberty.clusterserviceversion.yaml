@@ -93,7 +93,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: openliberty/operator:daily
-    createdAt: "2023-03-27T16:21:52Z"
+    createdAt: "2023-04-10T23:50:07Z"
     description: Deploy and manage applications running on Liberty
     operators.operatorframework.io/builder: operator-sdk-v1.24.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
@@ -147,6 +147,11 @@ spec:
         path: autoscaling.maxReplicas
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:number
+      - displayName: OIDC
+        path: sso.oidc
+      - description: The unique ID for the provider. Default value is oidc.
+        displayName: ID
+        path: sso.oidc[0].id
       - description: Name of the application. Defaults to the name of this custom
           resource.
         displayName: Application Name
@@ -158,6 +163,12 @@ spec:
         path: autoscaling.minReplicas
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:number
+      - displayName: OAuth2
+        path: sso.oauth2
+      - description: Specifies a discovery endpoint URL for the OpenID Connect provider.
+          Required field.
+        displayName: Discovery Endpoint
+        path: sso.oidc[0].discoveryEndpoint
       - description: Version of the application.
         displayName: Application Version
         path: applicationVersion
@@ -169,11 +180,24 @@ spec:
         path: autoscaling.targetCPUUtilizationPercentage
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:number
+      - displayName: GitHub
+        path: sso.github
+      - description: Specifies the name of the claim. Use its value as the user group
+          membership.
+        displayName: Group Name Attribute
+        path: sso.oidc[0].groupNameAttribute
       - description: Policy for pulling container images. Defaults to IfNotPresent.
         displayName: Pull Policy
         path: pullPolicy
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:imagePullPolicy
+      - description: Specifies the name of the claim. Use its value as the authenticated
+          user principal.
+        displayName: User Name Attribute
+        path: sso.oidc[0].userNameAttribute
+      - description: Specifies a callback protocol, host and port number.
+        displayName: Redirect to RP Host and Port
+        path: sso.redirectToRPHostAndPort
       - description: Name of the Secret to use to pull images from the specified repository.
           It is not required if the cluster is configured with a global image pull
           secret.
@@ -181,17 +205,35 @@ spec:
         path: pullSecret
         x-descriptors:
         - urn:alm:descriptor:io.kubernetes:Secret
+      - description: Specifies whether to map a user identifier to a registry user.
+          This parameter applies to all providers.
+        displayName: Map to User Registry
+        path: sso.mapToUserRegistry
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: The name of the social login configuration for display.
+        displayName: Display Name
+        path: sso.oidc[0].displayName
       - description: Name of the service account to use for deploying the application.
           A service account is automatically created if it's not specified.
         displayName: Service Account Name
         path: serviceAccountName
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Specifies whether the UserInfo endpoint is contacted.
+        displayName: User Info Endpoint Enabled
+        path: sso.oidc[0].userInfoEndpointEnabled
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Create Knative resources and use Knative serving.
         displayName: Create Knative Service
         path: createKnativeService
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Specifies the name of the claim. Use its value as the subject
+          realm.
+        displayName: Realm Name Attribute
+        path: sso.oidc[0].realmNameAttribute
       - description: Expose the application externally via a Route, a Knative Route
           or an Ingress resource.
         displayName: Expose
@@ -203,8 +245,11 @@ spec:
         path: manageTLS
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Number of pods to create. Not applicable when .spec.autoscaling
-          or .spec.createKnativeService is specified.
+      - description: Specifies one or more scopes to request.
+        displayName: Scope
+        path: sso.oidc[0].scope
+      - description: Number of pods to create. Defaults to 1. Not applicable when
+          .spec.autoscaling or .spec.createKnativeService is specified.
         displayName: Replicas
         path: replicas
         x-descriptors:
@@ -214,12 +259,21 @@ spec:
         path: service.port
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:number
+      - description: Specifies the required authentication method.
+        displayName: Token Endpoint Auth Method
+        path: sso.oidc[0].tokenEndpointAuthMethod
       - displayName: Auto Scaling
         path: autoscaling
       - displayName: Service Type
         path: service.type
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Specifies whether to enable host name verification when the client
+          contacts the provider.
+        displayName: Host Name Verification Enabled
+        path: sso.oidc[0].hostNameVerificationEnabled
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Resource requests and limits for the application container.
         displayName: Resource Requirements
         path: resources
@@ -266,38 +320,49 @@ spec:
       - description: An array consisting of service ports.
         displayName: Ports
         path: service.ports
+      - description: Configures the Semeru Cloud Compiler to handle Just-In-Time (JIT)
+          compilation requests from the application.
+        displayName: Semeru Cloud Compiler
+        path: semeruCloudCompiler
       - description: Expose the application as a bindable service. Defaults to false.
         displayName: Bindable
         path: service.bindable
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - displayName: Network Policy
+        path: networkPolicy
       - displayName: Serviceability
         path: serviceability
-      - displayName: Single sign-on
+      - displayName: Single Sign-On
         path: sso
-      - displayName: Monitoring
-        path: monitoring
-      - description: An array of environment variables for the application container.
-        displayName: Environment Variables
-        path: env
       - description: Specifies the strategy to replace old deployment pods with new
           pods.
         displayName: Deployment Update Strategy
         path: deployment.updateStrategy
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:updateStrategy
+      - displayName: Monitoring
+        path: monitoring
+      - description: An array of environment variables for the application container.
+        displayName: Environment Variables
+        path: env
       - description: List of sources to populate environment variables in the application
           container.
         displayName: Environment Variables from Sources
         path: envFrom
-      - description: Represents a volume with data that is accessible to the application
-          container.
-        displayName: Volumes
-        path: volumes
       - description: Specifies the strategy to replace old StatefulSet pods with new
           pods.
         displayName: StatefulSet Update Strategy
         path: statefulSet.updateStrategy
+      - displayName: Storage
+        path: statefulSet.storage
+      - description: Represents a volume with data that is accessible to the application
+          container.
+        displayName: Volumes
+        path: volumes
+      - description: A convenient field to set the size of the persisted storage.
+        displayName: Storage Size
+        path: statefulSet.storage.size
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
       - description: Represents where to mount the volumes into the application container.
@@ -306,42 +371,33 @@ spec:
       - description: List of containers to run before other containers in a pod.
         displayName: Init Containers
         path: initContainers
-      - displayName: Storage
-        path: statefulSet.storage
-      - description: List of sidecar containers. These are additional containers to
-          be added to the pods.
-        displayName: Sidecar Containers
-        path: sidecarContainers
-      - description: A convenient field to set the size of the persisted storage.
-        displayName: Storage Size
-        path: statefulSet.storage.size
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - displayName: Affinity
-        path: affinity
-      - displayName: Network Policy
-        path: networkPolicy
       - description: A convenient field to request the storage class of the persisted
           storage. The name can not be specified or updated after the storage is created.
         displayName: Storage Class Name
         path: statefulSet.storage.className
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: List of sidecar containers. These are additional containers to
+          be added to the pods.
+        displayName: Sidecar Containers
+        path: sidecarContainers
       - description: The directory inside the container where this persisted storage
           will be bound to.
         displayName: Storage Mount Path
         path: statefulSet.storage.mountPath
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Security context for the application container.
-        displayName: Security Context
-        path: securityContext
+      - displayName: Affinity
+        path: affinity
       - description: A YAML object that represents a volumeClaimTemplate component
           of a StatefulSet.
         displayName: Storage Volume Claim Template
         path: statefulSet.storage.volumeClaimTemplate
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:PersistentVolumeClaim
+      - description: Security context for the application container.
+        displayName: Security Context
+        path: securityContext
       - description: Labels to set on ServiceMonitor.
         displayName: Monitoring Labels
         path: monitoring.labels
@@ -392,6 +448,14 @@ spec:
         path: route.path
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Path type to be used for Ingress. This does not apply to Route
+          on OpenShift.
+        displayName: Path Type
+        path: route.pathType
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:select:Exact
+        - urn:alm:descriptor:com.tectonic.ui:select:Prefix
+        - urn:alm:descriptor:com.tectonic.ui:select:ImplementationSpecific
       - description: 'A name of a secret that already contains TLS key, certificate
           and CA to be used in the route. It can also contain destination CA certificate.
           The following keys are valid in the secret: ca.crt, destCA.crt, tls.crt,
@@ -400,34 +464,21 @@ spec:
         path: route.certificateSecretRef
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Disable the creation of the network policy. Defaults to false.
-        displayName: Disable
-        path: networkPolicy.disable
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: TLS termination policy. Can be one of edge, reencrypt and passthrough.
         displayName: Termination
         path: route.termination
         x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Specify the labels of namespaces that incoming traffic is allowed
-          from.
-        displayName: Namespace Labels
-        path: networkPolicy.namespaceLabels
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
+        - urn:alm:descriptor:com.tectonic.ui:select:edge
+        - urn:alm:descriptor:com.tectonic.ui:select:reencrypt
+        - urn:alm:descriptor:com.tectonic.ui:select:passthrough
       - description: HTTP traffic policy with TLS enabled. Can be one of Allow, Redirect
           and None.
         displayName: Insecure Edge Termination Policy
         path: route.insecureEdgeTerminationPolicy
         x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Specify the labels of pod(s) that incoming traffic is allowed
-          from.
-        displayName: From Labels
-        path: networkPolicy.fromLabels
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
+        - urn:alm:descriptor:com.tectonic.ui:select:Allow
+        - urn:alm:descriptor:com.tectonic.ui:select:Redirect
+        - urn:alm:descriptor:com.tectonic.ui:select:None
       - description: Periodic probe of container liveness. Container will be restarted
           if the probe fails.
         displayName: Liveness Probe
@@ -440,6 +491,63 @@ spec:
           probes are not executed until this completes successfully.
         displayName: Startup Probe
         path: probes.startup
+      - description: Disable the creation of the network policy. Defaults to false.
+        displayName: Disable
+        path: networkPolicy.disable
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Enable the Semeru Cloud Compiler. Defaults to false.
+        displayName: Enable
+        path: semeruCloudCompiler.enable
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Specify the labels of namespaces that incoming traffic is allowed
+          from.
+        displayName: Namespace Labels
+        path: networkPolicy.namespaceLabels
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Number of desired pods for the Semeru Cloud Compiler. Defaults
+          to 1.
+        displayName: Replicas
+        path: semeruCloudCompiler.replicas
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:podCount
+      - description: Specify the labels of pod(s) that incoming traffic is allowed
+          from.
+        displayName: From Labels
+        path: networkPolicy.fromLabels
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Resource requests and limits for the Semeru Cloud Compiler. The
+          CPU defaults to 100m with a limit of 2000m. The memory defaults to 800Mi,
+          with a limit of 1200Mi.
+        displayName: Resource Requirements
+        path: semeruCloudCompiler.resources
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
+      - description: Determines whether the access token that is provided in the request
+          is used for authentication.
+        displayName: Access Token Required
+        path: sso.oauth2[0].accessTokenRequired
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Determines whether to support access token authentication if
+          an access token is provided in the request.
+        displayName: Access Token Supported
+        path: sso.oauth2[0].accessTokenSupported
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Specifies the unique ID for the provider. The default value is
+          oauth2.
+        displayName: ID
+        path: sso.oauth2[0].id
+      - description: The URL for retrieving the user information.
+        displayName: User API
+        path: sso.oauth2[0].userApi
+      - description: Indicates which specification to use for the user API.
+        displayName: User API Type
+        path: sso.oauth2[0].userApiType
       - description: Hide liveness probe's Exec field
         displayName: Livness Probe's Exec
         path: probes.liveness.exec
@@ -512,6 +620,11 @@ spec:
       - displayName: SE Linux Options
         path: securityContext.seLinuxOptions
       statusDescriptors:
+      - description: Exposed URI of the application endpoint
+        displayName: Application
+        path: endpoints[0].uri
+        x-descriptors:
+        - urn:alm:descriptor:org.w3:link
       - displayName: Service Binding
         path: binding
       - displayName: Status Conditions
@@ -1036,6 +1149,7 @@ spec:
           - delete
           - get
           - list
+          - patch
           - update
           - watch
         - apiGroups:
@@ -1049,6 +1163,7 @@ spec:
           - delete
           - get
           - list
+          - patch
           - update
           - watch
         - apiGroups:
@@ -1062,6 +1177,7 @@ spec:
           - delete
           - get
           - list
+          - patch
           - update
           - watch
         - apiGroups:
@@ -1112,6 +1228,7 @@ spec:
           - delete
           - get
           - list
+          - patch
           - update
           - watch
         - apiGroups:
@@ -1158,6 +1275,14 @@ spec:
           - list
           - update
           - watch
+        - apiGroups:
+          - security.openshift.io
+          resourceNames:
+          - restricted
+          resources:
+          - securitycontextconstraints
+          verbs:
+          - use
         - apiGroups:
           - serving.knative.dev
           resources:

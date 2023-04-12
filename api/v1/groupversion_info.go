@@ -10,7 +10,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1beta2 contains API Schema definitions for the openliberty.io v1beta1 API group
+// Package v1 contains API Schema definitions for the apps.openliberty.io v1 API group
 // +kubebuilder:object:generate=true
 // +groupName=apps.openliberty.io
 package v1

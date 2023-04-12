@@ -1,10 +1,9 @@
 apiVersion: apps.openliberty.io/v1
 kind: OpenLibertyApplication
 metadata:
-  name: service-with-cert-liberty
+  name: service-with-cert-lib-app
 spec:
-  # Add fields here
-  applicationImage: k8s.gcr.io/pause:2.0
+  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
   replicas: 1
   service:
     certificateSecretRef: service-tls-secret
