@@ -23,4 +23,4 @@ spec:
           resources:
             requests:
               storage: 15Mi
-          storageClassName: rook-ceph
+          storageClassName: rook-cephfs

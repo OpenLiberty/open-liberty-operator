@@ -107,7 +107,7 @@ main() {
     push_images
 
     echo "****** Installing bundle..."
-    operator-sdk run bundle --install-mode OwnNamespace --pull-secret-name regcred "${BUNDLE_IMAGE}" || {
+    operator-sdk run bundle --install-mode OwnNamespace --pull-secret-name regcred "${BUNDLE_IMAGE}" --timeout 5m || {
         echo "****** Installing bundle failed..."
         exit 1
     }
