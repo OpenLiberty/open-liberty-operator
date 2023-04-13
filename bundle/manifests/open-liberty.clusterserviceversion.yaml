@@ -12,7 +12,9 @@ metadata:
           },
           "spec": {
             "applicationImage": "icr.io/appcafe/open-liberty/samples/getting-started@sha256:9a6f6352bee814302fcf939dd640b7d3b3e02307330f82bc32b782e7a9feb8a3",
-            "manageTLS": true
+            "expose": true,
+            "manageTLS": true,
+            "replicas": 1
           }
         },
         {
@@ -89,7 +91,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2023-04-12T16:46:44Z"
+    createdAt: "2023-04-12T21:29:36Z"
     description: Deploy and manage applications running on Liberty
     olm.skipRange: '>=0.8.0 <1.2.0'
     operators.openshift.io/infrastructure-features: '["disconnected"]'
