@@ -283,6 +283,17 @@ spec:
         app.kubernetes.io/name: open-liberty-operator
         control-plane: controller-manager
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - amd64
+                - ppc64le
+                - s390x
       containers:
       - args:
         - --health-probe-bind-address=:8081
@@ -298,6 +309,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: RELATED_IMAGE_LIBERTY_SAMPLE_APP
+          value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:9a6f6352bee814302fcf939dd640b7d3b3e02307330f82bc32b782e7a9feb8a3
         image: cp.stg.icr.io/cp/open-liberty-operator:main
         livenessProbe:
           failureThreshold: 3
@@ -322,13 +335,22 @@ spec:
           timeoutSeconds: 10
         resources:
           limits:
-            cpu: 200m
+            cpu: 400m
             memory: 512Mi
           requests:
-            cpu: 100m
-            memory: 64Mi
+            cpu: 200m
+            memory: 128Mi
         securityContext:
           allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+      hostIPC: false
+      hostNetwork: false
+      hostPID: false
       securityContext:
         runAsNonRoot: true
       serviceAccountName: olo-controller-manager

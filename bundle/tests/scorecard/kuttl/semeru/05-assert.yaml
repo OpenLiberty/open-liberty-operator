@@ -57,6 +57,7 @@ spec:
             - name: OPENJ9_JAVA_OPTIONS
               value: >-
                 -XX:+JITServerLogConnections
+                -XX:+JITServerShareROMClasses
                 -XX:JITServerSSLKey=/etc/x509/certs/tls.key
                 -XX:JITServerSSLCert=/etc/x509/certs/tls.crt
             - name: SA_RESOURCE_VERSION

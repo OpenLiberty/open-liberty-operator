@@ -63,6 +63,7 @@ spec:
             - name: OPENJ9_JAVA_OPTIONS
               value: >-
                 -XX:+JITServerLogConnections
+                -XX:+JITServerShareROMClasses
                 -XX:JITServerSSLKey=/etc/x509/certs/tls.key
                 -XX:JITServerSSLCert=/etc/x509/certs/tls.crt
             - name: SA_RESOURCE_VERSION
@@ -133,8 +134,8 @@ spec:
           #  - '-c'
           #  - >-
           #    export OPENJ9_JAVA_OPTIONS="$OPENJ9_JAVA_OPTIONS -XX:+UseJITServer
-          #    -XX:+JITServerLogConnections -XX:+JITServerShareROMClasses
-          #    -XX:JITServerAddress=my-liberty-app-semeru-compiler-1.websphere-liberty.svc
+          #    -XX:+JITServerLogConnections
+          #    -XX:JITServerAddress=my-liberty-app-semeru-compiler-1.open-liberty.svc
           #    -XX:JITServerSSLRootCerts=/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
           #    && server run
       serviceAccount: my-liberty-app

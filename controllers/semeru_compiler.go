@@ -325,6 +325,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 					},
 					Env: []corev1.EnvVar{
 						{Name: "OPENJ9_JAVA_OPTIONS", Value: "-XX:+JITServerLogConnections" +
+							" -XX:+JITServerShareROMClasses" +
 							" -XX:JITServerSSLKey=/etc/x509/certs/tls.key" +
 							" -XX:JITServerSSLCert=/etc/x509/certs/tls.crt"},
 					},
@@ -542,7 +543,7 @@ func (r *ReconcileOpenLiberty) getSemeruJavaOptions(instance *openlibertyv1.Open
 			certificateLocation = "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
 		}
 		jitServerAddress := instance.Status.SemeruCompiler.ServiceHostname
-		jitSeverOptions := fmt.Sprintf("-XX:+UseJITServer -XX:+JITServerLogConnections -XX:+JITServerShareROMClasses -XX:JITServerAddress=%v -XX:JITServerSSLRootCerts=%v",
+		jitSeverOptions := fmt.Sprintf("-XX:+UseJITServer -XX:+JITServerLogConnections -XX:JITServerAddress=%v -XX:JITServerSSLRootCerts=%v",
 			jitServerAddress, certificateLocation)
 
 		args := []string{
