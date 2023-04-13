@@ -30,11 +30,20 @@ main() {
     \"product_group_id\": \"${PRODUCT_GROUP_ID}\"
   }"""
 
+  echo $BUILD_DATA
+
   BUILD_TIME_START=${SECONDS}
   CURL_OPTS="-s -k -u ${FYRE_USER}:${FYRE_KEY}"
 
+  echo "BUILD_TIME_START: " $BUILD_TIME_START
+  echo "CURL_OPTS: " $CURL_OPTS
+  echo "CLUSTER_NAME: " $CLUSTER_NAME
+  echo "curl ${CURL_OPTS} https://api.fyre.ibm.com/rest/v1/?operation=query&request=showclusters | jq -r --arg cluster_name "${CLUSTER_NAME}" '.clusters[] | select(.name == $cluster_name) | .status"
+
   # Avoid creating cluster if it already exists
   BUILD_REQUEST_STATUS="$(curl ${CURL_OPTS} "https://api.fyre.ibm.com/rest/v1/?operation=query&request=showclusters" | jq -r --arg cluster_name "${CLUSTER_NAME}" '.clusters[] | select(.name == $cluster_name) | .status')"
+  echo "BUILD_REQUEST_STATUS: " $BUILD_REQUEST_STATUS
+
   if [[ -z "${BUILD_REQUEST_STATUS}" ]]; then
     # Build the single-VM cluster
     echo "Sending build request to Fyre..."

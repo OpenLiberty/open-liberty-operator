@@ -6,7 +6,7 @@ timeout: 60
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: manage-tls-rc
+  name: manage-tls-liberty
 status:
   replicas: 1
   readyReplicas: 1
@@ -19,11 +19,11 @@ spec:
         - name: TLS_DIR
           value: /etc/x509/certs
         - name: SA_RESOURCE_VERSION
-        - name: SERVICE_CERT_SECRET_RESOURCE_VERSION
         - name: WLP_LOGGING_CONSOLE_LOGLEVEL
         - name: WLP_LOGGING_CONSOLE_SOURCE
         - name: WLP_LOGGING_CONSOLE_FORMAT
-        - name: ROUTE_CERT_SECRET_RESOURCE_VERSION
+        - name: SEC_IMPORT_K8S_CERTS
+        - name: SERVICE_CERT_SECRET_RESOURCE_VERSION
         volumeMounts:
         - name: svc-certificate
           mountPath: /etc/x509/certs
@@ -39,12 +39,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: manage-tls-rc
+  name: manage-tls-liberty
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: manage-tls-rc
+  name: manage-tls-liberty
 spec:
   tls:
     - hosts:

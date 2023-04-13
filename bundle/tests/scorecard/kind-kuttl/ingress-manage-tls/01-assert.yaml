@@ -5,7 +5,7 @@ timeout: 60
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: manage-tls-rc
+  name: manage-tls-liberty
 spec:
   template:
     spec:
@@ -22,12 +22,12 @@ status:
 apiVersion: v1
 kind: Service
 metadata:
-  name: manage-tls-rc
+  name: manage-tls-liberty
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: manage-tls-rc
+  name: manage-tls-liberty
 spec:
   rules:
     - host: openlibertyoperator.test
