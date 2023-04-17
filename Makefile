@@ -199,7 +199,7 @@ bundle: manifests setup kustomize ## Generate bundle manifests and metadata, the
 	$(KUSTOMIZE) build config/kustomize/crd -o internal/deploy/kustomize/daily/base/open-liberty-crd.yaml
 	cd config/kustomize/operator && $(KUSTOMIZE) edit set namespace $(KUSTOMIZE_NAMESPACE)
 	$(KUSTOMIZE) build config/kustomize/operator -o internal/deploy/kustomize/daily/base/open-liberty-operator.yaml
-	sed -i.bak "s,${IMG},${KUSTOMIZE_IMG},g" internal/deploy/kustomize/daily/base/open-liberty-operator.yaml
+	sed -i.bak "s,${IMG},${KUSTOMIZE_IMG},g;s,serviceAccountName: controller-manager,serviceAccountName: olo-controller-manager,g" internal/deploy/kustomize/daily/base/open-liberty-operator.yaml
 	$(KUSTOMIZE) build config/kustomize/roles -o internal/deploy/kustomize/daily/base/open-liberty-roles.yaml
 
 	mv config/manifests/patches/csvAnnotations.yaml.bak config/manifests/patches/csvAnnotations.yaml
