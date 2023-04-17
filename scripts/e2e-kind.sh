@@ -120,13 +120,29 @@ install_olo() {
     kubectl create -f bundle/manifests/apps.openliberty.io_openlibertydumps.yaml
     kubectl create -f bundle/manifests/apps.openliberty.io_openlibertytraces.yaml
 
-    sed -i "s|image: .*|image: ${LOCAL_REGISTRY}/${BUILD_IMAGE}|
-            s|namespace: .*|namespace: ${TEST_NAMESPACE}|" deploy/kustomize/daily/base/open-liberty-operator.yaml
-    
-    kubectl create -f deploy/kustomize/daily/base/open-liberty-operator.yaml -n ${TEST_NAMESPACE}
+  sed -i "s|image: .*|image: ${LOCAL_REGISTRY}/${BUILD_IMAGE}|
+          s|default|${TEST_NAMESPACE}|" internal/deploy/kustomize/daily/base/open-liberty-operator.yaml
 
-    # Wait for operator deployment to be ready
-    wait_for ${TEST_NAMESPACE} olo-controller-manager
+  kubectl apply -f internal/deploy/kustomize/daily/base/open-liberty-operator.yaml -n ${TEST_NAMESPACE}
+
+  # Wait for operator deployment to be ready
+  wait_for ${TEST_NAMESPACE} olo-controller-manager
+}
+
+install_tools() {
+  echo "****** Installing Prometheus"
+  kubectl apply --server-side -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/bundle.yaml
+
+  echo "****** Installing Knative"
+  kubectl apply -f https://github.com/knative/serving/releases/download/knative-v1.7.4/serving-crds.yaml
+  kubectl apply -f https://github.com/knative/eventing/releases/download/knative-v1.7.4/eventing-crds.yaml
+
+  echo "****** Installing Cert Manager"
+  kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.2/cert-manager.yaml
+
+  echo "****** Enabling Ingress"
+  kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+  wait_for ingress-nginx ingress-nginx-controller
 }
 
 setup_test() {

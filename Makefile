@@ -196,13 +196,14 @@ bundle: manifests setup kustomize ## Generate bundle manifests and metadata, the
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle $(BUNDLE_GEN_FLAGS)
 	./scripts/csv_description_update.sh update_csv
 
-	$(KUSTOMIZE) build config/kustomize/crd -o deploy/kustomize/daily/base/open-liberty-crd.yaml
+	$(KUSTOMIZE) build config/kustomize/crd -o internal/deploy/kustomize/daily/base/open-liberty-crd.yaml
 	cd config/kustomize/operator && $(KUSTOMIZE) edit set namespace $(KUSTOMIZE_NAMESPACE)
-	$(KUSTOMIZE) build config/kustomize/operator -o deploy/kustomize/daily/base/open-liberty-operator.yaml
-	sed -i.bak "s,${IMG},${KUSTOMIZE_IMG},g" deploy/kustomize/daily/base/open-liberty-operator.yaml
-	
+	$(KUSTOMIZE) build config/kustomize/operator -o internal/deploy/kustomize/daily/base/open-liberty-operator.yaml
+	sed -i.bak "s,${IMG},${KUSTOMIZE_IMG},g" internal/deploy/kustomize/daily/base/open-liberty-operator.yaml
+	$(KUSTOMIZE) build config/kustomize/roles -o internal/deploy/kustomize/daily/base/open-liberty-roles.yaml
+
 	mv config/manifests/patches/csvAnnotations.yaml.bak config/manifests/patches/csvAnnotations.yaml
-	rm deploy/kustomize/daily/base/open-liberty-operator.yaml.bak
+	rm internal/deploy/kustomize/daily/base/open-liberty-operator.yaml.bak
 	operator-sdk bundle validate ./bundle
 
 .PHONY: fmt
