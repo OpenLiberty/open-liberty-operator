@@ -120,17 +120,18 @@ install_olo() {
     kubectl create -f bundle/manifests/apps.openliberty.io_openlibertydumps.yaml
     kubectl create -f bundle/manifests/apps.openliberty.io_openlibertytraces.yaml
 
-  sed -i "s|image: .*|image: ${LOCAL_REGISTRY}/${BUILD_IMAGE}|
-          s|default|${TEST_NAMESPACE}|" internal/deploy/kustomize/daily/base/open-liberty-operator.yaml
+    sed -i "s|image: .*|image: ${LOCAL_REGISTRY}/${BUILD_IMAGE}|
+            s|namespace: .*|namespace: ${TEST_NAMESPACE}|" deploy/kustomize/daily/base/open-liberty-operator.yaml
 
-  sed -i "s|namespace: .*|namespace: ${TEST_NAMESPACE}|" internal/deploy/kustomize/daily/base/open-liberty-roles.yaml
+    sed -i "s|namespace: .*|namespace: ${TEST_NAMESPACE}|" internal/deploy/kustomize/daily/base/open-liberty-roles.yaml
 
-  kubectl create -f internal/deploy/kustomize/daily/base/open-liberty-operator.yaml -n ${TEST_NAMESPACE}
-  kubectl create -f internal/deploy/kustomize/daily/base/open-liberty-roles.yaml -n ${TEST_NAMESPACE}
+    kubectl create -f internal/deploy/kustomize/daily/base/open-liberty-operator.yaml -n ${TEST_NAMESPACE}
+    kubectl create -f internal/deploy/kustomize/daily/base/open-liberty-roles.yaml -n ${TEST_NAMESPACE}
   
   # Wait for operator deployment to be ready
   wait_for ${TEST_NAMESPACE} olo-controller-manager
 }
+
 
 setup_test() {
     echo "****** Installing kuttl"
