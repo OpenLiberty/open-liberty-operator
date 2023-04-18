@@ -2,30 +2,32 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: olo-leader-election-role
-  namespace: olo-ns
+  namespace: default
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: olo-manager-role
-  namespace: olo-ns
+  namespace: default
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: olo-leader-election-rolebinding
-  namespace: olo-ns
+  namespace: default
 subjects:
 - kind: ServiceAccount
   name: olo-controller-manager
-  namespace: olo-ns
+  namespace: default
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: olo-manager-rolebinding
-  namespace: olo-ns
+  namespace: default
 subjects:
 - kind: ServiceAccount
   name: olo-controller-manager
-  namespace: olo-ns
+  namespace: default
+
+

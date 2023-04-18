@@ -123,8 +123,11 @@ install_olo() {
   sed -i "s|image: .*|image: ${LOCAL_REGISTRY}/${BUILD_IMAGE}|
           s|default|${TEST_NAMESPACE}|" internal/deploy/kustomize/daily/base/open-liberty-operator.yaml
 
-  kubectl apply -f internal/deploy/kustomize/daily/base/open-liberty-operator.yaml -n ${TEST_NAMESPACE}
+  sed -i "s|namespace: .*|namespace: ${TEST_NAMESPACE}|" internal/deploy/kustomize/daily/base/open-liberty-roles.yaml
 
+  kubectl create -f internal/deploy/kustomize/daily/base/open-liberty-operator.yaml -n ${TEST_NAMESPACE}
+  kubectl create -f internal/deploy/kustomize/daily/base/open-liberty-roles.yaml -n ${TEST_NAMESPACE}
+  
   # Wait for operator deployment to be ready
   wait_for ${TEST_NAMESPACE} olo-controller-manager
 }
