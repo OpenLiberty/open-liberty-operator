@@ -132,22 +132,6 @@ install_olo() {
   wait_for ${TEST_NAMESPACE} olo-controller-manager
 }
 
-install_tools() {
-  echo "****** Installing Prometheus"
-  kubectl apply --server-side -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/bundle.yaml
-
-  echo "****** Installing Knative"
-  kubectl apply -f https://github.com/knative/serving/releases/download/knative-v1.7.4/serving-crds.yaml
-  kubectl apply -f https://github.com/knative/eventing/releases/download/knative-v1.7.4/eventing-crds.yaml
-
-  echo "****** Installing Cert Manager"
-  kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.2/cert-manager.yaml
-
-  echo "****** Enabling Ingress"
-  kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
-  wait_for ingress-nginx ingress-nginx-controller
-}
-
 setup_test() {
     echo "****** Installing kuttl"
     mkdir krew && cd krew
