@@ -10,5 +10,4 @@ spec:
         - name: manager
           env:
             - name: WATCH_NAMESPACE
-              value: olo-watched-ns
-              valueFrom:
+              value: olo-watched-ns2

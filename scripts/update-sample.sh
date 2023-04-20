@@ -21,7 +21,7 @@ echo "sha is $SHA"
 files=" 
 config/samples/apps.openliberty.io_v1beta2_openlibertyapplications.yaml
 config/manager/manager.yaml
-deploy/kustomize/daily/base/open-liberty-operator.yaml
+internal/deploy/kustomize/daily/base/open-liberty-operator.yaml
 "
 
 for file in $files 

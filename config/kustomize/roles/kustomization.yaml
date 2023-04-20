@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-- ../../manager
+- ../../rbac
 
 # Adds namespace to all resources.
 namespace: default
@@ -11,7 +11,3 @@ namePrefix: olo-
 commonLabels:
   app.kubernetes.io/instance: open-liberty-operator
   app.kubernetes.io/name: open-liberty-operator
-
-patchesStrategicMerge:
-- patches/delete-namespace.yaml
-- patches/watch-namespace.yaml

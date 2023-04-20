@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: olo-controller-manager
-  namespace: olo-ns2
+  namespace: default
 spec:
   template:
     spec:
@@ -10,4 +10,5 @@ spec:
         - name: manager
           env:
             - name: WATCH_NAMESPACE
-              value: olo-watched-ns2
+              value: olo-watched-ns
+              valueFrom:
