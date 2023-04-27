@@ -1,7 +1,7 @@
 type: pipeline_definition
 product: Liberty
 name: Open Liberty Operator Docker Build
-description: A build to run the open liberty operator docker container build
+description: A build to run the container images for the Open Liberty Operator
 triggers:
 - type: manual
   triggerName: "olodocker"

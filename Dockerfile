@@ -34,7 +34,7 @@ ARG SUMMARY="Open Liberty Operator"
 ARG DESCRIPTION="This image contains the controllers for Open Liberty Operator."
 
 LABEL name=$NAME \
-      vendor="Open Liberty" \
+      vendor=IBM \
       version=$VERSION_LABEL \
       release=$RELEASE_LABEL \
       description=$DESCRIPTION \
