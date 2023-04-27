@@ -57,7 +57,7 @@ spec:
           initialDelaySeconds: 20
           periodSeconds: 30
           successThreshold: 1
-          timeoutSeconds: 10    
+          timeoutSeconds: 10
         env:
           - name: OPERATOR_NAMESPACE
             valueFrom:

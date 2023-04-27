@@ -7,7 +7,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     createdAt: "2022-03-01T09:00:00Z"
-    description: Deploy and manage applications running on Liberty
+    description: Deploy and manage containerized Liberty applications
     olm.skipRange: '>=0.8.0 <1.2.0'
     operators.openshift.io/infrastructure-features: '["disconnected"]'
     repository: https://github.com/OpenLiberty/open-liberty-operator
@@ -851,7 +851,7 @@ spec:
   - name: Documentation
     url: https://ibm.biz/olo-docs
   - name: Open Liberty
-    url: https://openliberty.io/
+    url: https://openliberty.io
   - name: Open Liberty Container Images
     url: https://ibm.biz/ol-images
   maintainers:
