@@ -1257,10 +1257,6 @@ type: kubernetes.io/tls
 
 For an example that uses `.spec.route.certificateSecretRef` and makes applications available externally, see the link:#expose-applications-externally[`.spec.expose` examples].
 
-== Troubleshooting
-
-See the link:++troubleshooting.adoc++[troubleshooting guide] for information on how to investigate and resolve deployment problems.
-
 == Day-2 Operations [[day-2-operations]]
 
 === Prerequisite
@@ -1365,3 +1361,7 @@ You can check the status of a trace operation using the `status` field inside th
 
 Note:
 _The operator doesn't monitor the Pods. If the Pod is restarted or deleted after the trace is enabled, then the tracing wouldn't be automatically enabled when the Pod comes back up. In that case, the status of the trace operation may not correctly report whether the trace is enabled or not._
+
+== Troubleshooting
+
+See the link:++troubleshooting.adoc++[troubleshooting guide] for information on how to investigate and resolve deployment problems.
