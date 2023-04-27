@@ -3,7 +3,6 @@ kind: ClusterRoleBinding
 metadata:
   labels:
     app.kubernetes.io/instance: open-liberty-operator
-    app.kubernetes.io/managed-by: olm
     app.kubernetes.io/name: open-liberty-operator
   name: olo-manager-cluster-rolebinding
 roleRef:
@@ -20,7 +19,6 @@ kind: ClusterRoleBinding
 metadata:
   labels:
     app.kubernetes.io/instance: open-liberty-operator
-    app.kubernetes.io/managed-by: olm
     app.kubernetes.io/name: open-liberty-operator
   name: olo-leader-election-cluster-rolebinding
 roleRef:
@@ -38,7 +36,6 @@ metadata:
   creationTimestamp: null
   labels:
     app.kubernetes.io/instance: open-liberty-operator
-    app.kubernetes.io/managed-by: olm
     app.kubernetes.io/name: open-liberty-operator
   name: olo-manager-cluster-role
 rules:
@@ -230,7 +227,6 @@ kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/instance: open-liberty-operator
-    app.kubernetes.io/managed-by: olm
     app.kubernetes.io/name: open-liberty-operator
   name: olo-leader-election-cluster-role
 rules:
