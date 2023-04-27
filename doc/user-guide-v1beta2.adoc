@@ -87,11 +87,6 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `monitoring` | Specifies parameters for `Service Monitor`. For examples, see link:#monitor-resources[Monitor resources] and link:#specify-multiple-service-ports[Specify multiple service ports].
 | `monitoring.endpoints` | A YAML snippet representing an array of link:++https://github.com/coreos/prometheus-operator/blob/main/Documentation/api.md#endpoint++[Endpoint] component from ServiceMonitor.
 | `monitoring.labels` | Labels to set on link:++https://github.com/coreos/prometheus-operator/blob/main/Documentation/api.md#servicemonitor++[ServiceMonitor].
-| `networkPolicy` | Defines the network policy. For examples, see link:#allowing-or-limiting-incoming-traffic[Allowing or limiting incoming traffic].
-| `networkPolicy.disable` | [[crd-networkPolicy-disable]] 	
-A Boolean to disable the creation of the network policy. The default value is `false`. By default, network policies for an application are created and limit incoming traffic.
-| `networkPolicy.fromLabels` | A set of labels that selects the pod(s) to allow incoming traffic from. Defaults to pod(s) belonging to the same application.
-| `networkPolicy.namespaceLabels` | A set of labels that selects the namespace to allow incoming traffic from. Defaults to the same namespace that the application is deployed to.
 | `probes` | Defines health checks on an application container to determine whether it is alive or ready to receive traffic. For examples, see link:#configure-probes[Configure probes].
 | `probes.liveness` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request++[Kubernetes liveness probe] that controls when Kubernetes needs to restart the pod.
 | `probes.readiness`   | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes++[Kubernetes readiness probe] that controls when the pod is ready to receive traffic.
@@ -242,8 +237,7 @@ Open Liberty Operator builds upon link:#common-component-documentation[component
 * link:#configure-probes[Configure probes (`.spec.probes`)]
 * link:#deploy-serverless-applications-with-knative[Deploy serverless applications with Knative (`.spec.createKnativeService`)]
 * link:#expose-applications-externally[Expose applications externally (`.spec.expose`, `.spec.createKnativeService`, `.spec.route`)]
-* link:#allowing-or-limiting-incoming-traffic[Allowing or limiting incoming traffic (`.spec.networkPolicy`)]
-* link:#bind-applications-with-operator-managed-backing-services[Bind applications with oeprator-managed backing services (`.status.binding.name` and `.spec.service.bindable`)]
+* link:#bind-applications-with-operator-managed-backing-services[Bind applications with operator-managed backing services (`.status.binding.name` and `.spec.service.bindable`)]
 * link:#limit-a-pod-to-run-on-specified-nodes[Limit a pod to run on specified nodes (`.spec.affinity`)]
 * link:#specifying-certificates-for-a-secret-route-and-service[Specifying certificates for a secret Route and Service (`.spec.service.certificateSecretRef` and `.spec.route.certificateSecretRef`)] 
 
@@ -997,55 +991,6 @@ spec:
   applicationImage: quay.io/my-repo/my-app:1.0
   createKnativeService: true
   expose: true
-----
-
-=== Allowing or limiting incoming traffic (`.spec.networkPolicy`) [[allowing-or-limiting-incoming-traffic]]
-
-By default, network policies for an application isolate incoming traffic.
-
-* The default network policy created for applications that are not exposed limits incoming traffic to pods in the same namespace that are part of the same application. Traffic is limited to only the ports that are configured by the service.
-* Red Hat OpenShift supports network policies by default. For exposed applications on Red Hat OpenShift, the network policy allows incoming traffic from the Red Hat OpenShift ingress controller on the ports in the service configuration. The network policy also allows incoming traffic from the Red Hat OpenShift monitoring stack.
-* For exposed applications on other Kubernetes platforms, the network policy allows incoming traffic from any pods in any namespace on the ports in the service configuration. For deployments to other Kubernetes platforms, ensure that your network plug-in supports the link:++https://kubernetes.io/docs/concepts/services-networking/network-policies/#prerequisites++[Kubernetes network policies].
-
-To disable the creation of network policies for an application, set link:#crd-networkPolicy-disable[`.spec.networkPolicy.disable`] to true.
-
-[source,yaml]
-----
-spec:
-  networkPolicy:
-    disable: true
-----
-
-You can change the network policy to allow incoming traffic from specific namespaces or pods. By default, `.spec.networkPolicy.namespaceLabels` is set to the same namespace to which the application is deployed, and `.spec.networkPolicy.fromLabels` is set to pods that belong to the same application specified by `.spec.applicationName`. The following example allows incoming traffic from pods that are labeled with the frontend role and are in the same namespace.
-
-[source,yaml]
-----
-spec:
-  networkPolicy:
-    fromLabels:
-      role: frontend
-----
-
-The following example allows incoming traffic from pods that belong to the same application in the `example` namespace.
-
-[source,yaml]
-----
-spec:
-  networkPolicy:
-    namespaceLabels:
-      kubernetes.io/metadata.name: example
-----
-
-The following example allows incoming traffic from pods that are labeled with the `frontend` role in the `example` namespace.
-
-[source,yaml]
-----
-spec:
-  networkPolicy:
-    namespaceLabels:
-      kubernetes.io/metadata.name: example
-    fromLabels:
-      role: frontend
 ----
 
 === Bind applications with operator-managed backing services (`.status.binding.name` and `.spec.service.bindable`) [[bind-applications-with-operator-managed-backing-services]]
