@@ -54,7 +54,7 @@ spec:
       mountPath: "/logs"
 ----
 
-The following table lists configurable fields of the `OpenLibertyApplication` CRD. For a complete OpenAPI v3 representation of these values, view the files under `/deploy/releases/_<operator-version>_/kubectl/openliberty-app-crd.yaml`. For example,  the link:++../deploy/releases/0.8.2/kubectl/openliberty-app-crd.yaml++[`OpenLibertyApplication` CRD] for release `0.8.2`.
+The following table lists configurable fields of the `OpenLibertyApplication` CRD. For complete OpenAPI v3 representation of these values, view the files under `/deploy/releases/_<operator-version>_/kubectl/openliberty-app-crd.yaml`. For example,  the link:++../deploy/releases/0.8.2/kubectl/openliberty-app-crd.yaml++[`OpenLibertyApplication` CRD] for release `0.8.2`.
 
 Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Specifying other fields is optional.
 
