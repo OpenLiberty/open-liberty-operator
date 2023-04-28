@@ -210,18 +210,18 @@ oc get olapps my-liberty-app
 oc get openlibertyapplication my-liberty-app
 ----
 
-=== Open Liberty Operator Documentation
+=== Operator configuration examples
 
 Open Liberty Operator builds upon link:#common-component-documentation[components] from the generic link:++https://github.com/application-stacks/runtime-component-operator++[Runtime Component Operator] and provides additional features to customize your Open Liberty applications.
 
-==== Open Liberty Operator Component Documentation
+==== Open Liberty Operator Components
 
 * link:#override-console-logging-environment-variable-default-values[Override console logging environment variable default values (`.spec.env`)] image:images/docs_openliberty_logo.png[OL,20] 
 * link:#configuring-single-sign-on-sso[Configuring single sign-on (SSO) (`.spec.sso`)] image:images/docs_openliberty_logo.png[OL,20] 
 * link:#storage-for-serviceability[Storage for serviceability (`.spec.serviceability`)] image:images/docs_openliberty_logo.png[OL,20]
 
 
-==== Common Component Documentation [[common-component-documentation]]
+==== Common Components [[common-component-documentation]]
 
 * link:#reference-image-streams[Reference image streams (`.spec.applicationImage`)]
 * link:#create-a-service-account[Create a service account (`.spec.serviceAccountName`)]
