@@ -121,7 +121,7 @@ install_olo() {
     kubectl create -f bundle/manifests/apps.openliberty.io_openlibertytraces.yaml
 
     sed -i "s|image: .*|image: ${LOCAL_REGISTRY}/${BUILD_IMAGE}|
-            s|namespace: .*|namespace: ${TEST_NAMESPACE}|" deploy/kustomize/daily/base/open-liberty-operator.yaml
+            s|namespace: .*|namespace: ${TEST_NAMESPACE}|" internal/deploy/kustomize/daily/base/open-liberty-operator.yaml
 
     sed -i "s|namespace: .*|namespace: ${TEST_NAMESPACE}|" internal/deploy/kustomize/daily/base/open-liberty-roles.yaml
 
