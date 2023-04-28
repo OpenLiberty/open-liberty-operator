@@ -299,7 +299,7 @@ If the `.status.conditions.type` Ready type does not have a status of `True`, se
 
 The value of the `.status.versions.reconciled` parameter is the version of the operand that is deployed into the cluster after the reconcile loop completes.
 
-=== Operator configuration examples
+=== Operator configuration examples [[operator-configuration-examples]]
 
 Open Liberty Operator builds upon link:#common-component-documentation[components] from the generic link:++https://github.com/application-stacks/runtime-component-operator++[Runtime Component Operator] and provides additional features to customize your Open Liberty applications.
 
