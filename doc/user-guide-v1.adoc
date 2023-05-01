@@ -1,0 +1,1496 @@
+= Open Liberty Operator v1.2.0+
+
+The Open Liberty Operator can be used to deploy and manage applications running on Open Liberty or WebSphere Liberty into Kubernetes clusters. You can also perform link:++#day-2-operations++[Day-2 operations] such as gathering traces and dumps using the operator.
+
+This documentation refers to the latest codebase.  For documentation and samples of older releases, please check out the link:++https://github.com/OpenLiberty/open-liberty-operator/releases++[main releases] page and navigate the corresponding tag.
+
+**Important**: This user guide only applies to operator versions **1.2.0 and above**.
+
+- For operator versions **below 1.2.0** refer to the link:++user-guide-v1beta2.adoc[v1beta2 user guide].
+- For operator versions **0.7.1 and below**, refer to the link:++user-guide.adoc++[v1beta1 user guide].
+
+**Important**: If you are upgrading from Open Liberty Operator versions 0.7.1 and below, note that API version of the custom resources (CRs) `OpenLibertyApplication`, `OpenLibertyDump` and `OpenLibertyTrace` have changed. Custom resources with `apiVersion: openliberty.io/v1beta1` are not handled by Open Liberty Operator versions 0.8.0 and above. You must delete existing custom resources with `apiVersion: openliberty.io/v1beta1` and create new custom resources with `apiVersion: apps.openliberty.io/v1`.
+
+== Operator installation
+
+Use the instructions for one of the link:++../deploy/releases++[releases] to install the operator into a Kubernetes cluster.
+
+The Open Liberty Operator can be installed to:
+
+* watch own namespace
+* watch another namespace
+* watch all namespaces in the cluster
+
+Appropriate cluster roles and bindings are required to watch another namespace or to watch all namespaces in the cluster.
+
+NOTE: The Open Liberty Operator can only interact with resources it is given permission to interact through link:++https://kubernetes.io/docs/reference/access-authn-authz/rbac/++[Role-based access control (RBAC)]. Some of the operator features require interacting with resources in other namespaces. In that case, the operator must be installed with correct `ClusterRole` definitions.
+
+== Overview
+
+The architecture of the Open Liberty Operator follows the basic controller pattern:  the Operator container with the controller is deployed into a Pod and listens for incoming resources with `Kind: OpenLibertyApplication`. Creating an `OpenLibertyApplication` custom resource (CR) triggers the Open Liberty Operator to create, update or delete Kubernetes resources needed by the application to run on your cluster.
+
+In addition, Open Liberty Operator makes it easy to perform link:++#day-2-operations++[Day-2 operations] on an Open Liberty or WebSphere Liberty server running inside a Pod as part of an `OpenLibertyApplication` instance:
+* Gather server traces using resource `Kind: OpenLibertyTrace`
+* Generate server dumps using resource `Kind: OpenLibertyDump`
+
+== Configuration
+
+=== Custom Resource Definition (CRD)
+
+Each instance of `OpenLibertyApplication` CR represents the application to be deployed on the cluster:
+
+[source,yaml]
+----
+apiVersion: apps.openliberty.io/v1
+kind: OpenLibertyApplication
+metadata:
+  name: my-liberty-app
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  service:
+    type: ClusterIP
+    port: 9080
+  expose: true
+  statefulSet:
+    storage:
+      size: 2Gi
+      mountPath: "/logs"
+----
+
+The following table lists configurable fields of the `OpenLibertyApplication` CRD. For complete OpenAPI v3 representation of these values, view the files under `/deploy/releases/_<operator-version>_/kubectl/openliberty-app-crd.yaml`. For example,  the link:++../deploy/releases/0.8.2/kubectl/openliberty-app-crd.yaml++[`OpenLibertyApplication` CRD] for release `0.8.2`.
+
+Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Specifying other fields is optional.
+
+.Custom Resource Definition
+|===
+| Field | Description
+| `affinity` | [[crd-spec-affinity]] Configures pods to run on specific nodes. For examples, see link:#limit-a-pod-to-run-on-specified-nodes[Limit a pod to run on specified nodes].
+| `affinity.architecture` | An array of architectures to be considered for deployment. Their position in the array indicates preference.
+| `affinity.nodeAffinity` | A YAML object that represents a link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#nodeaffinity-v1-core++[NodeAffinity].
+| `affinity.nodeAffinityLabels` | A YAML object that contains set of required labels and their values.
+| `affinity.podAffinity` | A YAML object that represents a link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#podaffinity-v1-core++[PodAffinity].
+| `affinity.podAntiAffinity` | A YAML object that represents a link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#podantiaffinity-v1-core++[PodAntiAffinity].
+| `applicationImage` | The absolute name of the image to be deployed, containing the registry and the tag. On OpenShift, it can also be set to `<project name>/<image stream name>[:tag]` to reference an image from an image stream. If `<project name>` and `<tag>` values are not defined, they default to the namespace of the CR and the value of `latest`, respectively.
+| `applicationName` | The name of the application this resource is part of. If not specified, it defaults to the name of the CR.
+| `applicationVersion` | The current version of the application. Label `app.kubernetes.io/version` will be added to all resources when the version is defined.
+| `autoscaling` | Configures the wanted resource consumption of pods. For examples, see link:#configure-multiple-application-instances-for-high-availability[Configure multiple application instances for high availability].
+| `autoscaling.maxReplicas` | Required field for autoscaling. Upper limit for the number of pods that can be set by the autoscaler. It cannot be lower than the minimum number of replicas.
+| `autoscaling.minReplicas`   | Lower limit for the number of pods that can be set by the autoscaler.
+| `autoscaling.targetCPUUtilizationPercentage`   | Target average CPU utilization (represented as a percentage of requested CPU) over all the pods.
+| `createKnativeService`   | A Boolean to toggle the creation of Knative resources and use of Knative serving. To create a Knative service, set the parameter to true. For examples, see link:#deploy-serverless-applications-with-knative[Deploy serverless applications with Knative] and link:#expose-applications-externally[Expose applications externally].
+| `deployment`  | The wanted state and cycle of the deployment and resources owned by the deployment.
+| `deployment.annotations`   | Annotations to be added only to the deployment and resources owned by the deployment.
+| `deployment.updateStrategy`   | A field to specify the update strategy of the deployment. For examples, see link:++https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy++[updateStrategy]
+| `deployment.updateStrategy.type`   | The type of update strategy of the deployment. The type can be set to `RollingUpdate` or `Recreate`, where `RollingUpdate` is the default update strategy.
+| `env`   | [[crd-spec-env]] An array of environment variables following the format of `{name, value}`, where value is a simple string. It may also follow the format of `{name, valueFrom}`, where valueFrom refers to a value in a `ConfigMap` or `Secret` resource. For examples, see link:#set-environment-variables-for-an-application-container[Set environment variables for an application container] and link:#override-console-logging-environment-variable-default-values[Override console logging environment variable default values].
+| `envFrom`   | An array of references to `ConfigMap` or `Secret` resources containing environment variables. Keys from `ConfigMap` or `Secret` resources become environment variable names in your container. For examples, see link:#set-environment-variables-for-an-application-container[Set environment variables for an application container].
+| `expose`   | A boolean that toggles the external exposure of this deployment via a Route or a Knative Route resource.
+| `initContainers` | The list of link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#container-v1-core++[Init Container] definitions.
+| `manageTLS`   | [[crd-spec-managetls]] A boolean to toggle automatic certificate generation and mounting TLS secret into the pod. The default value for this field is `true`.
+| `monitoring` | Specifies parameters for `Service Monitor`. For examples, see link:#monitor-resources[Monitor resources] and link:#specify-multiple-service-ports[Specify multiple service ports].
+| `monitoring.endpoints` | A YAML snippet representing an array of link:++https://github.com/coreos/prometheus-operator/blob/main/Documentation/api.md#endpoint++[Endpoint] component from ServiceMonitor.
+| `monitoring.labels` | Labels to set on link:++https://github.com/coreos/prometheus-operator/blob/main/Documentation/api.md#servicemonitor++[ServiceMonitor].
+| `probes` | Defines health checks on an application container to determine whether it is alive or ready to receive traffic. For examples, see link:#configure-probes[Configure probes].
+| `probes.liveness` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request++[Kubernetes liveness probe] that controls when Kubernetes needs to restart the pod.
+| `probes.readiness`   | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes++[Kubernetes readiness probe] that controls when the pod is ready to receive traffic.
+| `probes.startup` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes++[Kubernetes startup probe] that controls when Kubernetes needs to startup the pod on its first initialization.
+| `pullPolicy` | The policy used when pulling the image.  One of: `Always`, `Never`, and `IfNotPresent`.
+| `pullSecret` | If using a registry that requires authentication, the name of the secret containing credentials.
+| `replicas` | The static number of desired replica pods that run simultaneously.
+| `resources.limits.cpu` | The upper limit of CPU core. Specify integers, fractions (e.g. `0.5`), or millicores values(e.g. `100m`, where `100m` is equivalent to `.1` core).
+| `resources.limits.memory` | The memory upper limit in bytes. Specify integers with suffixes: `E`, `P`, `T`, `G`, `M`, `K`, or power-of-two equivalents: `Ei`, `Pi`, `Ti`, `Gi`, `Mi`, `Ki`.
+| `resources.requests.cpu` | The minimum required CPU core. Specify integers, fractions (e.g. `0.5`), or millicore values(e.g. `100m`, where `100m` is equivalent to `.1` core). Required field for autoscaling.
+| `resources.requests.memory` | The minimum memory in bytes. Specify integers with one of these suffixes: `E`, `P`, `T`, `G`, `M`, `K`, or power-of-two equivalents: `Ei`, `Pi`, `Ti`, `Gi`, `Mi`, `Ki`.
+| `route.annotations` | Annotations to be added to the `Route`.
+| `route.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be used in the `Route`. It can also contain destination CA certificate. The following keys are valid in the secret: `ca.crt`, `destCA.crt`, `tls.crt`, and `tls.key`.
+| `route.host`   | Hostname to be used for the `Route`.
+| `route.insecureEdgeTerminationPolicy`   | HTTP traffic policy with TLS enabled. Can be one of `Allow`, `Redirect` and `None`.
+| `route.path`   | Path to be used for the `Route`.
+| `route.pathType`   | Path type to be used. Required field for Ingress. See link:++https://kubernetes.io/docs/concepts/services-networking/ingress/#path-types++[Ingress path types].
+| `route.termination`   | TLS termination policy. Can be one of `edge`, `reencrypt` and `passthrough`.
+| `securityContext`  | A security context to control privilege and permission settings for the application container. For examples, see link:#set-privileges-and-permissions-for-a-pod-or-container[Set privileges and permissions for a pod or container]. If set, the fields of `SecurityContext` override the equivalent fields of `PodSecurityContext`. For examples, see link:++https://kubernetes.io/docs/tasks/configure-pod-container/security-context/++[Configure a Security Context for a Pod or Container].
+| `securityContext.allowPrivilegeEscalation` | A Boolean that controls whether a process can gain more privileges than its parent process. This Boolean controls whether the `no_new_privs` flag is set on the container process. `AllowPrivilegeEscalation` is `true` always when the container is run as `Privileged` and has `CAP_SYS_ADMIN`.
+| `securityContext.capabilities` | The capabilities to add or drop when containers are run. Defaults to the default set of capabilities that the container runtime grants.
+| `securityContext.capabilities.add` | An array of added capabilities of POSIX capabilities type.
+| `securityContext.capabilities.drop` | An array of removed capabilities of POSIX capabilities type.
+| `securityContext.privileged` | A Boolean to specify whether to run a container in privileged mode. Processes in privileged containers are equivalent to root on the host. The default is `false`.
+| `securityContext.procMount` | The type of proc mount to use for the containers. The default is `DefaultProcMount`, which uses the container runtime defaults for read-only paths and masked paths. To use `procMount`, the `ProcMountType` feature flag must be enabled.
+| `securityContext.readOnlyRootFilesystem` | A Boolean to specify whether this container has a read-only root file system. The default is `false`.
+| `securityContext.runAsGroup` | The GID to run the entrypoint of the container process. If unset, `runAsGroup` uses the runtime default. The value can be set in `PodSecurityContext`. If set in both `SecurityContext` and `PodSecurityContext`, the `SecurityContext` value takes precedence.
+| `securityContext.runAsNonRoot` | A Boolean that specifies whether the container must run as a nonroot user. If `true`, the kubelet validates the image at run time to ensure that it does not run as UID `0` (root), and fails to start the container if it does. If unset or `false`, the validation is not performed. The value can be set in `PodSecurityContext`. If set in both `SecurityContext` and `PodSecurityContext`, the `SecurityContext` value takes precedence.
+| `securityContext.runAsUser` | The UID to run the entrypoint of the container process. If unset, the default is the user that is specified in image metadata. The value can be set in `PodSecurityContext`. If set in both `SecurityContext` and `PodSecurityContext`, the `SecurityContext` value takes precedence.
+| `securityContext.seLinuxOptions` | The SELinux context to be applied to the container. Its properties include `level`, `role`, `type`, and `user`. If unspecified, the container runtime allocates a random SELinux context for each container. The value can be set in `PodSecurityContext`. If set in both `SecurityContext` and `PodSecurityContext`, the `SecurityContext` value takes precedence.
+| `securityContext.seccompProfile` | The `seccomp` options to use by this container. If `seccomp` options are set at both the pod and container level, the container options override the pod options.
+| `securityContext.seccompProfile.localhostProfile` | A profile that is defined in a file on the node. The profile must be preconfigured on the node to work. Specify a descending path, relative to the kubelet configured `seccomp` profile location. Only set `localhostProfile` if `type` is `Localhost`.
+| `securityContext.seccompProfile.type` | (Required) The kind of `seccomp` profile to use. Valid options are `Localhost` (use a profile that is defined in a file on the node), `RuntimeDefault` (use the container runtime default profile), and `Unconfined` (use no profile).
+| `securityContext.windowsOptions` | The Windows specific settings to apply to all containers. If unset, the options from the `PodSecurityContext` are used. If set in both `SecurityContext` and `PodSecurityContext`, the `SecurityContext` value takes precedence. The `windowsOptions` properties include `gmsaCredentialSpec`, `gmsaCredentialSpecName`, `hostProcess`, and `runAsUserName`.
+| `semeruCloudCompiler` | Configures the Semeru Cloud Compiler to handle Just-In-Time (JIT) compilation requests from the application.
+| `semeruCloudCompiler.enable` | Enables the Semeru Cloud Compiler. Defaults to `false`.
+| `semeruCloudCompiler.replicas` | Number of desired pods for the Semeru Cloud Compiler. Defaults to `1`.
+| `semeruCloudCompiler.resources` | Resource requests and limits for the Semeru Cloud Compiler. The CPU defaults to `100m` with a limit of `2000m`. The memory defaults to `800Mi`, with a limit of `1200Mi`.
+| `service` | Configures parameters for the network service of pods. For an example, see link:#specify-multiple-service-ports[Specify multiple service ports].
+| `service.annotations` | Annotations to be added to the service.
+| `service.bindable` | [[crd-spec-service-bindable]] A boolean to toggle whether the operator expose the application as a bindable service. Defaults to `false`.  For examples, see link:#bind-applications-with-operator-managed-backing-services[Bind applications with operator-managed backing services].
+| `service.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be mounted in the pod. The following keys are valid in the secret: `ca.crt`, `tls.crt`, and `tls.key`.
+| `service.nodePort` | Node proxies this port into your service. Please note once this port is set to a non-zero value it cannot be reset to zero.
+| `service.port` | The port exposed by the container.
+| `service.ports` | An array consisting of service ports.
+| `service.portName` | The name for the port exposed by the container.
+| `service.targetPort` | The port that the operator assigns to containers inside pods. Defaults to the value of `service.port`.
+| `service.type` | The Kubernetes link:++https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types++[Service Type].
+| `serviceability` | Specifies serviceability-related operations, such as gathering server memory dumps and server traces. For examples, see link:#storage-for-serviceability[Storage for serviceability].
+| `serviceability.size` | [[crd-spec-serviceability-size]] A convenient field to request the size of the persisted storage to use for serviceability. Can be overridden by the `serviceability.volumeClaimName` property.
+| `serviceability.storageClassName` | [[crd-spec-serviceability-storageClassName]] A convenient field to request the StorageClassName of the persisted storage to use for serviceability. Can be overridden by the `serviceability.volumeClaimName` property.
+| `serviceability.volumeClaimName` | [[crd-spec-serviceability-volumeClaimName]] The name of the link:++https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims++[PersistentVolumeClaim] resource you created to be used for serviceability. Must be in the same namespace.
+| `serviceAccountName` | The name of the Red Hat OpenShift service account to be used during deployment. If a service account name is not specified, a service account is automatically created. For examples, see link:#create-a-service-account[Create a service account].
+| `sidecarContainers` | The list of `sidecar` containers. These are additional containers to be added to the pods. Note: Sidecar containers should not be named `app`.
+| `sso`   | [[crd-sso]] Specifies the configuration for single sign-on providers to authenticate with. Specify sensitive fields, such as _clientId_ and _clientSecret_, for the selected providers by using the `Secret`. For examples, see link:++#configuring-single-sign-on-sso++[Configuring Single Sign-On (SSO)].
+| `sso.github.hostname`   | Specifies the host name of your enterprise GitHub, such as `github._mycompany_.com`. The default is `github.com`, which is the public GitHub.
+| `sso.mapToUserRegistry`   | Specifies whether to map a user identifier to a registry user. This field applies to all providers.
+| `sso.oauth2`   | The list of OAuth 2.0 providers to authenticate with. Required fields: _authorizationEndpoint_ and _tokenEndpoint_ fields. Specify sensitive fields, _clientId_  and _clientSecret_ by using the `Secret`.
+| `sso.oauth2[].accessTokenHeaderName`   | Name of the header to use when an OAuth access token is forwarded.
+| `sso.oauth2[].accessTokenRequired`   | Determines whether the access token that is provided in the request is used for authentication. If the field is set to true, the client must provide a valid access token.
+| `sso.oauth2[].accessTokenSupported`   | Determines whether to support access token authentication if an access token is provided in the request. If the field is set to true and an access token is provided in the request, then the access token is used as an authentication token.
+| `sso.oauth2[].authorizationEndpoint`   | Specifies an authorization endpoint URL for the OAuth 2.0 provider. Required field.
+| `sso.oauth2[].displayName`   | The name of the social login configuration for display.
+| `sso.oauth2[].groupNameAttribute`   | Specifies the name of the claim. Use its value as the user group membership.
+| `sso.oauth2[].id`   | Specifies the unique ID for the provider. The default value is _oauth2_.
+| `sso.oauth2[].realmName`   | Specifies the realm name for this social media.
+| `sso.oauth2[].realmNameAttribute`   | Specifies the name of the claim. Use its value as the subject realm.
+| `sso.oauth2[].scope`   | Specifies one or more scopes to request.
+| `sso.oauth2[].tokenEndpoint`   | Specifies a token endpoint URL for the OAuth 2.0 provider. Required field.
+| `sso.oauth2[].tokenEndpointAuthMethod`   | Specifies the required authentication method.
+| `sso.oauth2[].userApi`   | The URL for retrieving the user information.
+| `sso.oauth2[].userApiType`   | Indicates which specification to use for the user API.
+| `sso.oauth2[].userNameAttribute`   | Specifies the name of the claim. Use its value as the authenticated user principal.
+| `sso.oidc` | The list of OpenID Connect (OIDC) providers with which to authenticate. Each list item provides an OIDC client configuration. List items must include the `discoveryEndpoint` field. Specify sensitive fields, such as `clientId` and `clientSecret`, for the selected providers by using the `Secret`.
+| `sso.oidc[].discoveryEndpoint`   | Specifies a discovery endpoint URL for the OpenID Connect provider. Required field.
+| `sso.oidc[].displayName`   | The name of the social login configuration for display.
+| `sso.oidc[].groupNameAttribute`   | Specifies the name of the claim. Use its value as the user group membership.
+| `sso.oidc[].hostNameVerificationEnabled`   | Specifies whether to enable host name verification when the client contacts the provider.
+| `sso.oidc[].id`   | The unique ID for the provider. Default value is _oidc_.
+| `sso.oidc[].realmNameAttribute`   | Specifies the name of the claim. Use its value as the subject realm.
+| `sso.oidc[].scope`   | Specifies one or more scopes to request.
+| `sso.oidc[].tokenEndpointAuthMethod`   | Specifies the required authentication method.
+| `sso.oidc[].userInfoEndpointEnabled`   | Specifies whether the UserInfo endpoint is contacted.
+| `sso.oidc[].userNameAttribute`   | Specifies the name of the claim. Use its value as the authenticated user principal.
+| `sso.redirectToRPHostAndPort`   | Specifies a callback protocol, host and port number, such as https://myfrontend.mycompany.com. This field applies to all providers. 
+| `statefulSet` | The wanted state and cycle of stateful applications. For examples, see link:#persist-resources[Persist resources].
+| `statefulSet.annotations`   | Annotations to be added only to the StatefulSet and resources owned by the StatefulSet.
+| `statefulSet.storage.mountPath` | The directory inside the container where this persisted storage will be bound to.
+| `statefulSet.storage.size` | A convenient field to set the size of the persisted storage. Can be overridden by the `storage.volumeClaimTemplate` property. Operator will create a `StatefulSet` instead of a `Deployment` when `storage` is configured. For examples, see link:#persist-resources[Persist resources].
+| `statefulSet.storage.volumeClaimTemplate` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#components++[volumeClaimTemplate] component of a `StatefulSet`.
+| `statefulSet.updateStrategy`   | A field to specify the update strategy of the StatefulSet. For examples, see link:++https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies++[updateStrategy]
+| `statefulSet.updateStrategy.type`   | The type of update strategy of the StatefulSet. The type can be set to `RollingUpdate` or `OnDelete`, where `RollingUpdate` is the default update strategy.
+| `volumeMounts` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/storage/volumes/++[pod volumeMount]. For examples, see link:#persist-resources[Persist Resources].
+| `volumes` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/storage/volumes++[pod volume].
+|===
+
+=== Basic usage
+
+Use official link:++https://github.com/OpenLiberty/ci.docker#container-images++[Open Liberty images and guidelines] to create your application image.
+
+Use the following CR to deploy your application image to a Kubernetes environment:
+
+[source,yaml]
+----
+apiVersion: apps.openliberty.io/v1
+kind: OpenLibertyApplication
+metadata:
+  name: my-liberty-app
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+----
+
+The `applicationImage` value must be defined in `OpenLibertyApplication` CR. On OpenShift, the operator tries to find an image stream name with the `applicationImage` value. The operator falls back to the registry lookup if it is not able to find any image stream that matches the value. If you want to distinguish an image stream called `my-company/my-app` (project: `my-company`, image stream name: `my-app`) from the Docker Hub `my-company/my-app` image, you can use the full image reference as `docker.io/my-company/my-app`.
+
+To get information on the deployed CR, use either of the following:
+
+[source,yaml]
+----
+oc get olapp my-liberty-app
+oc get olapps my-liberty-app
+oc get openlibertyapplication my-liberty-app
+----
+
+=== Viewing operator application status
+
+An application administrator can view the status of an application that is deployed in a container. To get information about the deployed custom resource (CR), use a CLI or the Red Hat OpenShift console.
+
+* link:#status-types-for-status-condition[Status types for `.status.condition`]
+* link:#viewing-status-with-the-cli[Viewing status with the CLI]
+* link:#viewing-status-with-the-red-hat-openshift-console[Viewing status with the Red Hat OpenShift console]
+
+==== Status types for `.status.condition` [[status-types-for-status-condition]]
+The status types for the `.status.condition` parameter in the `OpenLibertyApplication` CR are `Ready`, `ResourcesReady`, `Reconciled`.
+
+*Reconciled*
+
+  - Indicates whether the current version of the operator successfully processed the configurations in the CR.
+
+*ResourcesReady*
+
+  - Indicates whether the application resources created and managed by the operator are ready.
+
+*Ready*
+
+  - Indicates the overall status of the application. If true, the application configuration was reconciled and its resource are in ready state.
+
+==== Viewing status with the CLI [[viewing-status-with-the-cli]]
+
+To use the CLI to get information about a deployed CR, run a `kubectl get` or `oc get` command.
+
+To run kubectl commands, you need the Kubernetes command line tool or the Red Hat OpenShift command-line interface (CLI). To run oc commands, you need the Red Hat OpenShift CLI.
+
+In the following get commands, replace `my-liberty-app` with your CR name. Run any one of the commands. `olapp` and `olapps` are short names for `openlibertyapplication` and `openlibertyapplications`.
+
+* Run any of the following `kubectl get` commands.
+
+[source,sh]
+----
+kubectl get olapp my-liberty-app
+kubectl get olapps my-liberty-app
+kubectl get openlibertyapplication my-liberty-app
+----
+
+* Run any of the following `oc get` commands.
+
+[source,sh]
+----
+oc get olapp my-liberty-app
+oc get olapps my-liberty-app
+oc get openlibertyapplication my-liberty-app
+----
+
+The results of the command resemble the following.
+[source,sh]
+----
+NAME             IMAGE                       EXPOSED   RECONCILED   RESOURCESREADY   READY   AGE
+my-liberty-app   quay.io/my-repo/my-app:1.0            True         True             True    18m
+----
+
+The value in the `READY` column is `True` when the application is successfully installed. If the value in the `READY` column is not `True`, see link:++troubleshooting.adoc++[Troubleshooting Open Liberty operators].
+
+==== Viewing status with the Red Hat OpenShift console [[viewing-status-with-the-red-hat-openshift-console]]
+
+To use the Red Hat OpenShift console to get information about a deployed CR, view the deployed `OpenLibertyApplication` instance and inspect the `.status` section.
+
+[source,yaml]
+----
+status:
+  conditions:
+    - lastTransitionTime: '2022-05-10T15:59:04Z'
+      status: 'True'
+      type: Reconciled
+    - lastTransitionTime: '2022-05-10T15:59:16Z'
+      message: 'Deployment replicas ready: 3/3'
+      reason: MinimumReplicasAvailable
+      status: 'True'
+      type: ResourcesReady
+    - lastTransitionTime: '2022-05-10T15:59:16Z'
+      message: Application is reconciled and resources are ready.
+      status: 'True'
+      type: Ready
+  imageReference: 'quay.io/my-repo/my-app:1.0'
+  references:
+    svcCertSecretName: my-liberty-app-svc-tls-ocp
+  versions:
+    reconciled: 1.0.0
+----
+
+If the `.status.conditions.type` Ready type does not have a status of `True`, see link:++troubleshooting.adoc++[Troubleshooting Open Liberty operators].
+
+The value of the `.status.versions.reconciled` parameter is the version of the operand that is deployed into the cluster after the reconcile loop completes.
+
+=== Operator configuration examples [[operator-configuration-examples]]
+
+Open Liberty Operator builds upon link:#common-component-documentation[components] from the generic link:++https://github.com/application-stacks/runtime-component-operator++[Runtime Component Operator] and provides additional features to customize your Open Liberty applications.
+
+==== Open Liberty Operator Components
+
+* link:#override-console-logging-environment-variable-default-values[Override console logging environment variable default values (`.spec.env`)] image:images/docs_openliberty_logo.png[OL,20] 
+* link:#configuring-single-sign-on-sso[Configuring single sign-on (SSO) (`.spec.sso`)] image:images/docs_openliberty_logo.png[OL,20] 
+* link:#storage-for-serviceability[Storage for serviceability (`.spec.serviceability`)] image:images/docs_openliberty_logo.png[OL,20]
+
+
+==== Common Components [[common-component-documentation]]
+
+* link:#reference-image-streams[Reference image streams (`.spec.applicationImage`)]
+* link:#create-a-service-account[Create a service account (`.spec.serviceAccountName`)]
+* link:#add-or-change-labels[Add or change labels (`.metadata.labels`)]
+* link:#add-annotations[Add annotations (`.metadata.annotations`)]
+* link:#set-environment-variables-for-an-application-container[Set environment variables for an application container (`.spec.env` or `.spec.envFrom`)]
+* link:#setting-up-basic-authentication-credentials-by-using-environment-variables[Setting up basic authentication credentials by using environment variables (`.spec.envFrom[\].secretRef`)]
+* link:#configure-multiple-application-instances-for-high-availability[Configure multiple application instances for high availability (`.spec.replicas` or `.spec.autoscaling`)]
+* link:#set-privileges-and-permissions-for-a-pod-or-container[Set privileges and permissions for a pod or container (`.spec.securityContext`)]
+* link:#persist-resources[Persist resources (`.spec.statefulSet` and `.spec.volumeMounts`)]
+* link:#monitor-resources[Monitor resources (`.spec.monitoring`)]
+* link:#specify-multiple-service-ports[Specify multiple service ports (`.spec.service.port*` and `.spec.monitoring.endpoints`)]
+* link:#configure-probes[Configure probes (`.spec.probes`)]
+* link:#deploy-serverless-applications-with-knative[Deploy serverless applications with Knative (`.spec.createKnativeService`)]
+* link:#expose-applications-externally[Expose applications externally (`.spec.expose`, `.spec.createKnativeService`, `.spec.route`)]
+* link:#bind-applications-with-operator-managed-backing-services[Bind applications with operator-managed backing services (`.status.binding.name` and `.spec.service.bindable`)]
+* link:#limit-a-pod-to-run-on-specified-nodes[Limit a pod to run on specified nodes (`.spec.affinity`)]
+
+* link:#configuring-transport-layer-security-tls-certificates[Configuring transport layer security (TLS) certificates]
+
+  - link:#generating-certificates-with-certificate-manager[Generating certificates with certificate manager]
+  - link:#generating-certificates-with-red-hat-openshift-service-ca[Generating certificates with Red Hat OpenShift service CA (`.spec.service.annotations`)]
+  - link:#specifying-certificates-for-a-secret-route-and-service[Specifying certificates for a secret Route and Service (`.spec.service.certificateSecretRef` and `.spec.route.certificateSecretRef`)] 
+
+=== Override console logging environment variable default values (`.spec.env`) image:images/docs_openliberty_logo.png[OL,30] [[override-console-logging-environment-variable-default-values]]
+
+The Open Liberty operator sets environment variables that are related to console logging by default. You can override the console logging default values with your own values in your CR link:#crd-spec-env[`.spec.env`] list.
+
+
+.Default Environment Variables
+|===
+| Name                           | Value
+| `WLP_LOGGING_CONSOLE_LOGLEVEL` | info
+| `WLP_LOGGING_CONSOLE_SOURCE`   | message,accessLog,ffdc,audit
+| `WLP_LOGGING_CONSOLE_FORMAT`   | json
+|===
+
+To override default values for the console logging environment variables, set your preferred values manually in your CR `.spec.env` list. For information about values that you can set, see the Open Liberty link:++https://openliberty.io/docs/ref/config/logging.html++[logging] documentation.
+
+The following example shows a CR `.spec.env` list that sets nondefault values for the console logging environment variables.
+
+[source,yaml]
+----
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  env:
+    - name: WLP_LOGGING_CONSOLE_FORMAT
+      value: "DEV"
+    - name: WLP_LOGGING_CONSOLE_SOURCE
+      value: "messages,trace,accessLog"
+    - name: WLP_LOGGING_CONSOLE_LOGLEVEL
+      value: "error"
+----
+
+For more information about overriding variable default values, see link:#set-environment-variables-for-an-application-container[Set environment variables for an application container (`.spec.env` or `.spec.envFrom`)].
+
+
+=== Configuring single sign-on (SSO) (`.spec.sso`) image:images/docs_openliberty_logo.png[OL,30] [[configuring-single-sign-on-sso]]
+
+An administrator can configure single sign-on (SSO) for Open Liberty operators to authenticate and manage users. Authentication can be delegated to external providers, such as Google, Facebook, LinkedIn, Twitter, GitHub, or any OpenID Connect (OIDC) or OAuth 2.0 clients.
+
+==== Procedure
+1. Configure and build the application image with single sign-on following the instructions in link:++https://github.com/OpenLiberty/ci.docker#container-images++[Open Liberty images and guidelines] and then link:++https://github.com/OpenLiberty/ci.docker/blob/main/SECURITY.md#single-sign-on-configuration++[Configuring Security: Single Sign-On configuration].
+2. Complete one of these choices to configure SSO in your operator.
+  - link:#configuring-sso-with-specified-client-ids-and-secrets[Configuring SSO with specified client IDs and secrets]
+  - link:#configuring-sso-automatic-registration-with-oidc-providers[Configuring SSO automatic registration with OIDC providers]
+  - link:#configuring-multiple-oidc-and-oauth-2-0-providers[Configuring multiple OIDC and OAuth 2.0 providers]
+
+==== Configuring SSO with specified client IDs and secrets [[configuring-sso-with-specified-client-ids-and-secrets]]
+
+The operator can specify a client ID and secret in advance. A disadvantage to this configuration is that the client ID and secret must be supplied for registration repetitively, rather than link:#configuring-sso-automatic-registration-with-oidc-providers[automatically with the provider administrator supplying the information] needed for registration one time.
+
+1. Create a secret that specifies sensitive information such as client IDs, client secrets, and tokens for the login providers you selected in application image.
+Create the `Secret` named `OpenLibertyApplication_name-olapp-sso` in the same namespace as the `OpenLibertyApplication` instance. In the following sample snippets, `OpenLibertyApplication` is named `my-app`, so the secret must be named `my-app-olapp-sso`. Both are in the same namespace called `demo`. 
+
+- The keys within the `Secret` must follow the `_provider_name_-_sensitive_field_name_` naming pattern. For example, `google-clientSecret`. Instead of a `-` character in between, you can also use `.` or `_`. For example, `oauth2_userApiToken`.
++
+[source,yaml]
+----
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    # Name of the secret should be in this format: <OpenLibertyApplication_name>-olapp-sso
+    name: my-app-olapp-sso
+    # Secret must be created in the same namespace as the OpenLibertyApplication instance
+    namespace: demo
+  type: Opaque
+  data:
+    # The keys must be in this format: <provider_name>-<sensitive_field_name>
+    github-clientId: bW9vb29vb28=
+    github-clientSecret: dGhlbGF1Z2hpbmdjb3c=
+    twitter-consumerKey: bW9vb29vb28=
+    twitter-consumerSecret: dGhlbGF1Z2hpbmdjb3c=
+    oidc-clientId: bW9vb29vb28=
+    oidc-clientSecret: dGhlbGF1Z2hpbmdjb3c=
+    oauth2-clientId: bW9vb29vb28=
+    oauth2-clientSecret: dGhlbGF1Z2hpbmdjb3c=
+    oauth2-userApiToken: dGhlbGF1Z2hpbmdjb3c=
+----
+- The operator watches for the creation and deletion of the SSO secret and any updates to it. Adding, updating, or removing keys from the secret are passed down to the application automatically.
+
+2. Configure single sign-on in the OpenLibertyApplication custom resource (CR). At minimum, set the `.spec.sso: {}` field so that the operator can pass the values from the secret to your application. Refer to the link:#crd-sso[OpenLibertyApplication CR] for more SSO configurations.
+
+3. Configure secured `Service` and secured `Route` with necessary certificates. Refer to link:#specifying-certificates-for-a-secret-route-and-service[Certificates] for more information.
+
+4. To automatically trust certificates from popular identity providers, including social login providers such as Google and Facebook, set the `SEC_TLS_TRUSTDEFAULTCERTS` environment variable to `true`. To automatically trust certificates issued by the Kubernetes cluster, set environment variable `SEC_IMPORT_K8S_CERTS` to `true`. Alternatively, you can include the necessary certificates manually when building application image or mounting them using a volume when you deploy your application.
++
+[source,yaml]
+----
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  env:
+    - name: SEC_TLS_TRUSTDEFAULTCERTS
+      value: "true"
+    - name: SEC_IMPORT_K8S_CERTS
+      value: "true"
+  sso:
+    redirectToRPHostAndPort: https://redirect-url.mycompany.com
+    github:
+      hostname: github.mycompany.com
+    oauth2:
+      - authorizationEndpoint: specify-required-value
+        tokenEndpoint: specify-required-value
+    oidc:
+      - discoveryEndpoint: specify-required-value
+  service:
+    certificateSecretRef: mycompany-service-cert
+    port: 9443
+    type: ClusterIP
+  expose: true
+  route:
+    certificateSecretRef: mycompany-route-cert
+    termination: reencrypt
+----
+
+==== Configuring SSO automatic registration with OIDC providers [[configuring-sso-automatic-registration-with-oidc-providers]]
+
+The operator can request a client ID and client secret from providers, rather than requiring them in advance. This ability can simplify deployment, as the provider administrator can supply the information that is needed for registration one time, instead of supplying client IDs and secrets repetitively. The callback URL from the provider to the client is supplied by the operator, so doesn't need to be known in advance.
+
+1. Add attributes that are named `_provider_name_-_autoreg-field_name_` to the Kubernetes secret.
+First, the operator makes an https request to the `.spec.sso.oidc[].discoveryEndpoint` field to obtain URLs for subsequent REST calls. Next, it makes other REST calls to the provider and obtains a client ID and client secret. The Kubernetes secret is updated with the obtained values.
+
+2. For Red Hat® Single Sign-on (RH-SSO), you can set the `.spec.sso.oidc[].userNameAttribute` field to `preferred_username` to obtain the user ID that was used to log in. For IBM Security Verify, set the field to `given_name`.
+The following example secret is tested on Red Hat OpenShift® with RH-SSO and IBM® Security Verify.
++
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  # Name of the secret should be in this format: <OpenLibertyApplication_name>-olapp-sso
+  name: my-app-olapp-sso
+  # Secret must be created in the same namespace as the OpenLibertyApplication instance
+  namespace: demo
+type: Opaque
+data:
+  # base64 encode the data before entering it here.
+  #
+  # Leave the clientId and secret out, registration will obtain them and update their values.
+  # oidc-clientId
+  # oidc-clientSecret
+  #
+  # Reserved: <provider>-autoreg-RegisteredClientId and RegisteredClientSecret
+  # are used by the operator to store a copy of the clientId and clientSecret values.
+  #
+  # Automatic registration attributes have -autoreg- after the provider name.
+  #
+  # Red Hat Single Sign On requires an initial access token for registration.
+  oidc-autoreg-initialAccessToken: xxxxxyyyyy
+  #
+  # IBM Security Verify requires a special clientId and clientSecret for registration.
+  # oidc-autoreg-initialClientId: bW9vb29vb28=
+  # oidc-autoreg-initialClientSecret: dGhlbGF1Z2hpbmdjb3c=
+  #
+  # Optional: Grant types are the types of OAuth flows the resulting clients will allow
+  # Default is authorization_code,refresh_token. Specify a comma separated list.
+  # oidc-autoreg-grantTypes: base64 data goes here
+  #
+  # Optional: Scopes limit the types of information about the user that the provider will return.
+  # Default is openid,profile. Specify a comma-separated list.
+  # oidc-autoreg-scopes: base64 data goes here
+  #
+  # Optional: To skip TLS certificate checking with the provider during registration, specify insecureTLS as true. 
+  # Default is false.
+  # oidc-autoreg-insecureTLS: dHJ1ZQ==
+----
+
+
+==== Configuring multiple OIDC and OAuth 2.0 providers [[configuring-multiple-oidc-and-oauth-2-0-providers]]
+
+You can authenticate with multiple OIDC and OAuth 2.0 providers.
+
+1. Configure and build application image with multiple OIDC or OAuth 2.0 providers.
+For example, set the provider name in your Dockerfile. The provider name must be unique and must contain only alphanumeric characters.
++
+[source,Dockerfile]
+----
+ARG SEC_SSO_PROVIDERS="google oidc:provider1,provider2 oauth2:provider3,provider4"
+----
+
+2. Use the provider name in an SSO `Secret` to specify its client ID and secret.
+For example, the following `Secret` sets `provider1-clientSecret: dGhlbGF1Z2hpbmdjb3c=` for a client ID and secret.
+
++
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  # Name of the secret should be in this format: <OpenLibertyApplication_name>-olapp-sso
+  name: my-app-olapp-sso
+  # Secret must be created in the same namespace as the OpenLibertyApplication instance
+  namespace: demo
+type: Opaque
+data:
+  # The keys must be in this format: <provider_name>-<sensitive_field_name>
+  google-clientId: xxxxxxxxxxxxx
+  google-clientSecret: yyyyyyyyyyyyyy
+  provider1-clientId: bW9vb29vb28=
+  provider1-clientSecret: dGhlbGF1Z2hpbmdjb3c=
+  provider2-autoreg-initialClientId: bW9vb29vb28=
+  provider2-autoreg-initialClientSecret: dGhlbGF1Z2hpbmdjb3c=
+  provider3-clientId: bW9vb29vb28=
+  provider3-clientSecret: dGhlbGF1Z2hpbmdjb3c=
+  provider4-clientId: bW9vb29vb28=
+  provider4-clientSecret: dGhlbGF1Z2hpbmdjb3c=
+----
+
+3. Configure a field for each corresponding provider in the `OpenLibertyApplication` CR. Use one or both of the `.spec.sso.oidc[].id` and `.spec.sso.oauth2[].id` fields.
+
++
+[source,yaml]
+----
+sso:
+  oidc:
+    - id: provider1
+      discoveryEndpoint: specify-required-value
+    - id: provider2
+      discoveryEndpoint: specify-required-value
+  oauth2:
+    - id: provider3
+      authorizationEndpoint: specify-required-value
+      tokenEndpoint: specify-required-value
+    - id: provider4
+      authorizationEndpoint: specify-required-value
+      tokenEndpoint: specify-required-value
+----
+
+=== Storage for serviceability (`.spec.serviceability`) image:images/docs_openliberty_logo.png[OL,30] [[storage-for-serviceability]]
+
+The operator provides single storage for serviceability.
+
+The operator makes it easy to use a single storage for link:#day-2-operations[Day-2 Operations] that are related to serviceability, such as gathering link:#day-2-trace[server traces] or link:#day-2-dump[server dumps]. The single storage is shared by all pods of a `OpenLibertyApplication` instance. You don't need to mount a separate storage for each pod.
+
+Your cluster must be configured to automatically bind the link:++https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims++[PersistentVolumeClaim] (PVC) to a PersistentVolume or you must bind it manually.
+
+You can specify the size of the persisted storage to request with the link:#crd-spec-serviceability-size[`.spec.serviceability.size`] parameter.
+
+[source,yaml]
+----
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  serviceability:
+    size: 1Gi
+----
+
+You can specify which storage class to request with the link:#crd-spec-serviceability-storageClassName[`.spec.serviceability.storageClassName`] parameter if you don’t want to use the default storage class. The operator automatically creates a `PersistentVolumeClaim` with the specified size and access mode `ReadWriteMany`. It is mounted at `/serviceability` inside all pods of the `OpenLibertyApplication` instance.
+
+Alternatively, you can create the PersistentVolumeClaim and specify its name with the link:#crd-spec-serviceability-volumeClaimName[`.spec.serviceability.volumeClaimName`] parameter. You must create it in the same namespace as the `OpenLibertyApplication` instance.
+
+
+[source,yaml]
+----
+apiVersion: apps.openliberty.io/v1
+kind: OpenLibertyApplication
+metadata:
+  name: my-liberty-app
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  serviceability:
+    size: 1Gi
+----
+
+You can also create the `PersistentVolumeClaim` yourself and specify its name using `.spec.serviceability.volumeClaimName` field. You must create it in the same namespace as the `OpenLibertyApplication` instance.
+
+[source,yaml]
+----
+apiVersion: apps.openliberty.io/v1
+kind: OpenLibertyApplication
+metadata:
+  name: my-liberty-app
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  serviceability:
+    volumeClaimName: my-pvc
+----
+
+_Once a `PersistentVolumeClaim` is created by operator, its size can not be updated. It will not be deleted when serviceability is disabled or when the `OpenLibertyApplication` is deleted._
+
+=== Reference image streams (`.spec.applicationImage`) [[reference-image-streams]]
+
+To deploy an image from an image stream, you must specify a **`.spec.applicationImage`** field in your CR.
+
+[source,yaml]
+----
+spec:
+  applicationImage: my-namespace/my-image-stream:1.0
+----
+
+The previous example looks up the `1.0` tag from the `my-image-stream` image stream in the `my-namespace` project and populates the CR `.status.imageReference` field with the exact referenced image similar to the following one: `image-registry.openshift-image-registry.svc:5000/my-namespace/my-image-stream@sha256:*`. The operator watches the specified image stream and deploys new images as new ones are available for the specified tag.
+
+To reference an image stream, the `.spec.applicationImage` field must follow the `<project name>/<image stream name>[:<tag>]` format. If `<project name>` or `<tag>` is not specified, the operator defaults the values to the namespace of the CR and the value of `latest`, respectively. For example, the `applicationImage: my-image-stream` configuration is the same as the `applicationImage: my-namespace/my-image-stream:latest` configuration.
+
+The Operator tries to find an image stream name first with the `<project name>/<image stream name>[:<tag>]` format and falls back to the registry lookup if it is not able to find any image stream that matches the value.
+
+NOTE: This feature is only available if you are running on Red Hat OpenShift. The operator requires `ClusterRole` permissions if the image stream resource is in another namespace.
+
+=== Create a service account (`.spec.serviceAccountName`) [[create-a-service-account]]
+
+The operator can create a `ServiceAccount` resource when deploying an `OpenLibertyApplication` custom resource (CR). If `.spec.serviceAccountName` is not specified in a CR, the operator creates a service account with the same name as the CR (e.g. `my-app`).
+
+Users can also specify `serviceAccountName` when they want to create a service account manually.
+
+If applications require specific permissions but still want the operator to create a `ServiceAccount`, users can still manually create a role binding to bind a role to the service account created by the operator. To learn more about Role-based access control (RBAC), see Kubernetes link:++https://kubernetes.io/docs/reference/access-authn-authz/rbac/++[documentation].
+
+=== Add or change labels (`.metadata.labels`) [[add-or-change-labels]]
+
+By default, the operator adds the following labels into all resources created
+for an `OpenLibertyApplication` CR:
+
+.Open Liberty operator label default values
+|===
+| Label                          | Default value                  | Description
+
+| `app.kubernetes.io/instance`   | `metadata.name`                | A unique name or identifier for this component. You cannot change the default.
+| `app.kubernetes.io/name`       | `metadata.name`                | A name that represents this component.
+| `app.kubernetes.io/managed-by` | `open-liberty-operator`   | The tool that manages this component.
+| `app.kubernetes.io/component`  | `backend`                      | The type of component that is created. For a full list, see the link:++https://github.com/gorkem/app-labels/blob/master/labels-annotation-for-openshift.adoc#labels++[Red Hat OpenShift documentation].
+| `app.kubernetes.io/part-of`    | `applicationName`              | The name of the higher-level application that this component is a part of. If the component is not a stand-alone application, configure this label.
+| `app.kubernetes.io/version`    | `version`                      | The version of the component.
+|===
+
+You can add new labels or overwrite existing labels, excluding the `app.kubernetes.io/instance` label. To set labels, specify them in your CR as key-value pairs in the `.metadata.labels` field.
+
+[source,yaml]
+----
+metadata:
+  name: my-app
+  labels:
+    my-label-key: my-label-value
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+----
+
+After the initial deployment of the CR, any changes to its labels are applied only if a `spec` field is updated.
+
+When running in Red Hat OpenShift, there are additional labels and annotations that are standard on the platform. Overwrite defaults where applicable and add any labels from the link:++https://github.com/redhat-developer/app-labels/blob/master/labels-annotation-for-openshift.adoc#labels++[Red Hat OpenShift list] that are not set by default using the previous instructions.
+
+=== Add annotations (`.metadata.annotations`) [[add-annotations]]
+
+To add new annotations into all resources created for a `OpenLibertyApplication`, specify them in your CR as key-value pairs in the `.metadata.annotations` field. Annotations in a CR override any annotations specified on a resource, except for the annotations set on `Service` with `.spec.service.annotations`.
+
+[source,yaml]
+----
+metadata:
+  name: my-app
+  annotations:
+    my-annotation-key: my-annotation-value
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+----
+
+After the initial deployment of `OpenLibertyApplication`, any changes to its annotations are applied only when one of the fields from `spec` is updated.
+
+When running in Red Hat OpenShift, there are additional annotations that are standard on the platform. Overwrite defaults where applicable and add any labels from the link:++https://github.com/gorkem/app-labels/blob/master/labels-annotation-for-openshift.adoc#labels++[Red Hat OpenShift list] that are not set by default using the previous instructions.
+
+=== Set environment variables for an application container (`.spec.env` or `.spec.envFrom`) [[set-environment-variables-for-an-application-container]]
+
+To set environment variables for your application container, specify `.spec.env` or `.spec.envFrom` fields in a CR. The environment variables can come directly from key-value pairs, `ConfigMap`, or `Secret`. The environment variables set by the `.spec.env` or `.spec.envFrom` fields override any environment variables that are specified in the container image.
+
+Use `.spec.envFrom` to define all data in a `ConfigMap` or a `Secret` as environment variables in a container. Keys from `ConfigMap` or `Secret` resources become environment variable names in your container. The following CR sets key-value pairs in `.spec.env` and `.spec.envFrom` fields.
+
+[source,yaml]
+----
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  env:
+    - name: DB_NAME
+      value: "database"
+    - name: DB_PORT
+      valueFrom:
+        configMapKeyRef:
+          name: db-config
+          key: db-port
+    - name: DB_USERNAME
+      valueFrom:
+        secretKeyRef:
+          name: db-credential
+          key: adminUsername
+    - name: DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: db-credential
+          key: adminPassword
+  envFrom:
+    - configMapRef:
+        name: env-configmap
+    - secretRef:
+        name: env-secrets
+----
+
+For another example that uses `.spec.envFrom[].secretRef`, see link:#setting-up-basic-authentication-credentials-by-using-environment-variables[Setting up basic authentication credentials by using environment variables].
+
+=== Setting up basic authentication credentials by using environment variables (`.spec.envFrom[].secretRef`) [[setting-up-basic-authentication-credentials-by-using-environment-variables]]
+
+An administrator can use the `username` and `password` container environment variables for basic authentication credentials.
+
+1. Create a secret with your wanted `username` and `password` values in your Kubernetes cluster.
+2. Modify your `OpenLibertyApplication` CR to add a `.spec.envFrom` parameter definition that references your `Secret`.
+For example, add the following `.spec.envFrom[].secretRef` parameter to your CR and replace `_basic-auth_` with your secret.
++
+[source,yaml]
+----
+spec:
+  envFrom:
+   - secretRef:
+      name: basic-auth
+----
+3. Ensure that your application container can access the `Secret`.
+
+The `.spec.envFrom` configuration sets two environment variables for your application container, `username` and `password`, and uses the `username` and `password` values in your secret.
+
+=== Configure multiple application instances for high availability (`.spec.replicas` or `.spec.autoscaling`) [[configure-multiple-application-instances-for-high-availability]]
+
+To run multiple instances of your application for high availability, use the `.spec.replicas` field for multiple static instances or the `.spec.autoscaling` field for auto-scaling, which autonomically creates or deletes instances based on resource consumption. The `.spec.autoscaling`.maxReplicas and `.spec.resources.requests.cpu` fields are required for auto-scaling.
+
+=== Set privileges and permissions for a pod or container (`.spec.securityContext`) [[set-privileges-and-permissions-for-a-pod-or-container]]
+
+A security context controls privilege and permission settings for a pod or application container. By default, the operator sets several `.spec.securityContext` parameters for an application container as shown in the following example.
+
+[source,yaml]
+----
+spec:
+  containers:
+    - name: app
+      securityContext:
+        capabilities:
+          drop:
+            - ALL
+        privileged: false
+        runAsNonRoot: true
+        readOnlyRootFilesystem: false
+        allowPrivilegeEscalation: false
+----
+To override the default values or set more parameters, change the `.spec.securityContext` parameters, for example:
+
+[source,yaml]
+----
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  securityContext:
+    readOnlyRootFilesystem: true
+    runAsUser: 1001
+    seLinuxOptions:
+      level: "s0:c123,c456"
+----
+For more information, see link:++https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container++[Set the security context for a Container]. For more information about security context parameters, see link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#securitycontext-v1-core++[SecurityContext v1 core].
+
+NOTE: If your Kubernetes cluster does not generate a user ID and `.spec.securityContext.runAsUser` is not specified, the user ID defaults to the value in the image metadata. If the image does not have a user ID specified either, you will have to assign a user ID through  `.spec.securityContext.runAsUser` to meet `.spec.securityContext.runAsNonRoot` requirement.
+
+=== Persist resources (`.spec.statefulSet` and `.spec.volumeMounts`) [[persist-resources]]
+If storage is specified in the `OpenLibertyApplication` CR, the operator can create a `StatefulSet` and `PersistentVolumeClaim` for each pod. If storage is not specified, `StatefulSet` resource is created without persistent storage.
+
+The following CR definition uses `.spec.statefulSet.storage` to provide basic storage. The operator creates a `StatefulSet` with the size of `1Gi` that mounts to the `/data` folder.
+[source,yaml]
+----
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  statefulSet:
+    storage:
+      size: 1Gi
+      mountPath: "/data"
+----
+An Open Liberty operator CR definition can provide more advanced storage. With the following CR definition, the operator creates a `PersistentVolumeClaim` called `pvc` with the size of `1Gi` and `ReadWriteOnce` access mode. The operator enables users to provide an entire `.spec.statefulSet.storage.volumeClaimTemplate` for full control over the automatically created `PersistentVolumeClaim`. To persist to more than one folder, the CR definition uses the `.spec.volumeMounts` field instead of `.spec.statefulSet.storage.mountPath`.
+[source,yaml]
+----
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  volumeMounts:
+  - name: pvc
+    mountPath: /data_1
+    subPath: data_1
+  - name: pvc
+    mountPath: /data_2
+    subPath: data_2
+  statefulSet:
+    storage:
+      volumeClaimTemplate:
+        metadata:
+          name: pvc
+        spec:
+          accessModes:
+          - "ReadWriteMany"
+          storageClassName: 'glusterfs'
+          resources:
+            requests:
+              storage: 1Gi
+----
+
+NOTE: After `StatefulSet` is created, the persistent storage and `PersistentVolumeClaim` cannot be added or changed.
+
+The following CR definition does not specify storage and creates `StatefulSet` resources without persistent storage. You can create `StatefulSet` resources without storage if you require only ordering and uniqueness of a set of pods.
+
+[source,yaml]
+----
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  statefulSet: {}
+----
+
+=== Monitor resources (`.spec.monitoring`) [[monitor-resources]]
+
+An Open Liberty operator can create a `ServiceMonitor` resource to integrate with Prometheus Operator.
+
+NOTE: The operator monitoring does not support integration with Knative Service. Prometheus Operator is required to use `ServiceMonitor`.
+
+At minimum, provide a label for Prometheus set on `ServiceMonitor` objects. In the following example, the `.spec.monitoring` label is `apps-prometheus`.
+
+[source,yaml]
+----
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  monitoring:
+    labels:
+       app-prometheus: ''
+    endpoints:
+    - interval: '30s'
+      basicAuth:
+        username:
+          key: username
+          name: metrics-secret
+        password:
+          key: password
+          name: metrics-secret
+      tlsConfig:
+        insecureSkipVerify: true
+----
+
+For more advanced monitoring, set many `ServiceMonitor` parameters such as authentication secret with link:++https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#endpoint++[Prometheus Endpoint].
+
+[source,yaml]
+----
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  monitoring:
+    labels:
+       app-prometheus: ''
+    endpoints:
+    - interval: '30s'
+      basicAuth:
+        username:
+          key: username
+          name: metrics-secret
+        password:
+          key: password
+          name: metrics-secret
+      tlsConfig:
+        insecureSkipVerify: true
+----
+
+=== Specify multiple service ports (`.spec.service.port*` and `.spec.monitoring.endpoints`) [[specify-multiple-service-ports]]
+
+To provide multiple service ports in addition to the primary service port, configure the primary service port with the `.spec.service.port`, `.spec.service.targetPort`, `.spec.service.portName`, and `.spec.service.nodePort` fields. The primary port is exposed from the container that runs the application and the port values are used to configure the Route (or Ingress), Service binding and Knative service.
+
+To specify an alternative port for Service Monitor, use the `.spec.monitoring.endpoints` field and specify either the `port` or `targetPort` field, otherwise it defaults to the primary port.
+
+Specify the primary port with the `.spec.service.port` field and additional ports with the `.spec.service.ports` field as shown in the following example.
+
+[source,yaml]
+----
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  service:
+    type: NodePort
+    port: 9080
+    portName: http
+    targetPort: 9080
+    nodePort: 30008
+    ports:
+      - port: 9443
+        name: https
+  monitoring:
+    endpoints:
+      - basicAuth:
+          password:
+            key: password
+            name: metrics-secret
+          username:
+            key: username
+            name: metrics-secret
+        interval: 5s
+        port: https
+        scheme: HTTPS
+        tlsConfig:
+          insecureSkipVerify: true
+    labels:
+      app-monitoring: 'true'
+----
+
+=== Configure probes (`.spec.probes`) [[configure-probes]]
+Probes are health checks on an application container to determine whether it is alive or ready to receive traffic. The Open Liberty operator has startup, liveness, and readiness probes.
+
+Probes are not enabled in applications by default. To enable a probe with the default values, set the probe parameters to `{}`. The following example enables all 3 probes to use default values.
+
+[source,yaml]
+----
+spec:
+  probes:
+    startup: {}
+    liveness: {}
+    readiness: {}
+----
+
+The following code snippet shows the default values for the **startup** probe (`.spec.probes.startup`).
+[source,yaml]
+----
+httpGet:
+  path: /health/started
+  port: 9443
+  scheme: HTTPS
+timeoutSeconds: 2
+periodSeconds: 10
+failureThreshold: 20
+----
+
+The following code snippet shows the default values for the **liveness** probe (`.spec.probes.liveness`).
+[source,yaml]
+----
+httpGet:
+  path: /health/live
+  port: 9443
+  scheme: HTTPS
+initialDelaySeconds: 60
+timeoutSeconds: 2
+periodSeconds: 10
+failureThreshold: 3
+----
+
+The following code snippet shows the default values for the **readiness** probe (`.spec.probes.readiness`).
+[source,yaml]
+----
+httpGet:
+  path: /health/ready
+  port: 9443
+  scheme: HTTPS
+initialDelaySeconds: 10
+timeoutSeconds: 2
+periodSeconds: 10
+failureThreshold: 10
+----
+
+To override a default value, specify a different value. The following example overrides a liveness probe initial delay default of `60` seconds and sets the initial delay to `90` seconds.
+[source,yaml]
+----
+spec:
+  probes:
+    liveness:
+      initialDelaySeconds: 90
+----
+
+When a probe **initialDelaySeconds** parameter is set to `0`, the default value is used. To set a probe initial delay to `0`, define the probe instead of using the default probe. The following example overrides the default value and sets the initial delay to `0`.
+
+[source,yaml]
+----
+spec:
+  probes:
+    liveness:
+      httpGet:
+        path: "/health/live"
+        port: 9443
+      initialDelaySeconds: 0
+----
+
+
+=== Deploy serverless applications with Knative (`.spec.createKnativeService`) [[deploy-serverless-applications-with-knative]]
+
+If link:++https://knative.dev/docs/++[Knative] is installed on a Kubernetes cluster, to deploy serverless applications with Knative on the cluster, the operator creates a link:++https://github.com/knative/serving/blob/main/docs/spec/spec.md#service++[Knative Service] resource which manages the entire life cycle of a workload. To create a Knative service, set `.spec.createKnativeService` to `true`.
+
+[source,yaml]
+----
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  createKnativeService: true
+----
+
+The operator creates a Knative service in the cluster and populates the resource with applicable `OpenLibertyApplication` fields. Also, it ensures non-Knative resources such as Kubernetes `Service`, `Route`, and `Deployment` are deleted.
+
+
+The CRD fields that can populate the Knative service resource include `.spec.applicationImage`, `.spec.serviceAccountName`, `.spec.probes.liveness`, `.spec.probes.readiness`, `.spec.service.port`, `.spec.volumes`, `.spec.volumeMounts`, `.spec.env`, `.spec.envFrom`, `.spec.pullSecret` and `.spec.pullPolicy`. Startup probe is not fully supported by Knative, thus `.spec.probes.startup` does not apply when Knative service is enabled.
+
+When using private registries with Knative / OpenShift Serverless  `.spec.pullSecret` must be specified. OpenShift global
+pull secret can not be used to provide registry credentials to Knative Services.
+
+
+For details on how to configure Knative for tasks such as enabling HTTPS connections and setting up a custom domain, see the link:++https://knative.dev/docs/serving/++[Knative documentation].
+
+Autoscaling fields in `OpenLibertyApplication` are not used to configure Knative Pod Autoscaler (KPA). To learn how to configure KPA, see link:++https://knative.dev/docs/serving/configuring-the-autoscaler/++[Configuring the Autoscaler].
+
+=== Expose applications externally (`.spec.expose`, `.spec.createKnativeService`, `.spec.route`) [[expose-applications-externally]]
+
+Expose an application externally with a Route, Knative Route, or Ingress resource.
+
+To expose an application externally with a route in a non-Knative deployment, set `.spec.expose` to true.
+
+The operator creates a secured route based on the application service when link:#crd-spec-managetls[`.spec.manageTLS`] is enabled. To use custom certificates, see information about link:#specifying-certificates-for-a-secret-route-and-service[`.spec.service.certificateSecretRef` and `.spec.route.certificateSecretRef`].
+
+[source,yaml]
+----
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  expose: true
+----
+
+To expose an application externally with Ingress in a non-Knative deployment, complete the following steps.
+
+1. To use the `Ingress` resource to expose your cluster, install an `Ingress` controller such a Nginx or Traefik.
+2. Ensure that a `Route` resource is not on the cluster. The Ingress resource is created only if the `Route` resource is not available on the cluster.
+3. To use the `Ingress` resource, set the `defaultHostName` variable in the `open-liberty-operator` `ConfigMap` object to a hostname such as `mycompany.com`.
+4. Enable TLS. Generate a certificate and specify the secret that contains the certificate with the `.spec.route.certificateSecretRef` field.
++
+[source,yaml]
+----
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  expose: true
+  route:
+    certificateSecretRef: mycompany-tls
+----
+5. Specify `.spec.route.annotations` to configure the `Ingress` resource. Annotations such as Nginx, HAProxy, Traefik, and others are specific to the `Ingress` controller implementation.
+The following example specifies annotations, an existing TLS secret, and a custom hostname.
+
+[source,yaml]
+----
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  expose: true
+  route:
+    annotations:
+      # You can use this annotation to specify the name of the ingress controller to use.
+      # You can install multiple ingress controllers to address different types of incoming traffic such as an external or internal DNS.
+      kubernetes.io/ingress.class: "nginx"
+
+      # The following nginx annotation enables a secure pod connection:
+      nginx.ingress.kubernetes.io/ssl-redirect: true
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+
+      # The following traefik annotation enables a secure pod connection:
+      traefik.ingress.kubernetes.io/service.serversscheme: https
+
+    # Use a custom hostname for the Ingress
+    host: app-v1.mycompany.com
+    # Reference a pre-existing TLS secret:
+    certificateSecretRef: mycompany-tls
+----
+
+To expose an application as a Knative service, set link:#deploy-serverless-applications-with-knative[`.spec.createKnativeService`] and `.spec.expose` to `true`. The operator creates an unsecured Knative route. To configure secure HTTPS connections for your Knative deployment, see link:++https://knative.dev/docs/serving/using-a-tls-cert/++[Configuring HTTPS with TLS certificates].
+
+[source,yaml]
+----
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  createKnativeService: true
+  expose: true
+----
+
+=== Bind applications with operator-managed backing services (`.status.binding.name` and `.spec.service.bindable`) [[bind-applications-with-operator-managed-backing-services]]
+
+The link:++https://github.com/redhat-developer/service-binding-operator++[Service Binding Operator] enables application developers to bind applications together with operator-managed backing services. If the Service Binding Operator is installed on your cluster, you can bind applications by creating a `ServiceBindingRequest` custom resource.
+
+You can configure an Open Liberty application to behave as a link:++https://github.com/k8s-service-bindings/spec#provisioned-service++[Provisioned Service] that is defined by the link:++https://github.com/k8s-service-bindings/spec++[Service Binding Specification]. According to the specification, a Provisioned Service resource must define a `.status.binding.name` that refers to a `Secret`. To expose your application as a Provisioned Service, set the link:#crd-spec-service-bindable[`.spec.service.bindable`] field to a value of true. The operator creates a _binding secret_ that is named `CR_NAME-expose-binding` and adds the `host`, `port`, `protocol`, `basePath`, and `uri` entries to the secret.
+
+To override the default values for the entries in the binding secret or to add new entries to the secret, create an _override secret_ that is named `CR_NAME-expose-binding-override` and add any entries to the secret. The operator reads the content of the override secret and overrides the default values in the binding secret.
+
+After an Open Liberty application is exposed as a Provisioned Service, a service binding request can refer to the application as a backing service.
+
+The instructions that follow show how to bind Open Liberty applications as services or producers to other workloads (such as pods or deployments). 
+
+NOTE: Two Open Liberty applications that are deployed through the Open Liberty Operator cannot be bound.
+
+
+- Set up the Service Binding operator to access Open Liberty applications.
+By default, the Service Binding operator does not have permission to interact with Open Liberty applications that are deployed through the Open Liberty operator. You must create two RoleBindings to give the Service Binding operator view and edit access for Open Liberty applications.
+
+1. In the Red Hat OpenShift dashboard, navigate to *User Management* > *RoleBindings*.
+2. Select *Create binding*.
+3. Set the *Binding type* to `Cluster-wide role binding` (`ClusterRoleBinding`).
+4. Enter a name for the binding. Choose a name that is related to service bindings and view access for Open Liberty applications.
+5. For the role name, enter `openlibertyapplications.apps.openliberty.io-v1-view`.
+6. Set the *Subject* to `ServiceAccount`.
+7. A *Subject namespace* menu appears. Select `openshift-operators`.
+8. In the *Subject name* field, enter `service-binding-operator`.
+9. Click *Create*.
+
++
+Now that you have set up the first role binding, navigate to the `RoleBindings` list and click *Create binding* again. Set up edit access by using the following instructions.
+
+10. Set *Binding type* to `Cluster-wide role binding` (`ClusterRoleBinding`).
+11. Enter a name for the binding. Choose a name that is related to service bindings and edit access for Open Liberty applications.
+12. In the *Role name* field, enter `openlibertyapplications.apps.openliberty.io-v1-edit`.
+13. Set *Subject* to `ServiceAccount`.
+14. In the *Subject namespace* list, select `openshift-operators`.
+15. In the *Subject name* field, type `service-binding-operator`.
+16. Click *Create*.
+
++ 
+Service bindings from Open Liberty applications (or "services") to pods or deployments (or "workloads") now succeed. After a binding is made, the bound workload restarts or scales to mount the binding secret to `/bindings` in all containers.
+
+- Set up a service binding by using the Red Hat method. For more information, see the link:++https://docs.openshift.com/container-platform/4.12/applications/connecting_applications_to_services/getting-started-with-service-binding.html#getting-started-with-service-binding++[Red Hat documentation] or the link:++https://developers.redhat.com/articles/2022/03/11/binding-workloads-services-made-easier-service-binding-operator-red-hat?_ga=2.71595863.551583477.1682431368-578520176.1682431368#use_the_service_binding_operator++[Red Hat tutorial].
+
+1. On the Red Hat OpenShift web dashboard, click *Administrator* in the sidebar and select *Developer*.
+2. In the Topology view for the current namespace, hover over the border of the Open Liberty application to be bound as a service, and drag an arrow to the Pod or Deployment workload. A tooltip appears entitled Create Service Binding.
+3. The Create Service Binding window opens. Change the name to value that is fewer than 63 characters. The Service Binding operator might fail to mount the secret as a volume if the name exceeds 63 characters.
+4. Click *Create*.
+5. A sidebar opens. To see the status of the binding, click the name of the secret and then scroll until the status appears.
+6. Check the pod/deployment workload and verify that a volume is mounted. You can also open a terminal session into a container and run `ls /bindings`.
+
+- Set up a service binding using the Spec API Tech Preview / Community method.
+
++
+This method is newer than the Red Hat method but achieves the same results. You must add a label to your Open Liberty application, such as `app=frontend`, if it does not have any unique labels. Set the binding to use a label selector so that the Service Binding operator looks for a Open Liberty application with a specific label.
+
+1. Install the Service Binding operator by using the Red Hat OpenShift Operator Catalog.
+2. Select *Operators* > *Installed Operators* and set the namespace to the same one used by both your Open Liberty application and pod/deployment workload.
+3. Open the Service Binding (Spec API Tech Preview) page.
+4. Click Create *ServiceBinding*.
+5. Choose a short name for the binding. Names that exceed 63 characters might cause the binding secret volume mount to fail.
+6. Expand the *Service* section.
+7. In the *Api Version* field, enter `apps.openliberty.io/v1`.
+8. In the *Kind* field, enter `OpenLibertyApplication`.
+9. In the *Name* field, enter the name of your application. You can get this name from the list of applications on the Open Liberty operator page.
+10. Expand the *Workload* section.
+11. Set the *Api Version* field to the value of apiVersion in your target workload YAML. For example, if the workload is a deployment, the value is `apps/v1`.
+12. Set the Kind field to the value of kind in your target workload YAML. For example, if the workload is a deployment, the value is `Deployment`.
+13. Expand the *Selector* subsection, and then expand the *Match Expressions* subsection.
+14. Click *Add Match Expression*.
+15. In the *Key* field, enter the label key that you set earlier. For example, for the label `app=frontend`, the key is `app`).
+16. In the *Operator* field, enter `Exists`.
+17. Expand the *Values* subsection and click *Add Value*.
+18. In the *Value* field, enter the label value that you set earlier. For example, if using the label `app=frontend`, the value is `frontend`.
+19. Click *Create*.
+20. Check the Pod/Deployment workload and verify that a volume is mounted, either by scrolling down or by opening a terminal session into a container and running `ls /bindings`.
+
+=== Limit a pod to run on specified nodes (`.spec.affinity`) [[limit-a-pod-to-run-on-specified-nodes]]
+Use link:#crd-spec-affinity[`.spec.affinity`] to constrain a Pod to run only on specified nodes.
+
+To set required labels for pod scheduling on specific nodes, use the `.spec.affinity.nodeAffinityLabels` field.
+
+[source,yaml]
+----
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  affinity:
+    nodeAffinityLabels:
+      customNodeLabel: label1, label2
+      customNodeLabel2: label3
+----
+
+The following example requires a `large` node type and preferences for two zones, which are named `zoneA` and `zoneB`.
+
+[source,yaml]
+----
+metadata:
+  name: my-app
+  namespace: test
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key:  node.kubernetes.io/instance-type
+            operator: In
+            values:
+            - large
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 60
+        preference:
+          matchExpressions:
+          - key: failure-domain.beta.kubernetes.io/zone
+            operator: In
+            values:
+            - zoneA
+      - weight: 20
+        preference:
+          matchExpressions:
+          - key: failure-domain.beta.kubernetes.io/zone
+            operator: In
+            values:
+            - zoneB
+----
+
+Use pod affinity and anti-affinity to constrain which nodes your pod is eligible to be scheduled based on labels on pods that are already running on the node rather than based on labels on node.
+
+The following example shows that pod affinity is required and that the pods for `Service-A` and `Service-B` must be in the same zone. Through pod anti-affinity, it is preferable not to schedule `Service_B` and `Service_C` on the same host.
+
+[source,yaml]
+----
+metadata:
+  name: Service-B
+  namespace: test
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: service
+            operator: In
+            values:
+            - Service-A
+        topologyKey: failure-domain.beta.kubernetes.io/zone
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: service
+              operator: In
+              values:
+              - Service-C
+          topologyKey: kubernetes.io/hostname
+----
+
+=== Configuring transport layer security (TLS) certificates [[configuring-transport-layer-security-tls-certificates]]
+
+An administrator can configure TLS certificates to secure applications that run on Kubernetes-based clusters. By default, the operator generates certificates. Instead, an administrator can specify certificates for the Route and Service.
+
+By default, the `OpenLibertyApplication` link:#crd-spec-managetls[`.spec.manageTLS`] parameter is set to `true` and the operator attempts to generate certificates and mount them to the pod at `/etc/x509/certs`. If `.spec.expose` is set to `true`, the Route also is configured automatically to enable TLS by using `reencrypt` termination. This configuration ensures end-to-end encryption from an external source to the application or pod.
+
+To change this default configuration, see the following sections.
+
+* link:#generating-certificates-with-certificate-manager[Generating certificates with certificate manager]
+* link:#generating-certificates-with-red-hat-openshift-service-ca[Generating certificates with Red Hat OpenShift service CA (`.spec.service.annotations`)]
+* link:#specifying-certificates-for-a-secret-route-and-service[Specifying certificates for a secret Route and Service (`.spec.service.certificateSecretRef` and `.spec.route.certificateSecretRef`)] 
+
+NOTE: If your application CR sets `.spec.manageTLS` to `false`, then the operator does not manage the certificate. You must provide your own TLS certificates and configure probes, monitoring, routes, and other parameters.
+
+=== Generating certificates with certificate manager [[generating-certificates-with-certificate-manager]]
+
+NOTE:  When `.spec.manageTLS` is set to `true`, the default, certificate manager must be installed on the Kubernetes cluster.
+
+When certificate manager is installed on the cluster, the service certificate is generated with the `cert-manager.io/v1` `Certificate` kind. The cert-manager tool enables the operator to automatically provision TLS certificates for pods and routes. Certificates are mounted into containers from a Kubernetes secret so that the certificates are automatically refreshed when they update. For more information about the cert-manager tool, see https://cert-manager.io/.
+
+The operator creates a certificate authority (CA) `Issuer` instance to be shared by applications within a single namespace. The secret (or issuer) must be created in the same namespace as the `OpenLibertyApplication`. The issuer is used to generate a service certificate for each application that is mounted into the pod. The `tls.crt`, `tls.key`, and `ca.crt` files are mounted to the pod. The location is set by the `TLS_DIR` environment variable. The same secret (or issuer) is used for all instances of the application in the namespace.
+
+==== Generating certificates with certificate manager (existing certificate scenario)
+
+By default, the operator creates its own certificate authority (CA) for issuing service certificates. However, you can use your own CA certificate. To use your CA certificate, create a Kubernetes secret named `olo-custom-ca-tls`. This secret must contain the CA's `tls.crt` and `tls.key` file. After this secret is provided, the operator reissues certificates for the service by using the provided CA.
+
+See the following example CA secret:
+
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: olo-custom-ca-tls
+data:
+  tls.crt: >-
+    LS0tLS.....
+  tls.key: >-
+    LS0tL.....
+type: kubernetes.io/tls
+----
+
+==== Generating certificates with certificate manager (custom issuer)
+
+You can provide a custom Issuer (for example, certificate authority (CA), or Vault) for the service certificates.
+
+The issuer must be named `olo-custom-issuer`.
+
+See the following example custom issuer:
+
+[source,yaml]
+----
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: olo-custom-issuer
+spec:
+  vault:
+    auth:
+      tokenSecretRef:
+        key: token
+        name: vault-token
+    path: pki/sign/cert-manager
+    server: >-
+      https://vault-internal.vault.svc:8201
+----
+
+=== Generating certificates with Red Hat OpenShift service CA (`.spec.service.annotations`)[[generating-certificates-with-red-hat-openshift-service-ca]]
+
+If the operator runs on Red Hat OpenShift Container Platform, the operator can automatically generate service certificates with Red Hat OpenShift Service CA.
+
+This method is the default, and is the simplest way to generate certificates if the certificate manager operator is not installed on the cluster.
+
+The `tls.crt` and `tls.key` files are mounted to the pod and the location is set by the `TLS_DIR` environment variable. The Red Hat OpenShift CA certificate is in the `/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt` file.
+
+If the certificate manager is installed on the cluster, the certificate manager generates service certificates unless otherwise specified by the application. For example, to force use of the Red Hat OpenShift service CA, add an annotation to the application YAML file with `.spec.service.annotations`.
+
+[source,yaml]
+----
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  manageTLS: true
+  expose: true
+  service:
+    annotations:
+      service.beta.openshift.io/serving-cert-secret-name: my-app-svc-tls-ocp
+    port: 9443
+----
+
+=== Specifying certificates for a secret Route and Service (`.spec.service.certificateSecretRef` and `.spec.route.certificateSecretRef`) [[specifying-certificates-for-a-secret-route-and-service]]
+
+Specify your own certificate for a secret `Route` with the `OpenLibertyApplication` CR `.spec.route.certificateSecretRef` parameter. Specify your own certificate for a secret `Service` with the `.spec.service.certificateSecretRef` parameter.
+
+The following examples specify certificates for a route.
+
+For `.spec.route.certificateSecretRef`, replace `my-app-rt-tls` with the name of a secret that contains TLS key, certificate, and CA to use in the route. It can also contain destination CA certificate.
+
+[source,yaml]
+----
+spec:
+  applicationImage: quay.io/my-repo/my-app:1.0
+  expose: true
+  route:
+    host: myapp.mycompany.com
+    termination: reencrypt
+    certificateSecretRef: my-app-rt-tls
+  service:
+    port: 9443
+----
+The following example manually provides a route secret. For the secret, replace `my-app-rt-tls` with the name of the secret. For a route, the following keys are valid in the secret.
+
+* `ca.crt`
+* `destCA.crt`
+* `tls.crt`
+* `tls.key`
+
+[source,yaml]
+----
+kind: Secret
+apiVersion: v1
+metadata:
+  name: my-app-rt-tls
+data:
+  ca.crt: >-
+    Certificate Authority public certificate...(base64)
+  tls.crt: >-
+    Route public certificate...(base64)
+  tls.key: >-
+    Route private key...(base64)
+  destCA.crt: >-
+    Pod/Service certificate Certificate Authority (base64). Might be required when using reencrypt termination policy.
+type: kubernetes.io/tls
+----
+
+For an example that uses `.spec.route.certificateSecretRef` and makes applications available externally, see the link:#expose-applications-externally[`.spec.expose` examples].
+
+== Day-2 Operations [[day-2-operations]]
+
+=== Prerequisite
+
+ - The corresponding `OpenLibertyApplication` must already have link:++#storage-for-serviceability++[storage for serviceability] configured in order to use the day-2 operations
+ - The custom resource (CR) for a day-2 operation must be created in the same namespace as the `OpenLibertyApplication`
+
+
+=== Operation discovery
+
+To allow auto-discovery of supported day-2 operations from external tools the following annotation has been added to the `OpenLibertyApplication` CRD:
+
+[source,yaml]
+----
+  annotations:
+    openliberty.io/day2operations: OpenLibertyTrace,OpenLibertyDump
+----
+
+Additionally, each day-2 operation CRD has the following annotation which illustrates the k8s `Kind`(s) the operation applies to:
+
+[source,yaml]
+----
+  annotations:
+    day2operation.openliberty.io/targetKinds: Pod
+----
+
+=== Request server dump [[day-2-dump]]
+
+You can request a snapshot of the server status including different types of server dumps, from an instance of Liberty server running inside a `Pod`, using Open Liberty Operator and `OpenLibertyDump` custom resource (CR). To use this feature the `OpenLibertyApplication` needs to have link:++#storage-for-serviceability++[storage for serviceability] already configured. Also, the `OpenLibertyDump` CR must be created in the same namespace as the `Pod` to operate on.
+
+The configurable fields are:
+
+.Configurable Dump Fields
+|===
+| Field | Description
+| `podName` | The name of the Pod, which must be in the same namespace as the `OpenLibertyDump` CR.
+| `include` | Optional. List of memory dump types to request: _thread,heap,system_
+|===
+
+Example including heap and thread dump:
+
+[source,yaml]
+----
+apiVersion: apps.openliberty.io/v1
+kind: OpenLibertyDump
+metadata:
+  name: example-dump
+spec:
+  podName: Specify_Pod_Name_Here
+  include:
+    - thread
+    - heap
+----
+
+The dump file name is added to the `OpenLibertyDump` CR status and file is stored in the `serviceability` folder with a format such as `/serviceability/_namespace_/_pod_name_/_timestamp_.zip`
+
+Once the dump has started, the CR can not be re-used to take more dumps. A new CR needs to be created for each server dump.
+
+You can check the status of a dump operation using the `status` field inside the CR YAML. You can also run the command `oc get oldump -o wide` to see the status of all dump operations in the current namespace.
+
+Note:
+_System dump might not work on certain Kubernetes versions, such as OpenShift 4.x_
+
+=== Request server traces [[day-2-trace]]
+
+You can request server traces, from an instance of Liberty server running inside a `Pod`, using Open Liberty Operator and `OpenLibertyTrace` custom resource (CR). To use this feature the `OpenLibertyApplication` must already have link:++#storage-for-serviceability++[storage for serviceability] configured. Also, the `OpenLibertyTrace` CR must be created in the same namespace as the `Pod` to operate on.
+
+The configurable fields are:
+
+.Configurable Trace Fields
+|===
+| Field | Description
+| `podName` | The name of the Pod, which must be in the same namespace as the `OpenLibertyTrace` CR.
+| `traceSpecification` | The trace string to be used to selectively enable trace. The default is *=info.
+| `maxFileSize` | The maximum size (in MB) that a log file can reach before it is rolled. To disable this attribute, set the value to 0. By default, the value is 20. This setting does not apply to the `console.log` file.
+| `maxFiles` | If an enforced maximum file size exists, this setting is used to determine how many of each of the logs files are kept. This setting also applies to the number of exception logs that summarize exceptions that occurred on any particular day.
+| `disable` | Set to _true_ to stop tracing.
+|===
+
+Example:
+
+[source,yaml]
+----
+apiVersion: apps.openliberty.io/v1
+kind: OpenLibertyTrace
+metadata:
+  name: example-trace
+spec:
+  podName: Specify_Pod_Name_Here
+  traceSpecification: "*=info:com.ibm.ws.webcontainer*=all"
+  maxFileSize: 20
+  maxFiles: 5
+----
+
+Generated trace files, along with _messages.log_ files, are stored in the `serviceability` folder with a format such as `/serviceability/_namespace_/_pod_name_/_timestamp_.zip`.
+
+Once the trace has started, it can be stopped by setting the `.spec.disable` field to `true`. Deleting the CR will also stop the tracing. Changing the `podName` will first stop the tracing on the old Pod before enabling traces on the new Pod.
+
+You can check the status of a trace operation using the `status` field inside the CR YAML. You can also run the command `oc get oltrace -o wide` to see the status of all trace operations in the current namespace.
+
+**Important**: _Liberty server must allow configuration dropins. The following configuration should not be set on the server: `<config updateTrigger=“disabled”/>`. Otherwise, OpenLibertyTrace operation will not work on the server._
+
+Note:
+_The operator doesn't monitor the Pods. If the Pod is restarted or deleted after the trace is enabled, then the tracing wouldn't be automatically enabled when the Pod comes back up. In that case, the status of the trace operation may not correctly report whether the trace is enabled or not._
+
+== Troubleshooting
+
+See the link:++troubleshooting.adoc++[troubleshooting guide] for information on how to investigate and resolve deployment problems.
