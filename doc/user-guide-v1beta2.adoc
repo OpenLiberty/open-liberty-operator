@@ -243,7 +243,7 @@ In the following get commands, replace `my-liberty-app` with your CR name. Run a
 
 * Run any of the following `kubectl get` commands.
 
-[source,bash]
+[source,sh]
 ----
 kubectl get olapp my-liberty-app
 kubectl get olapps my-liberty-app
@@ -252,7 +252,7 @@ kubectl get openlibertyapplication my-liberty-app
 
 * Run any of the following `oc get` commands.
 
-[source,bash]
+[source,sh]
 ----
 oc get olapp my-liberty-app
 oc get olapps my-liberty-app
@@ -260,7 +260,7 @@ oc get openlibertyapplication my-liberty-app
 ----
 
 The results of the command resemble the following.
-[source,bash]
+[source,sh]
 ----
 NAME             IMAGE                       EXPOSED   RECONCILED   RESOURCESREADY   READY   AGE
 my-liberty-app   quay.io/my-repo/my-app:1.0            True         True             True    18m
