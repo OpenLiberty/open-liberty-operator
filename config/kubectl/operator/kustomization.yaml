@@ -1,0 +1,46 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../rbac
+- ../../manager
+
+namePrefix: olo-
+
+# Labels to add to all resources and selectors.
+commonLabels:
+  app.kubernetes.io/instance: open-liberty-operator
+  app.kubernetes.io/name: open-liberty-operator
+
+patches:
+- path: patches/delete-namespace.yaml
+  target:
+    kind: Namespace
+
+patchesJson6902:
+  - target:
+      namespace: system
+      name: .*
+    patch: |-
+      - op: remove
+        path: /metadata/namespace
+  - target:
+      namespace: open-liberty-operator
+      name: .*
+    patch: |-
+      - op: remove
+        path: /metadata/namespace
+  - target:
+      kind: RoleBinding
+      name: .*
+    patch: |-
+      - op: remove
+        path: /subjects/0/namespace
+  - target:
+      kind: Deployment
+      name: olo-controller-manager
+    patch: |-
+      - op: remove
+        path: /spec/template/spec/containers/0/env/1/valueFrom
+      - op: add
+        path: /spec/template/spec/containers/0/env/1/value
+        value: OPEN_LIBERTY_WATCH_NAMESPACE
