@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/name: open-liberty-operator
     control-plane: controller-manager
   name: olo-controller-manager
-  namespace: default
+  namespace: open-liberty
 spec:
   replicas: 1
   selector:
