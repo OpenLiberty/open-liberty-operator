@@ -1,4 +1,4 @@
-= Open Liberty Operator v0.8.0+
+= Open Liberty Operator v0.8.x only
 
 The Open Liberty Operator can be used to deploy and manage applications running on Open Liberty or WebSphere Liberty into Kubernetes clusters. You can also perform link:++#day-2-operations++[Day-2 operations] such as gathering traces and dumps using the operator.
 
