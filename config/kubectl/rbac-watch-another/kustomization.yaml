@@ -1,0 +1,50 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../rbac
+
+namePrefix: olo-watched-
+
+# Labels to add to all resources and selectors.
+commonLabels:
+  app.kubernetes.io/instance: open-liberty-operator
+  app.kubernetes.io/name: open-liberty-operator
+
+patches:
+- path: patches/delete-service-account.yaml
+  target:
+    kind: ServiceAccount
+
+patchesJson6902:
+  - target:
+      name: .*
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: OPEN_LIBERTY_WATCH_NAMESPACE
+  - target:
+      kind: RoleBinding
+      name: .*
+    patch: |-
+      - op: replace
+        path: /subjects/0/namespace
+        value: OPEN_LIBERTY_OPERATOR_NAMESPACE
+      - op: replace
+        path: /subjects/0/name
+        value: olo-controller-manager
+  - target:
+      kind: RoleBinding
+      name: olo-watched-leader-election-rolebinding
+    patch: |-
+      - op: replace
+        path: /roleRef/name
+        value: olo-watched-leader-election-role
+  - target:
+      kind: RoleBinding
+      name: olo-watched-manager-rolebinding
+    patch: |-
+      - op: replace
+        path: /roleRef/name
+        value: olo-watched-manager-role
+
+        
