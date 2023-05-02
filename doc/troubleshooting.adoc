@@ -1,59 +1,103 @@
-= Troubleshooting
+= Troubleshooting Open Liberty operators
 
-Here are some basic troubleshooting methods to check if the operator is running fine:
+You might encounter an issue when you install, configure, or manage operators. You can run `oc` or `kubectl` commands to check the status of pods, operators, and custom resources and to investigate problems. 
 
-* Run the following and check if the output is similar to the following:
+To run oc commands, you need the link:++https://docs.openshift.com/container-platform/4.12/cli_reference/openshift_cli/developer-cli-commands.html++[Red Hat OpenShift command-line interface (CLI)]. To run kubectl commands if Red Hat OpenShift is not installed, you need the link:++https://kubernetes.io/docs/reference/kubectl/++[Kubernetes command line tool].
+
+TIP: The documentation shows `oc` commands. To run `kubectl` commands, replace `oc` with `kubectl` in the commands.
+
+* link:#troubleshooting-operators[Troubleshooting operators]
+* link:#troubleshooting-custom-resources[Troubleshooting custom resources]
+
+  - link:#lost-connections-when-using-openj9-version[Lost connections when using OpenJ9 version openj9-0.33.1]
+
+== Troubleshooting operators [[troubleshooting-operators]]
+
+Run the following `oc` commands to investigate problems with pods and operators.
+
+* Check the Open Liberty operator.
 +
 [source,sh]
 ----
-  $ oc get pods -l name=open-liberty-operator
-
-  NAME                                     READY   STATUS    RESTARTS   AGE
-  open-liberty-operator-5c4548d98f-xgqtg   1/1     Running   0          2m29s
+$ oc get pods -l name=open-liberty-operator
 ----
 
-* Check the operators events:
++
+Output from the *get pods* command shows the pod name and status.
+
 +
 [source,sh]
 ----
-  $ oc describe pod open-liberty-operator-5c4548d98f-xgqtg
+NAME                                     READY   STATUS    RESTARTS   AGE
+open-liberty-operator-5c4548d98f-xgqtg   1/1     Running   0          2m29s
 ----
 
-* Check the operator logs:
+* Check the operator events. In the *describe pod* command, replace `_<pod_name>_` with a pod name from the *get pods* output.
+
 +
 [source,sh]
 ----
-  $ oc logs open-liberty-operator-5c4548d98f-xgqtg
+$ oc describe pod <pod_name>
 ----
 
-If the operator is running fine, check the status of the `OpenLibertyApplication` Custom Resource (CR) instance.
++
+The following example command uses the Open Liberty operator pod name.
 
-Note that the following commands use `olapp`, which is the short name for `OpenLibertyApplication`:
-
-* Check the CR status:
 +
 [source,sh]
 ----
-  $ oc get olapp my-liberty-app -o wide
-
-  NAME                      IMAGE                                                     EXPOSED   RECONCILED   REASON    MESSAGE   AGE
-  my-liberty-app            quay.io/my-repo/my-app:1.0                                false     True                             1h
+$ oc describe pod open-liberty-operator-5c4548d98f-xgqtg
 ----
 
-* Check the CR effective fields:
+* Check the operator logs. In the *logs* command, replace `_<pod_name>_` with a pod name from the *get pods* output.
+
 +
 [source,sh]
 ----
-  $ oc get olapp my-liberty-app -o yaml
+$ oc logs <pod_name>
 ----
-+
-Ensure that the effective CR values are what you wanted.
 
-* Check the `status` section of the CR. If the CR was successfully reconciled, the output should look like the following:
+== Troubleshooting custom resources [[troubleshooting-custom-resources]]
+
+If the operator is running as wanted, check the status of the `OpenLibertyApplication` CR instance.
+
+The following commands use `olapp`, which is the short name for `OpenLibertyApplication`.
+
+* Check the CR status. In the *get olapp* command, replace `_<app_name>_` with the name of your CR instance.
+
++ 
+[source,sh]
+----
+$ oc get olapp <app_name> -o wide
+----
+
++
+The following example shows the command with `my-liberty-app` for `_<app_name>_` and the output.
+
 +
 [source,sh]
 ----
-  $ oc get olapp my-liberty-app -o yaml
+$ oc get olapp my-liberty-app -o wide
+
+NAME             IMAGE                       EXPOSED   RECONCILED   REASON    MESSAGE   AGE
+my-liberty-app   quay.io/my-repo/my-app:1.0  false     True                             1h
+----
+
+* Check the CR effective fields. In the *get olapp* command, replace `_<app_name>_` with the name of your CR instance.
+
++
+[source,sh]
+----
+$ oc get olapp <app_name> -o yaml
+----
+
++
+Ensure that the effective CR values in the output are what you want. If the CR successfully reconciled, the output has `Reconciled` in the `status` section.
+
++
+[source,sh]
+----
+$ oc get olapp my-liberty-app -o yaml
 
   apiVersion: openliberty.io/v1beta1
   kind: OpenLibertyApplication
@@ -65,9 +109,100 @@ Ensure that the effective CR values are what you wanted.
       type: Reconciled
 ----
 
-* Check the CR events:
+* Check the CR events. In the *describe olapp* command, replace `_<app_name>_` with the name of your CR instance.
+
++ 
+[source,sh]
+----
+$ oc describe olapp <app_name>
+----
+
+=== Lost connections when using OpenJ9 version openj9-0.33.1 [[lost-connections-when-using-openj9-version]]
+
+If you are running a `OpenLibertyApplication` custom resource that uses JITServer with OpenJ9 version `openj9-0.33.1`, the application might get lost connections to the JITServer with errors in the application and JIT Server containers. To prevent this problem, upgrade OpenJ9 to version `0.35.0`.
+
+* The following code shows an example error in an application pod.
+
 +
 [source,sh]
 ----
-  $ oc describe olapp my-liberty-app
+139745560807168:error:140940F4:SSL routines:ssl3_read_bytes:unexpected message:ssl/record/rec_layer_s3.c:1477:
+#JITServer: t=865045 Lost connection to the server (serverUID=2529813496315317418)
+----
+
+* The following shows an example error in a JIT server pod
+
++
+[source,sh]
+----
+139825751693056:error:1408F10B:SSL routines:ssl3_get_record:wrong version number:ssl/record/ssl3_record.c:355:
+----
+
+* The following code shows how to get the version information for OpenJ9.
+
++ 
+[source,sh]
+----
+sh-4.4$ java -version
+openjdk version "17.0.4.1" 2022-08-12
+IBM Semeru Runtime Open Edition 17.0.4.1 (build 17.0.4.1+1)
+Eclipse OpenJ9 VM 17.0.4.1 (build openj9-0.33.1, JRE 17 Linux amd64-64-Bit Compressed References 20220812_266 (JIT enabled, AOT enabled)
+OpenJ9   - 1d9d16830
+OMR      - b58aa2708
+JCL      - 1f4d354e654 based on jdk-17.0.4.1+1)
+----
+
+* The following code sample shows details of the Liberty version.
+
++
+[source,sh]
+----
+********************************************************************************
+product = Open Liberty 22.0.0.10 (wlp-1.0.69.cl221020220912-1100)
+wlp.install.dir = /opt/ol/wlp/
+server.output.dir = /opt/ol/wlp/output/defaultServer/
+java.home = /opt/java/openjdk
+java.version = 17.0.4.1
+java.runtime = IBM Semeru Runtime Open Edition (17.0.4.1+1)
+os = Linux (4.18.0-372.19.1.el8_6.x86_64; amd64) (en_US)
+process = 1@daytrader7-7f795bd46b-8vtkl
+Classpath = /opt/ol/wlp/bin/tools/ws-server.jar:/opt/ol/wlp/bin/tools/ws-javaagent.jar
+Java Library path = /opt/java/openjdk/lib/default:/opt/java/openjdk/lib:/usr/lib64:/usr/lib
+********************************************************************************
+----
+
+
+* The following code sample shows that OpenJ9 version `0.35.0` is installed.
+
++
+[source,sh]
+----
+sh-4.4$ java -version
+openjdk version "17.0.5" 2022-10-18
+IBM Semeru Runtime Open Edition 17.0.5.0 (build 17.0.5+8)
+Eclipse OpenJ9 VM 17.0.5.0 (build openj9-0.35.0, JRE 17 Linux amd64-64-Bit Compressed References 20221018_325 (JIT enabled, AOT enabled)
+OpenJ9   - e04a7f6c1
+OMR      - 85a21674f
+JCL      - 32d2c409a33 based on jdk-17.0.5+8)
+----
+
+* The following code sample shows details of the Liberty version.
+
++
+[source,sh]
+----
+********************************************************************************
+product = Open Liberty 22.0.0.12 (wlp-1.0.71.cl221220221107-1900)
+wlp.install.dir = /opt/ol/wlp/
+server.output.dir = /opt/ol/wlp/output/defaultServer/
+java.home = /opt/java/openjdk
+java.version = 17.0.5
+java.runtime = IBM Semeru Runtime Open Edition (17.0.5+8)
+os = Linux (4.18.0-305.57.1.el8_4.x86_64; amd64) (en_US)
+process = 1@daytrader7-0
+Classpath = /opt/ol/wlp/bin/tools/ws-server.jar:/opt/ol/wlp/bin/tools/ws-javaage
+nt.jar
+Java Library path = /opt/java/openjdk/lib/default:/opt/java/openjdk/lib:/usr/lib
+64:/usr/lib
+********************************************************************************
 ----
