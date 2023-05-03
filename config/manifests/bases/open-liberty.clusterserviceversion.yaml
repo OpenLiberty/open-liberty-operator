@@ -486,6 +486,32 @@ spec:
         path: semeruCloudCompiler.resources
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
+      - description: An array of architectures to be considered for deployment. Their
+          position in the array indicates preference.
+        displayName: Architecture
+        path: affinity.architecture
+      - description: Annotations to be added only to the Deployment and resources
+          owned by the Deployment
+        displayName: Annotations
+        path: deployment.annotations
+      - description: A convenient field to request the size of the persisted storage
+          to use for serviceability.
+        displayName: Size
+        path: serviceability.size
+      - description: A convenient field to request the StorageClassName of the persisted
+          storage to use for serviceability.
+        displayName: Storage Class Name
+        path: serviceability.storageClassName
+      - description: The name of the PersistentVolumeClaim resource you created to
+          be used for serviceability.
+        displayName: Volume Claim Name
+        path: serviceability.volumeClaimName
+      - description: Specifies the host name of your enterprise GitHub.
+        displayName: Hostname
+        path: sso.github.hostname
+      - description: Name of the header to use when an OAuth access token is forwarded.
+        displayName: Access Token Header Name
+        path: sso.oauth2[0].accessTokenHeaderName
       - description: Determines whether the access token that is provided in the request
           is used for authentication.
         displayName: Access Token Required
@@ -498,16 +524,48 @@ spec:
         path: sso.oauth2[0].accessTokenSupported
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Specifies an authorization endpoint URL for the OAuth 2.0 provider.
+          Required field.
+        displayName: Authorization Endpoint
+        path: sso.oauth2[0].authorizationEndpoint
+      - description: The name of the social login configuration for display.
+        displayName: Display Name
+        path: sso.oauth2[0].displayName
+      - description: Specifies the name of the claim. Use its value as the user group
+          membership
+        displayName: Group Name Attribute
+        path: sso.oauth2[0].groupNameAttribute
       - description: Specifies the unique ID for the provider. The default value is
           oauth2.
         displayName: ID
         path: sso.oauth2[0].id
+      - description: Specifies the realm name for this social media.
+        displayName: Realm Name
+        path: sso.oauth2[0].realmName
+      - description: Specifies the name of the claim. Use its value as the subject
+          realm.
+        displayName: Realm Name Attribute
+        path: sso.oauth2[0].realmNameAttribute
+      - description: Specifies one or more scopes to request.
+        displayName: Scope
+        path: sso.oauth2[0].scope
+      - description: Specifies a token endpoint URL for the OAuth 2.0 provider. Required
+          field.
+        displayName: Token Endpoint
+        path: sso.oauth2[0].tokenEndpoint
+      - description: Specifies the required authentication method.
+        displayName: Token Endpoint Auth Method
+        path: sso.oauth2[0].tokenEndpointAuthMethod
       - description: The URL for retrieving the user information.
         displayName: User API
         path: sso.oauth2[0].userApi
       - description: Indicates which specification to use for the user API.
         displayName: User API Type
         path: sso.oauth2[0].userApiType
+      - description: Specifies the name of the claim. Use its value as the authenticated
+          user principal.
+        displayName: User Name Attribute
+        path: sso.oauth2[0].userNameAttribute
       statusDescriptors:
       - description: Exposed URI of the application endpoint
         displayName: Application
@@ -829,6 +887,15 @@ spec:
       displayName: OpenLibertyDump
       kind: OpenLibertyDump
       name: openlibertydumps.apps.openliberty.io
+      specDescriptors:
+      - description: 'Optional. List of memory dump types to request: thread, heap,
+          system.'
+        displayName: Include
+        path: include
+      - description: The name of the Pod, which must be in the same namespace as the
+          OpenLibertyDump CR.
+        displayName: Pod Name
+        path: podName
       statusDescriptors:
       - description: Location of the generated dump file
         displayName: Dump File Path
@@ -845,6 +912,26 @@ spec:
       displayName: OpenLibertyTrace
       kind: OpenLibertyTrace
       name: openlibertytraces.apps.openliberty.io
+      specDescriptors:
+      - description: Set to true to stop tracing.
+        displayName: Disable
+        path: disable
+      - description: The maximum size (in MB) that a log file can reach before it
+          is rolled. To disable this attribute, set the value to 0.
+        displayName: Max File Size
+        path: maxFileSize
+      - description: If an enforced maximum file size exists, this setting is used
+          to determine how many of each of the logs files are kept.
+        displayName: Max Files
+        path: maxFiles
+      - description: The name of the Pod, which must be in the same namespace as the
+          OpenLibertyTrace CR.
+        displayName: Pod Name
+        path: podName
+      - description: The trace string to be used to selectively enable trace. The
+          default is *=info.
+        displayName: Trace Specification
+        path: traceSpecification
       version: v1
     - description: Day-2 operation for gathering server traces
       displayName: OpenLibertyTrace

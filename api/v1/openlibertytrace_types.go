@@ -10,18 +10,23 @@ import (
 // Defines the desired state of OpenLibertyTrace
 type OpenLibertyTraceSpec struct {
 	// The name of the Pod, which must be in the same namespace as the OpenLibertyTrace CR.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	PodName string `json:"podName"`
 
 	// The trace string to be used to selectively enable trace. The default is *=info.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	TraceSpecification string `json:"traceSpecification"`
 
 	// The maximum size (in MB) that a log file can reach before it is rolled. To disable this attribute, set the value to 0.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	MaxFileSize *int32 `json:"maxFileSize,omitempty"`
 
 	// If an enforced maximum file size exists, this setting is used to determine how many of each of the logs files are kept.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	MaxFiles *int32 `json:"maxFiles,omitempty"`
 
 	// Set to true to stop tracing.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Disable *bool `json:"disable,omitempty"`
 }
 
