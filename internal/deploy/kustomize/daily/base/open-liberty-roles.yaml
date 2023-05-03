@@ -5,7 +5,7 @@ metadata:
     app.kubernetes.io/instance: open-liberty-operator
     app.kubernetes.io/name: open-liberty-operator
   name: olo-controller-manager
-  namespace: default
+  namespace: open-liberty
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -14,7 +14,7 @@ metadata:
     app.kubernetes.io/instance: open-liberty-operator
     app.kubernetes.io/name: open-liberty-operator
   name: olo-leader-election-role
-  namespace: default
+  namespace: open-liberty
 rules:
 - apiGroups:
   - ""
@@ -46,7 +46,7 @@ metadata:
     app.kubernetes.io/instance: open-liberty-operator
     app.kubernetes.io/name: open-liberty-operator
   name: olo-manager-role
-  namespace: default
+  namespace: open-liberty
 rules:
 - apiGroups:
   - apps
@@ -231,7 +231,7 @@ metadata:
     app.kubernetes.io/instance: open-liberty-operator
     app.kubernetes.io/name: open-liberty-operator
   name: olo-leader-election-rolebinding
-  namespace: default
+  namespace: open-liberty
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -239,7 +239,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: olo-controller-manager
-  namespace: default
+  namespace: open-liberty
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -248,7 +248,7 @@ metadata:
     app.kubernetes.io/instance: open-liberty-operator
     app.kubernetes.io/name: open-liberty-operator
   name: olo-manager-rolebinding
-  namespace: default
+  namespace: open-liberty
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -256,4 +256,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: olo-controller-manager
-  namespace: default
+  namespace: open-liberty

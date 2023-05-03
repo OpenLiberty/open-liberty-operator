@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: olo-controller-manager
-  namespace: default
+  namespace: open-liberty
 spec:
   template:
     spec:
