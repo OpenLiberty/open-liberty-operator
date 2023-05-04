@@ -4,10 +4,9 @@ The Open Liberty Operator can be used to deploy and manage applications running 
 
 **Important**: This user guide only applies to Operator versions **1.2.0 and above**.
 
-**Important**: Are you **upgrading from version 0.8.x or below**? If so, before the upgrade, make sure to review the documentation on link:++https://ibm.biz/olo-upgrade-v1++[behavioural changes] that could impact your applications.
-
-
 == Operator installation
+
+**Important**: Are you **upgrading from version 0.8.x or below**? If so, before the upgrade, make sure to review the documentation on link:++https://ibm.biz/olo-upgrade-v1++[behavioural changes] that could impact your applications.
 
 Use the instructions for one of the link:++../deploy/releases++[releases] to install the operator into a Kubernetes cluster.
 
@@ -32,7 +31,7 @@ NOTE: The Open Liberty Operator can only interact with resources it is given per
 You can continue to use existing custom resources (CRs) with `apiVersion: apps.openliberty.io/v1beta2`, but there are some out-of-the-box behavioural changes in versions 1.2.0+ that could impact your applications. Primary changes are listed below. Prior to upgrading the Operator in a production environment, try the upgrade in a test or staging environment and validate that your applications function as you expect with the new version of the Open Liberty Operator. If not, make the necessary changes to your custom resources (CRs).
 
 - Certificate for service is automatically generated for each application to secure traffic. If `.spec.expose` is _true_, the Route is configured automatically to enable TLS by using _reencrypt_ termination. You must enable TLS within the application image. A secure TLS port (i.e. `9443`) must be specified for `.spec.service.port` field. See link:#configuring-transport-layer-security-tls-certificates[Configuring transport layer security (TLS) certificates (.spec.manageTLS)]
-- Network policies are created for each application to block incoming traffic. See link:++https://www.ibm.com/docs/en/was-liberty/base?topic=operator-configuration-examples#cfg-r-commoncomp__cc-networkpol++[Allowing or limiting incoming traffic (.spec.networkPolicy)]
+- Network policies are created for each application to block incoming traffic. See link:#allowing-or-limiting-incoming-traffic[Allowing or limiting incoming traffic (.spec.networkPolicy)]
 - Security context is set to the most secure policy. See link:#set-privileges-and-permissions-for-a-pod-or-container[Set privileges and permissions for a pod or container (.spec.securityContext)]
 
 == Overview
