@@ -15,7 +15,7 @@ Appropriate roles and bindings are required to watch another namespace or watch 
 +
 [source,sh]
 ----
-kubectl create -f https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/1.2.0/kubectl/openliberty-app-crd.yaml
+kubectl apply --server-side -f https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/1.2.0/kubectl/openliberty-app-crd.yaml
 ----
 
 . Install the `Open Liberty Operator:
@@ -67,4 +67,4 @@ curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main
 
 To uninstall the operator, run commands from Step 2c first and then Step 2b (if applicable), but after replacing `kubectl apply` with `kubectl delete`.
 
-Optionally you can delete the CRD resources, but note that deleting the CRD also deletes all instances of the `OpenLibertyApplication`, `OpenLibertyTrace` and `OpenLibertyDump` custom resources in the cluster. Skip this step if you are planning to install the Open Liberty Operator again and want the existing instances of these custom resources to be managed by the new instance of the Operator. To delete the CRD, run command from Step 1, but after replacing `kubectl create` with `kubectl delete`.
+Optionally you can delete the CRD resources, but note that deleting the CRD also deletes all instances of the `OpenLibertyApplication`, `OpenLibertyTrace` and `OpenLibertyDump` custom resources in the cluster. Skip this step if you are planning to install the Open Liberty Operator again and want the existing instances of these custom resources to be managed by the new instance of the Operator. To delete the CRD, run command from Step 1, but after replacing `kubectl apply` with `kubectl delete`.
