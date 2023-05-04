@@ -14,7 +14,11 @@ Red Hat OpenShift 4.10 or higher is supported. The operator is also supported on
 
 === Option 1: Install using Operator Lifecycle Manager (OLM) on OpenShift
 
-Open Liberty Operator is available from Red Hat's Certified OpenShift Operators catalog. From the integrated OperatorHub in OpenShift, filter by selecting `Certified` checkbox under `Source`. Search for `Open Liberty`. Click on the tile with `Open Liberty` to install the operator. Select the channel `v1.2` to install version 1.2.0. Refer to the **Deploy and use** section link:++https://catalog.redhat.com/software/operators/detail/5e987455e1ad57318e25093f#deploy-instructions/++[here] for additional information on installing with OpenShift web console and the instructions for installing using `oc` CLI. While following the instructions for installing using the CLI, use the following `Subscription`. Replace `<install_namespace>` with the appropriate value:
+Open Liberty Operator is available from Red Hat's Certified OpenShift Operators catalog. 
+
+To install using the integrated OperatorHub in OpenShift UI, select `Operators` from the navigation panel, then select `OperatorHub` and then search for `Open Liberty`. Click on the tile with `Open Liberty` to install the Operator. Select the channel `v1.2` to install version 1.2.0.
+
+To install using the `oc` CLI, refer to the **Deploy and use** section link:++https://catalog.redhat.com/software/operators/detail/5e987455e1ad57318e25093f#deploy-instructions/++[here]. While following the instructions for installing using the CLI, use the following `Subscription`. Replace `<install_namespace>` with the namespace you want to install the Operator to:
 
 ```
 apiVersion: operators.coreos.com/v1alpha1
