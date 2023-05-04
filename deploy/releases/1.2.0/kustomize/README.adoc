@@ -1,5 +1,7 @@
 = Installing the Open Liberty Operator using kustomize
 
+**Important**: Are you **upgrading from version 0.8.x or below**? If so, before the upgrade, make sure to review the documentation on link:++https://ibm.biz/olo-upgrade-v1++[behavioural changes] that could impact your applications.
+
 This directory contains configuration files that helps installing the Open Liberty operator
 using `kustomize` with the Kubernetes command-line interface (CLI) (`kubectl`). These configurations
 are useful when the cluster is not a Red Hat® OpenShift® Container Platform cluster or when
