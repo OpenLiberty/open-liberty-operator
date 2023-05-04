@@ -1,7 +1,7 @@
 
 == Installation
 
-The Open Liberty Operator can be installed to:
+The Open Liberty Operator 1.2.0 can be installed to:
 
 * watch own namespace
 * watch another namespace
@@ -11,11 +11,11 @@ Appropriate roles and bindings are required to watch another namespace or watch 
 
 ---
 
-. Install Custom Resource Definitions (CRDs) for `OpenLibertyApplication` and day-2 operations `OpenLibertyTrace` and `OpenLibertyDump`. This needs to be done only ONCE per cluster:
+. Install Custom Resource Definition (CRD) resources for `OpenLibertyApplication` and day-2 operations `OpenLibertyTrace` and `OpenLibertyDump`. This needs to be done only ONCE per cluster:
 +
 [source,sh]
 ----
-kubectl create -f https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/internal/deploy/1.2.0/kubectl/openliberty-app-crd.yaml
+kubectl create -f https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/1.2.0/kubectl/openliberty-app-crd.yaml
 ----
 
 . Install the `Open Liberty Operator:
@@ -39,7 +39,7 @@ NOTE: Ensure that you replace  `<SPECIFY_OPERATOR_NAMESPACE_HERE>` and `<SPECIFY
 +
 [source,sh]
 ----
-curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/internal/deploy/1.2.0/kubectl/openliberty-app-rbac-watch-all.yaml \
+curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/1.2.0/kubectl/openliberty-app-rbac-watch-all.yaml \
       | sed -e "s/OPEN_LIBERTY_OPERATOR_NAMESPACE/${OPERATOR_NAMESPACE}/" \
       | kubectl apply -f -
 ----
@@ -48,7 +48,7 @@ curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main
 +
 [source,sh]
 ----
-curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/internal/deploy/1.2.0/kubectl/openliberty-app-rbac-watch-another.yaml \
+curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/1.2.0/kubectl/openliberty-app-rbac-watch-another.yaml \
       | sed -e "s/OPEN_LIBERTY_OPERATOR_NAMESPACE/${OPERATOR_NAMESPACE}/" \
       | sed -e "s/OPEN_LIBERTY_WATCH_NAMESPACE/${WATCH_NAMESPACE}/" \
       | kubectl apply -f -
@@ -58,18 +58,13 @@ curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main
 +
 [source,sh]
 ----
-curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/internal/deploy/1.2.0/kubectl/openliberty-app-operator.yaml \
+curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/1.2.0/kubectl/openliberty-app-operator.yaml \
       | sed -e "s/OPEN_LIBERTY_WATCH_NAMESPACE/${WATCH_NAMESPACE}/" \
       | kubectl apply -n ${OPERATOR_NAMESPACE} -f -
 ----
 
 == Uninstallation
 
-_Optional_: Remove any `OpenLibertyApplication` Custom Resource instances before uninstalling the operator.
-
 To uninstall the operator, run commands from Step 2c first and then Step 2b (if applicable), but after replacing `kubectl apply` with `kubectl delete`.
 
-To delete the CRD, run command from Step 1, but after replacing `kubectl apply` with `kubectl delete`.
-
-_Deleting the CRD will also delete all `OpenLibertyApplication` in the cluster_
-
+Optionally you can delete the CRD resources, but note that deleting the CRD also deletes all instances of the `OpenLibertyApplication`, `OpenLibertyTrace` and `OpenLibertyDump` custom resources in the cluster. Skip this step if you are planning to install the Open Liberty Operator again and want the existing instances of these custom resources to be managed by the new instance of the Operator. To delete the CRD, run command from Step 1, but after replacing `kubectl create` with `kubectl delete`.
