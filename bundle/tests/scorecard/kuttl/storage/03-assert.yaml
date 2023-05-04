@@ -8,9 +8,11 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: storage-liberty
+  annotations:
+    testStep: storage-03
 status:
   replicas: 1
-#  readyReplicas: 1
+  readyReplicas: 1
 #  updatedReplicas: 1
 ---
 kind: PersistentVolumeClaim

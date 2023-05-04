@@ -4,6 +4,8 @@ apiVersion: apps.openliberty.io/v1
 kind: OpenLibertyApplication
 metadata:
   name: storage-liberty
+  annotations:
+    testStep: storage-03
 spec:
   # Add fields here
   applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
