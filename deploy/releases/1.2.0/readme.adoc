@@ -1,5 +1,7 @@
 = Open Liberty Operator v1.2.0
 
+**Important**: Are you **upgrading from version 0.8.x or below**? If so, before the upgrade, make sure to review the documentation on link:++https://ibm.biz/olo-upgrade-v1++[behavioural changes] that could impact your applications.
+
 == Supported Environments
 
 The Open Liberty Operator is is available for the following CPU architectures:

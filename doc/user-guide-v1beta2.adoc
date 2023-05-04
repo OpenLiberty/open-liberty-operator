@@ -2,9 +2,7 @@
 
 The Open Liberty Operator can be used to deploy and manage applications running on Open Liberty or WebSphere Liberty into Kubernetes clusters. You can also perform link:++#day-2-operations++[Day-2 operations] such as gathering traces and dumps using the operator.
 
-This documentation refers to the latest codebase.  For documentation and samples of older releases, please check out the link:++https://github.com/OpenLiberty/open-liberty-operator/releases++[main releases] page and navigate the corresponding tag.
-
-**Important**: This user guide only applies to operator versions **0.8.0 and above**. For operator versions **0.7.1 and below**, refer to this link:++user-guide.adoc++[user guide].
+**Important**: This user guide only applies to operator versions **0.8.0, 0.8.1 and 0.8.2**. For operator versions **1.2.0 and above**, refer to this link:++user-guide-v1.adoc++[user guide]. For operator versions **0.7.1 and below**, refer to this link:++user-guide-v1beta1.adoc++[user guide].
 
 **Important**: If you are upgrading from Open Liberty Operator versions 0.7.1 and below, note that API version of the custom resources (CRs) `OpenLibertyApplication`, `OpenLibertyDump` and `OpenLibertyTrace` have changed. Custom resources with `apiVersion: openliberty.io/v1beta1` are not handled by Open Liberty Operator versions 0.8.0 and above. You must delete existing custom resources with `apiVersion: openliberty.io/v1beta1` and create new custom resources with `apiVersion: apps.openliberty.io/v1beta2`.
 

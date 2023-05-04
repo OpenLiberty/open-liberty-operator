@@ -99,7 +99,7 @@ Ensure that the effective CR values in the output are what you want. If the CR s
 ----
 $ oc get olapp my-liberty-app -o yaml
 
-  apiVersion: openliberty.io/v1beta1
+  apiVersion: apps.openliberty.io/v1
   kind: OpenLibertyApplication
   ...
   status:

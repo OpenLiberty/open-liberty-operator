@@ -1,19 +1,21 @@
 = Open Liberty Operator v1.2.0+
 
-The Open Liberty Operator can be used to deploy and manage applications running on Open Liberty or WebSphere Liberty into Kubernetes clusters. You can also perform link:++#day-2-operations++[Day-2 operations] such as gathering traces and dumps using the operator.
+The Open Liberty Operator can be used to deploy and manage applications running on Open Liberty or WebSphere Liberty into Kubernetes clusters. You can also perform link:++#day-2-operations++[Day-2 operations] such as gathering traces and dumps using the Operator.
 
-This documentation refers to the latest codebase.  For documentation and samples of older releases, please check out the link:++https://github.com/OpenLiberty/open-liberty-operator/releases++[main releases] page and navigate the corresponding tag.
+**Important**: This user guide only applies to Operator versions **1.2.0 and above**.
 
-**Important**: This user guide only applies to operator versions **1.2.0 and above**.
+**Important**: Are you **upgrading from version 0.8.x or below**? If so, before the upgrade, make sure to review the documentation on link:++https://ibm.biz/olo-upgrade-v1++[behavioural changes] that could impact your applications.
 
-- For operator versions **below 1.2.0** refer to the link:++user-guide-v1beta2.adoc[v1beta2 user guide].
-- For operator versions **0.7.1 and below**, refer to the link:++user-guide.adoc++[v1beta1 user guide].
-
-**Important**: If you are upgrading from Open Liberty Operator versions 0.7.1 and below, note that API version of the custom resources (CRs) `OpenLibertyApplication`, `OpenLibertyDump` and `OpenLibertyTrace` have changed. Custom resources with `apiVersion: openliberty.io/v1beta1` are not handled by Open Liberty Operator versions 0.8.0 and above. You must delete existing custom resources with `apiVersion: openliberty.io/v1beta1` and create new custom resources with `apiVersion: apps.openliberty.io/v1`.
 
 == Operator installation
 
 Use the instructions for one of the link:++../deploy/releases++[releases] to install the operator into a Kubernetes cluster.
+
+The Open Liberty Operator is available for the following CPU architectures:
+
+- Linux&reg; x86_64 (amd64)
+- Linux&reg; on IBM&reg; Z (s390x)
+- Linux&reg; on Power&reg; (ppc64le)
 
 The Open Liberty Operator can be installed to:
 
@@ -24,6 +26,14 @@ The Open Liberty Operator can be installed to:
 Appropriate cluster roles and bindings are required to watch another namespace or to watch all namespaces in the cluster.
 
 NOTE: The Open Liberty Operator can only interact with resources it is given permission to interact through link:++https://kubernetes.io/docs/reference/access-authn-authz/rbac/++[Role-based access control (RBAC)]. Some of the operator features require interacting with resources in other namespaces. In that case, the operator must be installed with correct `ClusterRole` definitions.
+
+== Operator upgrade from 0.8.x
+
+You can continue to use existing custom resources (CRs) with `apiVersion: apps.openliberty.io/v1beta2`, but there are some out-of-the-box behavioural changes in versions 1.2.0+ that could impact your applications. Primary changes are listed below. Prior to upgrading the Operator in a production environment, try the upgrade in a test or staging environment and validate that your applications function as you expect with the new version of the Open Liberty Operator. If not, make the necessary changes to your custom resources (CRs).
+
+- Certificate for service is automatically generated for each application to secure traffic. If `.spec.expose` is _true_, the Route is configured automatically to enable TLS by using _reencrypt_ termination. You must enable TLS within the application image. A secure TLS port (i.e. `9443`) must be specified for `.spec.service.port` field. See link:#configuring-transport-layer-security-tls-certificates[Configuring transport layer security (TLS) certificates (.spec.manageTLS)]
+- Network policies are created for each application to block incoming traffic. See link:++https://www.ibm.com/docs/en/was-liberty/base?topic=operator-configuration-examples#cfg-r-commoncomp__cc-networkpol++[Allowing or limiting incoming traffic (.spec.networkPolicy)]
+- Security context is set to the most secure policy. See link:#set-privileges-and-permissions-for-a-pod-or-container[Set privileges and permissions for a pod or container (.spec.securityContext)]
 
 == Overview
 
@@ -1254,7 +1264,7 @@ spec:
 
 An administrator can configure TLS certificates to secure applications that run on Kubernetes-based clusters. By default, the operator generates certificates. Instead, an administrator can specify certificates for the Route and Service.
 
-By default, the `OpenLibertyApplication` link:#crd-spec-managetls[`.spec.manageTLS`] parameter is set to `true` and the operator attempts to generate certificates and mount them to the pod at `/etc/x509/certs`. If `.spec.expose` is set to `true`, the Route also is configured automatically to enable TLS by using `reencrypt` termination. This configuration ensures end-to-end encryption from an external source to the application or pod.
+By default, the `OpenLibertyApplication` link:#crd-spec-managetls[`.spec.manageTLS`] parameter is set to `true` and the operator attempts to generate certificates and mount them to the pod at `/etc/x509/certs`. You must enable TLS within your application image to use this capability. Port `9443` is used as the default service port. If your `OpenLibertyApplication` custom resource specifies the port explicitly using `.spec.service.port` field then make sure its value is set to the secure TLS port. Specifying `9080` as the value for `.spec.service.port` can cause the application to not work properly. If `.spec.expose` is set to `true`, the Route also is configured automatically to enable TLS by using `reencrypt` termination. This configuration ensures end-to-end encryption from an external source to the application or pod.
 
 To change this default configuration, see the following sections.
 
