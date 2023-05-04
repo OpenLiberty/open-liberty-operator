@@ -1,6 +1,8 @@
 
 == Installation
 
+**Important**: Are you **upgrading from version 0.8.x or below**? If so, before the upgrade, make sure to review the documentation on link:++https://ibm.biz/olo-upgrade-v1++[behavioural changes] that could impact your applications.
+
 The Open Liberty Operator 1.2.0 can be installed to:
 
 * watch own namespace
