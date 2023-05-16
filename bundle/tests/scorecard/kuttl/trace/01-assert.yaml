@@ -16,3 +16,5 @@ status:
   operatedResource:
     resourceName: trace-liberty-0
     resourceType: pod
+  versions:
+    reconciled: 1.2.0
