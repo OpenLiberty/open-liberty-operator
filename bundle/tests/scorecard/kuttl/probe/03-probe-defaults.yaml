@@ -4,7 +4,7 @@ metadata:
   name: probes-liberty
 spec:
   # Add fields here
-  applicationImage: icr.io/appcafe/open-liberty:full-java8-openj9-ubi
+  applicationImage: icr.io/appcafe/open-liberty/samples/getting-started
   manageTLS: false
   service:
     port: 9443
