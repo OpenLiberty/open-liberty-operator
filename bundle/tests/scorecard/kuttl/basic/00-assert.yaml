@@ -10,3 +10,11 @@ status:
   replicas: 1
   readyReplicas: 1
   updatedReplicas: 1
+---
+apiVersion: apps.openliberty.io/v1
+kind: OpenLibertyApplication
+metadata:
+  name: example-liberty-app
+status:
+  versions:
+    reconciled: 1.2.0
