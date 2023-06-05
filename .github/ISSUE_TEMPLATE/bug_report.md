@@ -31,13 +31,6 @@ A clear and concise description of what you expected to happen (or insert a code
 
 <!--- Insert the output of `oc version` here -->
 
-* Appsody CLI version (if applicable):
-
-<!--- Insert the output of `appsody version`here -->
-
-* Appsody Stack (if applicable):
-
-
 ### Possible solution
 
 <!--- Only if you have suggestions on a fix for the bug -->
