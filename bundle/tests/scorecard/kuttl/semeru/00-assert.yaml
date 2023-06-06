@@ -3,10 +3,6 @@
 # 2. Semeru service is create wtih the all correct default values.
 # 3. Application deployment is created with all correct default values (including certs and jitserver config properties being set)  
 
-apiVersion: kuttl.dev/v1beta1
-kind: TestAssert
-timeout: 120
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
