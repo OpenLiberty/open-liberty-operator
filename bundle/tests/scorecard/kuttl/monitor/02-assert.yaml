@@ -17,7 +17,7 @@ spec:
       app.kubernetes.io/instance: service-monitor-liberty
   endpoints:
   - path: "/path"
-    scheme: "myScheme"
+    scheme: "HTTPS"
     port: 9443-tcp
     params:
       params:
