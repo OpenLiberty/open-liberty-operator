@@ -13,4 +13,4 @@ metadata:
   name: example-liberty-app
 status:
   versions:
-    reconciled: 1.2.0
+    reconciled: 1.2.1
