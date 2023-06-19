@@ -301,7 +301,7 @@ spec:
           value: OPEN_LIBERTY_WATCH_NAMESPACE
         - name: RELATED_IMAGE_LIBERTY_SAMPLE_APP
           value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:b0d658e07e656a8cb3b02bf7194f788f4456c7ffe9d3361f96ac2807045dad80
-        image: icr.io/appcafe/open-liberty-operator:daily
+        image: cp.stg.icr.io/cp/open-liberty-operator@sha256:c51c4064f5c0494bc735ef2c88b360f01a3a8975fce2ed63a1bcb267a31c847c
         livenessProbe:
           failureThreshold: 3
           httpGet:
