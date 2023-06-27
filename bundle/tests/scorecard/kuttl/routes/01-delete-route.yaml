@@ -1,8 +1,0 @@
-apiVersion: apps.openliberty.io/v1
-kind: OpenLibertyApplication
-metadata:
-  name: route
-spec:
-  # Add fields here
-  expose: false
-

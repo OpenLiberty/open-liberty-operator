@@ -1,8 +1,0 @@
-apiVersion: route.openshift.io/v1
-kind: Route
-metadata:
-  name: route-with-cert-lib-app
-spec:
-  host: myapp.mycompany.com
-  tls:
-    termination: reencrypt

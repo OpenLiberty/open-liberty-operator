@@ -70,7 +70,7 @@ fi
 # prod or dev, start out with dev
 export ebcEnvironment=prod
 # priority is 30 to start, prod priority may be 100
-export ebc_priority=30
+export ebc_priority=100
 export ebc_autoCompleteAfterXHours=$(get_env ebc_autocomplete_hours "6")
 # gather pipeline URL and place in following env var
 reason="https://cloud.ibm.com/devops/pipelines/tekton/${PIPELINE_ID}/runs/${PIPELINE_RUN_ID}"

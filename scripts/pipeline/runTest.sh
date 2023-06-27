@@ -50,10 +50,23 @@ DIGEST="$(skopeo inspect docker://$IMAGE | grep Digest | grep -o 'sha[^\"]*')"
 
 export DIGEST
 echo "one-pipeline Digest Value: ${DIGEST}"
+echo "setting up tests from operators repo - runTest.sh"
+cp -rf operators/tests/common/* ../../bundle/tests/scorecard/kuttl
+cp -rf operators/tests/all-liberty/* ../../bundle/tests/scorecard/kuttl
+
+cp -rf operators/tests/kind/* ../../bundle/tests/scorecard/kind-kuttl
+cp -rf operators/scripts/test/* ../test
 
 cd ../..
 echo "directory before acceptance-test.sh"
 pwd
+echo "Getting the operator short name"
+export OP_SHORT_NAME=$(get_env operator-short-name)
+echo "Operator shortname is: ${OP_SHORT_NAME}"
+echo "Running modify-tests.sh script"
+scripts/test/modify-tests.sh --operator ${OP_SHORT_NAME}
+
+echo "Running acceptance-test.sh script"
 
 scripts/acceptance-test.sh
 rc=$?
@@ -90,5 +103,7 @@ fi
 echo "Cleaning up after tests have be completed"
 echo "switching back to scripts/pipeline directory"
 cd ..
+echo "Deleting test scripts ready for another run..."
+rm -rf ../../bundle/tests/scorecard/*
 oc logout
 export CLUSTER_URL=""

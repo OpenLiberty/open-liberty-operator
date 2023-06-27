@@ -1,8 +1,0 @@
-# Builds off variation 00 configuration and changes replicas to 3 and verifies configuration is updated
-
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: my-liberty-app-semeru-compiler-1
-spec:
-  replicas: 3
