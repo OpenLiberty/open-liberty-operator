@@ -7,7 +7,7 @@ echo "in directory"
 pwd
 
 echo "running configure-cluster.sh"
-git clone --single-branch --branch main https://$(get_env git-token)@github.ibm.com/websphere/operators.git
+git clone --single-branch --branch cosolidate-tests https://$(get_env git-token)@github.ibm.com/websphere/operators.git
 ls -l operators/scripts/configure-cluster/configure-cluster.sh
 echo "**** issuing oc login"
 oc login --insecure-skip-tls-verify $clusterurl -u kubeadmin -p $token
