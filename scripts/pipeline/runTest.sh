@@ -53,12 +53,16 @@ echo "one-pipeline Digest Value: ${DIGEST}"
 echo "setting up tests from operators repo - runTest.sh"
 mkdir ../../bundle/tests/scorecard/kuttl
 mkdir ../../bundle/tests/scorecard/kind-kuttl
+
+# Copying all the relevent kuttl test and config file
 cp operators/tests/config.yaml ../../bundle/tests/scorecard/
 cp -rf operators/tests/common/* ../../bundle/tests/scorecard/kuttl
 cp -rf operators/tests/all-liberty/* ../../bundle/tests/scorecard/kuttl
 
+# Copying all the kind only kuttl tests. Deciding if the run is a kind run is done in the acceptance-test.sh script
 cp -rf operators/tests/kind/* ../../bundle/tests/scorecard/kind-kuttl
 
+# Copying the common test scripts
 mkdir ../test
 cp -rf operators/scripts/test/* ../test
 
@@ -72,7 +76,6 @@ echo "Running modify-tests.sh script"
 scripts/test/modify-tests.sh --operator ${OP_SHORT_NAME}
 
 echo "Running acceptance-test.sh script"
-
 scripts/acceptance-test.sh
 rc=$?
 
