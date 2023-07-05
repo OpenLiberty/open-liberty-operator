@@ -19,6 +19,7 @@ fi
 echo "sha is $SHA"
 
 files=" 
+config/samples/apps.openliberty.io_v1_openlibertyapplications.yaml
 config/samples/apps.openliberty.io_v1beta2_openlibertyapplications.yaml
 config/manager/manager.yaml
 internal/deploy/kustomize/daily/base/open-liberty-operator.yaml
