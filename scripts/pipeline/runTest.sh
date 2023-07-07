@@ -51,8 +51,8 @@ DIGEST="$(skopeo inspect docker://$IMAGE | grep Digest | grep -o 'sha[^\"]*')"
 export DIGEST
 echo "one-pipeline Digest Value: ${DIGEST}"
 echo "setting up tests from operators repo - runTest.sh"
-mkdir ../../bundle/tests/scorecard/kuttl
-mkdir ../../bundle/tests/scorecard/kind-kuttl
+mkdir -p ../../bundle/tests/scorecard/kuttl
+mkdir -p ../../bundle/tests/scorecard/kind-kuttl
 
 # Copying all the relevent kuttl test and config file
 cp operators/tests/config.yaml ../../bundle/tests/scorecard/
@@ -73,7 +73,7 @@ echo "Getting the operator short name"
 export OP_SHORT_NAME=$(get_env operator-short-name)
 echo "Operator shortname is: ${OP_SHORT_NAME}"
 echo "Running modify-tests.sh script"
-scripts/test/modify-tests.sh --operator ${OP_SHORT_NAME}
+scripts/test/modify-tests.sh --operator ${OP_SHORT_NAME} --arch ${ARCHITECTURE}
 
 echo "Running acceptance-test.sh script"
 scripts/acceptance-test.sh
