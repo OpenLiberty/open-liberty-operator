@@ -1,6 +1,37 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
+  labels:
+    app.kubernetes.io/instance: open-liberty-operator
+    app.kubernetes.io/name: open-liberty-operator
+  name: olo-leader-election-watched-role
+  namespace: olo-watched-ns
+rules:
+- apiGroups:
+  - ""
+  - coordination.k8s.io
+  resources:
+  - configmaps
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
   creationTimestamp: null
   labels:
     app.kubernetes.io/instance: open-liberty-operator
@@ -27,6 +58,48 @@ rules:
   - statefulsets
   verbs:
   - update
+- apiGroups:
+  - apps.openliberty.io
+  resources:
+  - openlibertyapplications
+  - openlibertyapplications/finalizers
+  - openlibertyapplications/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.openliberty.io
+  resources:
+  - openlibertydumps
+  - openlibertydumps/finalizers
+  - openlibertydumps/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.openliberty.io
+  resources:
+  - openlibertytraces
+  - openlibertytraces/finalizers
+  - openlibertytraces/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - autoscaling
   resources:
@@ -88,48 +161,6 @@ rules:
   - list
   - watch
 - apiGroups:
-  - apps.openliberty.io
-  resources:
-  - openlibertyapplications
-  - openlibertyapplications/finalizers
-  - openlibertyapplications/status
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps.openliberty.io
-  resources:
-  - openlibertydumps
-  - openlibertydumps/finalizers
-  - openlibertydumps/status
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps.openliberty.io
-  resources:
-  - openlibertytraces
-  - openlibertytraces/finalizers
-  - openlibertytraces/status
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
   - monitoring.coreos.com
   resources:
   - servicemonitors
@@ -185,35 +216,21 @@ rules:
   - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: RoleBinding
 metadata:
   labels:
     app.kubernetes.io/instance: open-liberty-operator
     app.kubernetes.io/name: open-liberty-operator
-  name: olo-leader-election-watched-role
+  name: olo-leader-election-watched-rolebinding
   namespace: olo-watched-ns
-rules:
-  - apiGroups:
-      - ""
-      - coordination.k8s.io
-    resources:
-      - configmaps
-      - leases
-    verbs:
-      - get
-      - list
-      - watch
-      - create
-      - update
-      - patch
-      - delete
-  - apiGroups:
-      - ""
-    resources:
-      - events
-    verbs:
-      - create
-      - patch
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: olo-leader-election-watched-role
+subjects:
+- kind: ServiceAccount
+  name: olo-controller-manager
+  namespace: olo-ns
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -231,21 +248,3 @@ subjects:
 - kind: ServiceAccount
   name: olo-controller-manager
   namespace: olo-ns
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  labels:
-    app.kubernetes.io/instance: open-liberty-operator
-    app.kubernetes.io/name: open-liberty-operator
-  name: olo-leader-election-watched-rolebinding
-  namespace: olo-watched-ns
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: olo-leader-election-watched-role
-subjects:
-- kind: ServiceAccount
-  name: olo-controller-manager
-  namespace: olo-ns
----

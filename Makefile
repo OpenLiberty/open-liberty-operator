@@ -210,6 +210,9 @@ bundle: manifests setup kustomize ## Generate bundle manifests and metadata, the
 	$(KUSTOMIZE) build config/kubectl/rbac-watch-all -o internal/deploy/kubectl/openliberty-app-rbac-watch-all.yaml
 	$(KUSTOMIZE) build config/kubectl/rbac-watch-another -o internal/deploy/kubectl/openliberty-app-rbac-watch-another.yaml
 
+	$(KUSTOMIZE) build config/kustomize/watch-all -o internal/deploy/kustomize/daily/overlays/watch-all-namespaces/cluster-roles.yaml
+	$(KUSTOMIZE) build config/kustomize/watch-another -o internal/deploy/kustomize/daily/overlays/watch-another-namespace/olo-watched-ns/watched-roles.yaml
+
 	operator-sdk bundle validate ./bundle
 
 .PHONY: fmt
