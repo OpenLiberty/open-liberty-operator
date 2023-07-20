@@ -1,16 +1,16 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: service-with-cert-annotations-lib-app-svc-tls-cm
+  name: service-with-cert-annotations-liberty-svc-tls-cm
   annotations:
     key1: value1
 spec:
-  secretName: service-with-cert-annotations-lib-app-svc-tls-cm
+  secretName: service-with-cert-annotations-liberty-svc-tls-cm
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: service-with-cert-annotations-lib-app
+  name: service-with-cert-annotations-liberty
 status:
   replicas: 1
   readyReplicas: 1
@@ -32,4 +32,4 @@ spec:
       - name: svc-certificate
         secret:
           defaultMode: 420
-          secretName: service-with-cert-annotations-lib-app-svc-tls-cm
+          secretName: service-with-cert-annotations-liberty-svc-tls-cm
