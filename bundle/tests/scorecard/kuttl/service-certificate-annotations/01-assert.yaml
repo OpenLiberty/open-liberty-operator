@@ -24,6 +24,10 @@ spec:
         - name: TLS_DIR
           value: /etc/x509/certs
         - name: SA_RESOURCE_VERSION
+        - name: WLP_LOGGING_CONSOLE_LOGLEVEL
+        - name: WLP_LOGGING_CONSOLE_SOURCE
+        - name: WLP_LOGGING_CONSOLE_FORMAT
+        - name: SEC_IMPORT_K8S_CERTS
         - name: SERVICE_CERT_SECRET_RESOURCE_VERSION
         volumeMounts:
         - name: svc-certificate
