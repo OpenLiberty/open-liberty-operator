@@ -9,4 +9,4 @@ spec:
   service:
     certificate:
       annotations:
-        key1: "value1"
+        key1: value1
