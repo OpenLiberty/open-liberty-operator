@@ -1,0 +1,9 @@
+apiVersion: apps.openliberty.io/v1
+kind: OpenLibertyApplication
+metadata:
+  name: resource-conflict-liberty
+spec:
+  # Add fields here
+  applicationImage: registry.k8s.io/pause:3.2
+  replicas: 1
+  createKnativeService: true

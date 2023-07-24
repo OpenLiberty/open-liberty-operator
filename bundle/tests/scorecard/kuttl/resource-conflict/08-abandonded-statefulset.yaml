@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: resource-conflict-liberty
+  ownerReferences:
+  - apiVersion: apps.openliberty.io/v1
+    kind: NotOpenLibertyApplication
+    name: not-resource-conflict-liberty
+    uid: abcdefghijklmnopqrstuvwxyz
+spec:
+  template:
+    metadata:
+      labels:
+        test: kuttl
+    spec:
+      containers:
+      - name: app
+        image: registry.k8s.io/pause:3.2
+  selector:
+    matchLabels:
+      test: kuttl
+status:
+  replicas: 1
+  readyReplicas: 1
+  updatedReplicas: 1

@@ -1,0 +1,8 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: resource-conflict-liberty
+  ownerReferences:
+  - apiVersion: apps.openliberty.io/v1
+    kind: OpenLibertyApplication
+    name: resource-conflict-liberty
