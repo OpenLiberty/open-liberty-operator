@@ -91,7 +91,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2023-07-05T16:25:33Z"
+    createdAt: "2023-07-25T14:44:59Z"
     description: Deploy and manage containerized Liberty applications
     olm.skipRange: '>=0.8.0 <1.2.1'
     operators.openshift.io/infrastructure-features: '["disconnected"]'
@@ -1084,6 +1084,8 @@ spec:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
                 - name: RELATED_IMAGE_LIBERTY_SAMPLE_APP
                   value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:d3c67c4a15c97b0fb82f9ef4a2ccf474232b878787e9eea39af75a3ac78469e3
+                - name: RELATED_IMAGE_OPEN_LIBERTY_OPERATOR
+                  value: icr.io/appcafe/open-liberty-operator:daily
                 image: icr.io/appcafe/open-liberty-operator:daily
                 livenessProbe:
                   failureThreshold: 3
@@ -1363,4 +1365,6 @@ spec:
   relatedImages:
   - image: icr.io/appcafe/open-liberty/samples/getting-started@sha256:d3c67c4a15c97b0fb82f9ef4a2ccf474232b878787e9eea39af75a3ac78469e3
     name: liberty-sample-app
+  - image: icr.io/appcafe/open-liberty-operator:daily
+    name: open-liberty-operator
   version: 1.2.1
