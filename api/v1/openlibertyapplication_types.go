@@ -175,15 +175,15 @@ type OpenLibertyApplicationServiceAccount struct {
 type OpenLibertyApplicationProbes struct {
 	// Periodic probe of container liveness. Container will be restarted if the probe fails.
 	// +operator-sdk:csv:customresourcedefinitions:order=49,type=spec,displayName="Liveness Probe"
-	Liveness *corev1.Probe `json:"liveness,omitempty"`
+	Liveness *common.BaseComponentProbe `json:"liveness,omitempty"`
 
 	// Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails.
 	// +operator-sdk:csv:customresourcedefinitions:order=50,type=spec,displayName="Readiness Probe"
-	Readiness *corev1.Probe `json:"readiness,omitempty"`
+	Readiness *common.BaseComponentProbe `json:"readiness,omitempty"`
 
 	// Probe to determine successful initialization. If specified, other probes are not executed until this completes successfully.
 	// +operator-sdk:csv:customresourcedefinitions:order=51,type=spec,displayName="Startup Probe"
-	Startup *corev1.Probe `json:"startup,omitempty"`
+	Startup *common.BaseComponentProbe `json:"startup,omitempty"`
 }
 
 // Configure pods to run on particular Nodes.
@@ -697,32 +697,63 @@ func (cr *OpenLibertyApplication) GetProbes() common.BaseComponentProbes {
 }
 
 // GetLivenessProbe returns liveness probe
-func (p *OpenLibertyApplicationProbes) GetLivenessProbe() *corev1.Probe {
+func (p *OpenLibertyApplicationProbes) GetLivenessProbe() *common.BaseComponentProbe {
 	return p.Liveness
 }
 
 // GetReadinessProbe returns readiness probe
-func (p *OpenLibertyApplicationProbes) GetReadinessProbe() *corev1.Probe {
+func (p *OpenLibertyApplicationProbes) GetReadinessProbe() *common.BaseComponentProbe {
 	return p.Readiness
 }
 
 // GetStartupProbe returns startup probe
-func (p *OpenLibertyApplicationProbes) GetStartupProbe() *corev1.Probe {
+func (p *OpenLibertyApplicationProbes) GetStartupProbe() *common.BaseComponentProbe {
 	return p.Startup
 }
 
+func (p *OpenLibertyApplicationProbes) PatchLivenessProbe(ba common.BaseComponent, probe *common.BaseComponentProbe) *common.BaseComponentProbe {
+	return patchLibertyProbe(ba, probe)
+}
+
+func (p *OpenLibertyApplicationProbes) PatchReadinessProbe(ba common.BaseComponent, probe *common.BaseComponentProbe) *common.BaseComponentProbe {
+	return patchLibertyProbe(ba, probe)
+}
+
+func (p *OpenLibertyApplicationProbes) PatchStartupProbe(ba common.BaseComponent, probe *common.BaseComponentProbe) *common.BaseComponentProbe {
+	return patchLibertyProbe(ba, probe)
+}
+
+func patchLibertyProbe(ba common.BaseComponent, probe *common.BaseComponentProbe) *common.BaseComponentProbe {
+	if probe != nil {
+		manageTLSEnabled := ba.GetManageTLS() == nil || *ba.GetManageTLS()
+		if probe.BaseComponentProbeHandler.HTTPGet != nil {
+			if manageTLSEnabled {
+				probe.BaseComponentProbeHandler.HTTPGet.Scheme = "HTTPS"
+			} else {
+				probe.BaseComponentProbeHandler.HTTPGet.Scheme = "HTTP"
+			}
+			portValue := ba.GetService().GetPort()
+			if portValue != 0 {
+				port := intstr.FromInt(int(portValue))
+				probe.BaseComponentProbeHandler.HTTPGet.Port = &port
+			}
+		}
+	}
+	return probe
+}
+
 // GetDefaultLivenessProbe returns default values for liveness probe
-func (p *OpenLibertyApplicationProbes) GetDefaultLivenessProbe(ba common.BaseComponent) *corev1.Probe {
+func (p *OpenLibertyApplicationProbes) GetDefaultLivenessProbe(ba common.BaseComponent) *common.BaseComponentProbe {
 	return common.GetDefaultMicroProfileLivenessProbe(ba)
 }
 
 // GetDefaultReadinessProbe returns default values for readiness probe
-func (p *OpenLibertyApplicationProbes) GetDefaultReadinessProbe(ba common.BaseComponent) *corev1.Probe {
+func (p *OpenLibertyApplicationProbes) GetDefaultReadinessProbe(ba common.BaseComponent) *common.BaseComponentProbe {
 	return common.GetDefaultMicroProfileReadinessProbe(ba)
 }
 
 // GetDefaultStartupProbe returns default values for startup probe
-func (p *OpenLibertyApplicationProbes) GetDefaultStartupProbe(ba common.BaseComponent) *corev1.Probe {
+func (p *OpenLibertyApplicationProbes) GetDefaultStartupProbe(ba common.BaseComponent) *common.BaseComponentProbe {
 	return common.GetDefaultMicroProfileStartupProbe(ba)
 }
 

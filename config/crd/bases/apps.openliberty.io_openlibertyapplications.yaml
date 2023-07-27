@@ -3079,7 +3079,7 @@ spec:
                       failureThreshold:
                         description: Minimum consecutive failures for the probe to
                           be considered failed after having succeeded. Defaults to
-                          3. Minimum value is 1.
+                          nil.
                         format: int32
                         type: integer
                       grpc:
@@ -3144,8 +3144,6 @@ spec:
                             description: Scheme to use for connecting to the host.
                               Defaults to HTTP.
                             type: string
-                        required:
-                        - port
                         type: object
                       initialDelaySeconds:
                         description: 'Number of seconds after the container has started
@@ -3154,14 +3152,13 @@ spec:
                         type: integer
                       periodSeconds:
                         description: How often (in seconds) to perform the probe.
-                          Default to 10 seconds. Minimum value is 1.
+                          Defaults to nil.
                         format: int32
                         type: integer
                       successThreshold:
                         description: Minimum consecutive successes for the probe to
                           be considered successful after having failed. Defaults to
-                          1. Must be 1 for liveness and startup. Minimum value is
-                          1.
+                          nil.
                         format: int32
                         type: integer
                       tcpSocket:
@@ -3196,14 +3193,12 @@ spec:
                           The value zero indicates stop immediately via the kill signal
                           (no opportunity to shut down). This is a beta field and
                           requires enabling ProbeTerminationGracePeriod feature gate.
-                          Minimum value is 1. spec.terminationGracePeriodSeconds is
-                          used if unset.
+                          Defaults to nil
                         format: int64
                         type: integer
                       timeoutSeconds:
                         description: 'Number of seconds after which the probe times
-                          out. Defaults to 1 second. Minimum value is 1. More info:
-                          https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                          out. Defaults to nil. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
                         format: int32
                         type: integer
                     type: object
@@ -3230,7 +3225,7 @@ spec:
                       failureThreshold:
                         description: Minimum consecutive failures for the probe to
                           be considered failed after having succeeded. Defaults to
-                          3. Minimum value is 1.
+                          nil.
                         format: int32
                         type: integer
                       grpc:
@@ -3295,8 +3290,6 @@ spec:
                             description: Scheme to use for connecting to the host.
                               Defaults to HTTP.
                             type: string
-                        required:
-                        - port
                         type: object
                       initialDelaySeconds:
                         description: 'Number of seconds after the container has started
@@ -3305,14 +3298,13 @@ spec:
                         type: integer
                       periodSeconds:
                         description: How often (in seconds) to perform the probe.
-                          Default to 10 seconds. Minimum value is 1.
+                          Defaults to nil.
                         format: int32
                         type: integer
                       successThreshold:
                         description: Minimum consecutive successes for the probe to
                           be considered successful after having failed. Defaults to
-                          1. Must be 1 for liveness and startup. Minimum value is
-                          1.
+                          nil.
                         format: int32
                         type: integer
                       tcpSocket:
@@ -3347,14 +3339,12 @@ spec:
                           The value zero indicates stop immediately via the kill signal
                           (no opportunity to shut down). This is a beta field and
                           requires enabling ProbeTerminationGracePeriod feature gate.
-                          Minimum value is 1. spec.terminationGracePeriodSeconds is
-                          used if unset.
+                          Defaults to nil
                         format: int64
                         type: integer
                       timeoutSeconds:
                         description: 'Number of seconds after which the probe times
-                          out. Defaults to 1 second. Minimum value is 1. More info:
-                          https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                          out. Defaults to nil. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
                         format: int32
                         type: integer
                     type: object
@@ -3382,7 +3372,7 @@ spec:
                       failureThreshold:
                         description: Minimum consecutive failures for the probe to
                           be considered failed after having succeeded. Defaults to
-                          3. Minimum value is 1.
+                          nil.
                         format: int32
                         type: integer
                       grpc:
@@ -3447,8 +3437,6 @@ spec:
                             description: Scheme to use for connecting to the host.
                               Defaults to HTTP.
                             type: string
-                        required:
-                        - port
                         type: object
                       initialDelaySeconds:
                         description: 'Number of seconds after the container has started
@@ -3457,14 +3445,13 @@ spec:
                         type: integer
                       periodSeconds:
                         description: How often (in seconds) to perform the probe.
-                          Default to 10 seconds. Minimum value is 1.
+                          Defaults to nil.
                         format: int32
                         type: integer
                       successThreshold:
                         description: Minimum consecutive successes for the probe to
                           be considered successful after having failed. Defaults to
-                          1. Must be 1 for liveness and startup. Minimum value is
-                          1.
+                          nil.
                         format: int32
                         type: integer
                       tcpSocket:
@@ -3499,14 +3486,12 @@ spec:
                           The value zero indicates stop immediately via the kill signal
                           (no opportunity to shut down). This is a beta field and
                           requires enabling ProbeTerminationGracePeriod feature gate.
-                          Minimum value is 1. spec.terminationGracePeriodSeconds is
-                          used if unset.
+                          Defaults to nil
                         format: int64
                         type: integer
                       timeoutSeconds:
                         description: 'Number of seconds after which the probe times
-                          out. Defaults to 1 second. Minimum value is 1. More info:
-                          https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                          out. Defaults to nil. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
                         format: int32
                         type: integer
                     type: object
@@ -10681,7 +10666,7 @@ spec:
                       failureThreshold:
                         description: Minimum consecutive failures for the probe to
                           be considered failed after having succeeded. Defaults to
-                          3. Minimum value is 1.
+                          nil.
                         format: int32
                         type: integer
                       grpc:
@@ -10746,8 +10731,6 @@ spec:
                             description: Scheme to use for connecting to the host.
                               Defaults to HTTP.
                             type: string
-                        required:
-                        - port
                         type: object
                       initialDelaySeconds:
                         description: 'Number of seconds after the container has started
@@ -10756,14 +10739,13 @@ spec:
                         type: integer
                       periodSeconds:
                         description: How often (in seconds) to perform the probe.
-                          Default to 10 seconds. Minimum value is 1.
+                          Defaults to nil.
                         format: int32
                         type: integer
                       successThreshold:
                         description: Minimum consecutive successes for the probe to
                           be considered successful after having failed. Defaults to
-                          1. Must be 1 for liveness and startup. Minimum value is
-                          1.
+                          nil.
                         format: int32
                         type: integer
                       tcpSocket:
@@ -10798,14 +10780,12 @@ spec:
                           The value zero indicates stop immediately via the kill signal
                           (no opportunity to shut down). This is a beta field and
                           requires enabling ProbeTerminationGracePeriod feature gate.
-                          Minimum value is 1. spec.terminationGracePeriodSeconds is
-                          used if unset.
+                          Defaults to nil
                         format: int64
                         type: integer
                       timeoutSeconds:
                         description: 'Number of seconds after which the probe times
-                          out. Defaults to 1 second. Minimum value is 1. More info:
-                          https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                          out. Defaults to nil. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
                         format: int32
                         type: integer
                     type: object
@@ -10832,7 +10812,7 @@ spec:
                       failureThreshold:
                         description: Minimum consecutive failures for the probe to
                           be considered failed after having succeeded. Defaults to
-                          3. Minimum value is 1.
+                          nil.
                         format: int32
                         type: integer
                       grpc:
@@ -10897,8 +10877,6 @@ spec:
                             description: Scheme to use for connecting to the host.
                               Defaults to HTTP.
                             type: string
-                        required:
-                        - port
                         type: object
                       initialDelaySeconds:
                         description: 'Number of seconds after the container has started
@@ -10907,14 +10885,13 @@ spec:
                         type: integer
                       periodSeconds:
                         description: How often (in seconds) to perform the probe.
-                          Default to 10 seconds. Minimum value is 1.
+                          Defaults to nil.
                         format: int32
                         type: integer
                       successThreshold:
                         description: Minimum consecutive successes for the probe to
                           be considered successful after having failed. Defaults to
-                          1. Must be 1 for liveness and startup. Minimum value is
-                          1.
+                          nil.
                         format: int32
                         type: integer
                       tcpSocket:
@@ -10949,14 +10926,12 @@ spec:
                           The value zero indicates stop immediately via the kill signal
                           (no opportunity to shut down). This is a beta field and
                           requires enabling ProbeTerminationGracePeriod feature gate.
-                          Minimum value is 1. spec.terminationGracePeriodSeconds is
-                          used if unset.
+                          Defaults to nil
                         format: int64
                         type: integer
                       timeoutSeconds:
                         description: 'Number of seconds after which the probe times
-                          out. Defaults to 1 second. Minimum value is 1. More info:
-                          https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                          out. Defaults to nil. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
                         format: int32
                         type: integer
                     type: object
@@ -10984,7 +10959,7 @@ spec:
                       failureThreshold:
                         description: Minimum consecutive failures for the probe to
                           be considered failed after having succeeded. Defaults to
-                          3. Minimum value is 1.
+                          nil.
                         format: int32
                         type: integer
                       grpc:
@@ -11049,8 +11024,6 @@ spec:
                             description: Scheme to use for connecting to the host.
                               Defaults to HTTP.
                             type: string
-                        required:
-                        - port
                         type: object
                       initialDelaySeconds:
                         description: 'Number of seconds after the container has started
@@ -11059,14 +11032,13 @@ spec:
                         type: integer
                       periodSeconds:
                         description: How often (in seconds) to perform the probe.
-                          Default to 10 seconds. Minimum value is 1.
+                          Defaults to nil.
                         format: int32
                         type: integer
                       successThreshold:
                         description: Minimum consecutive successes for the probe to
                           be considered successful after having failed. Defaults to
-                          1. Must be 1 for liveness and startup. Minimum value is
-                          1.
+                          nil.
                         format: int32
                         type: integer
                       tcpSocket:
@@ -11101,14 +11073,12 @@ spec:
                           The value zero indicates stop immediately via the kill signal
                           (no opportunity to shut down). This is a beta field and
                           requires enabling ProbeTerminationGracePeriod feature gate.
-                          Minimum value is 1. spec.terminationGracePeriodSeconds is
-                          used if unset.
+                          Defaults to nil
                         format: int64
                         type: integer
                       timeoutSeconds:
                         description: 'Number of seconds after which the probe times
-                          out. Defaults to 1 second. Minimum value is 1. More info:
-                          https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                          out. Defaults to nil. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
                         format: int32
                         type: integer
                     type: object
