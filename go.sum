@@ -69,6 +69,8 @@ github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kd
 github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20210826220005-b48c857c3a0e/go.mod h1:F7bn7fEU90QkQ3tnmaTx3LTKLEDqnwWODIYppRQ5hnY=
 github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20230613090743-bf7f8422094b h1:yW/ojzeZvNbwIb7sN5Kf6ofK3ao+u0gBvFMXBLl2mw4=
 github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20230613090743-bf7f8422094b/go.mod h1:JsX0ioxZzA0yM1Sxg/1QKLg9dGqDXYvGZ+WwiQrMoxQ=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20230907143425-055a7d066125 h1:+QH7HGxWvbKYAwWY6/HQ0GgHZQzz+mNGf9Jafs0+Q9g=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20230907143425-055a7d066125/go.mod h1:JsX0ioxZzA0yM1Sxg/1QKLg9dGqDXYvGZ+WwiQrMoxQ=
 github.com/armon/circbuf v0.0.0-20150827004946-bbbad097214e/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=
 github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da/go.mod h1:Q73ZrmVTwzkszR9V5SSuryQ31EELlFMUz1kKyl939pY=
 github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310/go.mod h1:ufUuZ+zHj4x4TnLV4JWEpy2hxWSpsRywHrMgIH9cCH8=
