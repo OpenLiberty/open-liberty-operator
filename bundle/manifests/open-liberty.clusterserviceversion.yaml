@@ -91,7 +91,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2023-08-22T16:39:10Z"
+    createdAt: "2023-09-29T15:16:07Z"
     description: Deploy and manage containerized Liberty applications
     olm.skipRange: '>=0.8.0 <1.2.2'
     operators.openshift.io/infrastructure-features: '["disconnected"]'
@@ -411,6 +411,9 @@ spec:
       - description: Security context for the application container.
         displayName: Security Context
         path: securityContext
+      - description: Security context for the application pod.
+        displayName: Pod Security Context
+        path: podSecurityContext
       - description: Labels to set on ServiceMonitor.
         displayName: Monitoring Labels
         path: monitoring.labels

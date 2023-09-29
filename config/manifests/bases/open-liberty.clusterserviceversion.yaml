@@ -324,6 +324,9 @@ spec:
       - description: Security context for the application container.
         displayName: Security Context
         path: securityContext
+      - description: Security context for the application pod.
+        displayName: Pod Security Context
+        path: podSecurityContext
       - description: Labels to set on ServiceMonitor.
         displayName: Monitoring Labels
         path: monitoring.labels
