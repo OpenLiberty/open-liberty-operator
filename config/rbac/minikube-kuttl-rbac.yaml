@@ -90,6 +90,8 @@ rules:
   - services
   verbs:
   - get
+  - create
+  - delete
 - apiGroups:
   - apps.openliberty.io
   resources:
