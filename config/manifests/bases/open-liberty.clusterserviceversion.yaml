@@ -321,7 +321,7 @@ spec:
         path: statefulSet.storage.volumeClaimTemplate
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:PersistentVolumeClaim
-      - description: Security context for the application container.
+      - description: Security context for the application pod and container.
         displayName: Security Context
         path: securityContext
       - description: Labels to set on ServiceMonitor.
