@@ -136,6 +136,10 @@ type OpenLibertyApplicationSpec struct {
 	// Security context for the application container.
 	// +operator-sdk:csv:customresourcedefinitions:order=29,type=spec,displayName="Security Context"
 	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
+
+	// Security context for the application pod.
+	// +operator-sdk:csv:customresourcedefinitions:order=30,type=spec,displayName="Pod Security Context"
+	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
 }
 
 // Define health checks on application container to determine whether it is alive or ready to receive traffic
@@ -1077,6 +1081,11 @@ func (a *OpenLibertyApplicationAffinity) GetNodeAffinityLabels() map[string]stri
 // GetSecurityContext returns container security context
 func (cr *OpenLibertyApplication) GetSecurityContext() *corev1.SecurityContext {
 	return cr.Spec.SecurityContext
+}
+
+// GetPodSecurityContext returns pod security context
+func (cr *OpenLibertyApplication) GetPodSecurityContext() *corev1.PodSecurityContext {
+	return cr.Spec.PodSecurityContext
 }
 
 // GetSemeruCloudCompiler returns the Semeru Cloud Compiler configuration
