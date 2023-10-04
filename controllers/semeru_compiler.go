@@ -366,6 +366,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 
 	// Copy the securityContext from the OpenLibertyApplcation CR
 	deploy.Spec.Template.Spec.Containers[0].SecurityContext = utils.GetSecurityContext(ola)
+	deploy.Spec.Template.Spec.SecurityContext = utils.GetPodSecurityContext(ola)
 
 	lutils.AddSecretResourceVersionAsEnvVar(&deploy.Spec.Template, ola, r.GetClient(), ola.Status.SemeruCompiler.TLSSecretName, "TLS")
 }

@@ -41,6 +41,7 @@ type OpenLibertyDumpStatus struct {
 type DumpStatusVersions struct {
 	Reconciled string `json:"reconciled,omitempty"`
 }
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion

@@ -133,9 +133,14 @@ type OpenLibertyApplicationSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=28,type=spec,displayName="Affinity"
 	Affinity *OpenLibertyApplicationAffinity `json:"affinity,omitempty"`
 
-	// Security context for the application container.
+	// Security context for the application pod and container.
 	// +operator-sdk:csv:customresourcedefinitions:order=29,type=spec,displayName="Security Context"
-	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
+	SecurityContext *OpenLibertyApplicationSecurityContext `json:"securityContext,omitempty"`
+}
+
+// Define the security context object for the application pod and container
+type OpenLibertyApplicationSecurityContext struct {
+	common.AppSecurityContext `json:",omitempty"`
 }
 
 // Define health checks on application container to determine whether it is alive or ready to receive traffic
@@ -1074,8 +1079,22 @@ func (a *OpenLibertyApplicationAffinity) GetNodeAffinityLabels() map[string]stri
 	return a.NodeAffinityLabels
 }
 
+func (sc *OpenLibertyApplicationSecurityContext) GetContainerSecurityContext() *corev1.SecurityContext {
+	if sc == nil {
+		return nil
+	}
+	return common.GetSecurityContext(&sc.AppSecurityContext)
+}
+
+func (sc *OpenLibertyApplicationSecurityContext) GetPodSecurityContext() *corev1.PodSecurityContext {
+	if sc == nil {
+		return nil
+	}
+	return common.GetPodSecurityContext(&sc.AppSecurityContext)
+}
+
 // GetSecurityContext returns container security context
-func (cr *OpenLibertyApplication) GetSecurityContext() *corev1.SecurityContext {
+func (cr *OpenLibertyApplication) GetSecurityContext() common.BaseComponentSecurityContext {
 	return cr.Spec.SecurityContext
 }
 
