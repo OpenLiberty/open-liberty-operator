@@ -92,7 +92,7 @@ func (r *ReconcileOpenLibertyDump) Reconcile(ctx context.Context, request ctrl.R
 	time := time.Now()
 	dumpFolder := "/serviceability/" + pod.Namespace + "/" + pod.Name
 	dumpFileName := dumpFolder + "/" + time.Format("2006-01-02_15:04:05") + ".zip"
-	dumpCmd := "mkdir -p " + dumpFolder + " &&  server dump --archive=" + dumpFileName
+	dumpCmd := "if [ ! -d \"serviceability\" ]; then exit 1; fi && " + "mkdir -p " + dumpFolder + " &&  server dump --archive=" + dumpFileName
 	if len(instance.Spec.Include) > 0 {
 		dumpCmd += " --include="
 		for i := range instance.Spec.Include {

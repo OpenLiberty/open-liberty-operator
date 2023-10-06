@@ -97,7 +97,11 @@ func ExecuteCommandInContainer(config *rest.Config, podName, podNamespace, conta
 	})
 
 	if err != nil {
-		return stderr.String(), fmt.Errorf("Encountered error while running command: %v ; Stderr: %v ; Error: %v", command, stderr.String(), err.Error())
+		if strings.Contains(err.Error(), "command terminated with exit code 1") {
+			return stderr.String(), fmt.Errorf("Unable to find serviceability directory. Please check that serviceability has been configured correctly in the relevant OpenLibertyApplication custom resource for pod: %v in namespace: %v.", podName, podNamespace)
+		} else {
+			return stderr.String(), fmt.Errorf("Encountered error while running command: %v ; Stderr: %v ; Error: %v", command, stderr.String(), err.Error())
+		}
 	}
 
 	return stderr.String(), nil
