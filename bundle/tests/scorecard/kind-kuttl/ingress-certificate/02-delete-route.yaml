@@ -1,8 +1,0 @@
-apiVersion: apps.openliberty.io/v1
-kind: OpenLibertyApplication
-metadata:
-  name: ingress-with-cert-rc
-spec:
-  # Add fields here
-  expose: false
-

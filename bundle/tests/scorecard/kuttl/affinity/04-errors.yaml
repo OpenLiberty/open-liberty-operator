@@ -1,9 +1,0 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: affinity-liberty
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: anti-affinity-liberty

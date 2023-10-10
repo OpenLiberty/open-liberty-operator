@@ -1,7 +1,0 @@
-apiVersion: apps.openliberty.io/v1
-kind: OpenLibertyApplication
-metadata:
-  name: persistent-liberty
-spec:
-  volumeMounts:
-  statefulSet: {}

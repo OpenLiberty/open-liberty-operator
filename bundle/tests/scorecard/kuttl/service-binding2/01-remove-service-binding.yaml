@@ -1,9 +1,0 @@
-apiVersion: apps.openliberty.io/v1
-kind: OpenLibertyApplication
-metadata:
-  name: service-binding-liberty
-spec:
-  # Add fields here
-  replicas: 1
-  service:
-    bindable:

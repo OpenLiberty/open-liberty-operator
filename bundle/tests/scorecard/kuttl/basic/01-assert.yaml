@@ -1,8 +1,0 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: example-liberty-app
-status:
-  replicas: 2
-  readyReplicas: 2
-  updatedReplicas: 2

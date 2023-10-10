@@ -1,5 +1,0 @@
-apiVersion: autoscaling/v1
-kind: HorizontalPodAutoscaler
-metadata:
-  name: autoscaling3-liberty
-
