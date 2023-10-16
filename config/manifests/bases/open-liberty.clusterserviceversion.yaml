@@ -65,6 +65,12 @@ spec:
         path: autoscaling.maxReplicas
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:number
+      - description: Whether the Service Account token should be mounted into the
+          application pods. Defaults to true.
+        displayName: Mount Service Account Token
+        path: serviceAccount.mountToken
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - displayName: OIDC
         path: sso.oidc
       - description: The unique ID for the provider. Default value is oidc.
@@ -81,6 +87,12 @@ spec:
         path: autoscaling.minReplicas
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:number
+      - description: Name of the service account to use for deploying the application.
+          A service account is automatically created if it's not specified.
+        displayName: Service Account Name
+        path: serviceAccount.name
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       - displayName: OAuth2
         path: sso.oauth2
       - description: Specifies a discovery endpoint URL for the OpenID Connect provider.
@@ -132,12 +144,16 @@ spec:
       - description: The name of the social login configuration for display.
         displayName: Display Name
         path: sso.oidc[0].displayName
-      - description: Name of the service account to use for deploying the application.
-          A service account is automatically created if it's not specified.
+      - description: The service account to use for deploying the application. A service
+          account is automatically created if this is not specifed.
+        displayName: Service Account
+        path: serviceAccount
+      - description: Deprecated. .spec.serviceAccount.name should be used instead.
+          If both are specified, .spec.serviceAccount.name will override this.
         displayName: Service Account Name
         path: serviceAccountName
         x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
+        - urn:alm:descriptor:com.tectonic.ui:hidden
       - description: Specifies whether the UserInfo endpoint is contacted.
         displayName: User Info Endpoint Enabled
         path: sso.oidc[0].userInfoEndpointEnabled
