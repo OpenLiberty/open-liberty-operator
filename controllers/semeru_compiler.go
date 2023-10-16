@@ -352,8 +352,8 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 	}
 
 	// Copy the service account from the OpenLibertyApplcation CR
-	if ola.GetServiceAccountName() != nil && *ola.GetServiceAccountName() != "" {
-		deploy.Spec.Template.Spec.ServiceAccountName = *ola.GetServiceAccountName()
+	if saName := utils.GetServiceAccountName(ola); saName != "" {
+		deploy.Spec.Template.Spec.ServiceAccountName = saName
 	} else {
 		deploy.Spec.Template.Spec.ServiceAccountName = ola.GetName()
 	}
