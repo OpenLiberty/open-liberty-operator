@@ -113,8 +113,8 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	if podChanged && (prevTraceEnabled == corev1.ConditionTrue) {
 		r.disableTraceOnPrevPod(reqLogger, prevPodName, podNamespace)
 	}
-	pod := &corev1.Pod{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: podName, Namespace: podNamespace}, pod)
+
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: podName, Namespace: podNamespace}, &corev1.Pod{})
 	if err != nil && errors.IsNotFound(err) {
 		//Pod is not found. Return and don't requeue
 		reqLogger.Error(err, "Pod "+podName+" was not found in namespace "+podNamespace)
