@@ -94,11 +94,11 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2023-10-16T14:24:45Z"
+    createdAt: "2023-10-25T00:56:23Z"
     description: Deploy and manage containerized Liberty applications
     olm.skipRange: '>=0.8.0 <1.2.2'
     operators.openshift.io/infrastructure-features: '["disconnected"]'
-    operators.operatorframework.io/builder: operator-sdk-v1.24.0
+    operators.operatorframework.io/builder: operator-sdk-v1.27.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/OpenLiberty/open-liberty-operator
     support: IBM
