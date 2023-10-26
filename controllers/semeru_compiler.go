@@ -549,8 +549,8 @@ func (r *ReconcileOpenLiberty) getSemeruJavaOptions(instance *openlibertyv1.Open
 		args := []string{
 			"/bin/bash",
 			"-c",
-			"export OPENJ9_JAVA_OPTIONS=\"$OPENJ9_JAVA_OPTIONS " +
-				jitSeverOptions +
+			"export OPENJ9_JAVA_OPTIONS=\"$OPENJ9_JAVA_OPTIONS " + jitSeverOptions +
+				"\" && export OPENJ9_RESTORE_JAVA_OPTIONS=\"$OPENJ9_RESTORE_JAVA_OPTIONS " + jitSeverOptions +
 				"\" && server run",
 		}
 		return args
