@@ -230,7 +230,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 	}
 
-	if instance.Spec.ServiceAccountName == nil || *instance.Spec.ServiceAccountName == "" {
+	if oputils.GetServiceAccountName(instance) == "" {
 		serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
 		err = r.CreateOrUpdate(serviceAccount, instance, func() error {
 			return oputils.CustomizeServiceAccount(serviceAccount, instance, r.GetClient())
