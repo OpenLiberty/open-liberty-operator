@@ -346,7 +346,7 @@ build-manifest: setup-manifest
 	./scripts/build/build-manifest.sh --registry "${PUBLISH_REGISTRY}" --image "${OPERATOR_IMAGE}" --tag "${RELEASE_TARGET}"
 
 build-operator-pipeline:
-	./scripts/build/build-operator.sh --registry "${REGISTRY}" --image "${PIPELINE_OPERATOR_IMAGE}" --tag "${RELEASE_TARGET}"
+	./scripts/build/build-operator.sh --registry "${REGISTRY}" --image "${PIPELINE_OPERATOR_IMAGE}" --tag "${RELEASE_TARGET}" --go-version "${GO_VERSION}"
 
 build-manifest-pipeline:
 	./scripts/build/build-manifest.sh --registry "${REGISTRY}" --image "${IMAGE}" --tag "${RELEASE_TARGET}"
