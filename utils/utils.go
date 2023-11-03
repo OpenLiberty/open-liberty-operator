@@ -12,6 +12,7 @@ import (
 	rcoutils "github.com/application-stacks/runtime-component-operator/utils"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
+	v1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,6 +34,11 @@ var log = logf.Log.WithName("openliberty_utils")
 const serviceabilityMountPath = "/serviceability"
 const ssoEnvVarPrefix = "SEC_SSO_"
 const OperandVersion = "1.3.0"
+const ltpaKeysMountPath = "/config/managedLTPA"
+const ltpaServerXMLOverridesMountPath = "/config/configDropins/overrides/"
+const LTPAServerXMLSuffix = "-managed-ltpa-server-xml"
+const ltpaKeysFileName = "ltpa.keys"
+const ltpaXMLFileName = "managedLTPA.xml"
 
 // Validate if the OpenLibertyApplication is valid
 func Validate(olapp *olv1.OpenLibertyApplication) (bool, error) {
@@ -503,4 +509,143 @@ func Remove(list []string, s string) []string {
 		}
 	}
 	return list
+}
+
+func isVolumeMountFound(pts *corev1.PodTemplateSpec, name string) bool {
+	for _, v := range pts.Spec.Containers[0].VolumeMounts {
+		if v.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func isVolumeFound(pts *corev1.PodTemplateSpec, name string) bool {
+	for _, v := range pts.Spec.Volumes {
+		if v.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+// ConfigureLTPA setups the shared-storage for LTPA keys file generation
+func ConfigureLTPA(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string) {
+	// Mount a volume /config/ltpa to store the ltpa.keys file
+	ltpaKeyVolumeMount := GetLTPAKeysVolumeMount(la, ltpaKeysFileName)
+	if !isVolumeMountFound(pts, ltpaKeyVolumeMount.Name) {
+		pts.Spec.Containers[0].VolumeMounts = append(pts.Spec.Containers[0].VolumeMounts, ltpaKeyVolumeMount)
+	}
+	if !isVolumeFound(pts, ltpaKeyVolumeMount.Name) {
+		vol := corev1.Volume{
+			Name: ltpaKeyVolumeMount.Name,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: operatorShortName + "-managed-ltpa",
+					Items: []corev1.KeyToPath{{
+						Key:  ltpaKeysFileName,
+						Path: ltpaKeysFileName,
+					}},
+				},
+			},
+		}
+		pts.Spec.Volumes = append(pts.Spec.Volumes, vol)
+	}
+
+	// Mount a volume /config/configDropins/overrides/ltpa.xml to store the Liberty Server XML
+	ltpaXMLVolumeMount := GetLTPAXMLVolumeMount(la, ltpaXMLFileName)
+	if !isVolumeMountFound(pts, ltpaXMLVolumeMount.Name) {
+		pts.Spec.Containers[0].VolumeMounts = append(pts.Spec.Containers[0].VolumeMounts, ltpaXMLVolumeMount)
+	}
+	if !isVolumeFound(pts, ltpaXMLVolumeMount.Name) {
+		vol := corev1.Volume{
+			Name: ltpaXMLVolumeMount.Name,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: operatorShortName + LTPAServerXMLSuffix,
+					Items: []corev1.KeyToPath{{
+						Key:  ltpaXMLFileName,
+						Path: ltpaXMLFileName,
+					}},
+				},
+			},
+		}
+		pts.Spec.Volumes = append(pts.Spec.Volumes, vol)
+	}
+}
+
+func CustomizeLTPAServerXML(xmlSecret *corev1.Secret, la *olv1.OpenLibertyApplication, encryptedPassword string) {
+	xmlSecret.StringData = make(map[string]string)
+	keysFileName := strings.Replace(ltpaKeysMountPath, "/config", "${server.config.dir}", 1)
+	xmlSecret.StringData[ltpaXMLFileName] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<server>\n    <ltpa keysFileName=\"" + keysFileName + "/" + ltpaKeysFileName + "\" keysPassword=\"" + encryptedPassword + "\" />\n</server>"
+}
+
+func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaSecretName string, serviceAccountName string, ltpaScriptName string) {
+	encodingType := "aes" // the password encoding type for securityUtility (one of "xor", "aes", or "hash")
+	job.Spec.Template.ObjectMeta.Name = "liberty"
+	job.Spec.Template.Spec.Containers = []corev1.Container{
+		{
+			Name:            job.Spec.Template.ObjectMeta.Name,
+			Image:           la.GetApplicationImage(),
+			ImagePullPolicy: *la.GetPullPolicy(),
+			SecurityContext: rcoutils.GetSecurityContext(la),
+			Command:         []string{"/bin/bash", "-c"},
+			// Usage: /bin/create_ltpa_keys.sh <namespace> <ltpa-secret-name> <securityUtility-encoding>
+			Args: []string{ltpaKeysMountPath + "/bin/create_ltpa_keys.sh " + la.GetNamespace() + " " + ltpaSecretName + " " + ltpaKeysFileName + " " + encodingType},
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      ltpaScriptName,
+					MountPath: ltpaKeysMountPath + "/bin",
+				},
+			},
+		},
+	}
+	if la.GetPullSecret() != nil && *la.GetPullSecret() != "" {
+		job.Spec.Template.Spec.ImagePullSecrets = append(job.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{
+			Name: *la.GetPullSecret(),
+		})
+	}
+	job.Spec.Template.Spec.ServiceAccountName = serviceAccountName
+	job.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyOnFailure
+	var number int32
+	number = 0777
+	job.Spec.Template.Spec.Volumes = append(job.Spec.Template.Spec.Volumes, corev1.Volume{
+		Name: ltpaScriptName,
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: ltpaScriptName,
+				},
+				DefaultMode: &number,
+			},
+		},
+	})
+}
+
+func GetLTPAKeysVolumeMount(la *olv1.OpenLibertyApplication, fileName string) corev1.VolumeMount {
+	return corev1.VolumeMount{
+		Name:      "ltpa-keys",
+		MountPath: ltpaKeysMountPath + "/" + fileName,
+		SubPath:   fileName,
+	}
+}
+
+func GetLTPAXMLVolumeMount(la *olv1.OpenLibertyApplication, fileName string) corev1.VolumeMount {
+	return corev1.VolumeMount{
+		Name:      "ltpa-xml",
+		MountPath: ltpaServerXMLOverridesMountPath + fileName,
+		SubPath:   fileName,
+	}
+}
+
+func GetRequiredLabels(name string, instance string) map[string]string {
+	requiredLabels := make(map[string]string)
+	requiredLabels["app.kubernetes.io/name"] = name
+	if instance != "" {
+		requiredLabels["app.kubernetes.io/instance"] = instance
+	} else {
+		requiredLabels["app.kubernetes.io/instance"] = name
+	}
+	requiredLabels["app.kubernetes.io/managed-by"] = "websphere-liberty-operator"
+	return requiredLabels
 }
