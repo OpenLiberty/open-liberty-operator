@@ -296,11 +296,38 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 		PeriodSeconds:       5,
 	}
 
+	semeruPodMatchLabels := map[string]string{
+		"app.kubernetes.io/instance": getSemeruCompilerNameWithGeneration(ola),
+	}
 	deploy.Spec.Template = corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: getLabels(ola),
 		},
 		Spec: corev1.PodSpec{
+			Affinity: &corev1.Affinity{
+				PodAntiAffinity: &corev1.PodAntiAffinity{
+					PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+						{
+							Weight: 50,
+							PodAffinityTerm: corev1.PodAffinityTerm{
+								TopologyKey: "topology.kubernetes.io/zone",
+								LabelSelector: &metav1.LabelSelector{
+									MatchLabels: semeruPodMatchLabels,
+								},
+							},
+						},
+						{
+							Weight: 50,
+							PodAffinityTerm: corev1.PodAffinityTerm{
+								TopologyKey: "kubernetes.io/hostname",
+								LabelSelector: &metav1.LabelSelector{
+									MatchLabels: semeruPodMatchLabels,
+								},
+							},
+						},
+					},
+				},
+			},
 			Containers: []corev1.Container{
 				{
 					Name:            "compiler",
@@ -351,6 +378,17 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 		},
 	}
 
+	// Configure TopologySpreadConstraints from the OpenLibertyApplication CR
+	deploy.Spec.Template.Spec.TopologySpreadConstraints = make([]corev1.TopologySpreadConstraint, 0)
+	topologySpreadConstraintsConfig := ola.GetTopologySpreadConstraints()
+	if topologySpreadConstraintsConfig == nil || topologySpreadConstraintsConfig.GetDisableOperatorDefaults() == nil || !*topologySpreadConstraintsConfig.GetDisableOperatorDefaults() {
+		utils.CustomizeTopologySpreadConstraints(&deploy.Spec.Template, semeruPodMatchLabels)
+	}
+	if topologySpreadConstraintsConfig != nil && topologySpreadConstraintsConfig.GetConstraints() != nil {
+		deploy.Spec.Template.Spec.TopologySpreadConstraints = utils.MergeTopologySpreadConstraints(deploy.Spec.Template.Spec.TopologySpreadConstraints,
+			*topologySpreadConstraintsConfig.GetConstraints())
+	}
+
 	// Copy the service account from the OpenLibertyApplcation CR
 	if saName := utils.GetServiceAccountName(ola); saName != "" {
 		deploy.Spec.Template.Spec.ServiceAccountName = saName
@@ -375,6 +413,7 @@ func reconcileSemeruService(svc *corev1.Service, ola *openlibertyv1.OpenLibertyA
 	var timeout int32 = 86400
 	svc.Labels = getLabels(ola)
 	svc.Spec.Selector = getSelectors(ola)
+	utils.CustomizeServiceAnnotations(svc)
 	if len(svc.Spec.Ports) == 0 {
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{})
 	}

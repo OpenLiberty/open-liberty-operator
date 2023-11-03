@@ -140,6 +140,20 @@ type OpenLibertyApplicationSpec struct {
 	// Security context for the application container.
 	// +operator-sdk:csv:customresourcedefinitions:order=29,type=spec,displayName="Security Context"
 	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:order=30,type=spec,displayName="Topology Spread Constraints"
+	TopologySpreadConstraints *OpenLibertyApplicationTopologySpreadConstraints `json:"topologySpreadConstraints,omitempty"`
+}
+
+// Defines the topology spread constraints
+type OpenLibertyApplicationTopologySpreadConstraints struct {
+	// The list of TopologySpreadConstraints for the application instance and if applicable, the Semeru Cloud Compiler instance.
+	// +operator-sdk:csv:customresourcedefinitions:order=1,type=spec,displayName="Constraints"
+	Constraints *[]corev1.TopologySpreadConstraint `json:"constraints,omitempty"`
+
+	// Whether the operator should disable its default set of TopologySpreadConstraints. Defaults to false.
+	// +operator-sdk:csv:customresourcedefinitions:order=1,type=spec,displayName="Disable Operator Defaults",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	DisableOperatorDefaults *bool `json:"disableOperatorDefaults,omitempty"`
 }
 
 // Defines the service account
@@ -1123,6 +1137,25 @@ func (scc *OpenLibertyApplicationSemeruCloudCompiler) GetReplicas() *int32 {
 	}
 	one := int32(1)
 	return &one
+}
+
+// GetTopologySpreadConstraints returns the pod topology spread constraints configuration
+func (cr *OpenLibertyApplication) GetTopologySpreadConstraints() common.BaseComponentTopologySpreadConstraints {
+	if cr.Spec.TopologySpreadConstraints == nil {
+		return nil
+	}
+	return cr.Spec.TopologySpreadConstraints
+}
+
+func (cr *OpenLibertyApplicationTopologySpreadConstraints) GetConstraints() *[]corev1.TopologySpreadConstraint {
+	if cr.Constraints == nil {
+		return nil
+	}
+	return cr.Constraints
+}
+
+func (cr *OpenLibertyApplicationTopologySpreadConstraints) GetDisableOperatorDefaults() *bool {
+	return cr.DisableOperatorDefaults
 }
 
 // Initialize sets default values
