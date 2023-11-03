@@ -646,6 +646,6 @@ func GetRequiredLabels(name string, instance string) map[string]string {
 	} else {
 		requiredLabels["app.kubernetes.io/instance"] = name
 	}
-	requiredLabels["app.kubernetes.io/managed-by"] = "websphere-liberty-operator"
+	requiredLabels["app.kubernetes.io/managed-by"] = "open-liberty-operator"
 	return requiredLabels
 }
