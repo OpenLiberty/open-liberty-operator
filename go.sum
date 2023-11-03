@@ -44,10 +44,6 @@ github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d/go.mod h1:rBZYJk541a8SKzHPHnH3zbiI+7dagKZ0cgpgrD7Fyho=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
-github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20231012214154-373cb504000d h1:P8MnP9cxZ19PrMqqA60TeT2YXgDz+/kQer0rJJDEAEk=
-github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20231012214154-373cb504000d/go.mod h1:mQO6jtL9OMEzAx+IyCTDyEUm9wN1vUeunw0aROcepBw=
-github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20231024192226-922d2a5db383 h1:X0UjPYAsuK+ByO9Iy18ZxPjOPnFYUWE+yBX5tM5606M=
-github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20231024192226-922d2a5db383/go.mod h1:mQO6jtL9OMEzAx+IyCTDyEUm9wN1vUeunw0aROcepBw=
 github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20231101204909-42a1eb2ab28b h1:Eb+7GZz2VcC83mnMgDEtCJe8cQF2fM58rrG+TwnGj3Y=
 github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20231101204909-42a1eb2ab28b/go.mod h1:Yhxg+reeWEw4OnPUsX3ZYogS3RbtmC0M20TzX/w4N0I=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
