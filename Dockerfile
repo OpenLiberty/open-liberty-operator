@@ -60,9 +60,10 @@ LABEL name=$NAME \
       vcs-url=$VCS_URL \
       url=$VCS_URL
 
-COPY LICENSE /licenses/
+COPY --chown=${USER_ID}:${GROUP_ID} LICENSE /licenses/
 WORKDIR /
-COPY --from=builder /workspace/manager .
+COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/manager .
+COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/controllers/assets/ /controllers/assets
 
 USER ${USER_ID}:${GROUP_ID}
 

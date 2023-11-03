@@ -2411,6 +2411,10 @@ spec:
                 x-kubernetes-list-map-keys:
                 - name
                 x-kubernetes-list-type: map
+              manageLTPA:
+                description: Enable management of LTPA key sharing amongst Liberty
+                  containers. Defaults to false.
+                type: boolean
               manageTLS:
                 description: Enable management of TLS certificates. Defaults to true.
                 type: boolean
