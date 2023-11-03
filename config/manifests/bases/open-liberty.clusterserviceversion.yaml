@@ -76,6 +76,16 @@ spec:
       - description: The unique ID for the provider. Default value is oidc.
         displayName: ID
         path: sso.oidc[0].id
+      - description: The list of TopologySpreadConstraints for the application instance
+          and if applicable, the Semeru Cloud Compiler instance.
+        displayName: Constraints
+        path: topologySpreadConstraints.constraints
+      - description: Whether the operator should disable its default set of TopologySpreadConstraints.
+          Defaults to false.
+        displayName: Disable Operator Defaults
+        path: topologySpreadConstraints.disableOperatorDefaults
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Name of the application. Defaults to the name of this custom
           resource.
         displayName: Application Name
@@ -174,20 +184,15 @@ spec:
         path: expose
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Enable management of TLS certificates. Defaults to true.
-        displayName: Manage TLS
-        path: manageTLS
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Specifies one or more scopes to request.
         displayName: Scope
         path: sso.oidc[0].scope
-      - description: Number of pods to create. Defaults to 1. Not applicable when
-          .spec.autoscaling or .spec.createKnativeService is specified.
-        displayName: Replicas
-        path: replicas
+      - description: Enable management of LTPA key sharing amongst Liberty containers.
+          Defaults to false.
+        displayName: Manage LTPA
+        path: manageLTPA
         x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:podCount
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: The port exposed by the container.
         displayName: Service Port
         path: service.port
@@ -196,8 +201,11 @@ spec:
       - description: Specifies the required authentication method.
         displayName: Token Endpoint Auth Method
         path: sso.oidc[0].tokenEndpointAuthMethod
-      - displayName: Auto Scaling
-        path: autoscaling
+      - description: Enable management of TLS certificates. Defaults to true.
+        displayName: Manage TLS
+        path: manageTLS
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - displayName: Service Type
         path: service.type
         x-descriptors:
@@ -208,25 +216,29 @@ spec:
         path: sso.oidc[0].hostNameVerificationEnabled
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Resource requests and limits for the application container.
-        displayName: Resource Requirements
-        path: resources
+      - description: Number of pods to create. Defaults to 1. Not applicable when
+          .spec.autoscaling or .spec.createKnativeService is specified.
+        displayName: Replicas
+        path: replicas
         x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
+        - urn:alm:descriptor:com.tectonic.ui:podCount
       - description: Node proxies this port into your service.
         displayName: Node Port
         path: service.nodePort
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:number
-      - displayName: Probes
-        path: probes
+      - displayName: Auto Scaling
+        path: autoscaling
       - description: The name for the port exposed by the container.
         displayName: Port Name
         path: service.portName
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
-      - displayName: Deployment
-        path: deployment
+      - description: Resource requests and limits for the application container.
+        displayName: Resource Requirements
+        path: resources
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
       - description: Annotations to be added to the service.
         displayName: Service Annotations
         path: service.annotations
@@ -237,16 +249,16 @@ spec:
         path: service.certificate.annotations
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      - displayName: Probes
+        path: probes
       - description: The port that the operator assigns to containers inside pods.
           Defaults to the value of .spec.service.port.
         displayName: Target Port
         path: service.targetPort
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:number
-      - displayName: StatefulSet
-        path: statefulSet
-      - displayName: Service
-        path: service
+      - displayName: Deployment
+        path: deployment
       - description: 'A name of a secret that already contains TLS key, certificate
           and CA to be mounted in the pod. The following keys are valid in the secret:
           ca.crt, tls.crt, and tls.key.'
@@ -254,57 +266,73 @@ spec:
         path: service.certificateSecretRef
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
-      - displayName: Route
-        path: route
       - description: Configure service certificate.
         displayName: Service Certificate
         path: service.certificate
-      - description: Configures the Semeru Cloud Compiler to handle Just-In-Time (JIT)
-          compilation requests from the application.
-        displayName: Semeru Cloud Compiler
-        path: semeruCloudCompiler
+      - displayName: StatefulSet
+        path: statefulSet
+      - displayName: Service
+        path: service
       - description: An array consisting of service ports.
         displayName: Ports
         path: service.ports
-      - displayName: Network Policy
-        path: networkPolicy
+      - displayName: Route
+        path: route
       - description: Expose the application as a bindable service. Defaults to false.
         displayName: Bindable
         path: service.bindable
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - displayName: Serviceability
-        path: serviceability
-      - displayName: Single Sign-On
-        path: sso
+      - description: Configures the Semeru Cloud Compiler to handle Just-In-Time (JIT)
+          compilation requests from the application.
+        displayName: Semeru Cloud Compiler
+        path: semeruCloudCompiler
+      - displayName: Network Policy
+        path: networkPolicy
       - description: Specifies the strategy to replace old deployment pods with new
           pods.
         displayName: Deployment Update Strategy
         path: deployment.updateStrategy
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:updateStrategy
+      - displayName: Serviceability
+        path: serviceability
+      - displayName: Single Sign-On
+        path: sso
       - displayName: Monitoring
         path: monitoring
-      - description: An array of environment variables for the application container.
-        displayName: Environment Variables
-        path: env
-      - description: List of sources to populate environment variables in the application
-          container.
-        displayName: Environment Variables from Sources
-        path: envFrom
       - description: Specifies the strategy to replace old StatefulSet pods with new
           pods.
         displayName: StatefulSet Update Strategy
         path: statefulSet.updateStrategy
+      - description: An array of environment variables for the application container.
+        displayName: Environment Variables
+        path: env
       - displayName: Storage
         path: statefulSet.storage
+      - description: List of sources to populate environment variables in the application
+          container.
+        displayName: Environment Variables from Sources
+        path: envFrom
+      - description: A convenient field to set the size of the persisted storage.
+        displayName: Storage Size
+        path: statefulSet.storage.size
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: A convenient field to request the storage class of the persisted
+          storage. The name can not be specified or updated after the storage is created.
+        displayName: Storage Class Name
+        path: statefulSet.storage.className
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       - description: Represents a volume with data that is accessible to the application
           container.
         displayName: Volumes
         path: volumes
-      - description: A convenient field to set the size of the persisted storage.
-        displayName: Storage Size
-        path: statefulSet.storage.size
+      - description: The directory inside the container where this persisted storage
+          will be bound to.
+        displayName: Storage Mount Path
+        path: statefulSet.storage.mountPath
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
       - description: Represents where to mount the volumes into the application container.
@@ -313,33 +341,23 @@ spec:
       - description: List of containers to run before other containers in a pod.
         displayName: Init Containers
         path: initContainers
-      - description: A convenient field to request the storage class of the persisted
-          storage. The name can not be specified or updated after the storage is created.
-        displayName: Storage Class Name
-        path: statefulSet.storage.className
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: List of sidecar containers. These are additional containers to
-          be added to the pods.
-        displayName: Sidecar Containers
-        path: sidecarContainers
-      - description: The directory inside the container where this persisted storage
-          will be bound to.
-        displayName: Storage Mount Path
-        path: statefulSet.storage.mountPath
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - displayName: Affinity
-        path: affinity
       - description: A YAML object that represents a volumeClaimTemplate component
           of a StatefulSet.
         displayName: Storage Volume Claim Template
         path: statefulSet.storage.volumeClaimTemplate
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:PersistentVolumeClaim
+      - description: List of sidecar containers. These are additional containers to
+          be added to the pods.
+        displayName: Sidecar Containers
+        path: sidecarContainers
+      - displayName: Affinity
+        path: affinity
       - description: Security context for the application container.
         displayName: Security Context
         path: securityContext
+      - displayName: Topology Spread Constraints
+        path: topologySpreadConstraints
       - description: Labels to set on ServiceMonitor.
         displayName: Monitoring Labels
         path: monitoring.labels
