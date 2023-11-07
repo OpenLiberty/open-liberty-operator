@@ -142,8 +142,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 			traceConfig += " maxFiles=\"" + strconv.Itoa(int(*instance.Spec.MaxFiles)) + "\""
 		}
 		traceConfig += "/></server>"
-
-		_, err = utils.ExecuteCommandInContainer(r.RestConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "mkdir -p " + traceOutputDir + " && echo '" + traceConfig + "' > " + traceConfigFile})
+		_, err = utils.ExecuteCommandInContainer(r.RestConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "if [ ! -d \"serviceability\" ]; then exit 1; fi && " + "mkdir -p " + traceOutputDir + " && echo '" + traceConfig + "' > " + traceConfigFile})
 		if err != nil {
 			reqLogger.Error(err, "Encountered error while setting up trace for pod "+podName+" in namespace "+podNamespace)
 			return r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
