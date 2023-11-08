@@ -22,7 +22,7 @@
 - op: add
   path: /spec/customresourcedefinitions/owned/0/specDescriptors/-
   value:
-    displayName: Http Get
+    displayName: HTTP Get
     path: probes.liveness.httpGet
 - op: add
   path: /spec/customresourcedefinitions/owned/0/specDescriptors/-
@@ -32,7 +32,7 @@
 - op: add
   path: /spec/customresourcedefinitions/owned/0/specDescriptors/-
   value:
-    displayName: Http Headers
+    displayName: HTTP Headers
     path: probes.liveness.httpGet.httpHeaders
 - op: add
   path: /spec/customresourcedefinitions/owned/0/specDescriptors/-
@@ -93,7 +93,7 @@
 - op: add
   path: /spec/customresourcedefinitions/owned/0/specDescriptors/-
   value:
-    displayName: Http Get
+    displayName: HTTP Get
     path: probes.readiness.httpGet
 - op: add
   path: /spec/customresourcedefinitions/owned/0/specDescriptors/-
@@ -103,7 +103,7 @@
 - op: add
   path: /spec/customresourcedefinitions/owned/0/specDescriptors/-
   value:
-    displayName: Http Headers
+    displayName: HTTP Headers
     path: probes.readiness.httpGet.httpHeaders
 - op: add
   path: /spec/customresourcedefinitions/owned/0/specDescriptors/-
@@ -164,7 +164,7 @@
 - op: add
   path: /spec/customresourcedefinitions/owned/0/specDescriptors/-
   value:
-    displayName: Http Get
+    displayName: HTTP Get
     path: probes.startup.httpGet
 - op: add
   path: /spec/customresourcedefinitions/owned/0/specDescriptors/-
@@ -174,7 +174,7 @@
 - op: add
   path: /spec/customresourcedefinitions/owned/0/specDescriptors/-
   value:
-    displayName: Http Headers
+    displayName: HTTP Headers
     path: probes.startup.httpGet.httpHeaders
 - op: add
   path: /spec/customresourcedefinitions/owned/0/specDescriptors/-
@@ -226,7 +226,7 @@
   path: /spec/customresourcedefinitions/owned/0/specDescriptors/-
   value:
     displayName: Type
-    path: statefulSet.updateStrategy.typekube
+    path: statefulSet.updateStrategy.type
 - op: add
   path: /spec/customresourcedefinitions/owned/0/specDescriptors/-
   value:
@@ -240,7 +240,7 @@
 - op: add
   path: /spec/customresourcedefinitions/owned/0/specDescriptors/-
   value:
-    displayName: Metadate
+    displayName: Metadata
     path: statefulSet.storage.volumeClaimTemplate.metadata
 - op: add
   path: /spec/customresourcedefinitions/owned/0/specDescriptors/-
