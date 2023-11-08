@@ -3,9 +3,9 @@ kind: Kustomization
 
 namespace: olo-ns
 
-bases:
+
+resources:
 - ../../overlays/watch-all-namespaces
-
-patchesStrategicMerge:
-- olo-ns.yaml
-
+patches:
+- path: role1.yaml
+- path: role2.yaml

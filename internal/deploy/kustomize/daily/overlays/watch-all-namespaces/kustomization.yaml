@@ -3,12 +3,10 @@ kind: Kustomization
 
 namespace: open-liberty
 
-bases:
-- ../../base
 
 resources:
 - cluster-roles.yaml
+- ../../base
 
-patchesStrategicMerge:
-- olo-all-namespaces.yaml
-
+patches:
+- path: olo-all-namespaces.yaml

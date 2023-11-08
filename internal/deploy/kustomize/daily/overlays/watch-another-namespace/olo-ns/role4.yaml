@@ -1,0 +1,11 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: olo-manager-rolebinding
+  namespace: open-liberty
+subjects:
+- kind: ServiceAccount
+  name: olo-controller-manager
+  namespace: open-liberty
+
+
