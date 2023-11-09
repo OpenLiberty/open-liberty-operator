@@ -7,5 +7,3 @@ subjects:
 - kind: ServiceAccount
   name: olo-controller-manager
   namespace: open-liberty
-
-
