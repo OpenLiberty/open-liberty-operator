@@ -9,9 +9,11 @@ import (
 // OpenLibertyDumpSpec defines the desired state of OpenLibertyDump
 type OpenLibertyDumpSpec struct {
 	// The name of the Pod, which must be in the same namespace as the OpenLibertyDump CR.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	PodName string `json:"podName"`
 	// Optional. List of memory dump types to request: thread, heap, system.
 	// +listType=set
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Include []OpenLibertyDumpInclude `json:"include,omitempty"`
 }
 

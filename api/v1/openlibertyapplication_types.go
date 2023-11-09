@@ -206,6 +206,7 @@ type OpenLibertyApplicationAffinity struct {
 
 	// An array of architectures to be considered for deployment. Their position in the array indicates preference.
 	// +listType=set
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Architecture []string `json:"architecture,omitempty"`
 }
 
@@ -302,6 +303,7 @@ type OpenLibertyApplicationDeployment struct {
 	UpdateStrategy *appsv1.DeploymentStrategy `json:"updateStrategy,omitempty"`
 
 	// Annotations to be added only to the Deployment and resources owned by the Deployment
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
@@ -355,14 +357,17 @@ type OpenLibertyApplicationMonitoring struct {
 type OpenLibertyApplicationServiceability struct {
 	// A convenient field to request the size of the persisted storage to use for serviceability.
 	// +kubebuilder:validation:Pattern=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Size string `json:"size,omitempty"`
 
 	// The name of the PersistentVolumeClaim resource you created to be used for serviceability.
 	// +kubebuilder:validation:Pattern=.+
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	VolumeClaimName string `json:"volumeClaimName,omitempty"`
 
 	// A convenient field to request the StorageClassName of the persisted storage to use for serviceability.
 	// +kubebuilder:validation:Pattern=.+
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	StorageClassName string `json:"storageClassName,omitempty"`
 }
 
@@ -584,33 +589,43 @@ type OAuth2Client struct {
 	ID string `json:"id,omitempty"`
 
 	// Specifies a token endpoint URL for the OAuth 2.0 provider. Required field.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	TokenEndpoint string `json:"tokenEndpoint"`
 
 	// Specifies an authorization endpoint URL for the OAuth 2.0 provider. Required field.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	AuthorizationEndpoint string `json:"authorizationEndpoint"`
 
 	// Specifies the name of the claim. Use its value as the user group membership
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	GroupNameAttribute string `json:"groupNameAttribute,omitempty"`
 
 	// Specifies the name of the claim. Use its value as the authenticated user principal.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	UserNameAttribute string `json:"userNameAttribute,omitempty"`
 
 	// The name of the social login configuration for display.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	DisplayName string `json:"displayName,omitempty"`
 
 	// Specifies the name of the claim. Use its value as the subject realm.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	RealmNameAttribute string `json:"realmNameAttribute,omitempty"`
 
 	// Specifies the realm name for this social media.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	RealmName string `json:"realmName,omitempty"`
 
 	// Specifies one or more scopes to request.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Scope string `json:"scope,omitempty"`
 
 	// Specifies the required authentication method.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	TokenEndpointAuthMethod string `json:"tokenEndpointAuthMethod,omitempty"`
 
 	// Name of the header to use when an OAuth access token is forwarded.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	AccessTokenHeaderName string `json:"accessTokenHeaderName,omitempty"`
 
 	// Determines whether the access token that is provided in the request is used for authentication.
@@ -633,6 +648,7 @@ type OAuth2Client struct {
 // Represents configuration for social login using GitHub.
 type GithubLogin struct {
 	// Specifies the host name of your enterprise GitHub.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Hostname string `json:"hostname,omitempty"`
 }
 
