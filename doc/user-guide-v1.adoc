@@ -196,7 +196,7 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `statefulSet.storage.volumeClaimTemplate` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#components++[volumeClaimTemplate] component of a `StatefulSet`.
 | `statefulSet.updateStrategy`   | A field to specify the update strategy of the StatefulSet. For examples, see link:++https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies++[updateStrategy]
 | `statefulSet.updateStrategy.type`   | The type of update strategy of the StatefulSet. The type can be set to `RollingUpdate` or `OnDelete`, where `RollingUpdate` is the default update strategy.
-| `topologySpreadConstraints` | Configures topology spread constraints for the application instance and if applicable, the Semeru Cloud Compiler instance. For examples, see link:#configuring-topology-spread-constraints[Configuring topology spread constraints].
+| `topologySpreadConstraints` | Configures topology spread constraints for the application instance and if applicable, the Semeru Cloud Compiler instance. For examples, see link:#constrain-how-pods-are-spread-between-nodes-and-zones[Constrain how pods are spread between nodes and zones].
 | `topologySpreadConstraints.constraints` | A YAML array that represents a list of link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#topologyspreadconstraint-v1-core++[TopologySpreadConstraints].
 | `topologySpreadConstraints.disableOperatorDefaults` | Disables the default TopologySpreadConstraints set by the operator. Defaults to `false`. By default, pods of the application instance are (preferably) spread across zones and nodes with a `maxSkew` of 1. If applicable, pods of the Semeru Cloud Compiler instance are also (preferably) spread across zones and nodes with a `maxSkew` of 1.
 | `volumeMounts` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/storage/volumes/++[pod volumeMount]. For examples, see link:#persist-resources[Persist Resources].
@@ -390,7 +390,7 @@ For more information about overriding variable default values, see link:#set-env
 
 
 [[configuring-single-sign-on-sso]]
-=== Configuring single sign-on (SSO) image:images/docs_openliberty_logo.png[OL,30]
+=== Configuring single sign-on (SSO) (`.spec.sso`) image:images/docs_openliberty_logo.png[OL,30]
 
 An administrator can configure single sign-on (SSO) for Open Liberty operators to authenticate and manage users. Authentication can be delegated to external providers, such as Google, Facebook, LinkedIn, Twitter, GitHub, or any OpenID Connect (OIDC) or OAuth 2.0 clients.
 
@@ -585,7 +585,7 @@ sso:
 ----
 
 [[storage-for-serviceability]]
-=== Storage for serviceability image:images/docs_openliberty_logo.png[OL,30]
+=== Storage for serviceability (`.spec.serviceability`) image:images/docs_openliberty_logo.png[OL,30]
 
 The operator provides single storage for serviceability.
 
@@ -637,7 +637,7 @@ spec:
 _Once a `PersistentVolumeClaim` is created by operator, its size can not be updated. It will not be deleted when serviceability is disabled or when the `OpenLibertyApplication` is deleted._
 
 [[reference-image-streams]]
-=== Reference image streams
+=== Reference image streams (`.spec.applicationImage`) 
 
 To deploy an image from an image stream, you must specify a **`.spec.applicationImage`** field in your CR.
 
@@ -656,7 +656,7 @@ The Operator tries to find an image stream name first with the `<project name>/<
 NOTE: This feature is only available if you are running on Red Hat OpenShift. The operator requires `ClusterRole` permissions if the image stream resource is in another namespace.
 
 [[create-a-service-account]]
-=== Create a service account
+=== Create a service account (`.spec.serviceAccountName`)
 
 The operator can create a `ServiceAccount` resource when deploying an `OpenLibertyApplication` custom resource (CR). If `.spec.serviceAccountName` is not specified in a CR, the operator creates a service account with the same name as the CR (e.g. `my-app`).
 
@@ -665,7 +665,7 @@ Users can also specify `serviceAccountName` when they want to create a service a
 If applications require specific permissions but still want the operator to create a `ServiceAccount`, users can still manually create a role binding to bind a role to the service account created by the operator. To learn more about Role-based access control (RBAC), see Kubernetes link:++https://kubernetes.io/docs/reference/access-authn-authz/rbac/++[documentation].
 
 [[add-or-change-labels]]
-=== Add or change labels
+=== Add or change labels (`.metadata.labels`)
 
 By default, the operator adds the following labels into all resources created
 for an `OpenLibertyApplication` CR:
@@ -699,7 +699,7 @@ After the initial deployment of the CR, any changes to its labels are applied on
 When running in Red Hat OpenShift, there are additional labels and annotations that are standard on the platform. Overwrite defaults where applicable and add any labels from the link:++https://github.com/redhat-developer/app-labels/blob/master/labels-annotation-for-openshift.adoc#labels++[Red Hat OpenShift list] that are not set by default using the previous instructions.
 
 [[add-annotations]]
-=== Add annotations
+=== Add annotations (`.metadata.annotations`)
 
 To add new annotations into all resources created for a `OpenLibertyApplication`, specify them in your CR as key-value pairs in the `.metadata.annotations` field. Annotations in a CR override any annotations specified on a resource, except for the annotations set on `Service` with `.spec.service.annotations`.
 
@@ -718,7 +718,7 @@ After the initial deployment of `OpenLibertyApplication`, any changes to its ann
 When running in Red Hat OpenShift, there are additional annotations that are standard on the platform. Overwrite defaults where applicable and add any labels from the link:++https://github.com/gorkem/app-labels/blob/master/labels-annotation-for-openshift.adoc#labels++[Red Hat OpenShift list] that are not set by default using the previous instructions.
 
 [[set-environment-variables-for-an-application-container]]
-=== Set environment variables for an application container
+=== Set environment variables for an application container (`.spec.env` or `.spec.envFrom`)
 
 To set environment variables for your application container, specify `.spec.env` or `.spec.envFrom` fields in a CR. The environment variables can come directly from key-value pairs, `ConfigMap`, or `Secret`. The environment variables set by the `.spec.env` or `.spec.envFrom` fields override any environment variables that are specified in the container image.
 
@@ -756,7 +756,7 @@ spec:
 For another example that uses `.spec.envFrom[].secretRef`, see link:#setting-up-basic-authentication-credentials-by-using-environment-variables[Setting up basic authentication credentials by using environment variables].
 
 [[setting-up-basic-authentication-credentials-by-using-environment-variables]]
-=== Setting up basic authentication credentials by using environment variables
+=== Setting up basic authentication credentials by using environment variables (`.spec.envFrom[].secretRef`) 
 
 An administrator can use the `username` and `password` container environment variables for basic authentication credentials.
 
@@ -776,12 +776,12 @@ spec:
 The `.spec.envFrom` configuration sets two environment variables for your application container, `username` and `password`, and uses the `username` and `password` values in your secret.
 
 [[configure-multiple-application-instances-for-high-availability]]
-=== Configure multiple application instances for high availability
+=== Configure multiple application instances for high availability (`.spec.replicas` or `.spec.autoscaling`)
 
 To run multiple instances of your application for high availability, use the `.spec.replicas` field for multiple static instances or the `.spec.autoscaling` field for auto-scaling, which autonomically creates or deletes instances based on resource consumption. The `.spec.autoscaling`.maxReplicas and `.spec.resources.requests.cpu` fields are required for auto-scaling.
 
 [[set-privileges-and-permissions-for-a-pod-or-container]]
-=== Set privileges and permissions for a pod or container
+=== Set privileges and permissions for a pod or container (`.spec.securityContext`)
 
 A security context controls privilege and permission settings for a pod or application container. By default, the operator sets several `.spec.securityContext` parameters for an application container as shown in the following example.
 
@@ -816,7 +816,7 @@ For more information, see link:++https://kubernetes.io/docs/tasks/configure-pod-
 NOTE: If your Kubernetes cluster does not generate a user ID and `.spec.securityContext.runAsUser` is not specified, the user ID defaults to the value in the image metadata. If the image does not have a user ID specified either, you will have to assign a user ID through  `.spec.securityContext.runAsUser` to meet `.spec.securityContext.runAsNonRoot` requirement.
 
 [[persist-resources]]
-=== Persist resources
+=== Persist resources (`.spec.statefulSet` and `.spec.volumeMounts`) 
 If storage is specified in the `OpenLibertyApplication` CR, the operator can create a `StatefulSet` and `PersistentVolumeClaim` for each pod. If storage is not specified, `StatefulSet` resource is created without persistent storage.
 
 The following CR definition uses `.spec.statefulSet.storage` to provide basic storage. The operator creates a `StatefulSet` with the size of `1Gi` that mounts to the `/data` folder.
@@ -867,7 +867,7 @@ spec:
 ----
 
 [[monitor-resources]]
-=== Monitor resources
+=== Monitor resources (`.spec.monitoring`)
 
 An Open Liberty operator can create a `ServiceMonitor` resource to integrate with Prometheus Operator.
 
@@ -918,7 +918,7 @@ spec:
 ----
 
 [[specify-multiple-service-ports]]
-=== Specify multiple service ports
+=== Specify multiple service ports (`.spec.service.port*` and `.spec.monitoring.endpoints`)
 
 To provide multiple service ports in addition to the primary service port, configure the primary service port with the `.spec.service.port`, `.spec.service.targetPort`, `.spec.service.portName`, and `.spec.service.nodePort` fields. The primary port is exposed from the container that runs the application and the port values are used to configure the Route (or Ingress), Service binding and Knative service.
 
@@ -958,7 +958,7 @@ spec:
 ----
 
 [[configure-probes]]
-=== Configure probes
+=== Configure probes (`.spec.probes`)
 Probes are health checks on an application container to determine whether it is alive or ready to receive traffic. The Open Liberty operator has startup, liveness, and readiness probes.
 
 Probes are not enabled in applications by default. To enable a probe with the default values, set the probe parameters to `{}`. The following example enables all 3 probes to use default values.
@@ -1033,7 +1033,7 @@ spec:
 ----
 
 [[deploy-serverless-applications-with-knative]]
-=== Deploy serverless applications with Knative
+=== Deploy serverless applications with Knative (`.spec.createKnativeService`)
 
 If link:++https://knative.dev/docs/++[Knative] is installed on a Kubernetes cluster, to deploy serverless applications with Knative on the cluster, the operator creates a link:++https://github.com/knative/serving/blob/main/docs/spec/spec.md#service++[Knative Service] resource which manages the entire life cycle of a workload. To create a Knative service, set `.spec.createKnativeService` to `true`.
 
@@ -1058,7 +1058,7 @@ For details on how to configure Knative for tasks such as enabling HTTPS connect
 Autoscaling fields in `OpenLibertyApplication` are not used to configure Knative Pod Autoscaler (KPA). To learn how to configure KPA, see link:++https://knative.dev/docs/serving/configuring-the-autoscaler/++[Configuring the Autoscaler].
 
 [[expose-applications-externally]]
-=== Expose applications externally
+=== Expose applications externally (`.spec.expose`, `.spec.createKnativeService`, `.spec.route`)
 
 Expose an application externally with a Route, Knative Route, or Ingress resource.
 
@@ -1126,7 +1126,7 @@ spec:
 ----
 
 [[allowing-or-limiting-incoming-traffic]]
-=== Allowing or limiting incoming traffic
+=== Allowing or limiting incoming traffic (`.spec.networkPolicy`)
 
 By default, network policies for an application isolate incoming traffic.
 
@@ -1176,7 +1176,7 @@ spec:
 ----
 
 [[bind-applications-with-operator-managed-backing-services]]
-=== Bind applications with operator-managed backing services
+=== Bind applications with operator-managed backing services (`.status.binding.name` and `.spec.service.bindable`)
 
 The link:++https://github.com/redhat-developer/service-binding-operator++[Service Binding Operator] enables application developers to bind applications together with operator-managed backing services. If the Service Binding Operator is installed on your cluster, you can bind applications by creating a `ServiceBindingRequest` custom resource.
 
@@ -1254,7 +1254,7 @@ This method is newer than the Red Hat method but achieves the same results. You 
 20. Check the Pod/Deployment workload and verify that a volume is mounted, either by scrolling down or by opening a terminal session into a container and running `ls /bindings`.
 
 [[limit-a-pod-to-run-on-specified-nodes]]
-=== Limit a pod to run on specified nodes
+=== Limit a pod to run on specified nodes (`.spec.affinity`) 
 Use link:#crd-spec-affinity[`.spec.affinity`] to constrain a Pod to run only on specified nodes.
 
 To set required labels for pod scheduling on specific nodes, use the `.spec.affinity.nodeAffinityLabels` field.
@@ -1339,7 +1339,7 @@ spec:
 ----
 
 [[constrain-how-pods-are-spread-between-nodes-and-zones]]
-=== Constrain how pods are spread between nodes and zones
+=== Constrain how pods are spread between nodes and zones (`.spec.topologySpreadConstraints`)
 
 Use the `.spec.topologySpreadConstraints` YAML object to specify constraints on how pods of the application instance (and if enabled, the Semeru Cloud Compiler instance) are spread between nodes and zones of the cluster.
 
@@ -1457,7 +1457,7 @@ spec:
 ----
 
 [[generating-certificates-with-red-hat-openshift-service-ca]]
-=== Generating certificates with Red Hat OpenShift service CA
+=== Generating certificates with Red Hat OpenShift service CA (`.spec.service.annotations`)
 
 If the operator runs on Red Hat OpenShift Container Platform, the operator can automatically generate service certificates with Red Hat OpenShift Service CA.
 
@@ -1480,7 +1480,7 @@ spec:
 ----
 
 [[specifying-certificates-for-a-secret-route-and-service]]
-=== Specifying certificates for a secret Route and Service
+=== Specifying certificates for a secret Route and Service (`.spec.service.certificateSecretRef` and `.spec.route.certificateSecretRef`) 
 
 Specify your own certificate for a secret `Route` with the `OpenLibertyApplication` CR `.spec.route.certificateSecretRef` parameter. Specify your own certificate for a secret `Service` with the `.spec.service.certificateSecretRef` parameter.
 
