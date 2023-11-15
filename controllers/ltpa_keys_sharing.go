@@ -237,7 +237,17 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 					if err != nil {
 						return fmt.Errorf("Failed to create Job " + generateLTPAKeysJob.Name), ""
 					}
-				} else if err != nil {
+				} else if err == nil {
+					// If the LTPA Secret is not yet created (LTPA Job has not successfully completed)
+					// and the LTPA Job's configuration is outdated, retry LTPA generation with the new configuration
+					if lutils.IsLTPAJobConfigurationOutdated(generateLTPAKeysJob, instance) {
+						// Delete the Job request to restart the entire LTPA generation process (i.e. reloading the script, ltpa.xml, and Job)
+						err = r.DeleteResource(ltpaJobRequest)
+						if err != nil {
+							return err, ltpaSecret.Name
+						}
+					}
+				} else {
 					return fmt.Errorf("Failed to get Job " + generateLTPAKeysJob.Name), ""
 				}
 			}
