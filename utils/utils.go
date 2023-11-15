@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -578,6 +579,34 @@ func CustomizeLTPAServerXML(xmlSecret *corev1.Secret, la *olv1.OpenLibertyApplic
 	xmlSecret.StringData = make(map[string]string)
 	keysFileName := strings.Replace(ltpaKeysMountPath, "/config", "${server.config.dir}", 1)
 	xmlSecret.StringData[ltpaXMLFileName] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<server>\n    <ltpa keysFileName=\"" + keysFileName + "/" + ltpaKeysFileName + "\" keysPassword=\"" + encryptedPassword + "\" />\n</server>"
+}
+
+// Returns true if the OpenLibertyApplication leader's state has changed, causing existing LTPA Jobs to need a configuration update, otherwise return false
+func IsLTPAJobConfigurationOutdated(job *v1.Job, appLeaderInstance *olv1.OpenLibertyApplication) bool {
+	// The Job contains the leader's pull secret
+	if appLeaderInstance.GetPullSecret() != nil && *appLeaderInstance.GetPullSecret() != "" {
+		ltpaJobHasLeaderPullSecret := false
+		for _, objectReference := range job.Spec.Template.Spec.ImagePullSecrets {
+			if objectReference.Name == *appLeaderInstance.GetPullSecret() {
+				ltpaJobHasLeaderPullSecret = true
+			}
+		}
+		if !ltpaJobHasLeaderPullSecret {
+			return true
+		}
+	}
+	if len(job.Spec.Template.Spec.Containers) != 1 {
+		return true
+	}
+	// The Job matches the leader's pull policy
+	if job.Spec.Template.Spec.Containers[0].ImagePullPolicy != *appLeaderInstance.GetPullPolicy() {
+		return true
+	}
+	// The Job matches the leader's security context
+	if !reflect.DeepEqual(*job.Spec.Template.Spec.Containers[0].SecurityContext, *rcoutils.GetSecurityContext(appLeaderInstance)) {
+		return true
+	}
+	return false
 }
 
 func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaSecretName string, serviceAccountName string, ltpaScriptName string) {
