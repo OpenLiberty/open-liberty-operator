@@ -156,7 +156,10 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `serviceability.size` | [[crd-spec-serviceability-size]] A convenient field to request the size of the persisted storage to use for serviceability. Can be overridden by the `serviceability.volumeClaimName` property.
 | `serviceability.storageClassName` | [[crd-spec-serviceability-storageClassName]] A convenient field to request the StorageClassName of the persisted storage to use for serviceability. Can be overridden by the `serviceability.volumeClaimName` property.
 | `serviceability.volumeClaimName` | [[crd-spec-serviceability-volumeClaimName]] The name of the link:++https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims++[PersistentVolumeClaim] resource you created to be used for serviceability. Must be in the same namespace.
-| `serviceAccountName` | The name of the Red Hat OpenShift service account to be used during deployment. If a service account name is not specified, a service account is automatically created. For examples, see link:#create-a-service-account[Create a service account].
+| `serviceAccountName` | Deprecated. Use link:#crd-spec-serviceAccount-name[`serviceAccount.name`] instead.
+| `serviceAccount`| [[crd-spec-serviceAccount-name]] The name of the service account to be used during deployment. If a service account name is not specified, a service account is automatically created. For examples, see link:#create-a-service-account[Create a service account].
+| `serviceAccount.name` | Name of the service account to use for deploying the application.
+| `serviceAccount.mountToken` | A Boolean to toggle whether the service account's token should be mounted in the application pods. If unset or `true`, the token will be mounted.
 | `sidecarContainers` | The list of `sidecar` containers. These are additional containers to be added to the pods. Note: Sidecar containers should not be named `app`.
 | `sso`   | [[crd-sso]] Specifies the configuration for single sign-on providers to authenticate with. Specify sensitive fields, such as _clientId_ and _clientSecret_, for the selected providers by using the `Secret`. For examples, see link:++#configuring-single-sign-on-sso-specsso-++[Configuring Single Sign-On (SSO)].
 | `sso.github.hostname`   | Specifies the host name of your enterprise GitHub, such as `github._mycompany_.com`. The default is `github.com`, which is the public GitHub.
@@ -333,7 +336,7 @@ Open Liberty Operator builds upon link:#common-component-documentation[component
 ==== Common Components [[common-component-documentation]]
 
 * link:#reference-image-streams[Reference image streams] (`.spec.applicationImage`)
-* link:#create-a-service-account[Create a service account] (`.spec.serviceAccountName`)
+* link:#create-a-service-account[Create a service account] (`.spec.serviceAccount.name`)
 * link:#add-or-change-labels[Add or change labels] (`.metadata.labels`)
 * link:#add-annotations[Add annotations] (`.metadata.annotations`)
 * link:#set-environment-variables-for-an-application-container[Set environment variables for an application container] (`.spec.env` or `.spec.envFrom`)
@@ -656,11 +659,13 @@ The Operator tries to find an image stream name first with the `<project name>/<
 NOTE: This feature is only available if you are running on Red Hat OpenShift. The operator requires `ClusterRole` permissions if the image stream resource is in another namespace.
 
 [[create-a-service-account]]
-=== Create a service account (`.spec.serviceAccountName`)
+=== Create a service account (`.spec.serviceAccount.name`)
 
-The operator can create a `ServiceAccount` resource when deploying an `OpenLibertyApplication` custom resource (CR). If `.spec.serviceAccountName` is not specified in a CR, the operator creates a service account with the same name as the CR (e.g. `my-app`).
+The operator can create a `ServiceAccount` resource when deploying an `OpenLibertyApplication` custom resource (CR). If `.spec.serviceAccount.name` is not specified in a CR, the operator creates a service account with the same name as the CR (e.g. `my-app`).
 
-Users can also specify `serviceAccountName` when they want to create a service account manually.
+NOTE: `.spec.serviceAccountName` is now deprecated. The operator still looks up the value of `.spec.serviceAccountName`, but you must switch to using `.spec.serviceAccount.name`.
+
+You can set `.spec.serviceAccount.mountToken` to disable mounting the service account token into the application pods. By default, the service account token is mounted. This configuration applies to either the default service account that the operator creates or to the custom service account that you provide.
 
 If applications require specific permissions but still want the operator to create a `ServiceAccount`, users can still manually create a role binding to bind a role to the service account created by the operator. To learn more about Role-based access control (RBAC), see Kubernetes link:++https://kubernetes.io/docs/reference/access-authn-authz/rbac/++[documentation].
 
