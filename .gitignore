@@ -5,6 +5,7 @@ bin/kustomize
 build/_output
 build/_test
 bundle/tests/scorecard/kuttl/kubeconfig
+operators
 # Created by https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
 ### Emacs ###
 # -*- mode: gitignore; -*-
