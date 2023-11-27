@@ -1,6 +1,6 @@
 # Application Monitoring on Red Hat OpenShift Container Platform (RHOCP) with Prometheus and Grafana
 
-The following guide has been tested and supported with Red Hat OpenShift Container Platform (RHOCP) versions 4.12+.
+The following guide has been tested and supported with Red Hat OpenShift Container Platform (RHOCP) versions 4.12 and 4.14.
 
 ## Prerequisites
 
@@ -14,9 +14,9 @@ In RHOCP 4.6+, application monitoring can be set up by enabling monitoring for u
 
 There is no separate Grafana deployment that comes with enabling user-defined monitoring and the existing Grafana instance provided with the default monitoring stack is read-only, so a community-powered Grafana Operator must be installed later to create custom dashboards for viewing your metrics.
 
-. To configure the monitoring stack, follow this OpenShift guide link:++https://docs.openshift.com/container-platform/4.12/monitoring/configuring-the-monitoring-stack.html#preparing-to-configure-the-monitoring-stack++[Configuring the monitoring stack]. Here, you will create two config maps, `cluster-monitoring-config` and `user-workload-monitoring-config`, that will allow you to enable monitoring for user-defined projects in the next step. After creating the `user-workload-monitoring-config` config map, return to this guide to continue setting up monitoring for user-defined projects.
+. To configure the monitoring stack, follow this OpenShift guide link:++https://docs.openshift.com/container-platform/4.14/monitoring/configuring-the-monitoring-stack.html#preparing-to-configure-the-monitoring-stack++[Configuring the monitoring stack]. Here, you will create two config maps, `cluster-monitoring-config` and `user-workload-monitoring-config`, that will allow you to enable monitoring for user-defined projects in the next step. After creating the `user-workload-monitoring-config` config map, return to this guide to continue setting up monitoring for user-defined projects.
 
-. To enable monitoring for user-defined projects, follow the OpenShift guide link:++https://docs.openshift.com/container-platform/4.12/monitoring/enabling-monitoring-for-user-defined-projects.html++[Enabling monitoring for user-defined projects].
+. To enable monitoring for user-defined projects, follow the OpenShift guide link:++https://docs.openshift.com/container-platform/4.14/monitoring/enabling-monitoring-for-user-defined-projects.html++[Enabling monitoring for user-defined projects].
 
 . Deploy a Service Monitor inside the `myapp` namespace to define the service endpoint that will be monitored by the Prometheus instance. Add the following YAML to your OpenLibertyApplication Custom Resource (CR):
 
