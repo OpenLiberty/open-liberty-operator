@@ -7,8 +7,8 @@ resources:
 - ../../../overlays/watch-another-namespace
 patches:
 - path: olo-deployment.yaml
-- path: role1.yaml
-- path: role2.yaml
-- path: role3.yaml
-- path: role4.yaml
+- path: olo-leader-election-role.yaml
+- path: olo-manager-role.yaml
+- path: olo-leader-election-rolebinding.yaml
+- path: olo-manager-rolebinding.yaml
 - path: olo-sa.yaml

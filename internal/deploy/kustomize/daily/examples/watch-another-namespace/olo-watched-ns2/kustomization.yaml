@@ -6,7 +6,7 @@ namespace: olo-watched-ns2
 resources:
 - ../../../overlays/watch-another-namespace/olo-watched-ns
 patches:
-- path: role1.yaml
-- path: role2.yaml
-- path: role3.yaml
-- path: role4.yaml
+- path: olo-watched-role.yaml
+- path: olo-watched-rolebinding.yaml
+- path: olo-leader-election-watched-role.yaml
+- path: olo-leader-election-watched-rolebinding.yaml

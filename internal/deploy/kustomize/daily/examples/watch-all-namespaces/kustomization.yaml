@@ -7,5 +7,5 @@ namespace: olo-ns
 resources:
 - ../../overlays/watch-all-namespaces
 patches:
-- path: role1.yaml
-- path: role2.yaml
+- path: olo-leader-election-cluster-rolebinding.yaml
+- path: olo-manager-cluster-rolebinding.yaml
