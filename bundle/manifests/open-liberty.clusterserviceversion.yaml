@@ -94,7 +94,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2023-12-01T19:12:56Z"
+    createdAt: "2023-12-01T20:45:41Z"
     description: Deploy and manage containerized Liberty applications
     olm.skipRange: '>=0.8.0 <1.3.0'
     operators.openshift.io/infrastructure-features: '["disconnected"]'
@@ -1035,6 +1035,8 @@ spec:
     You can deploy your Liberty application container by either pointing to a container image, or an OpenShift ImageStream. When using an ImageStream the operator will watch for any updates and will automatically deploy the new image.
     ### Integration with Certificate Managers
     The [cert-manager APIs](https://cert-manager.io/) when available on the cluster will be used to generate certificates for the application. Otherwise, on Red Hat OpenShift, the operator will generate certificates using OpenShift's Certificate Manager. The operator will automatically provision TLS certificates for applications' pods and they are automatically refreshed when the certificates are updated. Optionally, you can bring your own (BYO) certificate authority (CA) or Issuer to generate certificates to secure your applications.
+    ### Management of Lightweight Third-Party Authentication (LTPA)
+    LTPA provides a method of SSO configuration to authenticate users to access applications. The Liberty operator can generate and manage the LTPA key for applications. A single LTPA key can be used per each namespace and shared with participating microservices and applications to allow users to authenticate only once.
     ### Automatically restrict network communication
     Network policies are created for each application by default to limit incoming traffic to pods in the same namespace that are part of the same application. Only the ports configured by the service are allowed. The network policy can be configured to allow either namespaces and/or pods with certain labels. On OpenShift, the operator automatically configures network policy to allow traffic from ingress, when the application is exposed, and from the monitoring stack.
     ### Integration with Semeru Cloud Compiler
