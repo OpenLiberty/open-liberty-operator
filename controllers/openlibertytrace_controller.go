@@ -11,7 +11,6 @@ import (
 	"github.com/go-logr/logr"
 
 	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
-	"github.com/OpenLiberty/open-liberty-operator/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -124,7 +123,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	if instance.Spec.Disable != nil && *instance.Spec.Disable {
 		//Disable trace if trace was previously enabled on the same pod
 		if !podChanged && prevTraceEnabled == corev1.ConditionTrue {
-			_, err = utils.ExecuteCommandInContainer(r.RestConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "rm -f " + traceConfigFile})
+			_, err = lutils.ExecuteCommandInContainer(r.RestConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "rm -f " + traceConfigFile})
 			if err != nil {
 				reqLogger.Error(err, "Encountered error while disabling trace for pod "+podName+" in namespace "+podNamespace)
 				return r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionTrue, podName, podChanged)
@@ -143,7 +142,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 		}
 		traceConfig += "/></server>"
 
-		_, err = utils.ExecuteCommandInContainer(r.RestConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "mkdir -p " + traceOutputDir + " && echo '" + traceConfig + "' > " + traceConfigFile})
+		_, err = lutils.ExecuteCommandInContainer(r.RestConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "mkdir -p " + traceOutputDir + " && echo '" + traceConfig + "' > " + traceConfigFile})
 		if err != nil {
 			reqLogger.Error(err, "Encountered error while setting up trace for pod "+podName+" in namespace "+podNamespace)
 			return r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
@@ -213,7 +212,7 @@ func (r *ReconcileOpenLibertyTrace) disableTraceOnPrevPod(reqLogger logr.Logger,
 		reqLogger.Info("Previous pod " + prevPodName + " was not found in namespace " + podNamespace)
 	} else {
 		//Stop tracing on previous Pod
-		_, err = utils.ExecuteCommandInContainer(r.RestConfig, prevPodName, podNamespace, "app", []string{"/bin/sh", "-c", "rm -f " + traceConfigFile})
+		_, err = lutils.ExecuteCommandInContainer(r.RestConfig, prevPodName, podNamespace, "app", []string{"/bin/sh", "-c", "rm -f " + traceConfigFile})
 		if err == nil {
 			reqLogger.Info("Disabled trace on previous pod " + prevPodName + " in namespace " + podNamespace)
 		} else {

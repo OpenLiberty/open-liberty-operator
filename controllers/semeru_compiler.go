@@ -88,7 +88,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCompiler(ola *openlibertyv1.OpenLi
 
 		//create certmanager issuer and certificate if necessary
 		if cmPresent {
-			err = r.GenerateCMIssuer(ola.Namespace, "olo", "Open Liberty Operator", "open-liberty-operator")
+			err = r.GenerateCMIssuer(ola.Namespace, OperatorShortName, "Open Liberty Operator", OperatorName)
 			if err != nil {
 				return err, "Failed to reconcile Certificate Issuer", false
 			}
@@ -624,7 +624,7 @@ func (r *ReconcileOpenLiberty) areSemeruCompilerResourcesReady(ola *openlibertyv
 }
 
 func (r *ReconcileOpenLiberty) isSemeruEnabled(ola *openlibertyv1.OpenLibertyApplication) bool {
-	if ola.GetSemeruCloudCompiler() != nil && ola.GetSemeruCloudCompiler().Enable == true {
+	if ola.GetSemeruCloudCompiler() != nil && ola.GetSemeruCloudCompiler().Enable {
 		return true
 	} else {
 		return false
