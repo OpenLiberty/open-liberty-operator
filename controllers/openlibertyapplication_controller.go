@@ -4,22 +4,20 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	networkingv1 "k8s.io/api/networking/v1"
 
 	"github.com/application-stacks/runtime-component-operator/common"
 	"github.com/go-logr/logr"
 
-	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
-	oputils "github.com/application-stacks/runtime-component-operator/utils"
+	olutils "github.com/OpenLiberty/open-liberty-operator/utils"
+	appstacksutils "github.com/application-stacks/runtime-component-operator/utils"
 
 	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	imageutil "github.com/openshift/library-go/pkg/image/imageutil"
-	"github.com/pkg/errors"
 	prometheusv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -38,15 +36,17 @@ import (
 )
 
 const (
+	OperatorFullName  = "Open Liberty Operator"
 	OperatorName      = "open-liberty-operator"
 	OperatorShortName = "olo"
+	APIName           = "OpenLibertyApplication"
 )
 
 // ReconcileOpenLiberty reconciles an OpenLibertyApplication object
 type ReconcileOpenLiberty struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	oputils.ReconcilerBase
+	appstacksutils.ReconcilerBase
 	Log             logr.Logger
 	watchNamespaces []string
 }
@@ -71,40 +71,19 @@ const applicationFinalizer = "finalizer.openlibertyapplications.apps.openliberty
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconcile OpenLibertyApplication - starting")
-	ns, err := oputils.GetOperatorNamespace()
-	if err != nil {
-		reqLogger.Info("Failed to get operator namespace, error: " + err.Error())
-	}
-	// When running the operator locally, `ns` will be empty string
-	if ns == "" {
-		// Since this method can be called directly from unit test, populate `watchNamespaces`.
-		if r.watchNamespaces == nil {
-			r.watchNamespaces, err = oputils.GetWatchNamespaces()
-			if err != nil {
-				reqLogger.Error(err, "Error getting watch namespace")
-				return reconcile.Result{}, err
-			}
-		}
-		// If the operator is running locally, use the first namespace in the `watchNamespaces`
-		// `watchNamespaces` must have at least one item
-		ns = r.watchNamespaces[0]
-	}
 
-	configMap, err := r.GetOpConfigMap(OperatorName, ns)
-	if err != nil {
-		reqLogger.Info("Failed to get open-liberty-operator config map, error: " + err.Error())
-		oputils.CreateConfigMap(OperatorName)
+	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger.Info("Reconcile " + APIName + " - starting")
+
+	if ns, err := r.CheckOperatorNamespace(r.watchNamespaces); err != nil {
+		return reconcile.Result{}, err
 	} else {
-		common.Config.LoadFromConfigMap(configMap)
+		r.UpdateConfigMap(OperatorName, ns)
 	}
 
 	// Fetch the OpenLiberty instance
 	instance := &openlibertyv1.OpenLibertyApplication{}
-	var ba common.BaseComponent = instance
-	err = r.GetClient().Get(context.TODO(), request.NamespacedName, instance)
-	if err != nil {
+	if err := r.GetClient().Get(context.TODO(), request.NamespacedName, instance); err != nil {
 		if kerrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
@@ -124,8 +103,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 	// Check if there is an existing Deployment, Statefulset or Knative service by this name
 	// not managed by this operator
-	err = oputils.CheckForNameConflicts("OpenLibertyApplication", instance.Name, instance.Namespace, r.GetClient(), request, isKnativeSupported)
-	if err != nil {
+	if err = appstacksutils.CheckForNameConflicts(APIName, instance.Name, instance.Namespace, r.GetClient(), request, isKnativeSupported); err != nil {
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
@@ -133,7 +111,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// indicated by the deletion timestamp being set.
 	isInstanceMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
 	if isInstanceMarkedToBeDeleted {
-		if lutils.Contains(instance.GetFinalizers(), applicationFinalizer) {
+		if olutils.Contains(instance.GetFinalizers(), applicationFinalizer) {
 			// Run finalization logic for applicationFinalizer. If the finalization logic fails, don't remove the
 			// finalizer so that we can retry during the next reconciliation.
 			if err := r.finalizeOpenLibertyApplication(reqLogger, instance, instance.Name+"-serviceability", instance.Namespace); err != nil {
@@ -141,7 +119,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			}
 
 			// Remove applicationFinalizer. Once all finalizers have been removed, the object will be deleted.
-			instance.SetFinalizers(lutils.Remove(instance.GetFinalizers(), applicationFinalizer))
+			instance.SetFinalizers(olutils.Remove(instance.GetFinalizers(), applicationFinalizer))
 			err := r.GetClient().Update(context.TODO(), instance)
 			if err != nil {
 				return reconcile.Result{}, err
@@ -151,25 +129,25 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	// Add finalizer for this CR
-	if !lutils.Contains(instance.GetFinalizers(), applicationFinalizer) {
+	if !olutils.Contains(instance.GetFinalizers(), applicationFinalizer) {
 		if err := r.addFinalizer(reqLogger, instance); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
+
+	// initialize the OpenLibertyApplication instance
 	instance.Initialize()
 
-	_, err = oputils.Validate(instance)
 	// If there's any validation error, don't bother with requeuing
-	if err != nil {
-		reqLogger.Error(err, "Error validating OpenLibertyApplication")
+	if _, err = appstacksutils.Validate(instance); err != nil {
+		reqLogger.Error(err, "Error validating "+APIName)
 		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		return reconcile.Result{}, nil
 	}
 
-	_, err = lutils.Validate(instance)
 	// If there's any validation error, don't bother with requeuing
-	if err != nil {
-		reqLogger.Error(err, "Error validating OpenLibertyApplication")
+	if _, err = olutils.Validate(instance); err != nil {
+		reqLogger.Error(err, "Error validating "+APIName)
 		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		return reconcile.Result{}, nil
 	}
@@ -177,18 +155,13 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	if r.IsOpenShift() {
 		// The order of items passed to the MergeMaps matters here! Annotations from GetOpenShiftAnnotations have higher importance. Otherwise,
 		// it is not possible to override converted annotations.
-		instance.Annotations = oputils.MergeMaps(instance.Annotations, oputils.GetOpenShiftAnnotations(instance))
+		instance.Annotations = appstacksutils.MergeMaps(instance.Annotations, appstacksutils.GetOpenShiftAnnotations(instance))
 	}
 
-	err = r.GetClient().Update(context.TODO(), instance)
-	if err != nil {
-		reqLogger.Error(err, "Error updating OpenLibertyApplication")
+	if err = r.GetClient().Update(context.TODO(), instance); err != nil {
+		reqLogger.Error(err, "Error updating "+APIName)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
-
-	// if currentGen == 1 {
-	// 	return reconcile.Result{}, nil
-	// }
 
 	defaultMeta := metav1.ObjectMeta{
 		Name:      instance.Name,
@@ -196,31 +169,10 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	imageReferenceOld := instance.Status.ImageReference
-	instance.Status.ImageReference = instance.Spec.ApplicationImage
-	if r.IsOpenShift() {
-		image, err := imageutil.ParseDockerImageReference(instance.Spec.ApplicationImage)
-		if err == nil {
-			isTag := &imagev1.ImageStreamTag{}
-			isTagName := imageutil.JoinImageStreamTag(image.Name, image.Tag)
-			isTagNamespace := image.Namespace
-			if isTagNamespace == "" {
-				isTagNamespace = instance.Namespace
-			}
-			key := types.NamespacedName{Name: isTagName, Namespace: isTagNamespace}
-			err = r.GetAPIReader().Get(context.Background(), key, isTag)
-			// Call ManageError only if the error type is not found or is not forbidden. Forbidden could happen
-			// when the operator tries to call GET for ImageStreamTags on a namespace that doesn't exists (e.g.
-			// cannot get imagestreamtags.image.openshift.io in the namespace "navidsh": no RBAC policy matched)
-			if err == nil {
-				image := isTag.Image
-				if image.DockerImageReference != "" {
-					instance.Status.ImageReference = image.DockerImageReference
-				}
-			} else if err != nil && !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) && !strings.Contains(isTagName, "/") {
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
-		}
+	if err = r.UpdateImageReference(instance); err != nil {
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
+
 	if imageReferenceOld != instance.Status.ImageReference {
 		// Trigger a new Semeru Cloud Compiler generation
 		createNewSemeruGeneration(instance)
@@ -234,36 +186,14 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 
 		reqLogger.Info("Updating status.imageReference", "status.imageReference", instance.Status.ImageReference)
-		err = r.UpdateStatus(instance)
-		if err != nil {
-			reqLogger.Error(err, "Error updating Open Liberty application status")
+		if err = r.UpdateStatus(instance); err != nil {
+			reqLogger.Error(err, "Error updating "+APIName+" status")
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
 	}
 
-	if oputils.GetServiceAccountName(instance) == "" {
-		serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
-		err = r.CreateOrUpdate(serviceAccount, instance, func() error {
-			return oputils.CustomizeServiceAccount(serviceAccount, instance, r.GetClient())
-		})
-		if err != nil {
-			reqLogger.Error(err, "Failed to reconcile ServiceAccount")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-	} else {
-		serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
-		err = r.DeleteResource(serviceAccount)
-		if err != nil {
-			reqLogger.Error(err, "Failed to delete ServiceAccount")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-	}
-
-	// Check if the ServiceAccount has a valid pull secret before creating the deployment/statefulset
-	// or setting up knative. Otherwise the pods can go into an ImagePullBackOff loop
-	saErr := oputils.ServiceAccountPullSecretExists(instance, r.GetClient())
-	if saErr != nil {
-		return r.ManageError(saErr, common.StatusConditionTypeReconciled, instance)
+	if err = r.UpdateServiceAccount(instance, defaultMeta); err != nil {
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
 	// Check if SemeruCloudCompiler is enabled before reconciling the Semeru Compiler deployment and service.
@@ -279,119 +209,41 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	if r.isSemeruEnabled(instance) {
 		message = "Check Semeru Compiler resources ready"
 		reqLogger.Info(message)
-		err = r.areSemeruCompilerResourcesReady(instance)
-		if err != nil {
+		if err = r.areSemeruCompilerResourcesReady(instance); err != nil {
 			reqLogger.Error(err, message)
 			return r.ManageError(err, common.StatusConditionTypeResourcesReady, instance)
 		}
 	}
 
-	if instance.Spec.CreateKnativeService != nil && *instance.Spec.CreateKnativeService {
-		// Clean up non-Knative resources
-		resources := []client.Object{
-			&corev1.Service{ObjectMeta: defaultMeta},
-			&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: instance.Name + "-headless", Namespace: instance.Namespace}},
-			&appsv1.Deployment{ObjectMeta: defaultMeta},
-			&appsv1.StatefulSet{ObjectMeta: defaultMeta},
-			&autoscalingv1.HorizontalPodAutoscaler{ObjectMeta: defaultMeta},
-			&networkingv1.NetworkPolicy{ObjectMeta: defaultMeta},
-		}
-		err = r.DeleteResources(resources)
+	// If Knative is supported and being used, delete other resources and create/update Knative service
+	// Otherwise, delete Knative service
+	createKnativeService := instance.GetCreateKnativeService() != nil && *instance.GetCreateKnativeService()
+	err = r.UpdateKnativeService(instance, defaultMeta, isKnativeSupported, createKnativeService)
+	if createKnativeService {
 		if err != nil {
-			reqLogger.Error(err, "Failed to clean up non-Knative resources")
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-
-		if ok, _ := r.IsGroupVersionSupported(networkingv1.SchemeGroupVersion.String(), "Ingress"); ok {
-			r.DeleteResource(&networkingv1.Ingress{ObjectMeta: defaultMeta})
-		}
-
-		if r.IsOpenShift() {
-			route := &routev1.Route{ObjectMeta: defaultMeta}
-			err = r.DeleteResource(route)
-			if err != nil {
-				reqLogger.Error(err, "Failed to clean up non-Knative resource Route")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
-		}
-		if isKnativeSupported {
-			reqLogger.Info("Knative is supported and Knative Service is enabled")
-			ksvc := &servingv1.Service{ObjectMeta: defaultMeta}
-			err = r.CreateOrUpdate(ksvc, instance, func() error {
-				oputils.CustomizeKnativeService(ksvc, instance)
-				return nil
-			})
-
-			if err != nil {
-				reqLogger.Error(err, "Failed to reconcile Knative Service")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
-			instance.Status.Versions.Reconciled = lutils.OperandVersion
-			reqLogger.Info("Reconcile OpenLibertyApplication - completed")
+		} else {
+			instance.Status.Versions.Reconciled = olutils.OperandVersion
+			reqLogger.Info("Reconcile " + APIName + " - completed")
 			return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
 		}
-		return r.ManageError(errors.New("failed to reconcile Knative service as operator could not find Knative CRDs"), common.StatusConditionTypeReconciled, instance)
 	}
 
-	if isKnativeSupported {
-		ksvc := &servingv1.Service{ObjectMeta: defaultMeta}
-		err = r.DeleteResource(ksvc)
-		if err != nil {
-			reqLogger.Error(err, "Failed to delete Knative Service")
-			r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-	}
-
-	useCertmanager, err := r.GenerateSvcCertSecret(ba, OperatorShortName, "Open Liberty Operator", OperatorName)
+	useCertmanager, err := r.UpdateSvcCertSecret(instance, OperatorShortName, OperatorFullName, OperatorName)
 	if err != nil {
-		reqLogger.Error(err, "Failed to reconcile CertManager Certificate")
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-	}
-	if ba.GetService().GetCertificateSecretRef() != nil {
-		ba.GetStatus().SetReference(common.StatusReferenceCertSecretName, *ba.GetService().GetCertificateSecretRef())
-	}
-
-	svc := &corev1.Service{ObjectMeta: defaultMeta}
-	err = r.CreateOrUpdate(svc, instance, func() error {
-		oputils.CustomizeService(svc, ba)
-		svc.Annotations = oputils.MergeMaps(svc.Annotations, instance.Spec.Service.Annotations)
-		if !useCertmanager && r.IsOpenShift() {
-			oputils.AddOCPCertAnnotation(ba, svc)
-		}
-		monitoringEnabledLabelName := getMonitoringEnabledLabelName(ba)
-		if instance.Spec.Monitoring != nil {
-			svc.Labels[monitoringEnabledLabelName] = "true"
-		} else {
-			delete(svc.Labels, monitoringEnabledLabelName)
-		}
-		return nil
-	})
-	if err != nil {
-		reqLogger.Error(err, "Failed to reconcile Service")
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
-	if (ba.GetManageTLS() == nil || *ba.GetManageTLS()) &&
-		ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName] == "" {
-		return r.ManageError(errors.New("Failed to generate TLS certificate. Ensure cert-manager is installed and running"),
-			common.StatusConditionTypeReconciled, instance)
+	if err = r.UpdateService(instance, defaultMeta, useCertmanager); err != nil {
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
-	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: defaultMeta}
-	if np := instance.Spec.NetworkPolicy; np == nil || np != nil && !np.IsDisabled() {
-		err = r.CreateOrUpdate(networkPolicy, instance, func() error {
-			oputils.CustomizeNetworkPolicy(networkPolicy, r.IsOpenShift(), instance)
-			return nil
-		})
-		if err != nil {
-			reqLogger.Error(err, "Failed to reconcile network policy")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-	} else {
-		if err := r.DeleteResource(networkPolicy); err != nil {
-			reqLogger.Error(err, "Failed to delete network policy")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
+	if err = r.UpdateTLSReference(instance); err != nil {
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	}
+
+	if err = r.UpdateNetworkPolicy(instance, defaultMeta); err != nil {
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
 	if instance.Spec.Serviceability != nil {
@@ -403,7 +255,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 			}
 		} else {
-			err = r.CreateOrUpdate(lutils.CreateServiceabilityPVC(instance), nil, func() error {
+			err = r.CreateOrUpdate(olutils.CreateServiceabilityPVC(instance), nil, func() error {
 				return nil
 			})
 			if err != nil {
@@ -427,58 +279,37 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	if instance.Spec.StatefulSet != nil {
-		// Delete Deployment if exists
-		deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
-		err = r.DeleteResource(deploy)
-
-		if err != nil {
-			reqLogger.Error(err, "Failed to delete Deployment")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-		svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: instance.Name + "-headless", Namespace: instance.Namespace}}
-		err = r.CreateOrUpdate(svc, instance, func() error {
-			oputils.CustomizeService(svc, instance)
-			svc.Spec.ClusterIP = corev1.ClusterIPNone
-			svc.Spec.Type = corev1.ServiceTypeClusterIP
-			return nil
-		})
-		if err != nil {
-			reqLogger.Error(err, "Failed to reconcile headless Service")
+		// Update StatefulSet - common configuration
+		if err = r.UpdateStatefulSet(instance, defaultMeta); err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
 
+		// Update StatefulSet - Liberty configuration
 		statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
 		err = r.CreateOrUpdate(statefulSet, instance, func() error {
-			oputils.CustomizeStatefulSet(statefulSet, instance)
-			oputils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
-			oputils.CustomizePersistence(statefulSet, instance)
-			if err := lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance, r.GetClient()); err != nil {
+			if err := olutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance, r.GetClient()); err != nil {
 				reqLogger.Error(err, "Failed to reconcile Liberty env, error: "+err.Error())
 				return err
 			}
 
 			statefulSet.Spec.Template.Spec.Containers[0].Args = r.getSemeruJavaOptions(instance)
 
-			if err := oputils.CustomizePodWithSVCCertificate(&statefulSet.Spec.Template, instance, r.GetClient()); err != nil {
-				return err
-			}
-
-			lutils.CustomizeLibertyAnnotations(&statefulSet.Spec.Template, instance)
+			olutils.CustomizeLibertyAnnotations(&statefulSet.Spec.Template, instance)
 			if instance.Spec.SSO != nil {
-				err = lutils.CustomizeEnvSSO(&statefulSet.Spec.Template, instance, r.GetClient(), r.IsOpenShift())
+				err = olutils.CustomizeEnvSSO(&statefulSet.Spec.Template, instance, r.GetClient(), r.IsOpenShift())
 				if err != nil {
 					reqLogger.Error(err, "Failed to reconcile Single sign-on configuration")
 					return err
 				}
 			}
-			lutils.ConfigureServiceability(&statefulSet.Spec.Template, instance)
+			olutils.ConfigureServiceability(&statefulSet.Spec.Template, instance)
 			semeruCertVolume := getSemeruCertVolume(instance)
 			if r.isSemeruEnabled(instance) && semeruCertVolume != nil {
 				statefulSet.Spec.Template.Spec.Volumes = append(statefulSet.Spec.Template.Spec.Volumes, *semeruCertVolume)
 				statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts,
 					getSemeruCertVolumeMount(instance))
 				semeruTLSSecretName := instance.Status.SemeruCompiler.TLSSecretName
-				err := lutils.AddSecretResourceVersionAsEnvVar(&statefulSet.Spec.Template, instance, r.GetClient(),
+				err := olutils.AddSecretResourceVersionAsEnvVar(&statefulSet.Spec.Template, instance, r.GetClient(),
 					semeruTLSSecretName, "SEMERU_TLS")
 				if err != nil {
 					return err
@@ -486,66 +317,44 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			}
 
 			if r.isLTPAKeySharingEnabled(instance) && len(ltpaSecretName) > 0 {
-				lutils.ConfigureLTPA(&statefulSet.Spec.Template, instance, OperatorShortName)
-				err := lutils.AddSecretResourceVersionAsEnvVar(&statefulSet.Spec.Template, instance, r.GetClient(), ltpaSecretName, "LTPA")
+				olutils.ConfigureLTPA(&statefulSet.Spec.Template, instance, OperatorShortName)
+				err := olutils.AddSecretResourceVersionAsEnvVar(&statefulSet.Spec.Template, instance, r.GetClient(), ltpaSecretName, "LTPA")
 				if err != nil {
 					return err
 				}
 			}
 			return nil
 		})
-		if err != nil {
-			reqLogger.Error(err, "Failed to reconcile StatefulSet")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-
 	} else {
-		// Delete StatefulSet if exists
-		statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
-		err = r.DeleteResource(statefulSet)
-		if err != nil {
-			reqLogger.Error(err, "Failed to delete Statefulset")
+		if err = r.UpdateDeployment(instance, defaultMeta); err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
 
-		// Delete StatefulSet if exists
-		headlesssvc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: instance.Name + "-headless", Namespace: instance.Namespace}}
-		err = r.DeleteResource(headlesssvc)
-
-		if err != nil {
-			reqLogger.Error(err, "Failed to delete headless Service")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
 		deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
 		err = r.CreateOrUpdate(deploy, instance, func() error {
-			oputils.CustomizeDeployment(deploy, instance)
-			oputils.CustomizePodSpec(&deploy.Spec.Template, instance)
-			if err := lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance, r.GetClient()); err != nil {
+			if err := olutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance, r.GetClient()); err != nil {
 				reqLogger.Error(err, "Failed to reconcile Liberty env, error: "+err.Error())
 				return err
 			}
 			deploy.Spec.Template.Spec.Containers[0].Args = r.getSemeruJavaOptions(instance)
 
-			if err := oputils.CustomizePodWithSVCCertificate(&deploy.Spec.Template, instance, r.GetClient()); err != nil {
-				return err
-			}
-			lutils.CustomizeLibertyAnnotations(&deploy.Spec.Template, instance)
+			olutils.CustomizeLibertyAnnotations(&deploy.Spec.Template, instance)
 			if instance.Spec.SSO != nil {
-				err = lutils.CustomizeEnvSSO(&deploy.Spec.Template, instance, r.GetClient(), r.IsOpenShift())
+				err = olutils.CustomizeEnvSSO(&deploy.Spec.Template, instance, r.GetClient(), r.IsOpenShift())
 				if err != nil {
 					reqLogger.Error(err, "Failed to reconcile Single sign-on configuration")
 					return err
 				}
 			}
 
-			lutils.ConfigureServiceability(&deploy.Spec.Template, instance)
+			olutils.ConfigureServiceability(&deploy.Spec.Template, instance)
 			semeruCertVolume := getSemeruCertVolume(instance)
 			if r.isSemeruEnabled(instance) && semeruCertVolume != nil {
 				deploy.Spec.Template.Spec.Volumes = append(deploy.Spec.Template.Spec.Volumes, *semeruCertVolume)
 				deploy.Spec.Template.Spec.Containers[0].VolumeMounts = append(deploy.Spec.Template.Spec.Containers[0].VolumeMounts,
 					getSemeruCertVolumeMount(instance))
 				semeruTLSSecretName := instance.Status.SemeruCompiler.TLSSecretName
-				err := lutils.AddSecretResourceVersionAsEnvVar(&deploy.Spec.Template, instance, r.GetClient(),
+				err := olutils.AddSecretResourceVersionAsEnvVar(&deploy.Spec.Template, instance, r.GetClient(),
 					semeruTLSSecretName, "SEMERU_TLS")
 				if err != nil {
 					return err
@@ -553,125 +362,26 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			}
 
 			if r.isLTPAKeySharingEnabled(instance) && len(ltpaSecretName) > 0 {
-				lutils.ConfigureLTPA(&deploy.Spec.Template, instance, OperatorShortName)
-				err := lutils.AddSecretResourceVersionAsEnvVar(&deploy.Spec.Template, instance, r.GetClient(), ltpaSecretName, "LTPA")
+				olutils.ConfigureLTPA(&deploy.Spec.Template, instance, OperatorShortName)
+				err := olutils.AddSecretResourceVersionAsEnvVar(&deploy.Spec.Template, instance, r.GetClient(), ltpaSecretName, "LTPA")
 				if err != nil {
 					return err
 				}
 			}
 			return nil
 		})
-		if err != nil {
-			reqLogger.Error(err, "Failed to reconcile Deployment")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-
 	}
 
-	if instance.Spec.Autoscaling != nil {
-		hpa := &autoscalingv1.HorizontalPodAutoscaler{ObjectMeta: defaultMeta}
-		err = r.CreateOrUpdate(hpa, instance, func() error {
-			oputils.CustomizeHPA(hpa, instance)
-			return nil
-		})
-
-		if err != nil {
-			reqLogger.Error(err, "Failed to reconcile HorizontalPodAutoscaler")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-	} else {
-		hpa := &autoscalingv1.HorizontalPodAutoscaler{ObjectMeta: defaultMeta}
-		err = r.DeleteResource(hpa)
-		if err != nil {
-			reqLogger.Error(err, "Failed to delete HorizontalPodAutoscaler")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
+	if err = r.UpdateAutoscaling(instance, defaultMeta); err != nil {
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
-	if ok, err := r.IsGroupVersionSupported(routev1.SchemeGroupVersion.String(), "Route"); err != nil {
-		reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", routev1.SchemeGroupVersion.String()))
-		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-	} else if ok {
-		if instance.Spec.Expose != nil && *instance.Spec.Expose {
-			route := &routev1.Route{ObjectMeta: defaultMeta}
-			err = r.CreateOrUpdate(route, instance, func() error {
-				key, cert, caCert, destCACert, err := r.GetRouteTLSValues(ba)
-				if err != nil {
-					return err
-				}
-				oputils.CustomizeRoute(route, instance, key, cert, caCert, destCACert)
-
-				return nil
-			})
-			if err != nil {
-				reqLogger.Error(err, "Failed to reconcile Route")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
-
-		} else {
-			route := &routev1.Route{ObjectMeta: defaultMeta}
-			err = r.DeleteResource(route)
-			if err != nil {
-				reqLogger.Error(err, "Failed to delete Route")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
-		}
-	} else {
-
-		if ok, err := r.IsGroupVersionSupported(networkingv1.SchemeGroupVersion.String(), "Ingress"); err != nil {
-			reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", networkingv1.SchemeGroupVersion.String()))
-			r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		} else if ok {
-			if instance.Spec.Expose != nil && *instance.Spec.Expose {
-				ing := &networkingv1.Ingress{ObjectMeta: defaultMeta}
-				err = r.CreateOrUpdate(ing, instance, func() error {
-					oputils.CustomizeIngress(ing, instance)
-					return nil
-				})
-				if err != nil {
-					reqLogger.Error(err, "Failed to reconcile Ingress")
-					return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-				}
-			} else {
-				ing := &networkingv1.Ingress{ObjectMeta: defaultMeta}
-				err = r.DeleteResource(ing)
-				if err != nil {
-					reqLogger.Error(err, "Failed to delete Ingress")
-					return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-				}
-			}
-		}
+	if err = r.UpdateRouteOrIngress(instance, defaultMeta); err != nil {
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
-	if ok, err := r.IsGroupVersionSupported(prometheusv1.SchemeGroupVersion.String(), "ServiceMonitor"); err != nil {
-		reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", prometheusv1.SchemeGroupVersion.String()))
-		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-	} else if ok {
-		if instance.Spec.Monitoring != nil && (instance.Spec.CreateKnativeService == nil || !*instance.Spec.CreateKnativeService) {
-			// Validate the monitoring endpoints' configuration before creating/updating the ServiceMonitor
-			if err := oputils.ValidatePrometheusMonitoringEndpoints(instance, r.GetClient(), instance.GetNamespace()); err != nil {
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
-			sm := &prometheusv1.ServiceMonitor{ObjectMeta: defaultMeta}
-			err = r.CreateOrUpdate(sm, instance, func() error {
-				oputils.CustomizeServiceMonitor(sm, instance)
-				return nil
-			})
-			if err != nil {
-				reqLogger.Error(err, "Failed to reconcile ServiceMonitor")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
-		} else {
-			sm := &prometheusv1.ServiceMonitor{ObjectMeta: defaultMeta}
-			err = r.DeleteResource(sm)
-			if err != nil {
-				reqLogger.Error(err, "Failed to delete ServiceMonitor")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
-		}
-
-	} else {
-		reqLogger.V(1).Info(fmt.Sprintf("%s is not supported", prometheusv1.SchemeGroupVersion.String()))
+	if err = r.UpdateServiceMonitor(instance, defaultMeta); err != nil {
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
 	// Delete completed Semeru instances because all pods now point to the newest Semeru service
@@ -682,8 +392,8 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 	}
 
-	instance.Status.Versions.Reconciled = lutils.OperandVersion
-	reqLogger.Info("Reconcile OpenLibertyApplication - completed")
+	instance.Status.Versions.Reconciled = olutils.OperandVersion
+	reqLogger.Info("Reconcile " + APIName + " - completed")
 	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
 }
 
@@ -711,7 +421,7 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 		return nil
 	})
 
-	watchNamespaces, err := oputils.GetWatchNamespaces()
+	watchNamespaces, err := appstacksutils.GetWatchNamespaces()
 	if err != nil {
 		r.Log.Error(err, "Failed to get watch namespace")
 		os.Exit(1)
@@ -721,7 +431,7 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 	for _, ns := range watchNamespaces {
 		watchNamespacesMap[ns] = true
 	}
-	isClusterWide := oputils.IsClusterWide(watchNamespaces)
+	isClusterWide := appstacksutils.IsClusterWide(watchNamespaces)
 
 	pred := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
