@@ -95,6 +95,7 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `envFrom`   | An array of references to `ConfigMap` or `Secret` resources containing environment variables. Keys from `ConfigMap` or `Secret` resources become environment variable names in your container. For examples, see link:#set-environment-variables-for-an-application-container[Set environment variables for an application container].
 | `expose`   | A boolean that toggles the external exposure of this deployment via a Route or a Knative Route resource.
 | `initContainers` | The list of link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#container-v1-core++[Init Container] definitions.
+| `manageLTPA`  | A Boolean that enables management of Lightweight Third-Party Authentication (LTPA) key sharing among Liberty containers. The default is `false`. For more information, see link:#configuring-ltpa[Configuring Lightweight Third-Party Authentication (LTPA)].
 | `manageTLS`   | [[crd-spec-managetls]] A boolean to toggle automatic certificate generation and mounting TLS secret into the pod. The default value for this field is `true`.
 | `monitoring` | Specifies parameters for `Service Monitor`. For examples, see link:#monitor-resources[Monitor resources] and link:#specify-multiple-service-ports[Specify multiple service ports].
 | `monitoring.endpoints` | A YAML snippet representing an array of link:++https://github.com/coreos/prometheus-operator/blob/main/Documentation/api.md#endpoint++[Endpoint] component from ServiceMonitor.
@@ -158,8 +159,8 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `serviceability.volumeClaimName` | [[crd-spec-serviceability-volumeClaimName]] The name of the link:++https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims++[PersistentVolumeClaim] resource you created to be used for serviceability. Must be in the same namespace.
 | `serviceAccountName` | Deprecated. Use link:#crd-spec-serviceAccount-name[`serviceAccount.name`] instead.
 | `serviceAccount`| [[crd-spec-serviceAccount-name]] The service account to use for application deployment. If a service account name is not specified, a service account is automatically created. For examples, see link:#create-a-service-account[Configure a service account].
-| `serviceAccount.name` | Name of the service account to use for deploying the application.
 | `serviceAccount.mountToken` | A Boolean to toggle whether the service account's token should be mounted in the application pods. If unset or `true`, the token will be mounted.
+| `serviceAccount.name` | Name of the service account to use for deploying the application.
 | `sidecarContainers` | The list of `sidecar` containers. These are additional containers to be added to the pods. Note: Sidecar containers should not be named `app`.
 | `sso`   | [[crd-sso]] Specifies the configuration for single sign-on providers to authenticate with. Specify sensitive fields, such as _clientId_ and _clientSecret_, for the selected providers by using the `Secret`. For examples, see link:++#configuring-single-sign-on-sso-specsso-++[Configuring Single Sign-On (SSO)].
 | `sso.github.hostname`   | Specifies the host name of your enterprise GitHub, such as `github._mycompany_.com`. The default is `github.com`, which is the public GitHub.
@@ -331,6 +332,7 @@ Open Liberty Operator builds upon link:#common-component-documentation[component
 * link:#override-console-logging-environment-variable-default-values[Override console logging environment variable default values] (`.spec.env`) image:images/docs_openliberty_logo.png[OL,20] 
 * link:#configuring-single-sign-on-sso[Configuring single sign-on (SSO)] (`.spec.sso`) image:images/docs_openliberty_logo.png[OL,20] 
 * link:#storage-for-serviceability[Storage for serviceability] (`.spec.serviceability`) image:images/docs_openliberty_logo.png[OL,20]
+* link:#configuring-ltpa[Configuring Lightweight Third-Party Authentication (LTPA)] (`.spec.manageLTPA`) image:images/docs_openliberty_logo.png[OL,20]
 
 
 ==== Common Components [[common-component-documentation]]
@@ -657,6 +659,30 @@ To reference an image stream, the `.spec.applicationImage` field must follow the
 The Operator tries to find an image stream name first with the `<project name>/<image stream name>[:<tag>]` format and falls back to the registry lookup if it is not able to find any image stream that matches the value.
 
 NOTE: This feature is only available if you are running on Red Hat OpenShift. The operator requires `ClusterRole` permissions if the image stream resource is in another namespace.
+
+
+[[configuring-ltpa]]
+=== Configuring Lightweight Third-Party Authentication (LTPA) (`.spec.manageLTPA`) image:images/docs_openliberty_logo.png[OL,30]
+
+Lightweight Third-Party Authentication (LTPA) provides SSO configuration to authenticate users to access applications. With LTPA, cryptographic keys enable and disable user details that pass between servers for authentication. To complete authentication, an LTPA token is generated. The LTPA token is signed with cryptographic keys, stores the user details, and has an expiration time. When authentication is complete, the LTPA token passes to other servers through cookies for web sources when SSO is enabled.
+
+Open Liberty operator can generate and manage an LTPA key for applications. By default, this functionality is disabled. Set the `.spec.manageLTPA` parameter to `true` in each OpenLibertyApplication custom resource to enable this functionality.
+
+A single LTPA key is used per each namespace and is shared with microservices and applications in a namespace. A password is generated and encrypted to secure the LTPA key. The LTPA key and the password are stored in the secret named `olo-managed-ltpa`.
+
+To revoke the LTPA key, delete the secret named `olo-managed-ltpa` in the namespace. A new LTPA key and password is then generated and used with applications in the namespace. For more information on LTPA, see
+link:++https://openliberty.io/docs/latest/single-sign-on.html?_ga=2.112348932.1887571414.1701787911-2108330677.1701464364&_gl=1*1yeml40*_ga*MjEwODMzMDY3Ny4xNzAxNDY0MzY0*_ga_FYECCCS21D*MTcwMTc4NzkxMC4yLjEuMTcwMTc4ODQ2OC4wLjAuMA..#_ltpa++[Single Sign On (SSO)].
+
+==== LTPA prerequisites
+
+The Liberty server must allow configuration drop-ins. The following configuration must not be set on the server. Otherwise, the manageLTPA functionality does not work.
+
+[source,xml]
+----
+<config updateTrigger="disabled"/>
+----
+
+Enable the link:++https://openliberty.io/docs/latest/reference/feature/appSecurity-5.0.html++[Application Security] feature in the Liberty server configuration for the application.
 
 [[create-a-service-account]]
 === Configure a service account (`.spec.serviceAccount`)
