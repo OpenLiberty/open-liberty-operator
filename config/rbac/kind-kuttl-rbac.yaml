@@ -132,3 +132,12 @@ rules:
   - get
   - list
   - delete
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - get
+  - list
+  - patch
+  - delete
