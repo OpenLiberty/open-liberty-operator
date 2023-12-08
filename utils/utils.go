@@ -615,7 +615,7 @@ func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaSecretNa
 	job.Spec.Template.Spec.Containers = []corev1.Container{
 		{
 			Name:            job.Spec.Template.ObjectMeta.Name,
-			Image:           la.GetApplicationImage(),
+			Image:           la.GetStatus().GetImageReference(),
 			ImagePullPolicy: *la.GetPullPolicy(),
 			SecurityContext: rcoutils.GetSecurityContext(la),
 			Command:         []string{"/bin/bash", "-c"},
