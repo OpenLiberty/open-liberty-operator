@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/instance: open-liberty-operator
+    app.kubernetes.io/name: open-liberty-operator
+    control-plane: controller-manager
+  name: olo-controller-manager
+  namespace: open-liberty
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: open-liberty-operator
+      app.kubernetes.io/name: open-liberty-operator
+      control-plane: controller-manager
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        app.kubernetes.io/instance: open-liberty-operator
+        app.kubernetes.io/name: open-liberty-operator
+        control-plane: controller-manager
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - amd64
+                - ppc64le
+                - s390x
+      containers:
+      - args:
+        - --health-probe-bind-address=:8081
+        - --enable-leader-election
+        command:
+        - /manager
+        env:
+        - name: WATCH_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: OPERATOR_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: RELATED_IMAGE_LIBERTY_SAMPLE_APP
+          value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:d735c2ceae5945a0f20adcbcb04e55472d2520b6d1abb6d3049c8521234d3b7a
+        - name: RELATED_IMAGE_OPEN_LIBERTY_OPERATOR
+          value: icr.io/appcafe/open-liberty-operator@sha256:7a1c5694b55bceec64a5ff115dec33196db72bfca42cb74ef15c7c8655a660d2
+        image: icr.io/appcafe/open-liberty-operator@sha256:7a1c5694b55bceec64a5ff115dec33196db72bfca42cb74ef15c7c8655a660d2
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 8081
+            scheme: HTTP
+          initialDelaySeconds: 90
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 10
+        name: manager
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /readyz
+            port: 8081
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 10
+        resources:
+          limits:
+            cpu: 400m
+            memory: 512Mi
+          requests:
+            cpu: 200m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+      hostIPC: false
+      hostNetwork: false
+      hostPID: false
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: olo-controller-manager
+      terminationGracePeriodSeconds: 10
