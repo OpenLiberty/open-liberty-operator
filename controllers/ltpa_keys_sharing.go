@@ -231,7 +231,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 				err = r.GetClient().Get(context.TODO(), types.NamespacedName{Name: generateLTPAKeysJob.Name, Namespace: generateLTPAKeysJob.Namespace}, generateLTPAKeysJob)
 				if err != nil && kerrors.IsNotFound(err) {
 					err = r.CreateOrUpdate(generateLTPAKeysJob, instance, func() error {
-						lutils.CustomizeLTPAJob(generateLTPAKeysJob, instance, ltpaSecret.Name, ltpaServiceAccountName, ltpaKeysCreationScriptConfigMap.Name)
+						lutils.CustomizeLTPAJob(generateLTPAKeysJob, instance, ltpaSecret.Name, ltpaServiceAccountName, ltpaKeysCreationScriptConfigMap.Name, r.GetClient())
 						return nil
 					})
 					if err != nil {
@@ -240,7 +240,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 				} else if err == nil {
 					// If the LTPA Secret is not yet created (LTPA Job has not successfully completed)
 					// and the LTPA Job's configuration is outdated, retry LTPA generation with the new configuration
-					if lutils.IsLTPAJobConfigurationOutdated(generateLTPAKeysJob, instance) {
+					if lutils.IsLTPAJobConfigurationOutdated(generateLTPAKeysJob, instance, r.GetClient()) {
 						// Delete the Job request to restart the entire LTPA generation process (i.e. reloading the script, ltpa.xml, and Job)
 						err = r.DeleteResource(ltpaJobRequest)
 						if err != nil {
