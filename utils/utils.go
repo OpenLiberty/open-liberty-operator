@@ -494,6 +494,15 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *olv1.OpenLibertyAppl
 	return nil
 }
 
+func LocalObjectReferenceContainsName(list []corev1.LocalObjectReference, name string) bool {
+	for _, v := range list {
+		if v.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
 func Contains(list []string, s string) bool {
 	for _, v := range list {
 		if v == s {
@@ -582,7 +591,7 @@ func CustomizeLTPAServerXML(xmlSecret *corev1.Secret, la *olv1.OpenLibertyApplic
 }
 
 // Returns true if the OpenLibertyApplication leader's state has changed, causing existing LTPA Jobs to need a configuration update, otherwise return false
-func IsLTPAJobConfigurationOutdated(job *v1.Job, appLeaderInstance *olv1.OpenLibertyApplication) bool {
+func IsLTPAJobConfigurationOutdated(job *v1.Job, appLeaderInstance *olv1.OpenLibertyApplication, client client.Client) bool {
 	// The Job contains the leader's pull secret
 	if appLeaderInstance.GetPullSecret() != nil && *appLeaderInstance.GetPullSecret() != "" {
 		ltpaJobHasLeaderPullSecret := false
@@ -593,6 +602,18 @@ func IsLTPAJobConfigurationOutdated(job *v1.Job, appLeaderInstance *olv1.OpenLib
 		}
 		if !ltpaJobHasLeaderPullSecret {
 			return true
+		}
+	}
+	// The Job contains the leader's custom ServiceAccount's pull secrets
+	if leaderSAName := rcoutils.GetServiceAccountName(appLeaderInstance); len(leaderSAName) > 0 {
+		customServiceAccount := &corev1.ServiceAccount{}
+		if err := client.Get(context.TODO(), types.NamespacedName{Name: leaderSAName, Namespace: appLeaderInstance.GetNamespace()}, customServiceAccount); err == nil {
+			for _, customSAObjectReference := range customServiceAccount.ImagePullSecrets {
+				// If one of the custom SA's pull secret's is not found within the Job, return outdated as true
+				if !LocalObjectReferenceContainsName(job.Spec.Template.Spec.ImagePullSecrets, customSAObjectReference.Name) {
+					return true
+				}
+			}
 		}
 	}
 	if len(job.Spec.Template.Spec.Containers) != 1 {
@@ -609,7 +630,7 @@ func IsLTPAJobConfigurationOutdated(job *v1.Job, appLeaderInstance *olv1.OpenLib
 	return false
 }
 
-func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaSecretName string, serviceAccountName string, ltpaScriptName string) {
+func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaSecretName string, serviceAccountName string, ltpaScriptName string, client client.Client) {
 	encodingType := "aes" // the password encoding type for securityUtility (one of "xor", "aes", or "hash")
 	job.Spec.Template.ObjectMeta.Name = "liberty"
 	job.Spec.Template.Spec.Containers = []corev1.Container{
@@ -635,6 +656,20 @@ func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaSecretNa
 		})
 	}
 	job.Spec.Template.Spec.ServiceAccountName = serviceAccountName
+	// If there is a custom ServiceAccount, include it's pull secrets into the LTPA Job
+	if leaderSAName := rcoutils.GetServiceAccountName(la); len(leaderSAName) > 0 {
+		customServiceAccount := &corev1.ServiceAccount{}
+		if err := client.Get(context.TODO(), types.NamespacedName{Name: leaderSAName, Namespace: la.GetNamespace()}, customServiceAccount); err == nil {
+			// For each of the custom SA's pull secret's, if it is not found within the Job, append it to the Job
+			for _, customSAObjectReference := range customServiceAccount.ImagePullSecrets {
+				if !LocalObjectReferenceContainsName(job.Spec.Template.Spec.ImagePullSecrets, customSAObjectReference.Name) {
+					job.Spec.Template.Spec.ImagePullSecrets = append(job.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{
+						Name: customSAObjectReference.Name,
+					})
+				}
+			}
+		}
+	}
 	job.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyOnFailure
 	var number int32
 	number = 0777
