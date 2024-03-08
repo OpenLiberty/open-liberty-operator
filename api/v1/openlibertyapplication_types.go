@@ -147,6 +147,9 @@ type OpenLibertyApplicationSpec struct {
 
 	// +operator-sdk:csv:customresourcedefinitions:order=32,type=spec,displayName="Topology Spread Constraints"
 	TopologySpreadConstraints *OpenLibertyApplicationTopologySpreadConstraints `json:"topologySpreadConstraints,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:order=33,type=spec,displayName="Generation"
+	Generation *int32 `json:"generation,omitempty"`
 }
 
 // Defines the topology spread constraints
@@ -432,6 +435,8 @@ type OpenLibertyApplicationStatus struct {
 	References common.StatusReferences `json:"references,omitempty"`
 
 	SemeruCompiler *SemeruCompilerStatus `json:"semeruCompiler,omitempty"`
+
+	ObservedGeneration *int32 `json:"observedGeneration,omitempty"`
 }
 
 // Defines possible status conditions.
