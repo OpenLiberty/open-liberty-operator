@@ -51,6 +51,8 @@ const (
 	OperationStatusConditionTypeEnabled OperationStatusConditionType = "Enabled"
 	// OperationStatusConditionTypeStarted indicates whether operation has been started
 	OperationStatusConditionTypeStarted OperationStatusConditionType = "Started"
+	// OperationStatusConditionTypeFailed indicates whether operation has failed
+	OperationStatusConditionTypeFailed OperationStatusConditionType = "Failed"
 	// OperationStatusConditionTypeCompleted indicates whether operation has been completed
 	OperationStatusConditionTypeCompleted OperationStatusConditionType = "Completed"
 )
