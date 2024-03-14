@@ -44,8 +44,8 @@ github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d/go.mod h1:rBZYJk541a8SKzHPHnH3zbiI+7dagKZ0cgpgrD7Fyho=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
-github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20231110151527-b5d45ab23956 h1:XpGY0dnfwe2dqe2clg6SnPQPTSFISpIb3yIqy196t+E=
-github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20231110151527-b5d45ab23956/go.mod h1:Yhxg+reeWEw4OnPUsX3ZYogS3RbtmC0M20TzX/w4N0I=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20240314102806-b26ca72e6e26 h1:xoTdn9gP4/Ek3HDH8KaKO9O/u+ojKa7ahYlrwsGBpsU=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20240314102806-b26ca72e6e26/go.mod h1:0srryJUQlw93Abr/tNbOmDgRh8PRUGuhgb4aVWY+g2Y=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
 github.com/benbjohnson/clock v1.1.0 h1:Q92kusRqC1XV2MjkWETPvjJVqKetz1OzxZB7mHJLju8=
