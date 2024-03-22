@@ -358,6 +358,8 @@ spec:
         path: securityContext
       - displayName: Topology Spread Constraints
         path: topologySpreadConstraints
+      - displayName: Generation
+        path: generation
       - description: Labels to set on ServiceMonitor.
         displayName: Monitoring Labels
         path: monitoring.labels
