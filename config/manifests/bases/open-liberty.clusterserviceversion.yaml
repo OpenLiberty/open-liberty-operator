@@ -830,6 +830,10 @@ spec:
       kind: OpenLibertyDump
       name: openlibertydumps.apps.openliberty.io
       statusDescriptors:
+      - displayName: Status Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       - description: Location of the generated dump file
         displayName: Dump File Path
         path: dumpFile
@@ -845,6 +849,11 @@ spec:
       displayName: OpenLibertyTrace
       kind: OpenLibertyTrace
       name: openlibertytraces.apps.openliberty.io
+      statusDescriptors:
+      - displayName: Status Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v1
     - description: Day-2 operation for gathering server traces
       displayName: OpenLibertyTrace

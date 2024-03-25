@@ -78,12 +78,18 @@ func (r *ReconcileOpenLibertyDump) Reconcile(ctx context.Context, request ctrl.R
 		reqLogger.Error(err, message)
 		r.Recorder.Event(instance, "Warning", "ProcessingError", message)
 		c := openlibertyv1.OperationStatusCondition{
-			Type:    openlibertyv1.OperationStatusConditionTypeStarted,
-			Status:  corev1.ConditionFalse,
+			Type:   openlibertyv1.OperationStatusConditionTypeStarted,
+			Status: corev1.ConditionFalse,
+		}
+		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+		// Additionally, set the condition to Failed to update the UI
+		f := openlibertyv1.OperationStatusCondition{
+			Type:    openlibertyv1.OperationStatusConditionTypeFailed,
+			Status:  corev1.ConditionTrue,
 			Reason:  "Error",
 			Message: "Failed to find a pod or pod is not in running state",
 		}
-		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, f)
 		instance.Status.Versions.Reconciled = utils.OperandVersion
 		r.Client.Status().Update(context.TODO(), instance)
 		return reconcile.Result{}, nil
@@ -104,8 +110,12 @@ func (r *ReconcileOpenLibertyDump) Reconcile(ctx context.Context, request ctrl.R
 		Type:   openlibertyv1.OperationStatusConditionTypeStarted,
 		Status: corev1.ConditionTrue,
 	}
-
 	instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+	f := openlibertyv1.OperationStatusCondition{
+		Type:   openlibertyv1.OperationStatusConditionTypeFailed,
+		Status: corev1.ConditionFalse,
+	}
+	instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, f)
 	r.Client.Status().Update(context.TODO(), instance)
 
 	_, err = utils.ExecuteCommandInContainer(r.RestConfig, pod.Name, pod.Namespace, "app", []string{"/bin/sh", "-c", dumpCmd})
@@ -114,12 +124,18 @@ func (r *ReconcileOpenLibertyDump) Reconcile(ctx context.Context, request ctrl.R
 		reqLogger.Error(err, "Execute dump cmd failed ", "cmd", dumpCmd)
 		r.Recorder.Event(instance, "Warning", "ProcessingError", err.Error())
 		c = openlibertyv1.OperationStatusCondition{
-			Type:    openlibertyv1.OperationStatusConditionTypeCompleted,
-			Status:  corev1.ConditionFalse,
+			Type:   openlibertyv1.OperationStatusConditionTypeCompleted,
+			Status: corev1.ConditionFalse,
+		}
+		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+		// Additionally, set the condition to Failed to update the UI
+		f = openlibertyv1.OperationStatusCondition{
+			Type:    openlibertyv1.OperationStatusConditionTypeFailed,
+			Status:  corev1.ConditionTrue,
 			Reason:  "Error",
 			Message: err.Error(),
 		}
-		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, f)
 		r.Client.Status().Update(context.TODO(), instance)
 		return reconcile.Result{}, nil
 
@@ -129,8 +145,12 @@ func (r *ReconcileOpenLibertyDump) Reconcile(ctx context.Context, request ctrl.R
 		Type:   openlibertyv1.OperationStatusConditionTypeCompleted,
 		Status: corev1.ConditionTrue,
 	}
-
 	instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+	f = openlibertyv1.OperationStatusCondition{
+		Type:   openlibertyv1.OperationStatusConditionTypeFailed,
+		Status: corev1.ConditionFalse,
+	}
+	instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, f)
 	instance.Status.DumpFile = dumpFileName
 	instance.Status.Versions.Reconciled = utils.OperandVersion
 	r.Client.Status().Update(context.TODO(), instance)
