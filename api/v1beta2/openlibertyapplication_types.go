@@ -126,26 +126,38 @@ type OpenLibertyApplicationSpec struct {
 type OpenLibertyApplicationProbes struct {
 	// Periodic probe of container liveness. Container will be restarted if the probe fails.
 	// +operator-sdk:csv:customresourcedefinitions:order=49,type=spec,displayName="Liveness Probe"
-	Liveness *corev1.Probe `json:"liveness,omitempty"`
+	Liveness *common.BaseComponentProbe `json:"liveness,omitempty"`
 
 	// Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails.
 	// +operator-sdk:csv:customresourcedefinitions:order=50,type=spec,displayName="Readiness Probe"
-	Readiness *corev1.Probe `json:"readiness,omitempty"`
+	Readiness *common.BaseComponentProbe `json:"readiness,omitempty"`
 
 	// Probe to determine successful initialization. If specified, other probes are not executed until this completes successfully.
 	// +operator-sdk:csv:customresourcedefinitions:order=51,type=spec,displayName="Startup Probe"
-	Startup *corev1.Probe `json:"startup,omitempty"`
+	Startup *common.BaseComponentProbe `json:"startup,omitempty"`
 }
 
-func (p *OpenLibertyApplicationProbes) GetDefaultLivenessProbe(common.BaseComponent) *corev1.Probe {
+func (p *OpenLibertyApplicationProbes) PatchLivenessProbe(ba common.BaseComponent, probe *common.BaseComponentProbe) *common.BaseComponentProbe {
+	return probe
+}
+
+func (p *OpenLibertyApplicationProbes) PatchReadinessProbe(ba common.BaseComponent, probe *common.BaseComponentProbe) *common.BaseComponentProbe {
+	return probe
+}
+
+func (p *OpenLibertyApplicationProbes) PatchStartupProbe(ba common.BaseComponent, probe *common.BaseComponentProbe) *common.BaseComponentProbe {
+	return probe
+}
+
+func (p *OpenLibertyApplicationProbes) GetDefaultLivenessProbe(common.BaseComponent) *common.BaseComponentProbe {
 	return nil
 }
 
-func (p *OpenLibertyApplicationProbes) GetDefaultReadinessProbe(common.BaseComponent) *corev1.Probe {
+func (p *OpenLibertyApplicationProbes) GetDefaultReadinessProbe(common.BaseComponent) *common.BaseComponentProbe {
 	return nil
 }
 
-func (p *OpenLibertyApplicationProbes) GetDefaultStartupProbe(common.BaseComponent) *corev1.Probe {
+func (p *OpenLibertyApplicationProbes) GetDefaultStartupProbe(common.BaseComponent) *common.BaseComponentProbe {
 	return nil
 }
 
@@ -538,17 +550,17 @@ func (cr *OpenLibertyApplication) GetProbes() common.BaseComponentProbes {
 }
 
 // GetLivenessProbe returns liveness probe
-func (p *OpenLibertyApplicationProbes) GetLivenessProbe() *corev1.Probe {
+func (p *OpenLibertyApplicationProbes) GetLivenessProbe() *common.BaseComponentProbe {
 	return p.Liveness
 }
 
 // GetReadinessProbe returns readiness probe
-func (p *OpenLibertyApplicationProbes) GetReadinessProbe() *corev1.Probe {
+func (p *OpenLibertyApplicationProbes) GetReadinessProbe() *common.BaseComponentProbe {
 	return p.Readiness
 }
 
 // GetStartupProbe returns startup probe
-func (p *OpenLibertyApplicationProbes) GetStartupProbe() *corev1.Probe {
+func (p *OpenLibertyApplicationProbes) GetStartupProbe() *common.BaseComponentProbe {
 	return p.Startup
 }
 
