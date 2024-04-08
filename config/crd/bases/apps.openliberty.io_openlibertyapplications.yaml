@@ -7436,8 +7436,8 @@ spec:
               imageReference:
                 type: string
               observedGeneration:
-                description: The last observed generation of this OpenLibertyApplication
-                  instance reconciled by the operator.
+                description: The last generation of this OpenLibertyApplication instance
+                  observed by the operator.
                 format: int64
                 type: integer
               references:
