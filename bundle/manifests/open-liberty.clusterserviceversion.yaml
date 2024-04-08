@@ -92,7 +92,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2024-03-08T16:24:15Z"
+    createdAt: "2024-04-08T15:13:57Z"
     description: Deploy and manage containerized Liberty applications
     olm.skipRange: '>=0.8.0 <1.3.1'
     operators.openshift.io/infrastructure-features: '["disconnected"]'
@@ -446,8 +446,6 @@ spec:
         path: securityContext
       - displayName: Topology Spread Constraints
         path: topologySpreadConstraints
-      - displayName: Generation
-        path: generation
       - description: Labels to set on ServiceMonitor.
         displayName: Monitoring Labels
         path: monitoring.labels

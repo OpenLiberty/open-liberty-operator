@@ -1184,9 +1184,6 @@ spec:
                 description: Expose the application externally via a Route, a Knative
                   Route or an Ingress resource.
                 type: boolean
-              generation:
-                format: int32
-                type: integer
               initContainers:
                 description: List of containers to run before other containers in
                   a pod.
@@ -7439,7 +7436,9 @@ spec:
               imageReference:
                 type: string
               observedGeneration:
-                format: int32
+                description: The observed generation from the OpenLibertyApplication
+                  metadata.
+                format: int64
                 type: integer
               references:
                 additionalProperties:
