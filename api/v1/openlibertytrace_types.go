@@ -28,6 +28,7 @@ type OpenLibertyTraceSpec struct {
 // Defines the observed state of OpenLibertyTrace operation
 type OpenLibertyTraceStatus struct {
 	// +listType=atomic
+	// +operator-sdk:csv:customresourcedefinitions:type=status,displayName="Status Conditions",xDescriptors="urn:alm:descriptor:io.kubernetes.conditions"
 	Conditions       []OperationStatusCondition `json:"conditions,omitempty"`
 	OperatedResource OperatedResource           `json:"operatedResource,omitempty"`
 	Versions         TraceStatusVersions        `json:"versions,omitempty"`

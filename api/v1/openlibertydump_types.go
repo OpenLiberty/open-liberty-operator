@@ -31,6 +31,7 @@ const (
 // Defines the observed state of OpenLibertyDump
 type OpenLibertyDumpStatus struct {
 	// +listType=atomic
+	// +operator-sdk:csv:customresourcedefinitions:type=status,displayName="Status Conditions",xDescriptors="urn:alm:descriptor:io.kubernetes.conditions"
 	Conditions []OperationStatusCondition `json:"conditions,omitempty"`
 	Versions   DumpStatusVersions         `json:"versions,omitempty"`
 	// Location of the generated dump file
