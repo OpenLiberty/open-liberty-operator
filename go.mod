@@ -3,7 +3,7 @@ module github.com/OpenLiberty/open-liberty-operator
 go 1.21
 
 require (
-	github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20231110151527-b5d45ab23956
+	github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20240322161104-4f585508aa30
 	github.com/cert-manager/cert-manager v1.10.2
 	github.com/go-logr/logr v1.2.4
 	github.com/openshift/api v0.0.0-20230928134114-673ed0cfc7f1
