@@ -84,6 +84,7 @@ func (r *ReconcileOpenLibertyDump) Reconcile(ctx context.Context, request ctrl.R
 			Message: "Failed to find a pod or pod is not in running state",
 		}
 		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+		instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 		instance.Status.Versions.Reconciled = utils.OperandVersion
 		r.Client.Status().Update(context.TODO(), instance)
 		return reconcile.Result{}, nil
@@ -132,6 +133,7 @@ func (r *ReconcileOpenLibertyDump) Reconcile(ctx context.Context, request ctrl.R
 
 	instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
 	instance.Status.DumpFile = dumpFileName
+	instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 	instance.Status.Versions.Reconciled = utils.OperandVersion
 	r.Client.Status().Update(context.TODO(), instance)
 	return reconcile.Result{}, nil

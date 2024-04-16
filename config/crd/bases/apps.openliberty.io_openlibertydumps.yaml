@@ -118,6 +118,11 @@ spec:
               dumpFile:
                 description: Location of the generated dump file
                 type: string
+              observedGeneration:
+                description: The last generation of this OpenLibertyDump instance
+                  observed by the operator.
+                format: int64
+                type: integer
               versions:
                 properties:
                   reconciled:
