@@ -26,6 +26,8 @@ CACERT=${SERVICEACCOUNT}/ca.crt
 
 RETRY_MESSAGE="Delete ConfigMap '$LTPA_JOB_REQUEST_NAME' to run this Job again."
 
+NETWORK_POLICY_MESSAGE="Is a NetworkPolicy blocking the pod's egress traffic? This pod must enable egress traffic to the API server and the cluster's DNS provider."
+
 function log() {
     echo "[$(basename ${0%.*})] $1"
 }
@@ -47,10 +49,10 @@ if [ $NOT_FOUND_COUNT -eq 0 ]; then
         error "cURL returned exit code $GET_SECRET_EXIT_CODE"
         if [[ "$GET_SECRET_EXIT_CODE" -eq 6 ]]; then
             log "Could not resolve hostname ${APISERVER}."
-            log "Is a NetworkPolicy blocking the pod's egress traffic? This pod must enable egress traffic to the API server and the cluster's DNS provider."
+            log "${NETWORK_POLICY_MESSAGE}"
         elif [[ "$GET_SECRET_EXIT_CODE" -eq 28 ]]; then
             log "Connection timed out trying to reach ${APISERVER}."
-            log "Is a NetworkPolicy blocking the pod's egress traffic? This pod must enable egress traffic to the API server and the cluster's DNS provider."
+            log "${NETWORK_POLICY_MESSAGE}"
         fi
     else
         error "Failed to parse response from the API server."
