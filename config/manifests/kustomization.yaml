@@ -7,6 +7,7 @@ resources:
 - ../scorecard
 patchesStrategicMerge:
   - patches/csvAnnotations.yaml
+  - patches/apiServerAccessPatch.yaml
 patches:
 - path: serviceBindingPatch.yaml
   target:
@@ -19,11 +20,6 @@ patches:
     name: open-liberty.v0.0.0
     namespace: placeholder
 - path: securityContextPatch.yaml
-  target:
-    kind: ClusterServiceVersion
-    name: open-liberty.v0.0.0
-    namespace: placeholder
-- path: apiServerAccessPatch.yaml
   target:
     kind: ClusterServiceVersion
     name: open-liberty.v0.0.0
