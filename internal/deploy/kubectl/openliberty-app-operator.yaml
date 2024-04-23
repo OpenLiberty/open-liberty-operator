@@ -158,6 +158,13 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - endpoints
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - ""
+  resources:
   - pods
   - pods/exec
   verbs:
