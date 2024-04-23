@@ -1091,6 +1091,11 @@ func (s *OpenLibertyApplicationStatus) SetCondition(c common.StatusCondition) {
 	}
 }
 
+func (s *OpenLibertyApplicationStatus) UnsetCondition(c common.StatusCondition) {
+	// Intentional dummy
+	return
+}
+
 func convertToCommonStatusConditionType(c StatusConditionType) common.StatusConditionType {
 	switch c {
 	case StatusConditionTypeReconciled:
