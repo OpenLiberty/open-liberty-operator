@@ -304,6 +304,7 @@ spec:
         app.kubernetes.io/instance: open-liberty-operator
         app.kubernetes.io/name: open-liberty-operator
         control-plane: controller-manager
+        openlibertyapplications.apps.openliberty.io/allow-apiserver-access: "true"
     spec:
       affinity:
         nodeAffinity:
