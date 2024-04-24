@@ -685,9 +685,11 @@ func GetRequiredLabels(name string, instance string) map[string]string {
 }
 
 func GetEndpointPortByName(endpointPorts *[]corev1.EndpointPort, name string) *corev1.EndpointPort {
-	for _, endpointPort := range *endpointPorts {
-		if endpointPort.Name == name {
-			return &endpointPort
+	if endpointPorts != nil {
+		for _, endpointPort := range *endpointPorts {
+			if endpointPort.Name == name {
+				return &endpointPort
+			}
 		}
 	}
 	return nil

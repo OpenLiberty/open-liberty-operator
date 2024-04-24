@@ -403,36 +403,39 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 		apiServerNetworkPolicy.Spec.Egress = append(apiServerNetworkPolicy.Spec.Egress, dnsRule)
 
-		// If allowed, add an Egress rule to access the API server.
-		// Otherwise, if the OpenShift DNS or K8s CoreDNS Egress rule does not provide permissive cluster-wide access
-		// and the K8s API server could not be found, use a permissive cluster-wide Egress rule.
-		if apiServerEndpoints, err := r.getEndpoints("kubernetes", "default"); err == nil {
-			rule := networkingv1.NetworkPolicyEgressRule{}
-			// Define the port
-			port := networkingv1.NetworkPolicyPort{}
-			port.Protocol = &apiServerEndpoints.Subsets[0].Ports[0].Protocol
-			var portNumber intstr.IntOrString = intstr.FromInt((int)(apiServerEndpoints.Subsets[0].Ports[0].Port))
-			port.Port = &portNumber
-			rule.Ports = append(rule.Ports, port)
+		// If the DNS rule is a specific Egress rule also check if another Egress rule can be created for the API server.
+		// Otherwise, fallback to a permissive cluster-wide Egress rule.
+		if !usingPermissiveRule {
+			if apiServerEndpoints, err := r.getEndpoints("kubernetes", "default"); err == nil {
+				rule := networkingv1.NetworkPolicyEgressRule{}
+				// Define the port
+				port := networkingv1.NetworkPolicyPort{}
+				port.Protocol = &apiServerEndpoints.Subsets[0].Ports[0].Protocol
+				var portNumber intstr.IntOrString = intstr.FromInt((int)(apiServerEndpoints.Subsets[0].Ports[0].Port))
+				port.Port = &portNumber
+				rule.Ports = append(rule.Ports, port)
 
-			// Add the endpoint address as ipBlock entries
-			for _, endpoint := range apiServerEndpoints.Subsets {
-				for _, address := range endpoint.Addresses {
-					peer := networkingv1.NetworkPolicyPeer{}
-					ipBlock := networkingv1.IPBlock{}
-					ipBlock.CIDR = address.IP + "/32"
+				// Add the endpoint address as ipBlock entries
+				for _, endpoint := range apiServerEndpoints.Subsets {
+					for _, address := range endpoint.Addresses {
+						peer := networkingv1.NetworkPolicyPeer{}
+						ipBlock := networkingv1.IPBlock{}
+						ipBlock.CIDR = address.IP + "/32"
 
-					peer.IPBlock = &ipBlock
-					rule.To = append(rule.To, peer)
+						peer.IPBlock = &ipBlock
+						rule.To = append(rule.To, peer)
+					}
 				}
+				apiServerNetworkPolicy.Spec.Egress = append(apiServerNetworkPolicy.Spec.Egress, rule)
+				reqLogger.Info("Found endpoints for kubernetes service in the default namespace")
+			} else {
+				// The operator couldn't create a rule for the K8s API server so add a permissive Egress rule
+				rule := networkingv1.NetworkPolicyEgressRule{}
+				apiServerNetworkPolicy.Spec.Egress = append(apiServerNetworkPolicy.Spec.Egress, rule)
+				reqLogger.Info("Found endpoints for kubernetes service in the default namespace")
 			}
-			apiServerNetworkPolicy.Spec.Egress = append(apiServerNetworkPolicy.Spec.Egress, rule)
-			reqLogger.Info("Found endpoints for kubernetes service in the default namespace")
-		} else if !usingPermissiveRule {
-			rule := networkingv1.NetworkPolicyEgressRule{}
-			apiServerNetworkPolicy.Spec.Egress = append(apiServerNetworkPolicy.Spec.Egress, rule)
-			reqLogger.Info("Found endpoints for kubernetes service in the default namespace")
 		}
+
 		apiServerNetworkPolicy.Labels = ba.GetLabels()
 		apiServerNetworkPolicy.Annotations = oputils.MergeMaps(apiServerNetworkPolicy.Annotations, ba.GetAnnotations())
 		apiServerNetworkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeEgress}
@@ -929,11 +932,13 @@ func (r *ReconcileOpenLiberty) getEndpoints(serviceName string, namespace string
 func (r *ReconcileOpenLiberty) getDNSEgressRule(reqLogger logr.Logger, endpointsName string, endpointsNamespace string) (bool, networkingv1.NetworkPolicyEgressRule) {
 	dnsRule := networkingv1.NetworkPolicyEgressRule{}
 	if dnsEndpoints, err := r.getEndpoints(endpointsName, endpointsNamespace); err == nil {
-		if endpointPort := lutils.GetEndpointPortByName(&dnsEndpoints.Subsets[0].Ports, "dns"); endpointPort != nil {
-			dnsRule.Ports = append(dnsRule.Ports, lutils.CreateNetworkPolicyPortFromEndpointPort(endpointPort))
-		}
-		if endpointPort := lutils.GetEndpointPortByName(&dnsEndpoints.Subsets[0].Ports, "dns-tcp"); endpointPort != nil {
-			dnsRule.Ports = append(dnsRule.Ports, lutils.CreateNetworkPolicyPortFromEndpointPort(endpointPort))
+		if len(dnsEndpoints.Subsets) > 0 {
+			if endpointPort := lutils.GetEndpointPortByName(&dnsEndpoints.Subsets[0].Ports, "dns"); endpointPort != nil {
+				dnsRule.Ports = append(dnsRule.Ports, lutils.CreateNetworkPolicyPortFromEndpointPort(endpointPort))
+			}
+			if endpointPort := lutils.GetEndpointPortByName(&dnsEndpoints.Subsets[0].Ports, "dns-tcp"); endpointPort != nil {
+				dnsRule.Ports = append(dnsRule.Ports, lutils.CreateNetworkPolicyPortFromEndpointPort(endpointPort))
+			}
 		}
 		peer := networkingv1.NetworkPolicyPeer{}
 		peer.NamespaceSelector = &metav1.LabelSelector{
