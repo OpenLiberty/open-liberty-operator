@@ -21,6 +21,7 @@ spec:
     metadata:
       labels:
         control-plane: controller-manager
+        openlibertyapplications.apps.openliberty.io/allow-apiserver-access: "true"
       annotations:
         kubectl.kubernetes.io/default-container: manager
 

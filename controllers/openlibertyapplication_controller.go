@@ -27,6 +27,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -38,8 +39,9 @@ import (
 )
 
 const (
-	OperatorName      = "open-liberty-operator"
-	OperatorShortName = "olo"
+	OperatorName                      = "open-liberty-operator"
+	OperatorShortName                 = "olo"
+	OperatorAllowAPIServerAccessLabel = "openlibertyapplications.apps.openliberty.io/allow-apiserver-access"
 )
 
 // ReconcileOpenLiberty reconciles an OpenLibertyApplication object
@@ -58,6 +60,7 @@ const applicationFinalizer = "finalizer.openlibertyapplications.apps.openliberty
 // +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=get;list;watch;create;update;delete,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=apps,resources=deployments/finalizers;statefulsets,verbs=update,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=core,resources=services;secrets;serviceaccounts;configmaps;persistentvolumeclaims,verbs=get;list;watch;create;update;delete,namespace=open-liberty-operator
+// +kubebuilder:rbac:groups=core,resources=endpoints,verbs=get;list,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;delete,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;watch;create;update;delete,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;delete,namespace=open-liberty-operator
@@ -375,6 +378,72 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName] == "" {
 		return r.ManageError(errors.New("Failed to generate TLS certificate. Ensure cert-manager is installed and running"),
 			common.StatusConditionTypeReconciled, instance)
+	}
+
+	// Kube API Server NetworkPolicy (based upon impl. by Martin Smithson)
+	apiServerNetworkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{
+		Name:      instance.Name + "-egress-dns-and-apiserver-access",
+		Namespace: instance.Namespace,
+	}}
+	err = r.CreateOrUpdate(apiServerNetworkPolicy, instance, func() error {
+		apiServerNetworkPolicy.Spec.PodSelector = metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				OperatorAllowAPIServerAccessLabel: "true",
+			},
+		}
+		apiServerNetworkPolicy.Spec.Egress = make([]networkingv1.NetworkPolicyEgressRule, 0)
+
+		var dnsRule networkingv1.NetworkPolicyEgressRule
+		var usingPermissiveRule bool
+		// If allowed, add an Egress rule to access the OpenShift DNS or K8s CoreDNS. Otherwise, use a permissive cluster-wide Egress rule.
+		if r.IsOpenShift() {
+			usingPermissiveRule, dnsRule = r.getDNSEgressRule(reqLogger, "dns-default", "openshift-dns")
+		} else {
+			usingPermissiveRule, dnsRule = r.getDNSEgressRule(reqLogger, "kube-dns", "kube-system")
+		}
+		apiServerNetworkPolicy.Spec.Egress = append(apiServerNetworkPolicy.Spec.Egress, dnsRule)
+
+		// If the DNS rule is a specific Egress rule also check if another Egress rule can be created for the API server.
+		// Otherwise, fallback to a permissive cluster-wide Egress rule.
+		if !usingPermissiveRule {
+			if apiServerEndpoints, err := r.getEndpoints("kubernetes", "default"); err == nil {
+				rule := networkingv1.NetworkPolicyEgressRule{}
+				// Define the port
+				port := networkingv1.NetworkPolicyPort{}
+				port.Protocol = &apiServerEndpoints.Subsets[0].Ports[0].Protocol
+				var portNumber intstr.IntOrString = intstr.FromInt((int)(apiServerEndpoints.Subsets[0].Ports[0].Port))
+				port.Port = &portNumber
+				rule.Ports = append(rule.Ports, port)
+
+				// Add the endpoint address as ipBlock entries
+				for _, endpoint := range apiServerEndpoints.Subsets {
+					for _, address := range endpoint.Addresses {
+						peer := networkingv1.NetworkPolicyPeer{}
+						ipBlock := networkingv1.IPBlock{}
+						ipBlock.CIDR = address.IP + "/32"
+
+						peer.IPBlock = &ipBlock
+						rule.To = append(rule.To, peer)
+					}
+				}
+				apiServerNetworkPolicy.Spec.Egress = append(apiServerNetworkPolicy.Spec.Egress, rule)
+				reqLogger.Info("Found endpoints for kubernetes service in the default namespace")
+			} else {
+				// The operator couldn't create a rule for the K8s API server so add a permissive Egress rule
+				rule := networkingv1.NetworkPolicyEgressRule{}
+				apiServerNetworkPolicy.Spec.Egress = append(apiServerNetworkPolicy.Spec.Egress, rule)
+				reqLogger.Info("Found endpoints for kubernetes service in the default namespace")
+			}
+		}
+
+		apiServerNetworkPolicy.Labels = ba.GetLabels()
+		apiServerNetworkPolicy.Annotations = oputils.MergeMaps(apiServerNetworkPolicy.Annotations, ba.GetAnnotations())
+		apiServerNetworkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeEgress}
+		return nil
+	})
+	if err != nil {
+		reqLogger.Error(err, "Failed to reconcile API server network policy")
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
 	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: defaultMeta}
@@ -849,4 +918,41 @@ func (r *ReconcileOpenLiberty) deletePVC(reqLogger logr.Logger, pvcName string, 
 			}
 		}
 	}
+}
+
+func (r *ReconcileOpenLiberty) getEndpoints(serviceName string, namespace string) (*corev1.Endpoints, error) {
+	endpoints := &corev1.Endpoints{}
+	if err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: serviceName, Namespace: namespace}, endpoints); err != nil {
+		return nil, err
+	} else {
+		return endpoints, nil
+	}
+}
+
+func (r *ReconcileOpenLiberty) getDNSEgressRule(reqLogger logr.Logger, endpointsName string, endpointsNamespace string) (bool, networkingv1.NetworkPolicyEgressRule) {
+	dnsRule := networkingv1.NetworkPolicyEgressRule{}
+	if dnsEndpoints, err := r.getEndpoints(endpointsName, endpointsNamespace); err == nil {
+		if len(dnsEndpoints.Subsets) > 0 {
+			if endpointPort := lutils.GetEndpointPortByName(&dnsEndpoints.Subsets[0].Ports, "dns"); endpointPort != nil {
+				dnsRule.Ports = append(dnsRule.Ports, lutils.CreateNetworkPolicyPortFromEndpointPort(endpointPort))
+			}
+			if endpointPort := lutils.GetEndpointPortByName(&dnsEndpoints.Subsets[0].Ports, "dns-tcp"); endpointPort != nil {
+				dnsRule.Ports = append(dnsRule.Ports, lutils.CreateNetworkPolicyPortFromEndpointPort(endpointPort))
+			}
+		}
+		peer := networkingv1.NetworkPolicyPeer{}
+		peer.NamespaceSelector = &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"kubernetes.io/metadata.name": endpointsNamespace,
+			},
+		}
+		dnsRule.To = append(dnsRule.To, peer)
+		reqLogger.Info("Found endpoints for " + endpointsName + " service in the " + endpointsNamespace + " namespace")
+		return false, dnsRule
+	}
+	// use permissive rule
+	// egress:
+	//   - {}
+	reqLogger.Info("Failed to retrieve endpoints for " + endpointsName + " service in the " + endpointsNamespace + "  namespace. Using more permissive rule.")
+	return true, dnsRule
 }

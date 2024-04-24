@@ -7,6 +7,7 @@ resources:
 - ../scorecard
 patchesStrategicMerge:
   - patches/csvAnnotations.yaml
+  - patches/apiServerAccessPatch.yaml
 patches:
 - path: serviceBindingPatch.yaml
   target:
