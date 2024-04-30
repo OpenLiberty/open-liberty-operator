@@ -7438,8 +7438,8 @@ spec:
               imageReference:
                 type: string
               observedGeneration:
-                description: The last generation of this OpenLibertyApplication instance
-                  observed by the operator.
+                description: The generation identifier of this OpenLibertyApplication
+                  instance completely reconciled by the Operator.
                 format: int64
                 type: integer
               references:
@@ -14530,8 +14530,8 @@ spec:
                 description: Location of the generated dump file
                 type: string
               observedGeneration:
-                description: The last generation of this OpenLibertyDump instance
-                  observed by the operator.
+                description: The generation identifier of this OpenLibertyDump instance
+                  completely reconciled by the Operator.
                 format: int64
                 type: integer
               versions:
@@ -14763,8 +14763,8 @@ spec:
                 type: array
                 x-kubernetes-list-type: atomic
               observedGeneration:
-                description: The last generation of this OpenLibertyTrace instance
-                  observed by the operator.
+                description: The generation identifier of this OpenLibertyTrace instance
+                  completely reconciled by the Operator.
                 format: int64
                 type: integer
               operatedResource:

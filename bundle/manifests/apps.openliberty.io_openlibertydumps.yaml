@@ -122,8 +122,8 @@ spec:
                 description: Location of the generated dump file
                 type: string
               observedGeneration:
-                description: The last generation of this OpenLibertyDump instance
-                  observed by the operator.
+                description: The generation identifier of this OpenLibertyDump instance
+                  completely reconciled by the Operator.
                 format: int64
                 type: integer
               versions:

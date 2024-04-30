@@ -433,7 +433,7 @@ type OpenLibertyApplicationStatus struct {
 
 	SemeruCompiler *SemeruCompilerStatus `json:"semeruCompiler,omitempty"`
 
-	// The last generation of this OpenLibertyApplication instance observed by the operator.
+	// The generation identifier of this OpenLibertyApplication instance completely reconciled by the Operator.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
