@@ -1598,7 +1598,7 @@ The configurable fields are:
 | `include` | Optional. List of memory dump types to request: _thread,heap,system_
 |===
 
-Example including heap and thread dump:
+Example including thread dump:
 
 [source,yaml]
 ----
@@ -1610,7 +1610,6 @@ spec:
   podName: Specify_Pod_Name_Here
   include:
     - thread
-    - heap
 ----
 
 The dump file name is added to the `OpenLibertyDump` CR status and file is stored in the `serviceability` folder with a format such as `/serviceability/_namespace_/_pod_name_/_timestamp_.zip`

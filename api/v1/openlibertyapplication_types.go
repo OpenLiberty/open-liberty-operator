@@ -432,6 +432,9 @@ type OpenLibertyApplicationStatus struct {
 	References common.StatusReferences `json:"references,omitempty"`
 
 	SemeruCompiler *SemeruCompilerStatus `json:"semeruCompiler,omitempty"`
+
+	// The generation identifier of this OpenLibertyApplication instance completely reconciled by the Operator.
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 // Defines possible status conditions.
@@ -464,6 +467,7 @@ const (
 	StatusConditionTypeReconciled     StatusConditionType = "Reconciled"
 	StatusConditionTypeResourcesReady StatusConditionType = "ResourcesReady"
 	StatusConditionTypeReady          StatusConditionType = "Ready"
+	StatusConditionTypeWarning        StatusConditionType = "Warning"
 
 	// Status Endpoint Scopes
 	StatusEndpointScopeExternal StatusEndpointScope = "External"
@@ -489,6 +493,9 @@ type StatusVersions struct {
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status",priority=0,description="Status of the component ready condition"
 // +kubebuilder:printcolumn:name="ReadyReason",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].reason",priority=1,description="Reason for the failure of component ready condition"
 // +kubebuilder:printcolumn:name="ReadyMessage",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].message",priority=1,description="Failure message from component ready condition"
+// +kubebuilder:printcolumn:name="Warning",type="string",JSONPath=".status.conditions[?(@.type=='Warning')].status",priority=0,description="Status of the component warning condition"
+// +kubebuilder:printcolumn:name="WarningReason",type="string",JSONPath=".status.conditions[?(@.type=='Warning')].reason",priority=1,description="Reason for the failure of component warning condition"
+// +kubebuilder:printcolumn:name="WarningMessage",type="string",JSONPath=".status.conditions[?(@.type=='Warning')].message",priority=1,description="Failure message from component warning condition"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",priority=0,description="Age of the resource"
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenLibertyApplication",resources={{Deployment,v1},{Service,v1},{StatefulSet,v1},{Route,v1},{HorizontalPodAutoscaler,v1},{ServiceAccount,v1},{Secret,v1},{NetworkPolicy,v1}}
 
@@ -1361,6 +1368,22 @@ func (s *OpenLibertyApplicationStatus) SetCondition(c common.StatusCondition) {
 	}
 }
 
+func (s *OpenLibertyApplicationStatus) UnsetCondition(c common.StatusCondition) {
+	for i := range s.Conditions {
+		if s.Conditions[i].GetType() == c.GetType() {
+			// Found the condition to remove
+			if i+1 == len(s.Conditions) {
+				// the match is the last element, can just shorten by one
+				s.Conditions = s.Conditions[:i]
+			} else {
+				// there are more elements after the match.
+				s.Conditions = append(s.Conditions[:i], s.Conditions[i+1])
+			}
+			return
+		}
+	}
+}
+
 func convertToCommonStatusConditionType(c StatusConditionType) common.StatusConditionType {
 	switch c {
 	case StatusConditionTypeReconciled:
@@ -1369,6 +1392,8 @@ func convertToCommonStatusConditionType(c StatusConditionType) common.StatusCond
 		return common.StatusConditionTypeResourcesReady
 	case StatusConditionTypeReady:
 		return common.StatusConditionTypeReady
+	case StatusConditionTypeWarning:
+		return common.StatusConditionTypeWarning
 	default:
 		panic(c)
 	}
@@ -1382,6 +1407,8 @@ func convertFromCommonStatusConditionType(c common.StatusConditionType) StatusCo
 		return StatusConditionTypeResourcesReady
 	case common.StatusConditionTypeReady:
 		return StatusConditionTypeReady
+	case common.StatusConditionTypeWarning:
+		return StatusConditionTypeWarning
 	default:
 		panic(c)
 	}

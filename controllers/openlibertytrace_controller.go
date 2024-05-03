@@ -191,6 +191,7 @@ func (r *ReconcileOpenLibertyTrace) UpdateStatus(issue error, conditionType open
 
 	s.SetCondition(statusCondition)
 
+	instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 	instance.Status.Versions.Reconciled = lutils.OperandVersion
 
 	err := r.Client.Status().Update(context.Background(), &instance)
