@@ -11,7 +11,7 @@ metadata:
             "name": "openliberty-app-sample"
           },
           "spec": {
-            "applicationImage": "icr.io/appcafe/open-liberty/samples/getting-started@sha256:d735c2ceae5945a0f20adcbcb04e55472d2520b6d1abb6d3049c8521234d3b7a",
+            "applicationImage": "icr.io/appcafe/open-liberty/samples/getting-started@sha256:cd4a9cc586dc371c34df44853abd3301bfd9bfde14efa01170625342a070d14f",
             "expose": true,
             "manageTLS": true,
             "replicas": 1,
@@ -28,8 +28,7 @@ metadata:
           },
           "spec": {
             "include": [
-              "thread",
-              "heap"
+              "thread"
             ],
             "podName": "Specify_Pod_Name_Here"
           }
@@ -54,7 +53,7 @@ metadata:
             "name": "openliberty-app-sample"
           },
           "spec": {
-            "applicationImage": "icr.io/appcafe/open-liberty/samples/getting-started@sha256:d735c2ceae5945a0f20adcbcb04e55472d2520b6d1abb6d3049c8521234d3b7a",
+            "applicationImage": "icr.io/appcafe/open-liberty/samples/getting-started@sha256:cd4a9cc586dc371c34df44853abd3301bfd9bfde14efa01170625342a070d14f",
             "expose": true,
             "replicas": 1,
             "service": {
@@ -70,8 +69,7 @@ metadata:
           },
           "spec": {
             "include": [
-              "thread",
-              "heap"
+              "thread"
             ],
             "podName": "Specify_Pod_Name_Here"
           }
@@ -94,7 +92,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2024-02-02T17:24:41Z"
+    createdAt: "2024-05-01T19:15:47Z"
     description: Deploy and manage containerized Liberty applications
     olm.skipRange: '>=0.8.0 <1.3.1'
     operators.openshift.io/infrastructure-features: '["disconnected"]'
@@ -1122,7 +1120,7 @@ spec:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
                 - name: RELATED_IMAGE_LIBERTY_SAMPLE_APP
-                  value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:d735c2ceae5945a0f20adcbcb04e55472d2520b6d1abb6d3049c8521234d3b7a
+                  value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:cd4a9cc586dc371c34df44853abd3301bfd9bfde14efa01170625342a070d14f
                 - name: RELATED_IMAGE_OPEN_LIBERTY_OPERATOR
                   value: icr.io/appcafe/open-liberty-operator:daily
                 image: icr.io/appcafe/open-liberty-operator:daily
@@ -1150,7 +1148,7 @@ spec:
                 resources:
                   limits:
                     cpu: 400m
-                    memory: 512Mi
+                    memory: 1Gi
                   requests:
                     cpu: 200m
                     memory: 128Mi
@@ -1425,7 +1423,7 @@ spec:
   provider:
     name: IBM
   relatedImages:
-  - image: icr.io/appcafe/open-liberty/samples/getting-started@sha256:d735c2ceae5945a0f20adcbcb04e55472d2520b6d1abb6d3049c8521234d3b7a
+  - image: icr.io/appcafe/open-liberty/samples/getting-started@sha256:cd4a9cc586dc371c34df44853abd3301bfd9bfde14efa01170625342a070d14f
     name: liberty-sample-app
   - image: icr.io/appcafe/open-liberty-operator:daily
     name: open-liberty-operator

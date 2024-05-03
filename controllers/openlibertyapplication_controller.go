@@ -241,21 +241,24 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 	}
 
-	if oputils.GetServiceAccountName(instance) == "" {
-		serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
-		err = r.CreateOrUpdate(serviceAccount, instance, func() error {
-			return oputils.CustomizeServiceAccount(serviceAccount, instance, r.GetClient())
-		})
-		if err != nil {
-			reqLogger.Error(err, "Failed to reconcile ServiceAccount")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-	} else {
-		serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
-		err = r.DeleteResource(serviceAccount)
-		if err != nil {
-			reqLogger.Error(err, "Failed to delete ServiceAccount")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	serviceAccountName := oputils.GetServiceAccountName(instance)
+	if serviceAccountName != defaultMeta.Name {
+		if serviceAccountName == "" {
+			serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
+			err = r.CreateOrUpdate(serviceAccount, instance, func() error {
+				return oputils.CustomizeServiceAccount(serviceAccount, instance, r.GetClient())
+			})
+			if err != nil {
+				reqLogger.Error(err, "Failed to reconcile ServiceAccount")
+				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			}
+		} else {
+			serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
+			err = r.DeleteResource(serviceAccount)
+			if err != nil {
+				reqLogger.Error(err, "Failed to delete ServiceAccount")
+				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			}
 		}
 	}
 
@@ -326,6 +329,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				reqLogger.Error(err, "Failed to reconcile Knative Service")
 				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 			}
+			instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 			instance.Status.Versions.Reconciled = lutils.OperandVersion
 			reqLogger.Info("Reconcile OpenLibertyApplication - completed")
 			return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
@@ -593,6 +597,15 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	} else if ok {
 		if instance.Spec.Expose != nil && *instance.Spec.Expose {
+			if oputils.ShouldDeleteRoute(ba) {
+				reqLogger.Info("Custom hostname has been removed from route, deleting and recreating the route")
+				route := &routev1.Route{ObjectMeta: defaultMeta}
+				err = r.DeleteResource(route)
+				if err != nil {
+					reqLogger.Error(err, "Failed to delete Route")
+					return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+				}
+			}
 			route := &routev1.Route{ObjectMeta: defaultMeta}
 			err = r.CreateOrUpdate(route, instance, func() error {
 				key, cert, caCert, destCACert, err := r.GetRouteTLSValues(ba)
@@ -682,6 +695,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 	}
 
+	instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 	instance.Status.Versions.Reconciled = lutils.OperandVersion
 	reqLogger.Info("Reconcile OpenLibertyApplication - completed")
 	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
