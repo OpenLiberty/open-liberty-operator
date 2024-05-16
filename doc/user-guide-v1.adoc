@@ -1050,7 +1050,7 @@ spec:
       initialDelaySeconds: 90
 ----
 
-When a probe **initialDelaySeconds** parameter is set to `0`, the default value is used. To set a probe initial delay to `0`, define the probe instead of using the default probe. The following example overrides the default value and sets the initial delay to `0`.
+When a probe **initialDelaySeconds** parameter is set to `0`, the default value is used. To set a probe initial delay to `0`, define the probe instead of using the default probe. The following example overrides the default value and sets the initial delay to `0`. The same will also apply to properties **timeoutSeconds**, **periodSeconds**, **successThreshold**, and **failureThreshold**.
 
 [source,yaml]
 ----
@@ -1061,6 +1061,66 @@ spec:
         path: "/health/live"
         port: 9443
       initialDelaySeconds: 0
+----
+
+Starting in version 1.4.0, you can now specify optional **port** and **scheme** parameters within `.spec.probes`.
+
+- If `.spec.probes.*.httpGet.port` is not specified, the value of `.spec.service.port` will be used.
+
+- If `.spec.probes.*.httpGet.scheme` is not specified, when `.spec.manageTLS` is `true` (or uninitialized) `HTTPS` will be used and when set to `false`, `HTTP` will be used.
+
+For instance, when `.spec.manageTLS` is set to `true` (or uninitialized)
+[source,yaml]
+----
+spec:
+  probes:
+    liveness:
+      httpGet:
+        path: "/health/live"
+  manageTLS: true
+  service:
+    port: 9443 
+----
+It produces a liveness probe configuration such as below:
+[source,yaml]
+----
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: 9443           # Value of .spec.service.port
+    scheme: HTTPS        # .spec.manageTLS is true
+  initialDelaySeconds: 60
+  timeoutSeconds: 2
+  periodSeconds: 10
+  successThreshold: 1
+  failureThreshold: 3
+----
+
+Additionally, in a configuration where `.spec.manageTLS` is `false` and using `.service.port` as `9080`
+[source,yaml]
+----
+spec:
+  probes:
+    liveness:
+      httpGet:
+        path: "/health/live"
+  manageTLS: false
+  service:
+    port: 9080
+----
+The following liveness probe is generated:
+[source,yaml]
+----
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: 9080           # Value of .spec.service.port
+    scheme: HTTP         # .spec.manageTLS is false
+  initialDelaySeconds: 60
+  timeoutSeconds: 2
+  periodSeconds: 10
+  successThreshold: 1
+  failureThreshold: 3
 ----
 
 [[deploy-serverless-applications-with-knative]]
