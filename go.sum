@@ -46,6 +46,8 @@ github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.
 github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20240514135533-812d07575e8c/go.mod h1:SCojMAukVov6aOA8VEjpr0nLcheOrtoAVUGRvLT9qyI=
 github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20240515205711-ea15efc009bc h1:ZO6TmqetJSRPah1luUsyG9On5N9XRm3/IBKsbsLLOwM=
 github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20240515205711-ea15efc009bc/go.mod h1:SCojMAukVov6aOA8VEjpr0nLcheOrtoAVUGRvLT9qyI=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20240516142046-336488006a05 h1:FPa3upDX4TvTDgRF+NXoUMhPsFb7YVhvld/pUN7r23A=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20240516142046-336488006a05/go.mod h1:SCojMAukVov6aOA8VEjpr0nLcheOrtoAVUGRvLT9qyI=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
 github.com/benbjohnson/clock v1.1.0 h1:Q92kusRqC1XV2MjkWETPvjJVqKetz1OzxZB7mHJLju8=

@@ -1063,7 +1063,9 @@ spec:
       initialDelaySeconds: 0
 ----
 
-Starting in version 1.4.0, you can now specify optional **port** and **scheme** parameters within `.spec.probes`.
+Starting in version 1.4.0, you can now specify optional parameters for HTTPGetAction's under `.spec.probes.*.httpGet` for the `startup`, `liveness` and `readiness` probes.
+
+- If `.spec.probes.*.httpGet.path` is not specified, the default paths listed above will be used.
 
 - If `.spec.probes.*.httpGet.port` is not specified, the value of `.spec.service.port` will be used.
 
@@ -1075,8 +1077,7 @@ For instance, when `.spec.manageTLS` is set to `true` (or uninitialized)
 spec:
   probes:
     liveness:
-      httpGet:
-        path: "/health/live"
+      httpGet: {}
   manageTLS: true
   service:
     port: 9443 
@@ -1086,7 +1087,7 @@ It produces a liveness probe configuration such as below:
 ----
 livenessProbe:
   httpGet:
-    path: /health/live
+    path: /health/live   # Default path for liveness probe
     port: 9443           # Value of .spec.service.port
     scheme: HTTPS        # .spec.manageTLS is true
   initialDelaySeconds: 60
@@ -1102,8 +1103,7 @@ Additionally, in a configuration where `.spec.manageTLS` is `false` and using `.
 spec:
   probes:
     liveness:
-      httpGet:
-        path: "/health/live"
+      httpGet: {}
   manageTLS: false
   service:
     port: 9080
@@ -1113,7 +1113,7 @@ The following liveness probe is generated:
 ----
 livenessProbe:
   httpGet:
-    path: /health/live
+    path: /health/live   # Default path for liveness probe
     port: 9080           # Value of .spec.service.port
     scheme: HTTP         # .spec.manageTLS is false
   initialDelaySeconds: 60
