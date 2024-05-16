@@ -711,37 +711,6 @@ func (p *OpenLibertyApplicationProbes) GetStartupProbe() *common.BaseComponentPr
 	return p.Startup
 }
 
-func (p *OpenLibertyApplicationProbes) PatchLivenessProbe(ba common.BaseComponent, probe *common.BaseComponentProbe) *common.BaseComponentProbe {
-	return patchLibertyProbe(ba, probe)
-}
-
-func (p *OpenLibertyApplicationProbes) PatchReadinessProbe(ba common.BaseComponent, probe *common.BaseComponentProbe) *common.BaseComponentProbe {
-	return patchLibertyProbe(ba, probe)
-}
-
-func (p *OpenLibertyApplicationProbes) PatchStartupProbe(ba common.BaseComponent, probe *common.BaseComponentProbe) *common.BaseComponentProbe {
-	return patchLibertyProbe(ba, probe)
-}
-
-func patchLibertyProbe(ba common.BaseComponent, probe *common.BaseComponentProbe) *common.BaseComponentProbe {
-	if probe != nil {
-		manageTLSEnabled := ba.GetManageTLS() == nil || *ba.GetManageTLS()
-		if probe.BaseComponentProbeHandler.HTTPGet != nil {
-			if manageTLSEnabled {
-				probe.BaseComponentProbeHandler.HTTPGet.Scheme = "HTTPS"
-			} else {
-				probe.BaseComponentProbeHandler.HTTPGet.Scheme = "HTTP"
-			}
-			portValue := ba.GetService().GetPort()
-			if portValue != 0 {
-				port := intstr.FromInt(int(portValue))
-				probe.BaseComponentProbeHandler.HTTPGet.Port = &port
-			}
-		}
-	}
-	return probe
-}
-
 // GetDefaultLivenessProbe returns default values for liveness probe
 func (p *OpenLibertyApplicationProbes) GetDefaultLivenessProbe(ba common.BaseComponent) *common.BaseComponentProbe {
 	return common.GetDefaultMicroProfileLivenessProbe(ba)
