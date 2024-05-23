@@ -1479,7 +1479,7 @@ When certificate manager is installed on the cluster, the service certificate is
 
 The operator creates a certificate authority (CA) `Issuer` instance to be shared by applications within a single namespace. The secret (or issuer) must be created in the same namespace as the `OpenLibertyApplication`. The issuer is used to generate a service certificate for each application that is mounted into the pod. The `tls.crt`, `tls.key`, and `ca.crt` files are mounted to the pod. The location is set by the `TLS_DIR` environment variable. The same secret (or issuer) is used for all instances of the application in the namespace.
 
-By default, the cert-manager certificates requested by Liberty Operator are valid for 90 days (duration), but the rotation happens well before that. The default renew-before period is 1/3 of the duration prior to expiry, so the rotation will happen every 60 days by default.
+By default, the cert-manager certificates requested by Liberty Operator are valid for 90 days (duration), but the rotation happens well before that. The default renew-before period is 1/3 of the duration prior to expiry, so the rotation will happen at 60 days by default.
 
 The default 90 days duration can be changed by updating the value of `certManagerCertDuration` and `certManagerCACertDuration` in the link:#operator-config-map[Operator ConfigMap] (global configuration) and must be specified in link:++https://pkg.go.dev/time#ParseDuration++[Go `time.Duration`] string format. The `certManagerCertDuration` and `certManagerCACertDuration` fields are the durations before expiry for the cert-manager issued service certificate and CA, respectively. This global configuration applies to all applications managed by Liberty Operator.
 
