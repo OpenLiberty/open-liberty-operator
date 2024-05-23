@@ -328,7 +328,7 @@ The value of the `.status.versions.reconciled` parameter is the version of the o
 
 The `ConfigMap` named `open-liberty-operator` is used for configuring Liberty operator managed resources. It is created once when the operator starts and is located in the operator's installed namespace.
 
-NOTE: For OCP users, the `AllNamespaces` install mode designates the namespace `openshift-operators` as the operator's installed namespace by default.
+NOTE: For OCP users, the `AllNamespaces` install mode designates `openshift-operators` as the operator's installed namespace.
 
 This is a sample operator `ConfigMap` that would get generated when the operator is installed and running in the `test-namespace` namespace.
 
