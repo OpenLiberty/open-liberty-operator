@@ -545,19 +545,19 @@ func isVolumeFound(pts *corev1.PodTemplateSpec, name string) bool {
 
 func ConfigurePasswordEncryption(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string) {
 	// Mount a volume /output/resources/liberty-operator/encryptionKey.xml to store the Liberty Password Encryption Key
-	MountSecretAsVolume(pts, operatorShortName+ManagedEncryptionServerXML, GetVolumeMount(la, SecureMountPath, EncryptionKeyXMLFileName))
+	MountSecretAsVolume(pts, operatorShortName+ManagedEncryptionServerXML, CreateVolumeMount(SecureMountPath, EncryptionKeyXMLFileName))
 
-	// Mount a volume /config/configDropins/overrides/mountencryptionKey.xml to import the Liberty Password Encryption Key
-	MountSecretAsVolume(pts, operatorShortName+ManagedEncryptionMountServerXML, GetVolumeMount(la, overridesMountPath, EncryptionKeyMountXMLFileName))
+	// Mount a volume /config/configDropins/overrides/encryptionKeyMount.xml to import the Liberty Password Encryption Key
+	MountSecretAsVolume(pts, operatorShortName+ManagedEncryptionMountServerXML, CreateVolumeMount(overridesMountPath, EncryptionKeyMountXMLFileName))
 }
 
 // ConfigureLTPA setups the shared-storage for LTPA keys file generation
 func ConfigureLTPA(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string) {
 	// Mount a volume /config/ltpa to store the ltpa.keys file
-	MountSecretAsVolume(pts, operatorShortName+"-managed-ltpa", GetVolumeMount(la, managedLTPAMountPath, ltpaKeysFileName))
+	MountSecretAsVolume(pts, operatorShortName+"-managed-ltpa", CreateVolumeMount(managedLTPAMountPath, ltpaKeysFileName))
 
 	// Mount a volume /config/configDropins/overrides/ltpa.xml to store the Liberty Server XML
-	MountSecretAsVolume(pts, operatorShortName+LTPAServerXMLSuffix, GetVolumeMount(la, overridesMountPath, ltpaXMLFileName))
+	MountSecretAsVolume(pts, operatorShortName+LTPAServerXMLSuffix, CreateVolumeMount(overridesMountPath, ltpaXMLFileName))
 }
 
 func MountSecretAsVolume(pts *corev1.PodTemplateSpec, secretName string, volumeMount corev1.VolumeMount) {
@@ -716,7 +716,7 @@ func parseMountName(fileName string) string {
 	return mountName
 }
 
-func GetVolumeMount(la *olv1.OpenLibertyApplication, mountPath string, fileName string) corev1.VolumeMount {
+func CreateVolumeMount(mountPath string, fileName string) corev1.VolumeMount {
 	return corev1.VolumeMount{
 		Name:      parseMountName(fileName),
 		MountPath: mountPath + "/" + fileName,

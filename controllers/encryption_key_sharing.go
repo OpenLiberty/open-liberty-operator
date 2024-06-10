@@ -9,14 +9,13 @@ import (
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 func (r *ReconcileOpenLiberty) reconcileEncryptionKeySharing(instance *olv1.OpenLibertyApplication) (string, string, error) {
-	// Does this Liberty application instance enable password encryption key sharing?
-	keySharingEnabled := r.isPasswordEncryptionKeySharingEnabled(instance)
-	if keySharingEnabled {
+	if r.isPasswordEncryptionKeySharingEnabled(instance) {
 		// Does the namespace already have a password encryption key sharing Secret?
 		encryptionSecret, err := r.hasEncryptionKeySecret(instance)
 		if err == nil {
@@ -25,19 +24,46 @@ func (r *ReconcileOpenLiberty) reconcileEncryptionKeySharing(instance *olv1.Open
 				// Create the Liberty config that will mount into the pods
 				err := r.createEncryptionKeyLibertyConfig(instance, encryptionKey)
 				if err != nil {
-					return "Failed to create Liberty resources to share the Encryption Key", encryptionSecret.Name, err
+					return "Failed to create Liberty resources to share the password encryption key", "", err
 				}
 				return "", encryptionSecret.Name, nil
 			}
 		}
 	}
-	// Delete the Liberty config that previously was mounted in the pod.
 	err := r.deleteEncryptionKeyResources(instance)
 	if err != nil {
-		return "Failed to delete Liberty resources sharing the old Encryption Key", "", err
+		return "Failed to delete Liberty resources for sharing the password encryption key", "", err
 	}
-
 	return "", "", nil
+}
+
+// Returns true if the OpenLibertyApplication instance initiated the password encryption keys sharing process or sets the instance as the leader if the password encryption keys are not yet shared
+func (r *ReconcileOpenLiberty) getEncryptionKeySharingLeader(instance *olv1.OpenLibertyApplication, createServiceAccount bool) (string, bool, string, error) {
+	encryptionSA := &corev1.ServiceAccount{}
+	encryptionSA.Name = OperatorShortName + "-password-encryption"
+	encryptionSA.Namespace = instance.GetNamespace()
+	encryptionSA.Labels = lutils.GetRequiredLabels(encryptionSA.Name, "")
+	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: encryptionSA.Name, Namespace: encryptionSA.Namespace}, encryptionSA)
+	if err != nil {
+		if kerrors.IsNotFound(err) {
+			if createServiceAccount {
+				r.CreateOrUpdate(encryptionSA, instance, func() error {
+					return nil
+				})
+				return instance.Name, true, encryptionSA.Name, nil
+			}
+			return "", false, "", nil
+		}
+		return "", false, encryptionSA.Name, err
+	}
+	encryptionKeySharingLeaderName := ""
+	for _, ownerReference := range encryptionSA.OwnerReferences {
+		if ownerReference.Name == instance.Name {
+			return instance.Name, true, encryptionSA.Name, nil
+		}
+		encryptionKeySharingLeaderName = ownerReference.Name
+	}
+	return encryptionKeySharingLeaderName, false, encryptionSA.Name, nil
 }
 
 func (r *ReconcileOpenLiberty) isPasswordEncryptionKeySharingEnabled(instance *olv1.OpenLibertyApplication) bool {
@@ -60,6 +86,14 @@ func (r *ReconcileOpenLiberty) hasEncryptionKeySecret(instance *olv1.OpenLiberty
 // Gets the password encryption keys Secret and returns the name of the Secret storing its metadata
 func (r *ReconcileOpenLiberty) createEncryptionKeyLibertyConfig(instance *olv1.OpenLibertyApplication, encryptionKey string) error {
 	if len(encryptionKey) == 0 {
+		return nil
+	}
+
+	_, isEncryptionKeySharingLeader, _, err := r.getEncryptionKeySharingLeader(instance, true)
+	if err != nil {
+		return err
+	}
+	if !isEncryptionKeySharingLeader {
 		return nil
 	}
 
@@ -100,22 +134,18 @@ func (r *ReconcileOpenLiberty) createEncryptionKeyLibertyConfig(instance *olv1.O
 }
 
 func (r *ReconcileOpenLiberty) deleteEncryptionKeyResources(instance *olv1.OpenLibertyApplication) error {
-	// The Secret to hold the server.xml that will override the password encryption key for the Liberty server
-	// This server.xml will be mounted in /output/resources/liberty-operator/encryptionKey.xml
-	encryptionXMLSecret := &corev1.Secret{}
-	encryptionXMLSecret.Name = OperatorShortName + lutils.ManagedEncryptionServerXML
-	encryptionXMLSecret.Namespace = instance.GetNamespace()
-	err := r.DeleteResource(encryptionXMLSecret)
+	_, isEncryptionKeySharingLeader, encryptionServiceAccountName, err := r.getEncryptionKeySharingLeader(instance, false)
 	if err != nil {
 		return err
 	}
+	if !isEncryptionKeySharingLeader {
+		return nil
+	}
 
-	// The Secret to hold the server.xml that will import the password encryption key into the Liberty server
-	// This server.xml will be mounted in /config/configDropins/overrides/encryptionKeyMount.xml
-	mountingXMLSecret := &corev1.Secret{}
-	mountingXMLSecret.Name = OperatorShortName + lutils.ManagedEncryptionMountServerXML
-	mountingXMLSecret.Namespace = instance.GetNamespace()
-	err = r.DeleteResource(mountingXMLSecret)
+	encryptionSA := &corev1.ServiceAccount{}
+	encryptionSA.Name = encryptionServiceAccountName
+	encryptionSA.Namespace = instance.GetNamespace()
+	err = r.DeleteResource(encryptionSA)
 	if err != nil {
 		return err
 	}
