@@ -619,6 +619,11 @@ func (in *OpenLibertyApplicationSpec) DeepCopyInto(out *OpenLibertyApplicationSp
 		*out = new(bool)
 		**out = **in
 	}
+	if in.ManagePasswordEncryption != nil {
+		in, out := &in.ManagePasswordEncryption, &out.ManagePasswordEncryption
+		*out = new(bool)
+		**out = **in
+	}
 	if in.ManageLTPA != nil {
 		in, out := &in.ManageLTPA, &out.ManageLTPA
 		*out = new(bool)
