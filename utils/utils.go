@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"reflect"
 	"sort"
 	"strconv"
@@ -35,11 +36,23 @@ var log = logf.Log.WithName("openliberty_utils")
 const serviceabilityMountPath = "/serviceability"
 const ssoEnvVarPrefix = "SEC_SSO_"
 const OperandVersion = "1.3.2"
-const ltpaKeysMountPath = "/config/managedLTPA"
-const ltpaServerXMLOverridesMountPath = "/config/configDropins/overrides/"
+
+// LTPA constants
+const managedLTPAMountPath = "/config/managedLTPA"
 const LTPAServerXMLSuffix = "-managed-ltpa-server-xml"
 const ltpaKeysFileName = "ltpa.keys"
 const ltpaXMLFileName = "managedLTPA.xml"
+
+// Mount constants
+const SecureMountPath = "/output/resources/liberty-operator"
+const overridesMountPath = "/config/configDropins/overrides"
+
+// Password encryption constants
+const ManagedEncryptionServerXML = "-managed-encryption-server-xml"
+const ManagedEncryptionMountServerXML = "-managed-encryption-mount-server-xml"
+const PasswordEncryptionKeySuffix = "-wlp-password-encryption-key"
+const EncryptionKeyXMLFileName = "encryptionKey.xml"
+const EncryptionKeyMountXMLFileName = "encryptionKeyMount.xml"
 
 // Validate if the OpenLibertyApplication is valid
 func Validate(olapp *olv1.OpenLibertyApplication) (bool, error) {
@@ -530,43 +543,36 @@ func isVolumeFound(pts *corev1.PodTemplateSpec, name string) bool {
 	return false
 }
 
+func ConfigurePasswordEncryption(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string) {
+	// Mount a volume /output/resources/liberty-operator/encryptionKey.xml to store the Liberty Password Encryption Key
+	MountSecretAsVolume(pts, operatorShortName+ManagedEncryptionServerXML, GetVolumeMount(la, SecureMountPath, EncryptionKeyXMLFileName))
+
+	// Mount a volume /config/configDropins/overrides/mountencryptionKey.xml to import the Liberty Password Encryption Key
+	MountSecretAsVolume(pts, operatorShortName+ManagedEncryptionMountServerXML, GetVolumeMount(la, overridesMountPath, EncryptionKeyMountXMLFileName))
+}
+
 // ConfigureLTPA setups the shared-storage for LTPA keys file generation
 func ConfigureLTPA(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string) {
 	// Mount a volume /config/ltpa to store the ltpa.keys file
-	ltpaKeyVolumeMount := GetLTPAKeysVolumeMount(la, ltpaKeysFileName)
-	if !isVolumeMountFound(pts, ltpaKeyVolumeMount.Name) {
-		pts.Spec.Containers[0].VolumeMounts = append(pts.Spec.Containers[0].VolumeMounts, ltpaKeyVolumeMount)
-	}
-	if !isVolumeFound(pts, ltpaKeyVolumeMount.Name) {
-		vol := corev1.Volume{
-			Name: ltpaKeyVolumeMount.Name,
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: operatorShortName + "-managed-ltpa",
-					Items: []corev1.KeyToPath{{
-						Key:  ltpaKeysFileName,
-						Path: ltpaKeysFileName,
-					}},
-				},
-			},
-		}
-		pts.Spec.Volumes = append(pts.Spec.Volumes, vol)
-	}
+	MountSecretAsVolume(pts, operatorShortName+"-managed-ltpa", GetVolumeMount(la, managedLTPAMountPath, ltpaKeysFileName))
 
 	// Mount a volume /config/configDropins/overrides/ltpa.xml to store the Liberty Server XML
-	ltpaXMLVolumeMount := GetLTPAXMLVolumeMount(la, ltpaXMLFileName)
-	if !isVolumeMountFound(pts, ltpaXMLVolumeMount.Name) {
-		pts.Spec.Containers[0].VolumeMounts = append(pts.Spec.Containers[0].VolumeMounts, ltpaXMLVolumeMount)
+	MountSecretAsVolume(pts, operatorShortName+LTPAServerXMLSuffix, GetVolumeMount(la, overridesMountPath, ltpaXMLFileName))
+}
+
+func MountSecretAsVolume(pts *corev1.PodTemplateSpec, secretName string, volumeMount corev1.VolumeMount) {
+	if !isVolumeMountFound(pts, volumeMount.Name) {
+		pts.Spec.Containers[0].VolumeMounts = append(pts.Spec.Containers[0].VolumeMounts, volumeMount)
 	}
-	if !isVolumeFound(pts, ltpaXMLVolumeMount.Name) {
+	if !isVolumeFound(pts, volumeMount.Name) {
 		vol := corev1.Volume{
-			Name: ltpaXMLVolumeMount.Name,
+			Name: volumeMount.Name,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: operatorShortName + LTPAServerXMLSuffix,
+					SecretName: secretName,
 					Items: []corev1.KeyToPath{{
-						Key:  ltpaXMLFileName,
-						Path: ltpaXMLFileName,
+						Key:  volumeMount.SubPath,
+						Path: volumeMount.SubPath,
 					}},
 				},
 			},
@@ -575,10 +581,43 @@ func ConfigureLTPA(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication,
 	}
 }
 
-func CustomizeLTPAServerXML(xmlSecret *corev1.Secret, la *olv1.OpenLibertyApplication, encryptedPassword string) {
+func CustomizeEncryptionKeyXML(managedEncryptionXMLSecret *corev1.Secret, encryptionKey string) error {
+	if managedEncryptionXMLSecret.StringData == nil {
+		managedEncryptionXMLSecret.StringData = make(map[string]string)
+	}
+	serverXML, err := ioutil.ReadFile("controllers/assets/encryption.xml")
+	if err != nil {
+		return err
+	}
+	severXMLString := strings.Replace(string(serverXML), "WLP_PASSWORD_ENCRYPTION_KEY", encryptionKey, 1)
+	managedEncryptionXMLSecret.StringData[EncryptionKeyXMLFileName] = severXMLString
+	return nil
+}
+
+func CustomizeEncryptionKeyMountXML(mountingPasswordKeySecret *corev1.Secret, fileLocation string) error {
+	if mountingPasswordKeySecret.StringData == nil {
+		mountingPasswordKeySecret.StringData = make(map[string]string)
+	}
+	serverXML, err := ioutil.ReadFile("controllers/assets/encryption-mount.xml")
+	if err != nil {
+		return err
+	}
+	severXMLString := strings.Replace(string(serverXML), "ENCRYPTION_LOCATION", fileLocation, 1)
+	mountingPasswordKeySecret.StringData[EncryptionKeyMountXMLFileName] = severXMLString
+	return nil
+}
+
+func CustomizeLTPAServerXML(xmlSecret *corev1.Secret, la *olv1.OpenLibertyApplication, encryptedPassword string) error {
 	xmlSecret.StringData = make(map[string]string)
-	keysFileName := strings.Replace(ltpaKeysMountPath, "/config", "${server.config.dir}", 1)
-	xmlSecret.StringData[ltpaXMLFileName] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<server>\n    <ltpa keysFileName=\"" + keysFileName + "/" + ltpaKeysFileName + "\" keysPassword=\"" + encryptedPassword + "\" />\n</server>"
+	managedLTPADir := strings.Replace(managedLTPAMountPath, "/config", "${server.config.dir}", 1)
+	serverXML, err := ioutil.ReadFile("controllers/assets/ltpa.xml")
+	if err != nil {
+		return err
+	}
+	severXMLString := strings.Replace(string(serverXML), "LTPA_KEYS_FILE_NAME", managedLTPADir+"/"+ltpaKeysFileName, 1)
+	severXMLString = strings.Replace(severXMLString, "LTPA_KEYS_PASSWORD", encryptedPassword, 1)
+	xmlSecret.StringData[ltpaXMLFileName] = severXMLString
+	return nil
 }
 
 // Returns true if the OpenLibertyApplication leader's state has changed, causing existing LTPA Jobs to need a configuration update, otherwise return false
@@ -609,7 +648,7 @@ func IsLTPAJobConfigurationOutdated(job *v1.Job, appLeaderInstance *olv1.OpenLib
 	return false
 }
 
-func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaSecretName string, serviceAccountName string, ltpaScriptName string) {
+func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaSecretName string, serviceAccountName string, ltpaScriptName string, operatorShortName string) {
 	encodingType := "aes" // the password encoding type for securityUtility (one of "xor", "aes", or "hash")
 	job.Spec.Template.ObjectMeta.Name = "liberty"
 	job.Spec.Template.Spec.Containers = []corev1.Container{
@@ -620,11 +659,11 @@ func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaSecretNa
 			SecurityContext: rcoutils.GetSecurityContext(la),
 			Command:         []string{"/bin/bash", "-c"},
 			// Usage: /bin/create_ltpa_keys.sh <namespace> <ltpa-secret-name> <securityUtility-encoding>
-			Args: []string{ltpaKeysMountPath + "/bin/create_ltpa_keys.sh " + la.GetNamespace() + " " + ltpaSecretName + " " + ltpaKeysFileName + " " + encodingType},
+			Args: []string{managedLTPAMountPath + "/bin/create_ltpa_keys.sh " + la.GetNamespace() + " " + ltpaSecretName + " " + ltpaKeysFileName + " " + encodingType + " " + operatorShortName + PasswordEncryptionKeySuffix},
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      ltpaScriptName,
-					MountPath: ltpaKeysMountPath + "/bin",
+					MountPath: managedLTPAMountPath + "/bin",
 				},
 			},
 		},
@@ -651,18 +690,36 @@ func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaSecretNa
 	})
 }
 
-func GetLTPAKeysVolumeMount(la *olv1.OpenLibertyApplication, fileName string) corev1.VolumeMount {
-	return corev1.VolumeMount{
-		Name:      "ltpa-keys",
-		MountPath: ltpaKeysMountPath + "/" + fileName,
-		SubPath:   fileName,
+// Converts a file name into a lowercase word separated string
+// Example: managedLTPASecret.xml -> managed-ltpa-secret-xml
+func parseMountName(fileName string) string {
+	i := 0
+	n := len(fileName)
+	mountName := ""
+	previousUpper := false
+	for i < n {
+		ch := string(fileName[i])
+		if ch == "." {
+			mountName += "-"
+		} else if ch == strings.ToUpper(ch) {
+			if !previousUpper && i > 0 {
+				mountName += "-"
+			}
+			mountName += strings.ToLower(ch)
+			previousUpper = true
+		} else {
+			mountName += ch
+			previousUpper = false
+		}
+		i += 1
 	}
+	return mountName
 }
 
-func GetLTPAXMLVolumeMount(la *olv1.OpenLibertyApplication, fileName string) corev1.VolumeMount {
+func GetVolumeMount(la *olv1.OpenLibertyApplication, mountPath string, fileName string) corev1.VolumeMount {
 	return corev1.VolumeMount{
-		Name:      "ltpa-xml",
-		MountPath: ltpaServerXMLOverridesMountPath + fileName,
+		Name:      parseMountName(fileName),
+		MountPath: mountPath + "/" + fileName,
 		SubPath:   fileName,
 	}
 }
