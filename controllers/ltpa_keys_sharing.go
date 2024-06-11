@@ -82,9 +82,9 @@ func (r *ReconcileOpenLiberty) getLTPAKeysSharingLeader(instance *olv1.OpenLiber
 	return nil, ltpaKeySharingLeaderName, false, ltpaServiceAccount.Name
 }
 
-// Restarts the LTPA keys generation process if the LTPA Secret has not been generated yet and this application instance is the leader
+// If the LTPA Secret is being created but does not exist yet, the LTPA instance leader will halt the process and restart creation of LTPA keys
 func (r *ReconcileOpenLiberty) restartLTPAKeysGeneration(instance *olv1.OpenLibertyApplication) error {
-	err, _, isLTPAKeySharingLeader, _ := r.getLTPAKeysSharingLeader(instance, true)
+	err, _, isLTPAKeySharingLeader, _ := r.getLTPAKeysSharingLeader(instance, false)
 	if err != nil {
 		return err
 	}
@@ -109,12 +109,6 @@ func (r *ReconcileOpenLiberty) restartLTPAKeysGeneration(instance *olv1.OpenLibe
 
 // Generates the LTPA keys file and returns the name of the Secret storing its metadata
 func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplication) (error, string) {
-	// Don't generate LTPA keys if this instance is not the leader
-	err, _, isLTPAKeySharingLeader, _ := r.getLTPAKeysSharingLeader(instance, false)
-	if err != nil {
-		return err, ""
-	}
-
 	// Initialize LTPA resources
 	ltpaXMLSecret := &corev1.Secret{}
 	ltpaXMLSecret.Name = OperatorShortName + lutils.LTPAServerXMLSuffix
@@ -143,7 +137,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 	ltpaSecret.Namespace = instance.GetNamespace()
 	ltpaSecret.Labels = lutils.GetRequiredLabels(ltpaSecret.Name, "")
 	// If the LTPA Secret does not exist, run the Kubernetes Job to generate the shared ltpa.keys file and Secret
-	err = r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaSecret.Name, Namespace: ltpaSecret.Namespace}, ltpaSecret)
+	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaSecret.Name, Namespace: ltpaSecret.Namespace}, ltpaSecret)
 	if err != nil && kerrors.IsNotFound(err) {
 		err, ltpaKeySharingLeaderName, isLTPAKeySharingLeader, ltpaServiceAccountName := r.getLTPAKeysSharingLeader(instance, true)
 		if err != nil {
@@ -274,6 +268,10 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 	} else if err != nil {
 		return err, ""
 	} else {
+		err, _, isLTPAKeySharingLeader, _ := r.getLTPAKeysSharingLeader(instance, false)
+		if err != nil {
+			return err, ""
+		}
 		if !isLTPAKeySharingLeader {
 			return nil, ltpaSecret.Name
 		}
@@ -327,6 +325,14 @@ func (r *ReconcileOpenLiberty) deleteLTPAKeysResources(instance *olv1.OpenLibert
 	ltpaKeysCreationScriptConfigMap.Name = OperatorShortName + "-managed-ltpa-script"
 	ltpaKeysCreationScriptConfigMap.Namespace = instance.GetNamespace()
 	err = r.DeleteResource(ltpaKeysCreationScriptConfigMap)
+	if err != nil {
+		return err
+	}
+
+	ltpaJobRequest := &corev1.ConfigMap{}
+	ltpaJobRequest.Name = OperatorShortName + "-managed-ltpa-job-request"
+	ltpaJobRequest.Namespace = instance.GetNamespace()
+	err = r.DeleteResource(ltpaJobRequest)
 	if err != nil {
 		return err
 	}
