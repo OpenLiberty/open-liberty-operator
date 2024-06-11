@@ -27,7 +27,7 @@ For information on how to use the Open Liberty Operator, see the link:++doc/++[d
 
 == License
 
-Usage is provided under the link:++https://opensource.org/licenses/EPL-1.0++[EPL 1.0 license]. See link:++LICENSE++[LICENSE] for the full details.
+Usage is provided under the link:++https://opensource.org/licenses/EPL-2.0++[EPL 2.0 license]. See link:++LICENSE++[LICENSE] for the full details.
 
 == Contributing
 
