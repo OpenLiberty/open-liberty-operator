@@ -424,7 +424,15 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
-	err, message, ltpaSecretName := r.reconcileLTPAKeysSharing(instance)
+	// Manage the shared password encryption key Secret if it exists
+	message, encryptionSecretName, err := r.reconcileEncryptionKeySharing(instance)
+	if err != nil {
+		reqLogger.Error(err, message)
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	}
+
+	// Create and manage the shared LTPA keys Secret if the feature is enabled
+	message, ltpaSecretName, err := r.reconcileLTPAKeysSharing(instance)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -484,6 +492,14 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				semeruTLSSecretName := instance.Status.SemeruCompiler.TLSSecretName
 				err := lutils.AddSecretResourceVersionAsEnvVar(&statefulSet.Spec.Template, instance, r.GetClient(),
 					semeruTLSSecretName, "SEMERU_TLS")
+				if err != nil {
+					return err
+				}
+			}
+
+			if r.isPasswordEncryptionKeySharingEnabled(instance) && len(encryptionSecretName) > 0 {
+				lutils.ConfigurePasswordEncryption(&statefulSet.Spec.Template, instance, OperatorShortName)
+				err := lutils.AddSecretResourceVersionAsEnvVar(&statefulSet.Spec.Template, instance, r.GetClient(), encryptionSecretName, "PASSWORD_ENCRYPTION")
 				if err != nil {
 					return err
 				}
@@ -551,6 +567,14 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				semeruTLSSecretName := instance.Status.SemeruCompiler.TLSSecretName
 				err := lutils.AddSecretResourceVersionAsEnvVar(&deploy.Spec.Template, instance, r.GetClient(),
 					semeruTLSSecretName, "SEMERU_TLS")
+				if err != nil {
+					return err
+				}
+			}
+
+			if r.isPasswordEncryptionKeySharingEnabled(instance) && len(encryptionSecretName) > 0 {
+				lutils.ConfigurePasswordEncryption(&deploy.Spec.Template, instance, OperatorShortName)
+				err := lutils.AddSecretResourceVersionAsEnvVar(&deploy.Spec.Template, instance, r.GetClient(), encryptionSecretName, "PASSWORD_ENCRYPTION")
 				if err != nil {
 					return err
 				}
