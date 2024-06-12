@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
@@ -32,7 +33,7 @@ func (r *ReconcileOpenLiberty) reconcileEncryptionKeySharing(instance *olv1.Open
 	}
 	err := r.deleteEncryptionKeyResources(instance)
 	if err != nil {
-		return "Failed to delete Liberty resources for sharing the password encryption key", "", err
+		return "Failed to delete cluster resources for sharing the password encryption key", "", err
 	}
 	return "", "", nil
 }
@@ -86,7 +87,7 @@ func (r *ReconcileOpenLiberty) hasEncryptionKeySecret(instance *olv1.OpenLiberty
 // Gets the password encryption keys Secret and returns the name of the Secret storing its metadata
 func (r *ReconcileOpenLiberty) createEncryptionKeyLibertyConfig(instance *olv1.OpenLibertyApplication, encryptionKey string) error {
 	if len(encryptionKey) == 0 {
-		return nil
+		return fmt.Errorf("a password encryption key was not specified")
 	}
 
 	_, isEncryptionKeySharingLeader, _, err := r.getEncryptionKeySharingLeader(instance, true)

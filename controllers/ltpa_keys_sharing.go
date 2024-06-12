@@ -286,14 +286,26 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 		})
 	}
 
-	// If the password encryption secret has changed, then delete the LTPA secret to regenerate
-	if encryptionKeySecret, err := r.hasEncryptionKeySecret(instance); err == nil {
-		if ltpaEncryptionRV, found := ltpaSecret.Data["encryptionSecretResourceVersion"]; !found || string(ltpaEncryptionRV) != encryptionKeySecret.ResourceVersion {
-			// Delete the LTPA Secret and depend on the create_ltpa_keys.sh script to append the encryptionSecretResourceVersion field
-			err = r.DeleteResource(ltpaSecret)
-			if err != nil {
-				return "", err
+	// Validate whether or not password encryption settings match the way LTPA keys were created
+	hasConfigurationMismatch := false
+	ltpaEncryptionRV, ltpaEncryptionRVFound := ltpaSecret.Data["encryptionSecretResourceVersion"]
+	if r.isPasswordEncryptionKeySharingEnabled(instance) {
+		if encryptionKeySecret, err := r.hasEncryptionKeySecret(instance); err == nil {
+			if !ltpaEncryptionRVFound || string(ltpaEncryptionRV) != encryptionKeySecret.ResourceVersion {
+				hasConfigurationMismatch = true // managePasswordEncryption is true, the shared encryption key exists but LTPA keys are either not encrypted or not updated
 			}
+		} else if kerrors.IsNotFound(err) && ltpaEncryptionRVFound {
+			hasConfigurationMismatch = true // managePasswordEncryption is true, the shared encryption key is missing but LTPA keys are still encrypted
+		}
+	} else if ltpaEncryptionRVFound {
+		hasConfigurationMismatch = true // managePasswordEncryption is false but LTPA keys are encrypted
+	}
+
+	// Delete the LTPA Secret and depend on the create_ltpa_keys.sh script to add/remove/update the encryptionSecretResourceVersion field
+	if hasConfigurationMismatch {
+		err = r.DeleteResource(ltpaSecret)
+		if err != nil {
+			return "", err
 		}
 	}
 	return ltpaSecret.Name, nil
