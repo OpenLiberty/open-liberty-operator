@@ -1,0 +1,54 @@
+# This file supports multi LTPA key generation across operator versions.
+#
+# The ".tree" dict consists of LTPA decision trees where each leaf represents a potential LTPA Secret to be created.
+# For instance, in ".tree.v1.4.0", password encryption key sharing was released. 
+# This change permitted two possible ways to generate an LTPA key. One with and one without the custom Liberty password encryption key.
+#
+#
+# NOTE: You only need to perform an LTPA migration when the LTPA generation logic has changed.
+# LTPA migration ensures that the user does not lose their existing LTPA key from a previous operator version.
+#
+# LTPA migration through operator upgrades (example upgrade 1.3.2 to 1.4.0)
+# =========================================================================
+# In 1.3.2, support for LTPA existed but support for password encryption did not.
+# In 1.4.0 support for password encryption was added, allowing you to create one LTPA Secret with encryption and another without.
+# In order to represent this, the ".replace.v1_4_0" contains a key-value LTPA Secret label replacement. 
+#     In this case, any LTPA secret with no labels (or "") will be replaced with the label "1_4_0.managePasswordEncryption: false"
+#     This string replacement corresponds directly with the decision tree's leaf node ".tree.1_4_0.managePasswordEncryption.false"
+#     Now the 1.3.2 LTPA Secret corresponds to the one of the two possible 1.4.0 LTPA Secrets and can be reused/reconciled with 1.4.0 LTPA management logic. 
+#
+tree:
+# 1.3.2
+# ======
+#
+# <no decision tree> (LTPA KEY 0)
+#
+## v1_3_2: {}
+# 1.4.0
+# ======
+#                              (LTPA KEY 1)
+#                            /  (t)
+#  managePasswordEncryption 
+#                            \  (f)
+#                              (LTPA KEY 2)
+#
+  v1_4_0:
+    managePasswordEncryption:
+      - true
+      - false
+# As an example, you can add an additional type that is one of ["aes", "xor"], then migrate the labels from 1.4.0 to 1.4.1
+# NOTE: this uses maps always as an edge. Lists can only exist at the leaf node to represent enumerated booleans or strings.
+  v1_4_1:
+    type:
+      aes:
+        managePasswordEncryption:
+          - true
+          - false
+      xor: type # "type" is a dummy string to create a leaf node in the tree to represent when a type: xor LTPA keys is used, it could also be a boolean
+replace:
+  v1_4_0:
+    "": "v1_4_0.managePasswordEncryption.false"  # Update (LTPA KEY 0) to replace it to (LTPA KEY 2)
+  v1_4_1:
+    "v1_4_0.managePasswordEncryption.true":  "v1_4_1.type.aes.managePasswordEncryption.true"
+    "v1_4_0.managePasswordEncryption.false": "v1_4_1.type.aes.managePasswordEncryption.false"
+  

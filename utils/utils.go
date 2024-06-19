@@ -42,6 +42,13 @@ const managedLTPAMountPath = "/config/managedLTPA"
 const LTPAServerXMLSuffix = "-managed-ltpa-server-xml"
 const ltpaKeysFileName = "ltpa.keys"
 const ltpaXMLFileName = "managedLTPA.xml"
+const LTPAPathIndexLabel = "openlibertyapplications.apps.openliberty.io/ltpa-path-index"
+
+// Leader tracking constants
+const ResourcesKey = "names"
+const ResourceOwnersKey = "owners"
+const ResourcePathsKey = "paths"
+const ResourcePathIndicesKey = "pathIndices"
 
 // Mount constants
 const SecureMountPath = "/output/resources/liberty-operator"
@@ -552,9 +559,9 @@ func ConfigurePasswordEncryption(pts *corev1.PodTemplateSpec, la *olv1.OpenLiber
 }
 
 // ConfigureLTPA setups the shared-storage for LTPA keys file generation
-func ConfigureLTPA(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string) {
+func ConfigureLTPA(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string, ltpaSecretName string) {
 	// Mount a volume /config/ltpa to store the ltpa.keys file
-	MountSecretAsVolume(pts, operatorShortName+"-managed-ltpa", CreateVolumeMount(managedLTPAMountPath, ltpaKeysFileName))
+	MountSecretAsVolume(pts, ltpaSecretName, CreateVolumeMount(managedLTPAMountPath, ltpaKeysFileName))
 
 	// Mount a volume /config/configDropins/overrides/ltpa.xml to store the Liberty Server XML
 	MountSecretAsVolume(pts, operatorShortName+LTPAServerXMLSuffix, CreateVolumeMount(overridesMountPath, ltpaXMLFileName))
@@ -648,7 +655,7 @@ func IsLTPAJobConfigurationOutdated(job *v1.Job, appLeaderInstance *olv1.OpenLib
 	return false
 }
 
-func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaSecretName string, serviceAccountName string, ltpaScriptName string, operatorShortName string) {
+func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaSecretName string, ltpaSecretInstanceName string, serviceAccountName string, ltpaScriptName string, operatorShortName string, ltpaPathIndex string, encryptionKeySharingEnabled string) {
 	encodingType := "aes" // the password encoding type for securityUtility (one of "xor", "aes", or "hash")
 	job.Spec.Template.ObjectMeta.Name = "liberty"
 	job.Spec.Template.Spec.Containers = []corev1.Container{
@@ -659,7 +666,7 @@ func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaSecretNa
 			SecurityContext: rcoutils.GetSecurityContext(la),
 			Command:         []string{"/bin/bash", "-c"},
 			// Usage: /bin/create_ltpa_keys.sh <namespace> <ltpa-secret-name> <securityUtility-encoding>
-			Args: []string{managedLTPAMountPath + "/bin/create_ltpa_keys.sh " + la.GetNamespace() + " " + ltpaSecretName + " " + ltpaKeysFileName + " " + encodingType + " " + operatorShortName + PasswordEncryptionKeySuffix},
+			Args: []string{managedLTPAMountPath + "/bin/create_ltpa_keys.sh " + la.GetNamespace() + " " + ltpaSecretName + " " + ltpaSecretInstanceName + " " + ltpaKeysFileName + " " + encodingType + " " + operatorShortName + PasswordEncryptionKeySuffix + " " + encryptionKeySharingEnabled + " " + LTPAPathIndexLabel + " " + ltpaPathIndex},
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      ltpaScriptName,
@@ -734,4 +741,24 @@ func GetRequiredLabels(name string, instance string) map[string]string {
 	}
 	requiredLabels["app.kubernetes.io/managed-by"] = "open-liberty-operator"
 	return requiredLabels
+}
+
+// Converts semantic version string "a.b.c" to format "va_b_c"
+func GetOperandVersionString() (string, error) {
+	if !strings.Contains(OperandVersion, ".") {
+		return "", fmt.Errorf("expected OperandVersion to be in semantic version format")
+	}
+	versionArray := strings.Split(OperandVersion, ".")
+	n := len(versionArray)
+	if n != 3 {
+		return "", fmt.Errorf("expected OperandVersion to be in semantic version format with 3 arguments")
+	}
+	finalVersion := "v"
+	for i, version := range versionArray {
+		finalVersion += version
+		if i < n-1 {
+			finalVersion += "_"
+		}
+	}
+	return finalVersion, nil
 }

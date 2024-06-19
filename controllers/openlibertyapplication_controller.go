@@ -221,13 +221,20 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			}
 		}
 	}
+
+	// Parse the LTPA Decision Tree
+	treeMap, _, err := r.ParseLTPADecisionTree(instance, reqLogger)
+	if err != nil {
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	}
+
 	if imageReferenceOld != instance.Status.ImageReference {
 		// Trigger a new Semeru Cloud Compiler generation
 		createNewSemeruGeneration(instance)
 
 		// If the shared LTPA keys was not generated from the last application image, restart the key generation process
 		if r.isLTPAKeySharingEnabled(instance) {
-			if err := r.restartLTPAKeysGeneration(instance); err != nil {
+			if err := r.restartLTPAKeysGeneration(instance, treeMap, ""); err != nil {
 				reqLogger.Error(err, "Error restarting the LTPA keys generation process")
 				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 			}
@@ -432,7 +439,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	// Create and manage the shared LTPA keys Secret if the feature is enabled
-	message, ltpaSecretName, err := r.reconcileLTPAKeysSharing(instance)
+	message, ltpaSecretName, err := r.reconcileLTPAKeysSharing(instance, treeMap)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -506,7 +513,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			}
 
 			if r.isLTPAKeySharingEnabled(instance) && len(ltpaSecretName) > 0 {
-				lutils.ConfigureLTPA(&statefulSet.Spec.Template, instance, OperatorShortName)
+				lutils.ConfigureLTPA(&statefulSet.Spec.Template, instance, OperatorShortName, ltpaSecretName)
 				err := lutils.AddSecretResourceVersionAsEnvVar(&statefulSet.Spec.Template, instance, r.GetClient(), ltpaSecretName, "LTPA")
 				if err != nil {
 					return err
@@ -581,7 +588,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			}
 
 			if r.isLTPAKeySharingEnabled(instance) && len(ltpaSecretName) > 0 {
-				lutils.ConfigureLTPA(&deploy.Spec.Template, instance, OperatorShortName)
+				lutils.ConfigureLTPA(&deploy.Spec.Template, instance, OperatorShortName, ltpaSecretName)
 				err := lutils.AddSecretResourceVersionAsEnvVar(&deploy.Spec.Template, instance, r.GetClient(), ltpaSecretName, "LTPA")
 				if err != nil {
 					return err
