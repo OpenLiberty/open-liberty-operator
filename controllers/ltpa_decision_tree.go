@@ -100,10 +100,10 @@ func ValidateLTPAMaps(treeMap map[string]interface{}, replaceMap map[string]map[
 	// 2. replaceMap label key-values should be able to walk treeMap
 	for _, replaceLabels := range replaceMap {
 		for k, v := range replaceLabels {
-			if _, err := canWalkTreeStrict(treeMap, k); err != nil {
+			if _, err := canTraverseTreeStrict(treeMap, k); err != nil {
 				return err
 			}
-			if _, err := canWalkTreeStrict(treeMap, v); err != nil {
+			if _, err := canTraverseTreeStrict(treeMap, v); err != nil {
 				return err
 			}
 		}
@@ -111,12 +111,12 @@ func ValidateLTPAMaps(treeMap map[string]interface{}, replaceMap map[string]map[
 	return nil
 }
 
-func canWalkTreeStrict(treeMap map[string]interface{}, path string) (string, error) {
-	return canWalkTree(treeMap, path, false)
+func canTraverseTreeStrict(treeMap map[string]interface{}, path string) (string, error) {
+	return canTraverseTree(treeMap, path, false)
 }
 
 // returns the valid subpath of treeMap and potential error
-func canWalkTree(treeMap map[string]interface{}, path string, allowSubPaths bool) (string, error) {
+func canTraverseTree(treeMap map[string]interface{}, path string, allowSubPaths bool) (string, error) {
 	n := len(path)
 	if n == 0 {
 		return path, nil
@@ -264,22 +264,18 @@ func isLeafNode(node interface{}) (string, bool) {
 	return leafString, found1 || found2
 }
 
-func GetPathFromLeafIndex(treeMap map[string]interface{}, version string, index int) (string, error) {
+func GetPathFromLeafIndex(versionTreeMap map[string]interface{}, index int) (string, error) {
 	if index < 0 {
 		return "", fmt.Errorf("no leaf exists in treeMap with a negative index")
-	}
-	value, found := treeMap[version]
-	if !found {
-		return "", fmt.Errorf("version " + version + " does not exist in treeMap")
 	}
 	stack := make([]AnnotatedTreeNode, 0)
 	rootNode := AnnotatedTreeNode{
 		node: TreeNode{
-			parentPath: version,
-			value:      value,
+			parentPath: "",
+			value:      versionTreeMap,
 		},
 		index:      -1, // index represents that root.value[index] has already been pushed on the stack, by default the count starts at -1 since nothing has been pushed yet
-		sortedKeys: getSortedKeysFromMapInterface(value),
+		sortedKeys: getSortedKeysFromMapInterface(versionTreeMap),
 	}
 	stack = append(stack, rootNode)
 	leafCount := -1

@@ -73,6 +73,7 @@ type LTPAConfig struct {
 	SecretInstanceName          string
 	ServiceAccountName          string
 	ScriptName                  string
+	EncryptionKeySecretName     string
 	EncryptionKeySharingEnabled bool // true or false
 }
 
@@ -670,7 +671,7 @@ func IsLTPAJobConfigurationOutdated(job *v1.Job, appLeaderInstance *olv1.OpenLib
 	return false
 }
 
-func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaConfig *LTPAConfig, operatorShortName string) {
+func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaConfig *LTPAConfig) {
 	encodingType := "aes" // the password encoding type for securityUtility (one of "xor", "aes", or "hash")
 	job.Spec.Template.ObjectMeta.Name = "liberty"
 	job.Spec.Template.Spec.Containers = []corev1.Container{
@@ -681,7 +682,7 @@ func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaConfig *
 			SecurityContext: rcoutils.GetSecurityContext(la),
 			Command:         []string{"/bin/bash", "-c"},
 			// Usage: /bin/create_ltpa_keys.sh <namespace> <ltpa-secret-name> <securityUtility-encoding>
-			Args: []string{managedLTPAMountPath + "/bin/create_ltpa_keys.sh " + la.GetNamespace() + " " + ltpaConfig.SecretName + " " + ltpaConfig.SecretInstanceName + " " + ltpaConfig.ScriptName + " " + encodingType + " " + operatorShortName + PasswordEncryptionKeySuffix + " " + strconv.FormatBool(ltpaConfig.EncryptionKeySharingEnabled) + " " + LTPAPathIndexLabel + " " + ltpaConfig.Metadata.PathIndex},
+			Args: []string{managedLTPAMountPath + "/bin/create_ltpa_keys.sh " + la.GetNamespace() + " " + ltpaConfig.SecretName + " " + ltpaConfig.SecretInstanceName + " " + ltpaConfig.ScriptName + " " + encodingType + " " + ltpaConfig.EncryptionKeySecretName + " " + strconv.FormatBool(ltpaConfig.EncryptionKeySharingEnabled) + " " + LTPAPathIndexLabel + " " + ltpaConfig.Metadata.PathIndex},
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      ltpaConfig.ScriptName,

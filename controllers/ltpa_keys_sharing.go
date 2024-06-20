@@ -40,13 +40,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}) (*lutils.LTPAMetadata, error) {
+func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}) (map[string]interface{}, *lutils.LTPAMetadata, error) {
 	// operandVersionString, err := lutils.GetOperandVersionString()
 	// if err != nil {
 	// 	return "", "", err
 	// }
 	metadata := &lutils.LTPAMetadata{}
 	operandVersionString := "v1_4_1"
+
 	var pathOptions, pathChoices []string
 	if operandVersionString == "v1_4_0" {
 		pathOptions = []string{"managePasswordEncryption"} // ordering matters, it must follow the nodes of the LTPA decision tree in ltpa-decision-tree.yaml
@@ -55,7 +56,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 		// // for instance, say v1_4_1 introduces a new "type" variable with options "aes", "xor" or "hash"
 		// // The sequence must match .tree.v1_4_1.type.aes.managePasswordEncryption -> false located in the ltpa-decision-tree.yaml file
 		// // It is also possible that "type" is set to "xor" which will look like .tree.v1_4_1.type.xor.managePasswordEncryption -> false
-		// // Since canWalkTree checks for a subpath and ".tree.v1_4_1.type.xor" terminates at a leaf, .tree.v1_4_1.type.xor.managePasswordEncryption will pass validation
+		// // Since canTraverseTree checks for a subpath and ".tree.v1_4_1.type.xor" terminates at a leaf, .tree.v1_4_1.type.xor.managePasswordEncryption will pass validation
 		pathOptions = []string{"type", "managePasswordEncryption"} // ordering matters, it must follow the nodes of the LTPA decision tree in ltpa-decision-tree.yaml
 		pathChoices = []string{"aes", strconv.FormatBool(r.isPasswordEncryptionKeySharingEnabled(instance))}
 	}
@@ -63,18 +64,20 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 	// convert the path options and choices into a labelKey such as "v1_4_0.managePasswordEncryption" and labelValue "<pathChoices[0]>"
 	labelString, err := getLabelFromDecisionPath(operandVersionString, pathOptions, pathChoices)
 	if err != nil {
-		return metadata, err
+		return nil, metadata, err
 	}
 	// validate that the decision path such as "v1_4_0.managePasswordEncryption:<pathChoices[0]>" is a valid subpath in treeMap
-	validSubPath, err := canWalkTree(treeMap, labelString, true)
+	validSubPath, err := canTraverseTree(treeMap, labelString, true)
 	if err != nil {
-		return metadata, err
+		return nil, metadata, err
 	}
+	// It can traverse the tree so the operandVersionString must be an element of treeMap
+	versionTreeMap := treeMap[operandVersionString].(map[string]interface{})
 
 	// check Secrets to see if LTPA keys already exist, select by lutils.LTPAPathLabel
-	leaderTracker, err := r.getLTPALeaderTracker(instance, treeMap)
+	leaderTracker, err := r.getLTPALeaderTracker(instance, versionTreeMap)
 	if err != nil {
-		return metadata, err
+		return versionTreeMap, metadata, err
 	}
 	pathIndex := GetLeafIndex(treeMap, validSubPath)
 	versionedPathIndex := fmt.Sprintf("%s.%d", operandVersionString, pathIndex)
@@ -86,7 +89,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 	if loc != -1 {
 		suffix, _ := getCommaSeparatedString(leaderTracker.Data[lutils.ResourcesKey], loc)
 		metadata.NameSuffix = suffix
-		return metadata, nil
+		return versionTreeMap, metadata, nil
 	}
 
 	// secret doesn't exist, generate a random suffix
@@ -95,20 +98,20 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 		randomSuffix = getRandomLowerAlphanumericSuffix(5)
 	}
 	metadata.NameSuffix = randomSuffix
-	return metadata, nil
+	return versionTreeMap, metadata, nil
 }
 
 // Create the LTPA Keys Secret used by an OpenLibertyApplication
-func (r *ReconcileOpenLiberty) reconcileLTPAKeysSharing(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, ltpaMetadata *lutils.LTPAMetadata) (string, string, error) {
+func (r *ReconcileOpenLiberty) reconcileLTPAKeysSharing(instance *olv1.OpenLibertyApplication, versionTreeMap map[string]interface{}, ltpaMetadata *lutils.LTPAMetadata) (string, string, error) {
 	var err error
 	ltpaSecretName := ""
 	if r.isLTPAKeySharingEnabled(instance) {
-		ltpaSecretName, err = r.generateLTPAKeys(instance, treeMap, ltpaMetadata)
+		ltpaSecretName, err = r.generateLTPAKeys(instance, versionTreeMap, ltpaMetadata)
 		if err != nil {
 			return "Failed to generate the shared LTPA Keys file", ltpaSecretName, err
 		}
 	} else {
-		err := r.deleteLTPAKeysResources(instance, treeMap, ltpaMetadata)
+		err := r.deleteLTPAKeysResources(instance, versionTreeMap, ltpaMetadata)
 		if err != nil {
 			return "Failed to delete LTPA Keys Resource", ltpaSecretName, err
 		}
@@ -128,7 +131,7 @@ func getRandomLowerAlphanumericSuffix(length int) string {
 }
 
 // Returns true if the OpenLibertyApplication instance initiated the LTPA keys sharing process or sets the instance as the leader if the LTPA keys are not yet shared
-func (r *ReconcileOpenLiberty) getLTPAKeysSharingLeader(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, ltpaMetadata *lutils.LTPAMetadata, createOrUpdateServiceAccount bool) (string, bool, string, string, error) {
+func (r *ReconcileOpenLiberty) getLTPAKeysSharingLeader(instance *olv1.OpenLibertyApplication, versionTreeMap map[string]interface{}, ltpaMetadata *lutils.LTPAMetadata, createOrUpdateServiceAccount bool) (string, bool, string, string, error) {
 	ltpaServiceAccount := &corev1.ServiceAccount{}
 	ltpaServiceAccount.Name = OperatorShortName + "-ltpa"
 	ltpaServiceAccount.Namespace = instance.GetNamespace()
@@ -143,19 +146,19 @@ func (r *ReconcileOpenLiberty) getLTPAKeysSharingLeader(instance *olv1.OpenLiber
 		return "", false, ltpaServiceAccount.Name, "", err
 	}
 	// Service account is found, but a new owner could be added or one already exists
-	leaderName, thisInstanceIsLeader, secretRef, _ := r.CreateOrUpdateWithLeaderTrackingLabels(ltpaServiceAccount, instance, treeMap, ltpaMetadata, createOrUpdateServiceAccount)
+	leaderName, thisInstanceIsLeader, secretRef, _ := r.CreateOrUpdateWithLeaderTrackingLabels(ltpaServiceAccount, instance, versionTreeMap, ltpaMetadata, createOrUpdateServiceAccount)
 	return leaderName, thisInstanceIsLeader, ltpaServiceAccount.Name, secretRef, nil
 }
 
 // If the LTPA Secret is being created but does not exist yet, the LTPA instance leader will halt the process and restart creation of LTPA keys
-func (r *ReconcileOpenLiberty) restartLTPAKeysGeneration(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, ltpaMetadata *lutils.LTPAMetadata) error {
-	_, isLTPAKeySharingLeader, _, nameSuffix, err := r.getLTPAKeysSharingLeader(instance, treeMap, ltpaMetadata, false)
+func (r *ReconcileOpenLiberty) restartLTPAKeysGeneration(instance *olv1.OpenLibertyApplication, versionTreeMap map[string]interface{}, ltpaMetadata *lutils.LTPAMetadata) error {
+	_, isLTPAKeySharingLeader, _, _, err := r.getLTPAKeysSharingLeader(instance, versionTreeMap, ltpaMetadata, false)
 	if err != nil {
 		return err
 	}
 	if isLTPAKeySharingLeader {
 		ltpaSecret := &corev1.Secret{}
-		ltpaSecret.Name = OperatorShortName + "-managed-ltpa" + nameSuffix
+		ltpaSecret.Name = OperatorShortName + "-managed-ltpa" + ltpaMetadata.NameSuffix
 		ltpaSecret.Namespace = instance.GetNamespace()
 		err = r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaSecret.Name, Namespace: ltpaSecret.Namespace}, ltpaSecret)
 		if err != nil && kerrors.IsNotFound(err) {
@@ -304,9 +307,10 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 							SecretInstanceName:          ltpaSecret.Name,
 							ServiceAccountName:          ltpaServiceAccountName,
 							ScriptName:                  ltpaKeysCreationScriptConfigMap.Name,
+							EncryptionKeySecretName:     OperatorShortName + lutils.PasswordEncryptionKeySuffix,
 							EncryptionKeySharingEnabled: r.isPasswordEncryptionKeySharingEnabled(instance),
 						}
-						lutils.CustomizeLTPAJob(generateLTPAKeysJob, instance, ltpaConfig, OperatorShortName)
+						lutils.CustomizeLTPAJob(generateLTPAKeysJob, instance, ltpaConfig)
 						return nil
 					})
 					if err != nil {
@@ -398,9 +402,9 @@ func (r *ReconcileOpenLiberty) isLTPAKeySharingEnabled(instance *olv1.OpenLibert
 }
 
 // Deletes resources used to create the LTPA keys file
-func (r *ReconcileOpenLiberty) deleteLTPAKeysResources(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, ltpaMetadata *lutils.LTPAMetadata) error {
+func (r *ReconcileOpenLiberty) deleteLTPAKeysResources(instance *olv1.OpenLibertyApplication, versionTreeMap map[string]interface{}, ltpaMetadata *lutils.LTPAMetadata) error {
 	// Don't delete LTPA keys resources if this instance is not the leader
-	_, isLTPAKeySharingLeader, ltpaServiceAccountName, _, err := r.getLTPAKeysSharingLeader(instance, treeMap, ltpaMetadata, false)
+	_, isLTPAKeySharingLeader, ltpaServiceAccountName, _, err := r.getLTPAKeysSharingLeader(instance, versionTreeMap, ltpaMetadata, false)
 	if err != nil {
 		return err
 	}
@@ -436,7 +440,7 @@ func (r *ReconcileOpenLiberty) deleteLTPAKeysResources(instance *olv1.OpenLibert
 	ltpaServiceAccount := &corev1.ServiceAccount{}
 	ltpaServiceAccount.Name = ltpaServiceAccountName
 	ltpaServiceAccount.Namespace = instance.GetNamespace()
-	hasNoOwners, err := r.DeleteResourceWithLeaderTrackingLabels(ltpaServiceAccount, instance, treeMap)
+	hasNoOwners, err := r.DeleteResourceWithLeaderTrackingLabels(ltpaServiceAccount, instance, versionTreeMap)
 	if err != nil {
 		return err
 	}
@@ -495,7 +499,7 @@ func commaSeparatedStringContains(stringList string, value string) int {
 }
 
 // Gets the LTPA Leader Tracker ConfigMap or creates and initializes one if it doesn't exist
-func (r *ReconcileOpenLiberty) getLTPALeaderTracker(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}) (*corev1.ConfigMap, error) {
+func (r *ReconcileOpenLiberty) getLTPALeaderTracker(instance *olv1.OpenLibertyApplication, versionTreeMap map[string]interface{}) (*corev1.ConfigMap, error) {
 	leaderTracker := &corev1.ConfigMap{}
 	leaderTracker.Name = OperatorShortName + "-managed-leader-tracking-ltpa"
 	leaderTracker.Namespace = instance.GetNamespace()
@@ -533,7 +537,7 @@ func (r *ReconcileOpenLiberty) getLTPALeaderTracker(instance *olv1.OpenLibertyAp
 					if val, found := secret.Labels[lutils.LTPAPathIndexLabel]; found {
 						resourcePathIndices[i] = val
 						intVal, _ := strconv.ParseInt(strings.Split(val, ".")[1], 10, 64)
-						path, _ := GetPathFromLeafIndex(treeMap, strings.Split(val, ".")[0], int(intVal))
+						path, _ := GetPathFromLeafIndex(versionTreeMap, int(intVal))
 						resourcePaths[i] = path
 					}
 					resources[i] = secret.Name[len(ltpaRootName):]
@@ -554,7 +558,7 @@ func (r *ReconcileOpenLiberty) getLTPALeaderTracker(instance *olv1.OpenLibertyAp
 }
 
 // Create or update the LTPA service account and track the LTPA state
-func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(sa *corev1.ServiceAccount, instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, ltpaMetadata *lutils.LTPAMetadata, createOrUpdateObject bool) (string, bool, string, error) {
+func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(sa *corev1.ServiceAccount, instance *olv1.OpenLibertyApplication, versionTreeMap map[string]interface{}, ltpaMetadata *lutils.LTPAMetadata, createOrUpdateObject bool) (string, bool, string, error) {
 	// Create the ServiceAccount
 	if createOrUpdateObject {
 		r.CreateOrUpdate(sa, instance, func() error {
@@ -562,7 +566,7 @@ func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(sa *corev1
 		})
 	}
 
-	leaderTracker, err := r.getLTPALeaderTracker(instance, treeMap)
+	leaderTracker, err := r.getLTPALeaderTracker(instance, versionTreeMap)
 	if err != nil {
 		return "", false, "", err
 	}
@@ -640,8 +644,8 @@ func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(sa *corev1
 
 // Removes the instance owner reference and references in leader tracking labels
 // Precondition: instance must be the resource leader
-func (r *ReconcileOpenLiberty) DeleteResourceWithLeaderTrackingLabels(sa *corev1.ServiceAccount, instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}) (bool, error) {
-	leaderTracker, err := r.getLTPALeaderTracker(instance, treeMap)
+func (r *ReconcileOpenLiberty) DeleteResourceWithLeaderTrackingLabels(sa *corev1.ServiceAccount, instance *olv1.OpenLibertyApplication, versionTreeMap map[string]interface{}) (bool, error) {
+	leaderTracker, err := r.getLTPALeaderTracker(instance, versionTreeMap)
 	if err != nil {
 		return false, err
 	}
