@@ -222,12 +222,8 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 	}
 
-	// Parse the LTPA Decision Tree
-	treeMap, _, err := r.ParseLTPADecisionTree(instance, reqLogger)
-	if err != nil {
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-	}
-	versionTreeMap, ltpaMetadata, err := r.reconcileLTPAMetadata(instance, treeMap)
+	// Builds the LTPA state and returns the metadata that describes this OpenLibertyApplication's LTPA Secret
+	ltpaMetadata, err := r.reconcileLTPAState(instance)
 	if err != nil {
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
@@ -238,7 +234,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 		// If the shared LTPA keys was not generated from the last application image, restart the key generation process
 		if r.isLTPAKeySharingEnabled(instance) {
-			if err := r.restartLTPAKeysGeneration(instance, versionTreeMap, ltpaMetadata); err != nil {
+			if err := r.restartLTPAKeysGeneration(instance, ltpaMetadata); err != nil {
 				reqLogger.Error(err, "Error restarting the LTPA keys generation process")
 				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 			}
@@ -443,7 +439,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	// Create and manage the shared LTPA keys Secret if the feature is enabled
-	message, ltpaSecretName, err := r.reconcileLTPAKeysSharing(instance, versionTreeMap, ltpaMetadata)
+	message, ltpaSecretName, err := r.reconcileLTPASecret(instance, ltpaMetadata)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
