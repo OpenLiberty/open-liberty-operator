@@ -61,6 +61,21 @@ const PasswordEncryptionKeySuffix = "-wlp-password-encryption-key"
 const EncryptionKeyXMLFileName = "encryptionKey.xml"
 const EncryptionKeyMountXMLFileName = "encryptionKeyMount.xml"
 
+type LTPAMetadata struct {
+	Path       string
+	PathIndex  string
+	NameSuffix string
+}
+
+type LTPAConfig struct {
+	Metadata                    *LTPAMetadata
+	SecretName                  string
+	SecretInstanceName          string
+	ServiceAccountName          string
+	ScriptName                  string
+	EncryptionKeySharingEnabled bool // true or false
+}
+
 // Validate if the OpenLibertyApplication is valid
 func Validate(olapp *olv1.OpenLibertyApplication) (bool, error) {
 	// Serviceability validation
@@ -655,7 +670,7 @@ func IsLTPAJobConfigurationOutdated(job *v1.Job, appLeaderInstance *olv1.OpenLib
 	return false
 }
 
-func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaSecretName string, ltpaSecretInstanceName string, serviceAccountName string, ltpaScriptName string, operatorShortName string, ltpaPathIndex string, encryptionKeySharingEnabled string) {
+func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaConfig *LTPAConfig, operatorShortName string) {
 	encodingType := "aes" // the password encoding type for securityUtility (one of "xor", "aes", or "hash")
 	job.Spec.Template.ObjectMeta.Name = "liberty"
 	job.Spec.Template.Spec.Containers = []corev1.Container{
@@ -666,10 +681,10 @@ func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaSecretNa
 			SecurityContext: rcoutils.GetSecurityContext(la),
 			Command:         []string{"/bin/bash", "-c"},
 			// Usage: /bin/create_ltpa_keys.sh <namespace> <ltpa-secret-name> <securityUtility-encoding>
-			Args: []string{managedLTPAMountPath + "/bin/create_ltpa_keys.sh " + la.GetNamespace() + " " + ltpaSecretName + " " + ltpaSecretInstanceName + " " + ltpaKeysFileName + " " + encodingType + " " + operatorShortName + PasswordEncryptionKeySuffix + " " + encryptionKeySharingEnabled + " " + LTPAPathIndexLabel + " " + ltpaPathIndex},
+			Args: []string{managedLTPAMountPath + "/bin/create_ltpa_keys.sh " + la.GetNamespace() + " " + ltpaConfig.SecretName + " " + ltpaConfig.SecretInstanceName + " " + ltpaConfig.ScriptName + " " + encodingType + " " + operatorShortName + PasswordEncryptionKeySuffix + " " + strconv.FormatBool(ltpaConfig.EncryptionKeySharingEnabled) + " " + LTPAPathIndexLabel + " " + ltpaConfig.Metadata.PathIndex},
 			VolumeMounts: []corev1.VolumeMount{
 				{
-					Name:      ltpaScriptName,
+					Name:      ltpaConfig.ScriptName,
 					MountPath: managedLTPAMountPath + "/bin",
 				},
 			},
@@ -680,16 +695,16 @@ func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaSecretNa
 			Name: *la.GetPullSecret(),
 		})
 	}
-	job.Spec.Template.Spec.ServiceAccountName = serviceAccountName
+	job.Spec.Template.Spec.ServiceAccountName = ltpaConfig.ServiceAccountName
 	job.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyOnFailure
 	var number int32
 	number = 0777
 	job.Spec.Template.Spec.Volumes = append(job.Spec.Template.Spec.Volumes, corev1.Volume{
-		Name: ltpaScriptName,
+		Name: ltpaConfig.ScriptName,
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: ltpaScriptName,
+					Name: ltpaConfig.ScriptName,
 				},
 				DefaultMode: &number,
 			},
