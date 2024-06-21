@@ -223,9 +223,12 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	// Builds the LTPA state and returns the metadata that describes this OpenLibertyApplication's LTPA Secret
-	ltpaMetadata, err := r.reconcileLTPAState(instance)
-	if err != nil {
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	var ltpaMetadata *lutils.LTPAMetadata
+	if r.isLTPAKeySharingEnabled(instance) {
+		ltpaMetadata, err = r.reconcileLTPAState(instance)
+		if err != nil {
+			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		}
 	}
 
 	if imageReferenceOld != instance.Status.ImageReference {

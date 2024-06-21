@@ -264,18 +264,18 @@ func isLeafNode(node interface{}) (string, bool) {
 	return leafString, found1 || found2
 }
 
-func GetPathFromLeafIndex(versionTreeMap map[string]interface{}, index int) (string, error) {
+func GetPathFromLeafIndex(treeMap map[string]interface{}, version string, index int) (string, error) {
 	if index < 0 {
 		return "", fmt.Errorf("no leaf exists in treeMap with a negative index")
 	}
 	stack := make([]AnnotatedTreeNode, 0)
 	rootNode := AnnotatedTreeNode{
 		node: TreeNode{
-			parentPath: "",
-			value:      versionTreeMap,
+			parentPath: version,
+			value:      treeMap[version],
 		},
 		index:      -1, // index represents that root.value[index] has already been pushed on the stack, by default the count starts at -1 since nothing has been pushed yet
-		sortedKeys: getSortedKeysFromMapInterface(versionTreeMap),
+		sortedKeys: getSortedKeysFromMapInterface(treeMap[version]),
 	}
 	stack = append(stack, rootNode)
 	leafCount := -1

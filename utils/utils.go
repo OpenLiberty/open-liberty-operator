@@ -43,6 +43,7 @@ const LTPAServerXMLSuffix = "-managed-ltpa-server-xml"
 const ltpaKeysFileName = "ltpa.keys"
 const ltpaXMLFileName = "managedLTPA.xml"
 const LTPAPathIndexLabel = "openlibertyapplications.apps.openliberty.io/ltpa-path-index"
+const LTPAVersionLabel = "openlibertyapplications.apps.openliberty.io/ltpa-version"
 
 // Leader tracking constants
 const ResourcesKey = "names"
@@ -759,6 +760,29 @@ func GetRequiredLabels(name string, instance string) map[string]string {
 	return requiredLabels
 }
 
+func IsOperandVersionString(version string) bool {
+	if !strings.Contains(version, "_") {
+		return false
+	}
+	if version[0] != 'v' {
+		return false
+	}
+	versionArray := strings.Split(version, "_")
+	n := len(versionArray)
+	return n == 3
+}
+
+func GetFirstNumberFromString(target string) string {
+	k := 0
+	for k < len(target) {
+		if _, err := strconv.Atoi(string(target[k])); err != nil {
+			break
+		}
+		k += 1
+	}
+	return target[:k]
+}
+
 // Converts semantic version string "a.b.c" to format "va_b_c"
 func GetOperandVersionString() (string, error) {
 	if !strings.Contains(OperandVersion, ".") {
@@ -771,9 +795,15 @@ func GetOperandVersionString() (string, error) {
 	}
 	finalVersion := "v"
 	for i, version := range versionArray {
-		finalVersion += version
 		if i < n-1 {
+			if version != GetFirstNumberFromString(version) {
+				return "", fmt.Errorf("expected OperandVersion not to contain build manifest data in the first two arguments")
+			}
+			finalVersion += version
 			finalVersion += "_"
+		} else {
+			// trim the end for possible build metadata
+			finalVersion += GetFirstNumberFromString(version)
 		}
 	}
 	return finalVersion, nil
