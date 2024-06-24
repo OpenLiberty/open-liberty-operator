@@ -1,0 +1,28 @@
+tree:
+  v10_3_3:
+    a: b # 0
+  v10_4_1:
+    a:
+      b: 
+        c: true # 0
+        d: true # 1 (this is the new value of v10_3_3.a.b)
+        e:
+          - true # 2
+          - false # 3
+  v10_4_20:
+    a:
+      b:
+        c: true # 0
+        d: false # 1
+        e: bob # 2 (this is the new value of v10_4_1.a.b.e.true)
+      f:
+        g:
+          i: hello # 3 (this is the new value of v10_4_1.a.b.e.false)
+        h: element # 4
+replace:
+  v10_4_1:
+    "v10_3_3.a.b": "v10_4_1.a.b.d.true"
+  v10_4_20:
+    "v10_4_1.a.b.e.true": "v10_4_20.a.b.e.bob"
+    "v10_4_1.a.b.e.false": "v10_4_20.a.f.g.i.hello"
+      

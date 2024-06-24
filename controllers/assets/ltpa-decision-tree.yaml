@@ -36,19 +36,5 @@ tree:
     managePasswordEncryption:
       - true
       - false
-# As an example, you can add an additional type that is one of ["aes", "xor"], then migrate the labels from 1.4.0 to 1.4.1
-# NOTE: this uses maps always as an edge. Lists can only exist at the leaf node to represent enumerated booleans or strings.
-  v1_4_1:
-    type:
-      aes:
-        managePasswordEncryption:
-          - true
-          - false
-      xor: type # "type" is a dummy string to create a leaf node in the tree to represent when a type: xor LTPA keys is used, it could also be a boolean
-replace:
-  v1_4_0:
-    "": "v1_4_0.managePasswordEncryption.false"  # Update (LTPA KEY 0) to replace it to (LTPA KEY 2)
-  v1_4_1:
-    "v1_4_0.managePasswordEncryption.true":  "v1_4_1.type.aes.managePasswordEncryption.true"
-    "v1_4_0.managePasswordEncryption.false": "v1_4_1.type.aes.managePasswordEncryption.false"
+replace: {}
   

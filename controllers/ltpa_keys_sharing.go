@@ -19,8 +19,8 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -43,7 +43,7 @@ import (
 // Validates the LTPA decision tree YAML and generates the leader tracking state (ConfigMap) for maintaining multiple LTPA Secrets
 // Returns the LTPA metadata that identifies the type of LTPA key that the OpenLibertyApplication instance wants to use
 func (r *ReconcileOpenLiberty) reconcileLTPAState(instance *olv1.OpenLibertyApplication) (*lutils.LTPAMetadata, error) {
-	treeMap, replaceMap, err := parseLTPADecisionTree()
+	treeMap, replaceMap, err := parseDecisionTree(nil)
 	if err != nil {
 		return nil, err
 	}
@@ -351,7 +351,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 			err = r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaKeysCreationScriptConfigMap.Name, Namespace: ltpaKeysCreationScriptConfigMap.Namespace}, ltpaKeysCreationScriptConfigMap)
 			if err != nil && kerrors.IsNotFound(err) {
 				ltpaKeysCreationScriptConfigMap.Data = make(map[string]string)
-				script, err := ioutil.ReadFile("controllers/assets/create_ltpa_keys.sh")
+				script, err := os.ReadFile("controllers/assets/create_ltpa_keys.sh")
 				if err != nil {
 					return "", err
 				}
@@ -810,7 +810,7 @@ func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(sa *corev1
 	}
 	// else { // something went wrong, elem_len(LTPAResourcesLabel) != 0 }
 	// r.DeleteResource(obj)
-	return "", false, "", fmt.Errorf("leader tracking labels are out of sync.")
+	return "", false, "", fmt.Errorf("leader tracking labels are out of sync")
 }
 
 // Removes the instance owner reference and references in leader tracking labels
@@ -821,7 +821,7 @@ func (r *ReconcileOpenLiberty) DeleteResourceWithLeaderTrackingLabels(sa *corev1
 		return false, err
 	}
 	hasNoOwners := false
-	r.CreateOrUpdate(leaderTracker, nil, func() error {
+	err = r.CreateOrUpdate(leaderTracker, nil, func() error {
 		// If the instance is being tracked, remove it
 		resourceOwnersLabel, resourceOwnersLabelFound := leaderTracker.Data[lutils.ResourceOwnersKey]
 		if resourceOwnersLabelFound {
@@ -836,23 +836,33 @@ func (r *ReconcileOpenLiberty) DeleteResourceWithLeaderTrackingLabels(sa *corev1
 					}
 				}
 				leaderTracker.Data[lutils.ResourceOwnersKey] = strings.Join(newOwners, ",")
-			} else {
-				if resourceOwnersLabel == instance.Name {
-					leaderTracker.Data[lutils.ResourceOwnersKey] = ""
-					hasNoOwners = true
-					return r.DeleteResource(sa)
-				}
+			} else if resourceOwnersLabel == instance.Name || resourceOwnersLabel == "" {
+				leaderTracker.Data[lutils.ResourceOwnersKey] = ""
+				hasNoOwners = true
+				return r.DeleteResource(sa)
 			}
+		} else {
+			hasNoOwners = true
 		}
 		return nil
 	})
-	return hasNoOwners, nil
+	return hasNoOwners, err
 }
 
-func parseLTPADecisionTree() (map[string]interface{}, map[string]map[string]string, error) {
-	tree, err := ioutil.ReadFile("controllers/assets/ltpa-decision-tree.yaml")
-	if err != nil {
-		return nil, nil, err
+func parseDecisionTree(fileName *string) (map[string]interface{}, map[string]map[string]string, error) {
+	var tree []byte
+	var err error
+	// Allow specifying custom file for testing
+	if fileName != nil {
+		tree, err = os.ReadFile(*fileName)
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		tree, err = os.ReadFile("controllers/assets/ltpa-decision-tree.yaml")
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	ltpaDecisionTreeYAML := make(map[string]interface{})
 	err = yaml.Unmarshal(tree, ltpaDecisionTreeYAML)
