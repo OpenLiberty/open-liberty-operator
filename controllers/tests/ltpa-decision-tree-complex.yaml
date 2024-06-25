@@ -6,19 +6,20 @@ tree:
     a:
       b: 
         c: true # 0
-        d: true # 1 (this is the new value of v10_3_3.a.b)
+        d: true # 1
         e:
           - true # 2
           - false # 3
+    j: fizz # 4 (this element appears only in v10_4_1, but is deprecated in all other versions because no replace command exists)
   v10_4_20:
     a:
       b:
         c: true # 0
         d: false # 1
-        e: foo # 2 (this is the new value of v10_4_1.a.b.e.true)
+        e: foo # 2
       f:
         g:
-          i: bar # 3 (this is the new value of v10_4_1.a.b.e.false)
+          i: bar # 3
         h: element # 4
   v10_4_500:
     a:

@@ -460,9 +460,21 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndD
 		},
 		Data: map[string][]byte{}, // create empty data
 	}
+	complexSecret3 := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ltpaRootName + "-ccccc", // random lower alphanumeric suffix of length 5
+			Namespace: namespace,
+			Labels: map[string]string{
+				lutils.LTPAPathIndexLabel: "v10_4_1.4", // choosing path index 4 under tree v10_4_1 (i.e. v10_4_1.j.fizz)
+				"app.kubernetes.io/name":  ltpaRootName,
+			},
+		},
+		Data: map[string][]byte{}, // create empty data
+	}
 	tests = []Test{
 		{"create LTPA Secret from based on path index 2 of complex decision tree", nil, r.CreateOrUpdate(complexSecret, nil, func() error { return nil })},
 		{"create LTPA Secret from based on path index 3 of complex decision tree", nil, r.CreateOrUpdate(complexSecret2, nil, func() error { return nil })},
+		{"create LTPA Secret from based on path index 4 of complex decision tree", nil, r.CreateOrUpdate(complexSecret3, nil, func() error { return nil })},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -480,10 +492,10 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndD
 	// Thirdly, check that the LTPA leader tracker upgraded the two LTPA Secrets created
 	configMap, err := r.getLTPALeaderTracker(instance)
 	expectedConfigMapData := map[string]string{
-		lutils.ResourcesKey:           "-b12g1,-bazc1",
-		lutils.ResourceOwnersKey:      ",",                                          // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
-		lutils.ResourcePathsKey:       "v10_4_500.a.b.b.true,v10_4_500.a.f.g.i.bar", // These paths have been upgraded to v10_4_500 based on replaceMap
-		lutils.ResourcePathIndicesKey: "v10_4_500.0,v10_4_500.4",                    // These path indices have been upgraded to v10_4_500 based on replaceMap
+		lutils.ResourcesKey:           "-b12g1,-bazc1,-ccccc",
+		lutils.ResourceOwnersKey:      ",,",                                                        // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
+		lutils.ResourcePathsKey:       "v10_4_500.a.b.b.true,v10_4_500.a.f.g.i.bar,v10_4_1.j.fizz", // These paths have been upgraded to v10_4_500 based on replaceMap
+		lutils.ResourcePathIndicesKey: "v10_4_500.0,v10_4_500.4,v10_4_1.4",                         // These path indices have been upgraded to v10_4_500 based on replaceMap
 	}
 	tests = []Test{
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
@@ -507,10 +519,10 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndD
 
 	configMap, err = r.getLTPALeaderTracker(instance)
 	expectedConfigMapData = map[string]string{
-		lutils.ResourcesKey:           "-b12g1,-bazc1",
-		lutils.ResourceOwnersKey:      ",",                               // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
-		lutils.ResourcePathsKey:       "v10_3_3.a.b,v10_4_1.a.b.e.false", // v10_4_1 has no path to v10_3_3 so it is kept to be reference for a future upgrade
-		lutils.ResourcePathIndicesKey: "v10_3_3.0,v10_4_1.3",             // These path indices have been upgraded to v10_4_500 based on replaceMap
+		lutils.ResourcesKey:           "-b12g1,-bazc1,-ccccc",
+		lutils.ResourceOwnersKey:      ",,",                                             // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
+		lutils.ResourcePathsKey:       "v10_3_3.a.b,v10_4_1.a.b.e.false,v10_4_1.j.fizz", // v10_4_1 has no path to v10_3_3 so it is kept to be reference for a future upgrade
+		lutils.ResourcePathIndicesKey: "v10_3_3.0,v10_4_1.3,v10_4_1.4",                  // These path indices have been upgraded to v10_4_500 based on replaceMap
 	}
 	tests = []Test{
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
