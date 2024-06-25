@@ -1,40 +1,41 @@
 # This file supports multi LTPA key generation across operator versions.
+# Adding a new .tree.<version> is only required when LTPA generation logic has changed.
 #
-# The ".tree" dict consists of LTPA decision trees where each leaf represents a potential LTPA Secret to be created.
-# For instance, in ".tree.v1.4.0", password encryption key sharing was released. 
-# This change permitted two possible ways to generate an LTPA key. One with and one without the custom Liberty password encryption key.
+# Each "valid path" represents an LTPA key.
+# - a "valid path" can be defined as a string that:
+#     - starts with an operand version string "va.b.c"
+#     - traverses each map/list element by using a period '.'
+#     - terminates at a constant boolean, string
 #
+# In 1.3.2 (1 LTPA key per namespace), there is one possible path "v1_3_2.true" 
+# In 1.4.0 (2 LTPA keys per namespace), there are two possible paths "v1_4_0.managePasswordEncryption.true" and "v1_4_0.managePasswordEncryption.false"
 #
-# NOTE: You only need to perform an LTPA migration when the LTPA generation logic has changed.
-# LTPA migration ensures that the user does not lose their existing LTPA key from a previous operator version.
+# The operator will aim to use the latest decision tree version less than or equal to the operator version. 
+# - with operator version 1.6.0, the operator will use .tree.v1_4_0 which is the most up-to-date version
+# - with operator version 1.4.0, the operator will use .tree.v1_4_0
+# - with operator version 1.4.0-alpha, the operator will use .tree.v1_4_0 and ignores the build tags
+# - with operator version 1.3.3, the operator will error saying it could not find any version.
 #
-# LTPA migration through operator upgrades (example upgrade 1.3.2 to 1.4.0)
-# =========================================================================
-# In 1.3.2, support for LTPA existed but support for password encryption did not.
-# In 1.4.0 support for password encryption was added, allowing you to create one LTPA Secret with encryption and another without.
-# In order to represent this, the ".replace.v1_4_0" contains a key-value LTPA Secret label replacement. 
-#     In this case, any LTPA secret with no labels (or "") will be replaced with the label "1_4_0.managePasswordEncryption: false"
-#     This string replacement corresponds directly with the decision tree's leaf node ".tree.1_4_0.managePasswordEncryption.false"
-#     Now the 1.3.2 LTPA Secret corresponds to the one of the two possible 1.4.0 LTPA Secrets and can be reused/reconciled with 1.4.0 LTPA management logic. 
-#
+# This data structure is used in ltpa_keys_sharing.go with reconcileLTPAMetadata() which builds a decision path based on the app instance.
+# 
 tree:
-# 1.3.2
-# ======
-#
-# <no decision tree> (LTPA KEY 0)
-#
-## v1_3_2: true
-# 1.4.0
-# ======
-#                              (LTPA KEY 1)
-#                            /  (t)
-#  managePasswordEncryption 
-#                            \  (f)
-#                              (LTPA KEY 2)
-#
+## v1_3_2: true 
   v1_4_0:
     managePasswordEncryption:
       - true
       - false
 replace: {}
+## An example of how .replace.* is used:
+## In 1.3.2, the singleton LTPA Secret did not have password encryption, so the key represented by path "v1_3_2.true" is the same key as represented by path "v1_4_0.managePasswordEncryption.false"
+## The 1.3.2 operator will create an LTPA Secret and label it "v1_3_2.0" which indicates the path at index 0 for .tree.v1_3_2.
+## The 1.4.0 operator will search LTPA Secrets within the namespace and sees that the "v1_3_2" LTPA Secret could potentially be updated.
+##     It then reads key-values in .replace.v1_4_0 which shows that there is an upgrade path from v1_3_2.true to v1_4_0.managePasswordEncryption.false
+##     The operator will save this new metadata and patch the LTPA Secret's label by updating to "v1_4_0.1" which represents path index 1 for .tree.v1_4_0.
+## Similarly, when the 1.3.2 operator is re-run on the v1_4_0 LTPA Secret, a downgrade will also occur and the LTPA Secret will be patched once again.
+## 
+##
+# replace:
+#   v1_4_0:
+#     "v1_3_2.true": "v1_4_0.managePasswordEncryption.false"
+
   

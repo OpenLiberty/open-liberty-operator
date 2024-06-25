@@ -24,12 +24,8 @@ import (
 )
 
 var (
-	name      = "app"
-	namespace = "openliberty"
-	// appImage            = "my-image"
-	// consoleFormat       = "json"
-	// replicas      int32 = 3
-	// clusterType         = corev1.ServiceTypeClusterIP
+	name       = "app"
+	namespace  = "openliberty"
 	trueValue  = true
 	falseValue = false
 )
