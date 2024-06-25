@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
+	tree "github.com/OpenLiberty/open-liberty-operator/tree"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
 	oputils "github.com/application-stacks/runtime-component-operator/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -37,24 +38,6 @@ type Test struct {
 	test     string
 	expected interface{}
 	actual   interface{}
-}
-
-func TestCompareOperandVersion(t *testing.T) {
-	tests := []Test{
-		{"same version", compareOperandVersion("v0_0_0", "v0_0_0"), 0},
-		{"same version, multiple digits", compareOperandVersion("v10_10_10", "v10_10_10"), 0},
-		{"same version, build tags", compareOperandVersion("v2_0_0alpha", "v2_0_0alpha"), 0},
-		{"different patch version, build tags", compareOperandVersion("v2_0_10alpha", "v2_0_2alpha"), 8},
-		{"different patch version, build tags, reversed", compareOperandVersion("v2_0_2alpha", "v2_0_10alpha"), -8},
-		{"different patch version", compareOperandVersion("v1_0_0", "v1_0_1"), -1},
-		{"different minor version", compareOperandVersion("v1_0_0", "v1_1_0"), -1},
-		{"different major version", compareOperandVersion("v2_0_0", "v1_0_0"), 1},
-		{"minor less than patch", compareOperandVersion("v1_10_0", "v1_0_5"), 10},
-		{"major less than patch", compareOperandVersion("v2_0_0", "v1_0_10"), 1},
-	}
-	if err := verifyTests(tests); err != nil {
-		t.Fatalf("%v", err)
-	}
 }
 
 func TestIsLTPAKeySharingEnabled(t *testing.T) {
@@ -102,143 +85,12 @@ func TestIsLTPAKeySharingEnabled(t *testing.T) {
 	}
 }
 
-func TestGetCommaSeparatedString(t *testing.T) {
-	emptyString, emptyStringErr := getCommaSeparatedString("", 0)
-	oneElement, oneElementErr := getCommaSeparatedString("one", 0)
-	oneElementAOOB, oneElementAOOBErr := getCommaSeparatedString("one", 1)
-	multiElement, multiElementErr := getCommaSeparatedString("one,two,three,four,five", 3)
-	multiElementAOOB, multiElementAOOBErr := getCommaSeparatedString("one,two,three,four,five", 5)
-	tests := []Test{
-		{"empty string", "", emptyString},
-		{"empty string errors", fmt.Errorf("there is no element"), emptyStringErr},
-		{"one element", "one", oneElement},
-		{"one element errors", nil, oneElementErr},
-		{"one element array out of bounds", "", oneElementAOOB},
-		{"one element array out of bounds error", fmt.Errorf("cannot index string list with only one element"), oneElementAOOBErr},
-		{"multi element", "four", multiElement},
-		{"multi element error", nil, multiElementErr},
-		{"multi element array out of bounds", "", multiElementAOOB},
-		{"multi element array out of bounds error", fmt.Errorf("element not found"), multiElementAOOBErr},
-	}
-	if err := verifyTests(tests); err != nil {
-		t.Fatalf("%v", err)
-	}
-}
-
-func TestCommaSeparatedStringContains(t *testing.T) {
-	match := commaSeparatedStringContains("one,two,three,four", "three")
-	substringNonMatch := commaSeparatedStringContains("one,two,three,four", "thre")
-	substringNonMatch2 := commaSeparatedStringContains("one,two,three,four", "threee")
-	oneElementMatch := commaSeparatedStringContains("one", "one")
-	noElementNonMatch := commaSeparatedStringContains("", "one")
-	tests := []Test{
-		{"single match", 2, match},
-		{"substring should not match", -1, substringNonMatch},
-		{"substring 2 should not match", -1, substringNonMatch2},
-		{"one element match", 0, oneElementMatch},
-		{"no element non match", -1, noElementNonMatch},
-	}
-	if err := verifyTests(tests); err != nil {
-		t.Fatalf("%v", err)
-	}
-}
-
 func getControllersFolder() string {
 	cwd, err := os.Getwd()
 	if err != nil || !strings.HasSuffix(cwd, "/controllers") {
 		return "controllers"
 	}
 	return cwd
-}
-
-func TestParseDecisionTree(t *testing.T) {
-	// Test 2 generations
-	fileName := getControllersFolder() + "/assets/tests/ltpa-decision-tree-2-generations.yaml"
-	treeMap, replaceMap, err := parseDecisionTree(&fileName)
-
-	// Expect tree map
-	expectedTreeMap := make(map[string]interface{})
-	expectedTreeMap["v10_4_0"] = make(map[string]interface{})
-	expectedTreeMap["v10_4_0"].(map[string]interface{})["managePasswordEncryption"] = make([]interface{}, 2)
-	expectedTreeMap["v10_4_0"].(map[string]interface{})["managePasswordEncryption"].([]interface{})[0] = true
-	expectedTreeMap["v10_4_0"].(map[string]interface{})["managePasswordEncryption"].([]interface{})[1] = false
-	expectedTreeMap["v10_4_1"] = make(map[string]interface{})
-	expectedTreeMap["v10_4_1"].(map[string]interface{})["type"] = make(map[string]interface{})
-	expectedTreeMap["v10_4_1"].(map[string]interface{})["type"].(map[string]interface{})["aes"] = make(map[string]interface{})
-	expectedTreeMap["v10_4_1"].(map[string]interface{})["type"].(map[string]interface{})["aes"].(map[string]interface{})["managePasswordEncryption"] = make([]interface{}, 2)
-	expectedTreeMap["v10_4_1"].(map[string]interface{})["type"].(map[string]interface{})["aes"].(map[string]interface{})["managePasswordEncryption"].([]interface{})[0] = true
-	expectedTreeMap["v10_4_1"].(map[string]interface{})["type"].(map[string]interface{})["aes"].(map[string]interface{})["managePasswordEncryption"].([]interface{})[1] = false
-	expectedTreeMap["v10_4_1"].(map[string]interface{})["type"].(map[string]interface{})["xor"] = "type"
-
-	// Expect replace map
-	expectedReplaceMap := make(map[string]map[string]string)
-	expectedReplaceMap["v10_4_1"] = make(map[string]string)
-	expectedReplaceMap["v10_4_1"]["v10_4_0.managePasswordEncryption.true"] = "v10_4_1.type.aes.managePasswordEncryption.true"
-	expectedReplaceMap["v10_4_1"]["v10_4_0.managePasswordEncryption.false"] = "v10_4_1.type.aes.managePasswordEncryption.false"
-
-	tests := []Test{
-		{"parse decision tree (2 generations) error", nil, err},
-		{"parse decision tree (2 generations) map", expectedTreeMap, treeMap},
-		{"parse decision tree (2 generations) replace map", expectedReplaceMap, replaceMap},
-	}
-	if err := verifyTests(tests); err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	// Test 3 generations
-	fileName = getControllersFolder() + "/assets/tests/ltpa-decision-tree-3-generations.yaml"
-	treeMap, replaceMap, err = parseDecisionTree(&fileName)
-
-	// Expect tree map
-	expectedTreeMap = make(map[string]interface{})
-	expectedTreeMap["v10_3_3"] = make(map[string]interface{})
-	expectedTreeMap["v10_3_3"].(map[string]interface{})["manageLTPA"] = true
-	expectedTreeMap["v10_4_0"] = make(map[string]interface{})
-	expectedTreeMap["v10_4_0"].(map[string]interface{})["managePasswordEncryption"] = make([]interface{}, 2)
-	expectedTreeMap["v10_4_0"].(map[string]interface{})["managePasswordEncryption"].([]interface{})[0] = true
-	expectedTreeMap["v10_4_0"].(map[string]interface{})["managePasswordEncryption"].([]interface{})[1] = false
-	expectedTreeMap["v10_4_1"] = make(map[string]interface{})
-	expectedTreeMap["v10_4_1"].(map[string]interface{})["type"] = make(map[string]interface{})
-	expectedTreeMap["v10_4_1"].(map[string]interface{})["type"].(map[string]interface{})["aes"] = make(map[string]interface{})
-	expectedTreeMap["v10_4_1"].(map[string]interface{})["type"].(map[string]interface{})["aes"].(map[string]interface{})["managePasswordEncryption"] = make([]interface{}, 2)
-	expectedTreeMap["v10_4_1"].(map[string]interface{})["type"].(map[string]interface{})["aes"].(map[string]interface{})["managePasswordEncryption"].([]interface{})[0] = true
-	expectedTreeMap["v10_4_1"].(map[string]interface{})["type"].(map[string]interface{})["aes"].(map[string]interface{})["managePasswordEncryption"].([]interface{})[1] = false
-	expectedTreeMap["v10_4_1"].(map[string]interface{})["type"].(map[string]interface{})["xor"] = "type"
-
-	// Expect replace map
-	expectedReplaceMap = make(map[string]map[string]string)
-	expectedReplaceMap["v10_4_0"] = make(map[string]string)
-	expectedReplaceMap["v10_4_0"]["v10_3_3.manageLTPA.true"] = "v10_4_0.managePasswordEncryption.false"
-	expectedReplaceMap["v10_4_1"] = make(map[string]string)
-	expectedReplaceMap["v10_4_1"]["v10_4_0.managePasswordEncryption.true"] = "v10_4_1.type.aes.managePasswordEncryption.true"
-	expectedReplaceMap["v10_4_1"]["v10_4_0.managePasswordEncryption.false"] = "v10_4_1.type.aes.managePasswordEncryption.false"
-
-	tests = []Test{
-		{"parse decision tree (3 generations) error", nil, err},
-		{"parse decision tree (3 generations) map", expectedTreeMap, treeMap},
-		{"parse decision tree (3 generations) replace map", expectedReplaceMap, replaceMap},
-	}
-	if err := verifyTests(tests); err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	// Test 1 generation
-	fileName = getControllersFolder() + "/assets/tests/ltpa-decision-tree-1-generation.yaml"
-	treeMap, replaceMap, err = parseDecisionTree(&fileName)
-
-	expectedTreeMap = make(map[string]interface{})
-	expectedTreeMap["v10_3_3"] = make(map[string]interface{})
-
-	expectedReplaceMap = make(map[string]map[string]string)
-
-	tests = []Test{
-		{"parse decision tree (1 generation) error", nil, err},
-		{"parse decision tree (1 generation) map", expectedTreeMap, treeMap},
-		{"parse decision tree (1 generation) replace map", expectedReplaceMap, replaceMap},
-	}
-	if err := verifyTests(tests); err != nil {
-		t.Fatalf("%v", err)
-	}
 }
 
 func TestLTPALeaderTracker(t *testing.T) {
@@ -277,8 +129,8 @@ func TestLTPALeaderTracker(t *testing.T) {
 
 	// Second, initialize the LTPA leader tracker
 	latestOperandVersion := "v10_4_1"
-	fileName := getControllersFolder() + "/assets/tests/ltpa-decision-tree-complex.yaml"
-	treeMap, replaceMap, err := parseDecisionTree(&fileName)
+	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
+	treeMap, replaceMap, err := tree.ParseLTPADecisionTree(&fileName)
 	tests = []Test{
 		{"parse decision tree complex", nil, err},
 	}
@@ -322,7 +174,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 		},
 		Data: map[string][]byte{}, // create empty data
 	}
-	// LTPA Secrets can't be created without a ServiceAccount (this is used as a mock for CreateOrUpdateWithLeaderTrackingLabels in order to mock the LTPA Secret)
+	// LTPA Secrets can't be created without a ServiceAccount (this mock ServiceAccount allows function CreateOrUpdateWithLeaderTrackingLabels to mock the LTPA Secret)
 	// In a live environment, the LTPA Secrets depend on the ServiceAccount to issue a Job that creates the LTPA Secret
 	complexServiceAccount := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -422,8 +274,8 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 
 	// Using the LTPA Decision Tree (complex) at version v10_4_1
 	latestOperandVersion := "v10_4_1"
-	fileName := getControllersFolder() + "/assets/tests/ltpa-decision-tree-complex.yaml"
-	treeMap, replaceMap, err := parseDecisionTree(&fileName)
+	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
+	treeMap, replaceMap, err := tree.ParseLTPADecisionTree(&fileName)
 	tests := []Test{
 		{"parse decision tree complex", nil, err},
 	}
@@ -476,8 +328,189 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 	expectedConfigMapData := map[string]string{
 		lutils.ResourcesKey:           "-b12g1,-bazc1",
 		lutils.ResourceOwnersKey:      ",", // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
-		lutils.ResourcePathsKey:       latestOperandVersion + ".a.b.e.true," + latestOperandVersion + ".a.b.e.false",
-		lutils.ResourcePathIndicesKey: latestOperandVersion + ".2," + latestOperandVersion + ".3",
+		lutils.ResourcePathsKey:       "v10_4_1.a.b.e.true,v10_4_1.a.b.e.false",
+		lutils.ResourcePathIndicesKey: "v10_4_1.2,v10_4_1.3",
+	}
+	tests = []Test{
+		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
+		{"get LTPA leader tracker namespace", namespace, configMap.Namespace},
+		{"get LTPA leader tracker data", expectedConfigMapData, configMap.Data},
+		{"get LTPA leader tracker label", latestOperandVersion, configMap.Labels[lutils.LTPAVersionLabel]},
+		{"get LTPA leader tracker error", nil, err},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+// This tests that the LTPA leader tracker can have cluster awareness of LTPA Secrets before operator reconciliation and upgrade the LTPA Secrets to the latest decision tree version
+func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T) {
+	spec := openlibertyv1.OpenLibertyApplicationSpec{}
+	instance := createOpenLibertyApp(name, namespace, spec)
+	r := createReconcilerFromOpenLibertyApp(instance)
+
+	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
+	treeMap, replaceMap, err := tree.ParseLTPADecisionTree(&fileName)
+	tests := []Test{
+		{"parse decision tree complex", nil, err},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// Firstly, Before initializing the leader tracker, create two LTPA Secrets based upon paths in ltpa-decision-tree-complex.yaml
+	latestOperandVersion := "v10_4_1"
+	ltpaRootName := "olo-managed-ltpa"
+	complexSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ltpaRootName + "-b12g1", // random lower alphanumeric suffix of length 5
+			Namespace: namespace,
+			Labels: map[string]string{
+				lutils.LTPAPathIndexLabel: latestOperandVersion + ".2", // choosing path index 2 under tree v10_4_1 (i.e. v10_4_1.a.b.e.true)
+				"app.kubernetes.io/name":  ltpaRootName,
+			},
+		},
+		Data: map[string][]byte{}, // create empty data
+	}
+	complexSecret2 := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ltpaRootName + "-bazc1", // random lower alphanumeric suffix of length 5
+			Namespace: namespace,
+			Labels: map[string]string{
+				lutils.LTPAPathIndexLabel: latestOperandVersion + ".3", // choosing path index 3 under tree v10_4_1 (i.e. v10_4_1.a.b.e.false)
+				"app.kubernetes.io/name":  ltpaRootName,
+			},
+		},
+		Data: map[string][]byte{}, // create empty data
+	}
+	tests = []Test{
+		{"create LTPA Secret from based on path index 2 of complex decision tree", nil, r.CreateOrUpdate(complexSecret, nil, func() error { return nil })},
+		{"create LTPA Secret from based on path index 3 of complex decision tree", nil, r.CreateOrUpdate(complexSecret2, nil, func() error { return nil })},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// Second, initialize the leader tracker but on a higher version of the LTPA decision tree
+	latestOperandVersion = "v10_4_20" // upgrade the version
+	tests = []Test{
+		{"initializeLTPALeaderTracker at version v10_4_20", nil, r.initializeLTPALeaderTracker(instance, treeMap, replaceMap, latestOperandVersion)},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// Lastly, check that the LTPA leader tracker upgraded the two LTPA Secrets created
+	configMap, err := r.getLTPALeaderTracker(instance)
+	expectedConfigMapData := map[string]string{
+		lutils.ResourcesKey:           "-b12g1,-bazc1",
+		lutils.ResourceOwnersKey:      ",",                                       // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
+		lutils.ResourcePathsKey:       "v10_4_20.a.b.e.foo,v10_4_20.a.f.g.i.bar", // These paths have been upgraded to v10_4_20 based on replaceMap
+		lutils.ResourcePathIndicesKey: "v10_4_20.2,v10_4_20.3",                   // These path indices have been upgraded to v10_4_20 based on replaceMap
+	}
+	tests = []Test{
+		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
+		{"get LTPA leader tracker namespace", namespace, configMap.Namespace},
+		{"get LTPA leader tracker data", expectedConfigMapData, configMap.Data},
+		{"get LTPA leader tracker label", latestOperandVersion, configMap.Labels[lutils.LTPAVersionLabel]},
+		{"get LTPA leader tracker error", nil, err},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+// This tests that the LTPA leader tracker can have cluster awareness of LTPA Secrets before operator reconciliation and upgrade the LTPA Secrets to the latest decision tree version
+func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngrades(t *testing.T) {
+	spec := openlibertyv1.OpenLibertyApplicationSpec{}
+	instance := createOpenLibertyApp(name, namespace, spec)
+	r := createReconcilerFromOpenLibertyApp(instance)
+
+	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
+	treeMap, replaceMap, err := tree.ParseLTPADecisionTree(&fileName)
+	tests := []Test{
+		{"parse decision tree complex", nil, err},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// Firstly, Before initializing the leader tracker, create two LTPA Secrets based upon paths in ltpa-decision-tree-complex.yaml
+	latestOperandVersion := "v10_4_1"
+	ltpaRootName := "olo-managed-ltpa"
+	complexSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ltpaRootName + "-b12g1", // random lower alphanumeric suffix of length 5
+			Namespace: namespace,
+			Labels: map[string]string{
+				lutils.LTPAPathIndexLabel: "v10_4_1.2", // choosing path index 2 under tree v10_4_1 (i.e. v10_4_1.a.b.e.true)
+				"app.kubernetes.io/name":  ltpaRootName,
+			},
+		},
+		Data: map[string][]byte{}, // create empty data
+	}
+	complexSecret2 := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ltpaRootName + "-bazc1", // random lower alphanumeric suffix of length 5
+			Namespace: namespace,
+			Labels: map[string]string{
+				lutils.LTPAPathIndexLabel: "v10_4_1.3", // choosing path index 3 under tree v10_4_1 (i.e. v10_4_1.a.b.e.false)
+				"app.kubernetes.io/name":  ltpaRootName,
+			},
+		},
+		Data: map[string][]byte{}, // create empty data
+	}
+	tests = []Test{
+		{"create LTPA Secret from based on path index 2 of complex decision tree", nil, r.CreateOrUpdate(complexSecret, nil, func() error { return nil })},
+		{"create LTPA Secret from based on path index 3 of complex decision tree", nil, r.CreateOrUpdate(complexSecret2, nil, func() error { return nil })},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// Second, initialize the leader tracker but on a higher version of the LTPA decision tree
+	latestOperandVersion = "v10_4_500" // upgrade the version
+	tests = []Test{
+		{"initializeLTPALeaderTracker at version v10_4_500", nil, r.initializeLTPALeaderTracker(instance, treeMap, replaceMap, latestOperandVersion)},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// Thirdly, check that the LTPA leader tracker upgraded the two LTPA Secrets created
+	configMap, err := r.getLTPALeaderTracker(instance)
+	expectedConfigMapData := map[string]string{
+		lutils.ResourcesKey:           "-b12g1,-bazc1",
+		lutils.ResourceOwnersKey:      ",",                                          // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
+		lutils.ResourcePathsKey:       "v10_4_500.a.b.b.true,v10_4_500.a.f.g.i.bar", // These paths have been upgraded to v10_4_500 based on replaceMap
+		lutils.ResourcePathIndicesKey: "v10_4_500.0,v10_4_500.4",                    // These path indices have been upgraded to v10_4_500 based on replaceMap
+	}
+	tests = []Test{
+		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
+		{"get LTPA leader tracker namespace", namespace, configMap.Namespace},
+		{"get LTPA leader tracker data", expectedConfigMapData, configMap.Data},
+		{"get LTPA leader tracker label", latestOperandVersion, configMap.Labels[lutils.LTPAVersionLabel]},
+		{"get LTPA leader tracker error", nil, err},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// Fourthly, downgrade the decision tree version and initialize the leader tracker (it will fail once to delete)
+	latestOperandVersion = "v10_3_3"
+	tests = []Test{
+		{"Downgrade LTPA Leader Tracker from v10_4_500 to v10_3_3", nil, r.initializeLTPALeaderTracker(instance, treeMap, replaceMap, latestOperandVersion)},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	configMap, err = r.getLTPALeaderTracker(instance)
+	expectedConfigMapData = map[string]string{
+		lutils.ResourcesKey:           "-b12g1,-bazc1",
+		lutils.ResourceOwnersKey:      ",",                               // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
+		lutils.ResourcePathsKey:       "v10_3_3.a.b,v10_4_1.a.b.e.false", // v10_4_1 has no path to v10_3_3 so it is kept to be reference for a future upgrade
+		lutils.ResourcePathIndicesKey: "v10_3_3.0,v10_4_1.3",             // These path indices have been upgraded to v10_4_500 based on replaceMap
 	}
 	tests = []Test{
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
