@@ -6,6 +6,7 @@
 #     - starts with an operand version string "va.b.c"
 #     - traverses each map/list element by using a period '.'
 #     - terminates at a constant boolean, string
+#     - optionally uses a list as a pre-terminating element but nowhere else
 #
 # In 1.3.2 (1 LTPA key per namespace), there is one possible path "v1_3_2.true" 
 # In 1.4.0 (2 LTPA keys per namespace), there are two possible paths "v1_4_0.managePasswordEncryption.true" and "v1_4_0.managePasswordEncryption.false"
