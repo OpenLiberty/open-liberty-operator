@@ -504,7 +504,7 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndD
 		t.Fatalf("%v", err)
 	}
 
-	// Fourthly, downgrade the decision tree version and initialize the leader tracker (it will fail once to delete)
+	// Fourthly, downgrade the decision tree version and initialize the leader tracker (run initialize once to delete the old configMap)
 	latestOperandVersion = "v10_3_3"
 	tests = []Test{
 		{"Downgrade LTPA Leader Tracker from v10_4_500 to v10_3_3", nil, r.initializeLTPALeaderTracker(instance, treeMap, replaceMap, latestOperandVersion)},
@@ -512,6 +512,8 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndD
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
 	}
+
+	r.initializeLTPALeaderTracker(instance, treeMap, replaceMap, latestOperandVersion)
 
 	configMap, err = r.getLTPALeaderTracker(instance)
 	expectedConfigMapData = map[string]string{
@@ -521,11 +523,11 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndD
 		lutils.ResourcePathIndicesKey: "v10_3_3.0,v10_4_1.3,v10_4_1.4",                  // These path indices have been upgraded to v10_4_500 based on replaceMap
 	}
 	tests = []Test{
+		{"get LTPA leader tracker error", nil, err},
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
 		{"get LTPA leader tracker namespace", namespace, configMap.Namespace},
 		{"get LTPA leader tracker data", expectedConfigMapData, configMap.Data},
 		{"get LTPA leader tracker label", latestOperandVersion, configMap.Labels[lutils.LTPAVersionLabel]},
-		{"get LTPA leader tracker error", nil, err},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)

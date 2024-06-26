@@ -89,6 +89,24 @@ func GetCommaSeparatedString(stringList string, index int) (string, error) {
 	return "", fmt.Errorf("element not found")
 }
 
+func IsLowerAlphanumericSuffix(suffix string) bool {
+	for _, ch := range suffix {
+		numCheck := int(ch - '0')
+		lowerAlphaCheck := int(ch - 'a')
+		if !((numCheck >= 0 && numCheck <= 9) || (lowerAlphaCheck >= 0 && lowerAlphaCheck <= 25)) {
+			return false
+		}
+	}
+	return true
+}
+
+func GetCommaSeparatedArray(stringList string) []string {
+	if strings.Contains(stringList, ",") {
+		return strings.Split(stringList, ",")
+	}
+	return []string{stringList}
+}
+
 // returns the index of the contained value in stringList or else -1
 func CommaSeparatedStringContains(stringList string, value string) int {
 	if strings.Contains(stringList, ",") {
@@ -103,12 +121,38 @@ func CommaSeparatedStringContains(stringList string, value string) int {
 	return -1
 }
 
+func IsValidOperandVersion(version string) bool {
+	if len(version) == 0 {
+		return false
+	}
+	if version[0] != 'v' {
+		return false
+	}
+	if !strings.Contains(version, "_") {
+		return false
+	}
+	versions := strings.Split(version, "_")
+	if len(versions) != 2 {
+		return false
+	}
+	for _, version := range versions {
+		if len(lutils.GetFirstNumberFromString(version)) == 0 {
+			return false
+		}
+	}
+
+	return true
+}
+
 // migrates path to a valid path existing in operator version targetVersion
 func ReplacePath(path string, targetVersion string, treeMap map[string]interface{}, replaceMap map[string]map[string]string) (string, error) {
 	// determine upgrade/downgrade strategy
 	currPath := path
 	currVersion := strings.Split(currPath, ".")[0]
 	sortedKeys := getSortedKeysFromReplaceMap(replaceMap)
+	if !IsValidOperandVersion(currVersion) || !IsValidOperandVersion(targetVersion) {
+		return "", fmt.Errorf("there was no valid upgrade path to migrate the LTPA Secret on path %s, this may occur when the LTPA decision tree was modified from the history of an older multi-LTPA Liberty operator, first delete the affected/outdated LTPA Secret(s) then delete the olo-managed-leader-tracking-ltpa ConfigMap to resolve the operator state", path)
+	}
 	cmp := CompareOperandVersion(currVersion, targetVersion)
 	latestOperandVersion, _ := GetLatestOperandVersion(treeMap, targetVersion)
 	// currVersion > targetVersion - downgrade

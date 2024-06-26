@@ -40,7 +40,7 @@ const OperandVersion = "1.3.2"
 // LTPA constants
 const managedLTPAMountPath = "/config/managedLTPA"
 const LTPAServerXMLSuffix = "-managed-ltpa-server-xml"
-const ltpaKeysFileName = "ltpa.keys"
+const LTPAKeysFileName = "ltpa.keys"
 const ltpaXMLFileName = "managedLTPA.xml"
 const LTPAPathIndexLabel = "openlibertyapplications.apps.openliberty.io/ltpa-path-index"
 const LTPAVersionLabel = "openlibertyapplications.apps.openliberty.io/ltpa-version"
@@ -73,7 +73,8 @@ type LTPAConfig struct {
 	SecretName                  string
 	SecretInstanceName          string
 	ServiceAccountName          string
-	ScriptName                  string
+	ConfigMapName               string
+	FileName                    string
 	EncryptionKeySecretName     string
 	EncryptionKeySharingEnabled bool // true or false
 }
@@ -576,12 +577,12 @@ func ConfigurePasswordEncryption(pts *corev1.PodTemplateSpec, la *olv1.OpenLiber
 }
 
 // ConfigureLTPA setups the shared-storage for LTPA keys file generation
-func ConfigureLTPA(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string, ltpaSecretName string) {
+func ConfigureLTPA(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string, ltpaSecretName string, ltpaSuffixName string) {
 	// Mount a volume /config/ltpa to store the ltpa.keys file
-	MountSecretAsVolume(pts, ltpaSecretName, CreateVolumeMount(managedLTPAMountPath, ltpaKeysFileName))
+	MountSecretAsVolume(pts, ltpaSecretName, CreateVolumeMount(managedLTPAMountPath, LTPAKeysFileName))
 
 	// Mount a volume /config/configDropins/overrides/ltpa.xml to store the Liberty Server XML
-	MountSecretAsVolume(pts, operatorShortName+LTPAServerXMLSuffix, CreateVolumeMount(overridesMountPath, ltpaXMLFileName))
+	MountSecretAsVolume(pts, operatorShortName+LTPAServerXMLSuffix+ltpaSuffixName, CreateVolumeMount(overridesMountPath, ltpaXMLFileName))
 }
 
 func MountSecretAsVolume(pts *corev1.PodTemplateSpec, secretName string, volumeMount corev1.VolumeMount) {
@@ -638,7 +639,7 @@ func CustomizeLTPAServerXML(xmlSecret *corev1.Secret, la *olv1.OpenLibertyApplic
 	if err != nil {
 		return err
 	}
-	severXMLString := strings.Replace(string(serverXML), "LTPA_KEYS_FILE_NAME", managedLTPADir+"/"+ltpaKeysFileName, 1)
+	severXMLString := strings.Replace(string(serverXML), "LTPA_KEYS_FILE_NAME", managedLTPADir+"/"+LTPAKeysFileName, 1)
 	severXMLString = strings.Replace(severXMLString, "LTPA_KEYS_PASSWORD", encryptedPassword, 1)
 	xmlSecret.StringData[ltpaXMLFileName] = severXMLString
 	return nil
@@ -673,6 +674,7 @@ func IsLTPAJobConfigurationOutdated(job *v1.Job, appLeaderInstance *olv1.OpenLib
 }
 
 func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaConfig *LTPAConfig) {
+	ltpaVolumeMountName := parseMountName(ltpaConfig.FileName)
 	encodingType := "aes" // the password encoding type for securityUtility (one of "xor", "aes", or "hash")
 	job.Spec.Template.ObjectMeta.Name = "liberty"
 	job.Spec.Template.Spec.Containers = []corev1.Container{
@@ -683,10 +685,10 @@ func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaConfig *
 			SecurityContext: rcoutils.GetSecurityContext(la),
 			Command:         []string{"/bin/bash", "-c"},
 			// Usage: /bin/create_ltpa_keys.sh <namespace> <ltpa-secret-name> <securityUtility-encoding>
-			Args: []string{managedLTPAMountPath + "/bin/create_ltpa_keys.sh " + la.GetNamespace() + " " + ltpaConfig.SecretName + " " + ltpaConfig.SecretInstanceName + " " + ltpaConfig.ScriptName + " " + encodingType + " " + ltpaConfig.EncryptionKeySecretName + " " + strconv.FormatBool(ltpaConfig.EncryptionKeySharingEnabled) + " " + LTPAPathIndexLabel + " " + ltpaConfig.Metadata.PathIndex},
+			Args: []string{managedLTPAMountPath + "/bin/create_ltpa_keys.sh " + la.GetNamespace() + " " + ltpaConfig.SecretName + " " + ltpaConfig.SecretInstanceName + " " + ltpaConfig.FileName + " " + encodingType + " " + ltpaConfig.EncryptionKeySecretName + " " + strconv.FormatBool(ltpaConfig.EncryptionKeySharingEnabled) + " " + LTPAPathIndexLabel + " " + ltpaConfig.Metadata.PathIndex},
 			VolumeMounts: []corev1.VolumeMount{
 				{
-					Name:      ltpaConfig.ScriptName,
+					Name:      ltpaVolumeMountName,
 					MountPath: managedLTPAMountPath + "/bin",
 				},
 			},
@@ -699,14 +701,13 @@ func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaConfig *
 	}
 	job.Spec.Template.Spec.ServiceAccountName = ltpaConfig.ServiceAccountName
 	job.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyOnFailure
-	var number int32
-	number = 0777
+	number := int32(0777)
 	job.Spec.Template.Spec.Volumes = append(job.Spec.Template.Spec.Volumes, corev1.Volume{
-		Name: ltpaConfig.ScriptName,
+		Name: ltpaVolumeMountName,
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: ltpaConfig.ScriptName,
+					Name: ltpaConfig.ConfigMapName,
 				},
 				DefaultMode: &number,
 			},

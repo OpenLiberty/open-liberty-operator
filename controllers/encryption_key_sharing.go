@@ -74,6 +74,14 @@ func (r *ReconcileOpenLiberty) isPasswordEncryptionKeySharingEnabled(instance *o
 	return false
 }
 
+func (r *ReconcileOpenLiberty) isUsingPasswordEncryptionKeySharing(instance *olv1.OpenLibertyApplication) bool {
+	if r.isPasswordEncryptionKeySharingEnabled(instance) {
+		_, err := r.hasEncryptionKeySecret(instance)
+		return err == nil
+	}
+	return false
+}
+
 func (r *ReconcileOpenLiberty) hasEncryptionKeySecret(instance *olv1.OpenLibertyApplication) (*corev1.Secret, error) {
 	// The Secret that contains the password encryption key
 	passwordKeySecret := &corev1.Secret{}
