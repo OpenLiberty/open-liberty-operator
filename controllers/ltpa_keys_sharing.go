@@ -160,27 +160,30 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 	ltpaXMLSecret.Labels = lutils.GetRequiredLabels(ltpaXMLSecret.Name, "")
 
 	generateLTPAKeysJob := &v1.Job{}
-	generateLTPAKeysJob.Name = OperatorShortName + "-managed-ltpa-keys-generation" + ltpaMetadata.NameSuffix
+	generateLTPAKeysJobRootName := OperatorShortName + "-managed-ltpa-keys-generation"
+	generateLTPAKeysJob.Name = generateLTPAKeysJobRootName + ltpaMetadata.NameSuffix
 	generateLTPAKeysJob.Namespace = instance.GetNamespace()
-	generateLTPAKeysJob.Labels = lutils.GetRequiredLabels(generateLTPAKeysJob.Name, "")
+	generateLTPAKeysJob.Labels = lutils.GetRequiredLabels(generateLTPAKeysJobRootName, generateLTPAKeysJob.Name)
 
 	deletePropagationBackground := metav1.DeletePropagationBackground
 
 	ltpaJobRequest := &corev1.ConfigMap{}
-	ltpaJobRequest.Name = OperatorShortName + "-managed-ltpa-job-request" + ltpaMetadata.NameSuffix
+	ltpaJobRequestRootName := OperatorShortName + "-managed-ltpa-job-request"
+	ltpaJobRequest.Name = ltpaJobRequestRootName + ltpaMetadata.NameSuffix
 	ltpaJobRequest.Namespace = instance.GetNamespace()
-	ltpaJobRequest.Labels = lutils.GetRequiredLabels(ltpaJobRequest.Name, "")
+	ltpaJobRequest.Labels = lutils.GetRequiredLabels(ltpaJobRequestRootName, ltpaJobRequest.Name)
 
 	ltpaKeysCreationScriptConfigMap := &corev1.ConfigMap{}
-	ltpaKeysCreationScriptConfigMap.Name = OperatorShortName + "-managed-ltpa-script" + ltpaMetadata.NameSuffix
+	ltpaKeysCreationScriptConfigMapRootName := OperatorShortName + "-managed-ltpa-script"
+	ltpaKeysCreationScriptConfigMap.Name = ltpaKeysCreationScriptConfigMapRootName + ltpaMetadata.NameSuffix
 	ltpaKeysCreationScriptConfigMap.Namespace = instance.GetNamespace()
-	ltpaKeysCreationScriptConfigMap.Labels = lutils.GetRequiredLabels(ltpaKeysCreationScriptConfigMap.Name, "")
+	ltpaKeysCreationScriptConfigMap.Labels = lutils.GetRequiredLabels(ltpaKeysCreationScriptConfigMapRootName, ltpaKeysCreationScriptConfigMap.Name)
 
 	ltpaSecret := &corev1.Secret{}
 	ltpaSecretRootName := OperatorShortName + "-managed-ltpa"
 	ltpaSecret.Name = ltpaSecretRootName + ltpaMetadata.NameSuffix
 	ltpaSecret.Namespace = instance.GetNamespace()
-	ltpaSecret.Labels = lutils.GetRequiredLabels(ltpaSecret.Name, "")
+	ltpaSecret.Labels = lutils.GetRequiredLabels(ltpaSecretRootName, ltpaSecret.Name)
 	// If the LTPA Secret does not exist, run the Kubernetes Job to generate the shared ltpa.keys file and Secret
 	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaSecret.Name, Namespace: ltpaSecret.Namespace}, ltpaSecret)
 	if err != nil && kerrors.IsNotFound(err) {
