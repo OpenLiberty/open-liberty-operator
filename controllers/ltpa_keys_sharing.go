@@ -424,42 +424,40 @@ func (r *ReconcileOpenLiberty) deleteLTPAKeysResources(instance *olv1.OpenLibert
 	if !found {
 		return fmt.Errorf("could not get LTPA leader tracker state (%s) for deletion", lutils.ResourceOwnersKey)
 	}
-	i := tree.CommaSeparatedStringContains(resourceOwners, instance.Name)
-	if i == -1 {
-		return nil
-	}
-	resourceNames, found := leaderTracker.Data[lutils.ResourcesKey]
-	if !found {
-		return fmt.Errorf("could not get LTPA leader tracker state (%s) for deletion", lutils.ResourcesKey)
-	}
-	ownerNameSuffix, err := tree.GetCommaSeparatedString(resourceNames, i)
-	if err != nil {
-		return err
-	}
+	if i := tree.CommaSeparatedStringContains(resourceOwners, instance.Name); i != -1 {
+		resourceNames, found := leaderTracker.Data[lutils.ResourcesKey]
+		if !found {
+			return fmt.Errorf("could not get LTPA leader tracker state (%s) for deletion", lutils.ResourcesKey)
+		}
+		ownerNameSuffix, err := tree.GetCommaSeparatedString(resourceNames, i)
+		if err != nil {
+			return err
+		}
 
-	generateLTPAKeysJob := &v1.Job{}
-	generateLTPAKeysJob.Name = OperatorShortName + "-managed-ltpa-keys-generation" + ownerNameSuffix
-	generateLTPAKeysJob.Namespace = instance.GetNamespace()
-	deletePropagationBackground := metav1.DeletePropagationBackground
-	err = r.GetClient().Delete(context.TODO(), generateLTPAKeysJob, &client.DeleteOptions{PropagationPolicy: &deletePropagationBackground})
-	if err != nil && !kerrors.IsNotFound(err) {
-		return err
-	}
+		generateLTPAKeysJob := &v1.Job{}
+		generateLTPAKeysJob.Name = OperatorShortName + "-managed-ltpa-keys-generation" + ownerNameSuffix
+		generateLTPAKeysJob.Namespace = instance.GetNamespace()
+		deletePropagationBackground := metav1.DeletePropagationBackground
+		err = r.GetClient().Delete(context.TODO(), generateLTPAKeysJob, &client.DeleteOptions{PropagationPolicy: &deletePropagationBackground})
+		if err != nil && !kerrors.IsNotFound(err) {
+			return err
+		}
 
-	ltpaKeysCreationScriptConfigMap := &corev1.ConfigMap{}
-	ltpaKeysCreationScriptConfigMap.Name = OperatorShortName + "-managed-ltpa-script" + ownerNameSuffix
-	ltpaKeysCreationScriptConfigMap.Namespace = instance.GetNamespace()
-	err = r.DeleteResource(ltpaKeysCreationScriptConfigMap)
-	if err != nil {
-		return err
-	}
+		ltpaKeysCreationScriptConfigMap := &corev1.ConfigMap{}
+		ltpaKeysCreationScriptConfigMap.Name = OperatorShortName + "-managed-ltpa-script" + ownerNameSuffix
+		ltpaKeysCreationScriptConfigMap.Namespace = instance.GetNamespace()
+		err = r.DeleteResource(ltpaKeysCreationScriptConfigMap)
+		if err != nil {
+			return err
+		}
 
-	ltpaJobRequest := &corev1.ConfigMap{}
-	ltpaJobRequest.Name = OperatorShortName + "-managed-ltpa-job-request" + ownerNameSuffix
-	ltpaJobRequest.Namespace = instance.GetNamespace()
-	err = r.DeleteResource(ltpaJobRequest)
-	if err != nil {
-		return err
+		ltpaJobRequest := &corev1.ConfigMap{}
+		ltpaJobRequest.Name = OperatorShortName + "-managed-ltpa-job-request" + ownerNameSuffix
+		ltpaJobRequest.Namespace = instance.GetNamespace()
+		err = r.DeleteResource(ltpaJobRequest)
+		if err != nil {
+			return err
+		}
 	}
 
 	ltpaServiceAccount := &corev1.ServiceAccount{}
@@ -686,31 +684,38 @@ func (r *ReconcileOpenLiberty) DeleteResourceWithLeaderTrackingLabels(sa *corev1
 		return false, err
 	}
 	hasNoOwners := false
-	err = r.CreateOrUpdate(leaderTracker, nil, func() error {
+	r.CreateOrUpdate(leaderTracker, nil, func() error {
 		// If the instance is being tracked, remove it
 		resourceOwnersLabel, resourceOwnersLabelFound := leaderTracker.Data[lutils.ResourceOwnersKey]
 		if resourceOwnersLabelFound {
 			if strings.Contains(resourceOwnersLabel, ",") {
 				owners := strings.Split(resourceOwnersLabel, ",")
 				newOwners := make([]string, len(owners))
+				ownerListNonEmpty := false
 				for i, owner := range owners {
-					if owner != instance.Name {
+					if owner != instance.Name && owner != "" {
 						newOwners[i] = owner
+						ownerListNonEmpty = true
 					} else {
 						newOwners[i] = ""
 					}
 				}
 				leaderTracker.Data[lutils.ResourceOwnersKey] = strings.Join(newOwners, ",")
+				if !ownerListNonEmpty {
+					hasNoOwners = true
+				}
 			} else if resourceOwnersLabel == instance.Name || resourceOwnersLabel == "" {
 				leaderTracker.Data[lutils.ResourceOwnersKey] = ""
 				hasNoOwners = true
-				return r.DeleteResource(sa)
 			}
 		} else {
 			hasNoOwners = true
 		}
 		return nil
 	})
+	if hasNoOwners {
+		err = r.DeleteResource(sa)
+	}
 	return hasNoOwners, err
 }
 
