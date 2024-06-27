@@ -128,11 +128,11 @@ func IsValidOperandVersion(version string) bool {
 	if version[0] != 'v' {
 		return false
 	}
-	if !strings.Contains(version, "_") {
+	if !strings.Contains(version[1:], "_") {
 		return false
 	}
-	versions := strings.Split(version, "_")
-	if len(versions) != 2 {
+	versions := strings.Split(version[1:], "_")
+	if len(versions) != 3 {
 		return false
 	}
 	for _, version := range versions {

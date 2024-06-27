@@ -364,7 +364,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 		}
 	}
 
-	// The LTPA Secret is created (in other words, the LTPA Job has completed), so delete the Job request
+	// The LTPA Secret is created (in other words, the LTPA Job has completed) so delete the Job request
 	err = r.DeleteResource(ltpaJobRequest)
 	if err != nil {
 		return ltpaSecret.Name, err
@@ -691,19 +691,15 @@ func (r *ReconcileOpenLiberty) DeleteResourceWithLeaderTrackingLabels(sa *corev1
 			if strings.Contains(resourceOwnersLabel, ",") {
 				owners := strings.Split(resourceOwnersLabel, ",")
 				newOwners := make([]string, len(owners))
-				ownerListNonEmpty := false
 				for i, owner := range owners {
-					if owner != instance.Name && owner != "" {
+					if owner != instance.Name {
 						newOwners[i] = owner
-						ownerListNonEmpty = true
 					} else {
 						newOwners[i] = ""
 					}
 				}
 				leaderTracker.Data[lutils.ResourceOwnersKey] = strings.Join(newOwners, ",")
-				if !ownerListNonEmpty {
-					hasNoOwners = true
-				}
+				hasNoOwners = len(leaderTracker.Data[lutils.ResourceOwnersKey]) == len(newOwners)-1
 			} else if resourceOwnersLabel == instance.Name || resourceOwnersLabel == "" {
 				leaderTracker.Data[lutils.ResourceOwnersKey] = ""
 				hasNoOwners = true
