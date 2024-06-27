@@ -221,13 +221,23 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			}
 		}
 	}
+
+	// Builds the LTPA state and returns the metadata that describes this OpenLibertyApplication's LTPA Secret
+	var ltpaMetadata *lutils.LTPAMetadata
+	if r.isLTPAKeySharingEnabled(instance) {
+		ltpaMetadata, err = r.reconcileLTPAState(instance)
+		if err != nil {
+			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		}
+	}
+
 	if imageReferenceOld != instance.Status.ImageReference {
 		// Trigger a new Semeru Cloud Compiler generation
 		createNewSemeruGeneration(instance)
 
 		// If the shared LTPA keys was not generated from the last application image, restart the key generation process
 		if r.isLTPAKeySharingEnabled(instance) {
-			if err := r.restartLTPAKeysGeneration(instance); err != nil {
+			if err := r.restartLTPAKeysGeneration(instance, ltpaMetadata); err != nil {
 				reqLogger.Error(err, "Error restarting the LTPA keys generation process")
 				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 			}
@@ -424,7 +434,15 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
-	err, message, ltpaSecretName := r.reconcileLTPAKeysSharing(instance)
+	// Manage the shared password encryption key Secret if it exists
+	message, encryptionSecretName, err := r.reconcileEncryptionKeySharing(instance)
+	if err != nil {
+		reqLogger.Error(err, message)
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	}
+
+	// Create and manage the shared LTPA keys Secret if the feature is enabled
+	message, ltpaSecretName, err := r.reconcileLTPASecret(instance, ltpaMetadata)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -489,8 +507,16 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				}
 			}
 
+			if r.isPasswordEncryptionKeySharingEnabled(instance) && len(encryptionSecretName) > 0 {
+				lutils.ConfigurePasswordEncryption(&statefulSet.Spec.Template, instance, OperatorShortName)
+				err := lutils.AddSecretResourceVersionAsEnvVar(&statefulSet.Spec.Template, instance, r.GetClient(), encryptionSecretName, "PASSWORD_ENCRYPTION")
+				if err != nil {
+					return err
+				}
+			}
+
 			if r.isLTPAKeySharingEnabled(instance) && len(ltpaSecretName) > 0 {
-				lutils.ConfigureLTPA(&statefulSet.Spec.Template, instance, OperatorShortName)
+				lutils.ConfigureLTPA(&statefulSet.Spec.Template, instance, OperatorShortName, ltpaSecretName, ltpaMetadata.NameSuffix)
 				err := lutils.AddSecretResourceVersionAsEnvVar(&statefulSet.Spec.Template, instance, r.GetClient(), ltpaSecretName, "LTPA")
 				if err != nil {
 					return err
@@ -556,8 +582,16 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				}
 			}
 
+			if r.isPasswordEncryptionKeySharingEnabled(instance) && len(encryptionSecretName) > 0 {
+				lutils.ConfigurePasswordEncryption(&deploy.Spec.Template, instance, OperatorShortName)
+				err := lutils.AddSecretResourceVersionAsEnvVar(&deploy.Spec.Template, instance, r.GetClient(), encryptionSecretName, "PASSWORD_ENCRYPTION")
+				if err != nil {
+					return err
+				}
+			}
+
 			if r.isLTPAKeySharingEnabled(instance) && len(ltpaSecretName) > 0 {
-				lutils.ConfigureLTPA(&deploy.Spec.Template, instance, OperatorShortName)
+				lutils.ConfigureLTPA(&deploy.Spec.Template, instance, OperatorShortName, ltpaSecretName, ltpaMetadata.NameSuffix)
 				err := lutils.AddSecretResourceVersionAsEnvVar(&deploy.Spec.Template, instance, r.GetClient(), ltpaSecretName, "LTPA")
 				if err != nil {
 					return err

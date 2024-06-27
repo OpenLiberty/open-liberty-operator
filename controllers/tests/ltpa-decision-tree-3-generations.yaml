@@ -1,0 +1,23 @@
+tree:
+  v10_3_3: 
+    manageLTPA: true
+  v10_4_0:
+    managePasswordEncryption:
+      - true
+      - false
+      - test
+  v10_4_1:
+    type:
+      aes:
+        managePasswordEncryption:
+          - true
+          - false
+          - test
+      xor: type # "type" is a dummy string to create a leaf node in the tree to represent when a type: xor LTPA keys is used, it could also be a boolean
+replace:
+  v10_4_0:
+    "v10_3_3.manageLTPA.true": "v10_4_0.managePasswordEncryption.false"
+  v10_4_1:
+    "v10_4_0.managePasswordEncryption.true":  "v10_4_1.type.aes.managePasswordEncryption.true"
+    "v10_4_0.managePasswordEncryption.false": "v10_4_1.type.aes.managePasswordEncryption.false"
+    "v10_4_0.managePasswordEncryption.test":  "v10_4_1.type.aes.managePasswordEncryption.test"
