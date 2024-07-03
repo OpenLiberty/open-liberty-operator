@@ -134,7 +134,7 @@ func (r *ReconcileOpenLiberty) createEncryptionKeyLibertyConfig(instance *olv1.O
 	}
 	if err := r.CreateOrUpdate(mountingXMLSecret, nil, func() error {
 		mountDir := strings.Replace(lutils.SecureMountPath+"/"+lutils.EncryptionKeyXMLFileName, "/output", "${server.output.dir}", 1)
-		return lutils.CustomizeEncryptionKeyMountXML(mountingXMLSecret, mountDir)
+		return lutils.CustomizeLibertyFileMountXML(mountingXMLSecret, lutils.EncryptionKeyMountXMLFileName, mountDir)
 	}); err != nil {
 		return err
 	}

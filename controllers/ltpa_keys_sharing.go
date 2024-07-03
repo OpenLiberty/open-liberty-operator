@@ -41,14 +41,14 @@ func (r *ReconcileOpenLiberty) reconcileLTPAState(instance *olv1.OpenLibertyAppl
 	}
 
 	// get the versioned LTPA decision tree and LTPA metadata specific to the operator and instance being reconciled
-	_, ltpaMetadata, err := r.reconcileLTPAMetadata(instance, treeMap, latestOperandVersion)
+	ltpaMetadata, err := r.reconcileLTPAMetadata(instance, treeMap, latestOperandVersion)
 	if err != nil {
 		return nil, err
 	}
 	return ltpaMetadata, nil
 }
 
-func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, latestOperandVersion string) (map[string]interface{}, *lutils.LTPAMetadata, error) {
+func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, latestOperandVersion string) (*lutils.LTPAMetadata, error) {
 	metadata := &lutils.LTPAMetadata{}
 
 	var pathOptions, pathChoices []string
@@ -68,24 +68,22 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 	// convert the path options and choices into a labelKey such as "v1_4_0.managePasswordEncryption" and labelValue "<pathChoices[0]>"
 	labelString, err := tree.GetLabelFromDecisionPath(latestOperandVersion, pathOptions, pathChoices)
 	if err != nil {
-		return nil, metadata, err
+		return metadata, err
 	}
 	// validate that the decision path such as "v1_4_0.managePasswordEncryption:<pathChoices[0]>" is a valid subpath in treeMap
 	validSubPath, err := tree.CanTraverseTree(treeMap, labelString, true)
 	if err != nil {
-		return nil, metadata, err
+		return metadata, err
 	}
-	// It can traverse the tree so the operandVersionString must be an element of treeMap
-	versionTreeMap := treeMap[latestOperandVersion].(map[string]interface{})
 
 	// check Secrets to see if LTPA keys already exist, select by lutils.LTPAPathLabel
 	leaderTracker, err := r.getLTPALeaderTracker(instance)
 	if err != nil {
-		return versionTreeMap, metadata, err
+		return metadata, err
 	}
 	// prevent multiple LTPA keys from being created due to version changes
 	if leaderTracker.Labels[lutils.LTPAVersionLabel] != latestOperandVersion {
-		return versionTreeMap, metadata, fmt.Errorf("waiting for the LTPA leader tracker to be updated")
+		return metadata, fmt.Errorf("waiting for the LTPA leader tracker to be updated")
 	}
 
 	pathIndex := tree.GetLeafIndex(treeMap, validSubPath)
@@ -99,7 +97,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 	if loc != -1 {
 		suffix, _ := tree.GetCommaSeparatedString(leaderTracker.Data[lutils.ResourcesKey], loc)
 		metadata.NameSuffix = suffix
-		return versionTreeMap, metadata, nil
+		return metadata, nil
 	}
 
 	// if the env variable LTPA_RESOURCE_SUFFIXES is set, it can provide a comma separated string of length 5 suffixes to exhaust (can be used in test and production to provide predictability to LTPA Secret naming)
@@ -113,7 +111,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 		for _, suffix := range predeterminedSuffixesArray {
 			if len(suffix) == 5 && tree.IsLowerAlphanumericSuffix(suffix) && !strings.Contains(leaderTracker.Data[lutils.ResourcesKey], suffix) {
 				metadata.NameSuffix = "-" + suffix
-				return versionTreeMap, metadata, nil
+				return metadata, nil
 			}
 		}
 	}
@@ -124,7 +122,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 		randomSuffix = tree.GetRandomLowerAlphanumericSuffix(5)
 	}
 	metadata.NameSuffix = randomSuffix
-	return versionTreeMap, metadata, nil
+	return metadata, nil
 }
 
 func hasLTPAResourceSuffixesEnv(instance *olv1.OpenLibertyApplication) (string, bool) {
@@ -188,6 +186,12 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 	ltpaXMLSecret.Namespace = instance.GetNamespace()
 	ltpaXMLSecret.Labels = lutils.GetRequiredLabels(ltpaXMLSecretRootName, ltpaXMLSecret.Name)
 
+	ltpaXMLMountSecret := &corev1.Secret{}
+	ltpaXMLMountSecretRootName := OperatorShortName + lutils.LTPAServerXMLMountSuffix
+	ltpaXMLMountSecret.Name = ltpaXMLMountSecretRootName + ltpaMetadata.NameSuffix
+	ltpaXMLMountSecret.Namespace = instance.GetNamespace()
+	ltpaXMLMountSecret.Labels = lutils.GetRequiredLabels(ltpaXMLMountSecretRootName, ltpaXMLSecret.Name)
+
 	generateLTPAKeysJob := &v1.Job{}
 	generateLTPAKeysJobRootName := OperatorShortName + "-managed-ltpa-keys-generation"
 	generateLTPAKeysJob.Name = generateLTPAKeysJobRootName + ltpaMetadata.NameSuffix
@@ -231,6 +235,10 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 			if kerrors.IsNotFound(err) {
 				// Clear all LTPA-related resources from a prior reconcile
 				err = r.DeleteResource(ltpaXMLSecret)
+				if err != nil {
+					return "", err
+				}
+				err = r.DeleteResource(ltpaXMLMountSecret)
 				if err != nil {
 					return "", err
 				}
@@ -370,12 +378,32 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 		return ltpaSecret.Name, err
 	}
 
+	// The Secret to hold the server.xml that will import the LTPA keys into the Liberty server
+	// This server.xml will be mounted in /config/configDropins/overrides/ltpaKeysMount.xml
+	serverXMLMountSecretErr := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaXMLMountSecret.Name, Namespace: ltpaXMLMountSecret.Namespace}, ltpaXMLMountSecret)
+	if serverXMLMountSecretErr != nil {
+		if kerrors.IsNotFound(serverXMLMountSecretErr) {
+			if err := r.CreateOrUpdate(ltpaXMLMountSecret, nil, func() error {
+				mountDir := strings.Replace(lutils.SecureMountPath+"/"+lutils.LTPAKeysXMLFileName, "/output", "${server.output.dir}", 1)
+				return lutils.CustomizeLibertyFileMountXML(ltpaXMLMountSecret, lutils.LTPAKeysMountXMLFileName, mountDir)
+			}); err != nil {
+				return "", err
+			}
+		} else {
+			return "", serverXMLMountSecretErr
+		}
+	}
+
 	// Create the Liberty Server XML Secret if it doesn't exist
 	serverXMLSecretErr := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaXMLSecret.Name, Namespace: ltpaXMLSecret.Namespace}, ltpaXMLSecret)
-	if serverXMLSecretErr != nil && kerrors.IsNotFound(serverXMLSecretErr) {
-		r.CreateOrUpdate(ltpaXMLSecret, nil, func() error {
-			return lutils.CustomizeLTPAServerXML(ltpaXMLSecret, instance, string(ltpaSecret.Data["password"]))
-		})
+	if serverXMLSecretErr != nil {
+		if kerrors.IsNotFound(serverXMLSecretErr) {
+			r.CreateOrUpdate(ltpaXMLSecret, nil, func() error {
+				return lutils.CustomizeLTPAServerXML(ltpaXMLSecret, instance, string(ltpaSecret.Data["password"]))
+			})
+		} else {
+			return "", serverXMLSecretErr
+		}
 	}
 
 	// Validate whether or not password encryption settings match the way LTPA keys were created

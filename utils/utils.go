@@ -40,8 +40,10 @@ const OperandVersion = "1.3.2"
 // LTPA constants
 const managedLTPAMountPath = "/config/managedLTPA"
 const LTPAServerXMLSuffix = "-managed-ltpa-server-xml"
+const LTPAServerXMLMountSuffix = "-managed-ltpa-mount-server-xml"
 const LTPAKeysFileName = "ltpa.keys"
-const ltpaXMLFileName = "managedLTPA.xml"
+const LTPAKeysXMLFileName = "managedLTPA.xml"
+const LTPAKeysMountXMLFileName = "managedLTPAMount.xml"
 const LTPAPathIndexLabel = "openlibertyapplications.apps.openliberty.io/ltpa-path-index"
 const LTPAVersionLabel = "openlibertyapplications.apps.openliberty.io/ltpa-version"
 
@@ -578,11 +580,14 @@ func ConfigurePasswordEncryption(pts *corev1.PodTemplateSpec, la *olv1.OpenLiber
 
 // ConfigureLTPA setups the shared-storage for LTPA keys file generation
 func ConfigureLTPA(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string, ltpaSecretName string, ltpaSuffixName string) {
-	// Mount a volume /config/ltpa to store the ltpa.keys file
-	MountSecretAsVolume(pts, ltpaSecretName, CreateVolumeMount(managedLTPAMountPath, LTPAKeysFileName))
+	// Mount a volume /output/resources/liberty-operator/ltpa.keys to store the ltpa.keys file
+	MountSecretAsVolume(pts, ltpaSecretName, CreateVolumeMount(SecureMountPath, LTPAKeysFileName))
 
-	// Mount a volume /config/configDropins/overrides/ltpa.xml to store the Liberty Server XML
-	MountSecretAsVolume(pts, operatorShortName+LTPAServerXMLSuffix+ltpaSuffixName, CreateVolumeMount(overridesMountPath, ltpaXMLFileName))
+	// Mount a volume /output/resources/liberty-operator/managedLTPA.xml to store the Liberty Server XML
+	MountSecretAsVolume(pts, operatorShortName+LTPAServerXMLSuffix+ltpaSuffixName, CreateVolumeMount(SecureMountPath, LTPAKeysXMLFileName))
+
+	// Mount a volume /config/configDropins/overrides/managedLTPAMount.xml to import the managedLTPA.xml file
+	MountSecretAsVolume(pts, operatorShortName+LTPAServerXMLMountSuffix+ltpaSuffixName, CreateVolumeMount(overridesMountPath, LTPAKeysMountXMLFileName))
 }
 
 func MountSecretAsVolume(pts *corev1.PodTemplateSpec, secretName string, volumeMount corev1.VolumeMount) {
@@ -619,29 +624,29 @@ func CustomizeEncryptionKeyXML(managedEncryptionXMLSecret *corev1.Secret, encryp
 	return nil
 }
 
-func CustomizeEncryptionKeyMountXML(mountingPasswordKeySecret *corev1.Secret, fileLocation string) error {
-	if mountingPasswordKeySecret.StringData == nil {
-		mountingPasswordKeySecret.StringData = make(map[string]string)
-	}
-	serverXML, err := ioutil.ReadFile("controllers/assets/encryption-mount.xml")
-	if err != nil {
-		return err
-	}
-	severXMLString := strings.Replace(string(serverXML), "ENCRYPTION_LOCATION", fileLocation, 1)
-	mountingPasswordKeySecret.StringData[EncryptionKeyMountXMLFileName] = severXMLString
-	return nil
-}
-
 func CustomizeLTPAServerXML(xmlSecret *corev1.Secret, la *olv1.OpenLibertyApplication, encryptedPassword string) error {
 	xmlSecret.StringData = make(map[string]string)
-	managedLTPADir := strings.Replace(managedLTPAMountPath, "/config", "${server.config.dir}", 1)
+	managedLTPADir := strings.Replace(SecureMountPath, "/output", "${output.config.dir}", 1)
 	serverXML, err := ioutil.ReadFile("controllers/assets/ltpa.xml")
 	if err != nil {
 		return err
 	}
 	severXMLString := strings.Replace(string(serverXML), "LTPA_KEYS_FILE_NAME", managedLTPADir+"/"+LTPAKeysFileName, 1)
 	severXMLString = strings.Replace(severXMLString, "LTPA_KEYS_PASSWORD", encryptedPassword, 1)
-	xmlSecret.StringData[ltpaXMLFileName] = severXMLString
+	xmlSecret.StringData[LTPAKeysXMLFileName] = severXMLString
+	return nil
+}
+
+func CustomizeLibertyFileMountXML(mountingPasswordKeySecret *corev1.Secret, mountXMLFileName string, fileLocation string) error {
+	if mountingPasswordKeySecret.StringData == nil {
+		mountingPasswordKeySecret.StringData = make(map[string]string)
+	}
+	serverXML, err := ioutil.ReadFile("controllers/assets/mount.xml")
+	if err != nil {
+		return err
+	}
+	severXMLString := strings.Replace(string(serverXML), "MOUNT_LOCATION", fileLocation, 1)
+	mountingPasswordKeySecret.StringData[mountXMLFileName] = severXMLString
 	return nil
 }
 
