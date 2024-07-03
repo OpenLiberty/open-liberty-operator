@@ -642,7 +642,25 @@ func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(sa *corev1
 		if initialLeaderIndex < len(resourceOwners) {
 			candidateLeader := resourceOwners[initialLeaderIndex]
 			if len(candidateLeader) > 0 {
-				// return this other instance as the leader, it could also be this instance
+				// Return this other instance as the leader (the "other" instance could also be this instance)
+				// Before returning, if the candidate instance is not this instance, this instance must clean up its old owner references to avoid an resource owner cycle.
+				// A resource owner cycle can occur when instance A points to resource A and instance B points to resource B but then both instance A and B swap pointing to each other's resource.
+				if candidateLeader != instance.Name {
+					// create a new array of resource owners without any references to instance.Name
+					newResourceOwners := make([]string, len(resourceOwners))
+					for i, owner := range resourceOwners {
+						if owner == instance.Name { // if this instance was a previous leader, remove the reference
+							newResourceOwners[i] = ""
+						} else {
+							newResourceOwners[i] = owner
+						}
+					}
+					// save this new owner list
+					r.CreateOrUpdate(leaderTracker, nil, func() error {
+						leaderTracker.Data[lutils.ResourceOwnersKey] = strings.Join(newResourceOwners, ",")
+						return nil
+					})
+				}
 				return candidateLeader, candidateLeader == instance.Name, pathIndices[initialLeaderIndex], nil
 			} else {
 				if !createOrUpdateObject {
@@ -672,7 +690,10 @@ func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(sa *corev1
 		// else { // something went wrong, elem_len(LTPAResourceOwnersLabel) != elem_len(LTPAResourcesLabel) }
 	}
 	// else { // something went wrong, elem_len(LTPAResourcesLabel) != 0 }
-	// r.DeleteResource(obj)
+	// the leader tracking labels are out of sync, delete the leader tracker to allow the operator to recreate it in the correct format
+	if err := r.DeleteResource(leaderTracker); err != nil {
+		return "", false, "", err
+	}
 	return "", false, "", fmt.Errorf("leader tracking labels are out of sync")
 }
 
@@ -730,6 +751,6 @@ func (r *ReconcileOpenLiberty) getLTPAKeysSharingLeader(instance *olv1.OpenLiber
 		return "", false, ltpaServiceAccount.Name, "", err
 	}
 	// Service account is found, but a new owner could be added or one already exists
-	leaderName, thisInstanceIsLeader, secretRef, _ := r.CreateOrUpdateWithLeaderTrackingLabels(ltpaServiceAccount, instance, ltpaMetadata, createOrUpdateServiceAccount)
-	return leaderName, thisInstanceIsLeader, ltpaServiceAccount.Name, secretRef, nil
+	leaderName, thisInstanceIsLeader, secretRef, err := r.CreateOrUpdateWithLeaderTrackingLabels(ltpaServiceAccount, instance, ltpaMetadata, createOrUpdateServiceAccount)
+	return leaderName, thisInstanceIsLeader, ltpaServiceAccount.Name, secretRef, err
 }
