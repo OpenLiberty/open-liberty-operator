@@ -305,122 +305,85 @@ func TestGetLeafIndex(t *testing.T) {
 	// Test 1 generation - empty path
 	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-1-generation.yaml"
 	treeMap, _, _ := ParseLTPADecisionTree(&fileName)
-	leafIndex1a := GetLeafIndex(treeMap, "")
-	leafIndex1b := GetLeafIndex(treeMap, "v10_3_3.test")
+	tests := []Test{
+		{"get leaf index - 1 generation a", -1, GetLeafIndex(treeMap, "")},
+		{"get leaf index - 1 generation b", 0, GetLeafIndex(treeMap, "v10_3_3.test")},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
 
 	// Test 2 generations
 	fileName = getControllersFolder() + "/tests/ltpa-decision-tree-2-generations.yaml"
 	treeMap, _, _ = ParseLTPADecisionTree(&fileName)
-	// valid paths
-	leafIndex2 := GetLeafIndex(treeMap, "")
-	leafIndex2a := GetLeafIndex(treeMap, "v10_4_0.managePasswordEncryption.true")
-	leafIndex2b := GetLeafIndex(treeMap, "v10_4_0.managePasswordEncryption.false")
-	leafIndex2c := GetLeafIndex(treeMap, "v10_4_1.type.aes.managePasswordEncryption.true")
-	leafIndex2d := GetLeafIndex(treeMap, "v10_4_1.type.aes.managePasswordEncryption.false")
-	leafIndex2e := GetLeafIndex(treeMap, "v10_4_1.type.xor.type")
-	// invalid paths
-	leafIndex2f := GetLeafIndex(treeMap, "v10_4_0.managePasswordEncryption")
-	leafIndex2g := GetLeafIndex(treeMap, "v10_4_0.managePasswordEncryption.random")
-	leafIndex2h := GetLeafIndex(treeMap, "v10_4_1.type.aes.managePasswordEncryption")
-	leafIndex2i := GetLeafIndex(treeMap, "v10_4_1.type.aes.")
-	leafIndex2j := GetLeafIndex(treeMap, "v10_4_1.type.aes")
-	leafIndex2k := GetLeafIndex(treeMap, "v10_4_1.type")
-	leafIndex2l := GetLeafIndex(treeMap, "v10_4_1.type.aes.managePasswordEncryption.true.false")
-	// syntax errors, incorrect elements
-	leafIndex2m := GetLeafIndex(treeMap, "v10_4_1.type.aes.")
-	leafIndex2n := GetLeafIndex(treeMap, "v10_4_1.type.")
-	leafIndex2o := GetLeafIndex(treeMap, "v10_4_1.ty")
-
+	tests = []Test{
+		{"get leaf index - 2 generations", -1, GetLeafIndex(treeMap, "")},
+		// valid paths
+		{"get leaf index - 2 generations a", 0, GetLeafIndex(treeMap, "v10_4_0.managePasswordEncryption.true")},
+		{"get leaf index - 2 generations b", 1, GetLeafIndex(treeMap, "v10_4_0.managePasswordEncryption.false")},
+		{"get leaf index - 2 generations c", 0, GetLeafIndex(treeMap, "v10_4_1.type.aes.managePasswordEncryption.true")},
+		{"get leaf index - 2 generations d", 1, GetLeafIndex(treeMap, "v10_4_1.type.aes.managePasswordEncryption.false")},
+		{"get leaf index - 2 generations e", 2, GetLeafIndex(treeMap, "v10_4_1.type.xor.type")},
+		// invalid paths
+		{"get leaf index - 2 generations f", -1, GetLeafIndex(treeMap, "v10_4_0.managePasswordEncryption")},
+		{"get leaf index - 2 generations g", -1, GetLeafIndex(treeMap, "v10_4_0.managePasswordEncryption.random")},
+		{"get leaf index - 2 generations h", -1, GetLeafIndex(treeMap, "v10_4_1.type.aes.managePasswordEncryption")},
+		{"get leaf index - 2 generations i", -1, GetLeafIndex(treeMap, "v10_4_1.type.aes.managePasswordEncryption")},
+		{"get leaf index - 2 generations j", -1, GetLeafIndex(treeMap, "v10_4_1.type.aes")},
+		{"get leaf index - 2 generations k", -1, GetLeafIndex(treeMap, "v10_4_1.type")},
+		{"get leaf index - 2 generations l", -1, GetLeafIndex(treeMap, "v10_4_1.type.aes.managePasswordEncryption.true.false")},
+		// syntax errors, incorrect elements
+		{"get leaf index - 2 generations m", -1, GetLeafIndex(treeMap, "v10_4_1.type.aes.")},
+		{"get leaf index - 2 generations n", -1, GetLeafIndex(treeMap, "v10_4_1.type.")},
+		{"get leaf index - 2 generations o", -1, GetLeafIndex(treeMap, "v10_4_1.ty")},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
 	// Test 3 generations
 	fileName = getControllersFolder() + "/tests/ltpa-decision-tree-3-generations.yaml"
 	treeMap, _, _ = ParseLTPADecisionTree(&fileName)
-	leafIndex3 := GetLeafIndex(treeMap, "")
-	// valid paths
-	leafIndex3a := GetLeafIndex(treeMap, "v10_3_3.manageLTPA.true")
-	leafIndex3b := GetLeafIndex(treeMap, "v10_4_0.managePasswordEncryption.true")
-	leafIndex3c := GetLeafIndex(treeMap, "v10_4_0.managePasswordEncryption.false")
-	leafIndex3d := GetLeafIndex(treeMap, "v10_4_1.type.aes.managePasswordEncryption.true")
-	leafIndex3e := GetLeafIndex(treeMap, "v10_4_1.type.aes.managePasswordEncryption.false")
-	leafIndex3f := GetLeafIndex(treeMap, "v10_4_1.type.aes.managePasswordEncryption.test")
-	leafIndex3g := GetLeafIndex(treeMap, "v10_4_1.type.xor.type")
-	// invalid paths
-	leafIndex3h := GetLeafIndex(treeMap, "v10_4_1.type.xor.type.test")
-	leafIndex3i := GetLeafIndex(treeMap, "v10_4_1.type.aes")
-	leafIndex3j := GetLeafIndex(treeMap, "v10_4_1.type.aes.managePasswordEncryption.true.v10_3_3.manageLTPA.true")
-	leafIndex3k := GetLeafIndex(treeMap, "v10_4_1.v10_3_3.manageLTPA.true")
-	leafIndex3l := GetLeafIndex(treeMap, "v10_3_3.manageLTPA.true.v10_4_0")
-
+	tests = []Test{
+		{"get leaf index - 3 generations", -1, GetLeafIndex(treeMap, "")},
+		// valid paths
+		{"get leaf index - 3 generations a", 0, GetLeafIndex(treeMap, "v10_3_3.manageLTPA.true")},
+		{"get leaf index - 3 generations b", 0, GetLeafIndex(treeMap, "v10_4_0.managePasswordEncryption.true")},
+		{"get leaf index - 3 generations c", 1, GetLeafIndex(treeMap, "v10_4_0.managePasswordEncryption.false")},
+		{"get leaf index - 3 generations d", 0, GetLeafIndex(treeMap, "v10_4_1.type.aes.managePasswordEncryption.true")},
+		{"get leaf index - 3 generations e", 1, GetLeafIndex(treeMap, "v10_4_1.type.aes.managePasswordEncryption.false")},
+		{"get leaf index - 3 generations f", 2, GetLeafIndex(treeMap, "v10_4_1.type.aes.managePasswordEncryption.test")},
+		{"get leaf index - 3 generations g", 3, GetLeafIndex(treeMap, "v10_4_1.type.xor.type")},
+		// invalid paths
+		{"get leaf index - 3 generations h", -1, GetLeafIndex(treeMap, "v10_4_1.type.xor.type.test")},
+		{"get leaf index - 3 generations i", -1, GetLeafIndex(treeMap, "v10_4_1.type.aes")},
+		{"get leaf index - 3 generations j", -1, GetLeafIndex(treeMap, "v10_4_1.type.aes.managePasswordEncryption.true.v10_3_3.manageLTPA.true")},
+		{"get leaf index - 3 generations k", -1, GetLeafIndex(treeMap, "v10_4_1.v10_3_3.manageLTPA.true")},
+		{"get leaf index - 3 generations l", -1, GetLeafIndex(treeMap, "v10_3_3.manageLTPA.true.v10_4_0")},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
 	// Test complex
 	fileName = getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
 	treeMap, _, _ = ParseLTPADecisionTree(&fileName)
-	leafIndex4 := GetLeafIndex(treeMap, "")
-	// valid paths
-	leafIndex4a := GetLeafIndex(treeMap, "v10_3_3.a.b")
-	leafIndex4b := GetLeafIndex(treeMap, "v10_4_1.a.b.c.true")
-	leafIndex4c := GetLeafIndex(treeMap, "v10_4_1.a.b.d.true")
-	leafIndex4d := GetLeafIndex(treeMap, "v10_4_1.a.b.e.true")
-	leafIndex4e := GetLeafIndex(treeMap, "v10_4_1.a.b.e.false")
-	leafIndex4f := GetLeafIndex(treeMap, "v10_4_20.a.b.c.true")
-	leafIndex4g := GetLeafIndex(treeMap, "v10_4_20.a.b.d.false")
-	leafIndex4h := GetLeafIndex(treeMap, "v10_4_20.a.b.e.foo")
-	leafIndex4i := GetLeafIndex(treeMap, "v10_4_20.a.f.g.i.bar")
-	leafIndex4j := GetLeafIndex(treeMap, "v10_4_20.a.f.h.element")
-	leafIndex4k := GetLeafIndex(treeMap, "v10_4_500.a.b.b.true")
-	leafIndex4l := GetLeafIndex(treeMap, "v10_4_500.a.b.c.true")
-	leafIndex4m := GetLeafIndex(treeMap, "v10_4_500.a.b.d.false")
-	leafIndex4n := GetLeafIndex(treeMap, "v10_4_500.a.b.e.foo")
-	leafIndex4o := GetLeafIndex(treeMap, "v10_4_500.a.f.g.i.bar")
-	leafIndex4p := GetLeafIndex(treeMap, "v10_4_500.a.f.h.element")
-
-	tests := []Test{
-		{"get leaf index - 1 generation a", -1, leafIndex1a},
-		{"get leaf index - 1 generation b", 0, leafIndex1b},
-		{"get leaf index - 2 generations", -1, leafIndex2},
-		{"get leaf index - 2 generations a", 0, leafIndex2a},
-		{"get leaf index - 2 generations b", 1, leafIndex2b},
-		{"get leaf index - 2 generations c", 0, leafIndex2c},
-		{"get leaf index - 2 generations d", 1, leafIndex2d},
-		{"get leaf index - 2 generations e", 2, leafIndex2e},
-		{"get leaf index - 2 generations f", -1, leafIndex2f},
-		{"get leaf index - 2 generations g", -1, leafIndex2g},
-		{"get leaf index - 2 generations h", -1, leafIndex2h},
-		{"get leaf index - 2 generations i", -1, leafIndex2i},
-		{"get leaf index - 2 generations j", -1, leafIndex2j},
-		{"get leaf index - 2 generations k", -1, leafIndex2k},
-		{"get leaf index - 2 generations l", -1, leafIndex2l},
-		{"get leaf index - 2 generations m", -1, leafIndex2m},
-		{"get leaf index - 2 generations n", -1, leafIndex2n},
-		{"get leaf index - 2 generations o", -1, leafIndex2o},
-		{"get leaf index - 3 generations", -1, leafIndex3},
-		{"get leaf index - 3 generations a", 0, leafIndex3a},
-		{"get leaf index - 3 generations b", 0, leafIndex3b},
-		{"get leaf index - 3 generations c", 1, leafIndex3c},
-		{"get leaf index - 3 generations d", 0, leafIndex3d},
-		{"get leaf index - 3 generations e", 1, leafIndex3e},
-		{"get leaf index - 3 generations f", 2, leafIndex3f},
-		{"get leaf index - 3 generations g", 3, leafIndex3g},
-		{"get leaf index - 3 generations h", -1, leafIndex3h},
-		{"get leaf index - 3 generations i", -1, leafIndex3i},
-		{"get leaf index - 3 generations j", -1, leafIndex3j},
-		{"get leaf index - 3 generations k", -1, leafIndex3k},
-		{"get leaf index - 3 generations l", -1, leafIndex3l},
-		{"get leaf index - complex generations", -1, leafIndex4},
-		{"get leaf index - complex generations a", 0, leafIndex4a},
-		{"get leaf index - complex generations b", 0, leafIndex4b},
-		{"get leaf index - complex generations c", 1, leafIndex4c},
-		{"get leaf index - complex generations d", 2, leafIndex4d},
-		{"get leaf index - complex generations e", 3, leafIndex4e},
-		{"get leaf index - complex generations f", 0, leafIndex4f},
-		{"get leaf index - complex generations g", 1, leafIndex4g},
-		{"get leaf index - complex generations h", 2, leafIndex4h},
-		{"get leaf index - complex generations i", 3, leafIndex4i},
-		{"get leaf index - complex generations j", 4, leafIndex4j},
-		{"get leaf index - complex generations k", 0, leafIndex4k},
-		{"get leaf index - complex generations l", 1, leafIndex4l},
-		{"get leaf index - complex generations m", 2, leafIndex4m},
-		{"get leaf index - complex generations n", 3, leafIndex4n},
-		{"get leaf index - complex generations o", 4, leafIndex4o},
-		{"get leaf index - complex generations p", 5, leafIndex4p},
+	tests = []Test{
+		{"get leaf index - complex generations", -1, GetLeafIndex(treeMap, "")},
+		{"get leaf index - complex generations a", 0, GetLeafIndex(treeMap, "v10_3_3.a.b")},
+		{"get leaf index - complex generations b", 0, GetLeafIndex(treeMap, "v10_4_1.a.b.c.true")},
+		{"get leaf index - complex generations c", 1, GetLeafIndex(treeMap, "v10_4_1.a.b.d.true")},
+		{"get leaf index - complex generations d", 2, GetLeafIndex(treeMap, "v10_4_1.a.b.e.true")},
+		{"get leaf index - complex generations e", 3, GetLeafIndex(treeMap, "v10_4_1.a.b.e.false")},
+		{"get leaf index - complex generations f", 0, GetLeafIndex(treeMap, "v10_4_20.a.b.c.true")},
+		{"get leaf index - complex generations g", 1, GetLeafIndex(treeMap, "v10_4_20.a.b.d.false")},
+		{"get leaf index - complex generations h", 2, GetLeafIndex(treeMap, "v10_4_20.a.b.e.foo")},
+		{"get leaf index - complex generations i", 3, GetLeafIndex(treeMap, "v10_4_20.a.f.g.i.bar")},
+		{"get leaf index - complex generations j", 4, GetLeafIndex(treeMap, "v10_4_20.a.f.h.element")},
+		{"get leaf index - complex generations k", 0, GetLeafIndex(treeMap, "v10_4_500.a.b.b.true")},
+		{"get leaf index - complex generations l", 1, GetLeafIndex(treeMap, "v10_4_500.a.b.c.true")},
+		{"get leaf index - complex generations m", 2, GetLeafIndex(treeMap, "v10_4_500.a.b.d.false")},
+		{"get leaf index - complex generations n", 3, GetLeafIndex(treeMap, "v10_4_500.a.b.e.foo")},
+		{"get leaf index - complex generations o", 4, GetLeafIndex(treeMap, "v10_4_500.a.f.g.i.bar")},
+		{"get leaf index - complex generations p", 5, GetLeafIndex(treeMap, "v10_4_500.a.f.h.element")},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
