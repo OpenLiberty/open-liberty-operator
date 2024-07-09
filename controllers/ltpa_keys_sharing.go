@@ -638,6 +638,7 @@ func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(sa *corev1
 	if resourcesLabelFound && resourcesLabel != "" {
 		initialLeaderIndex = tree.CommaSeparatedStringContains(string(resourcesLabel), ltpaMetadata.NameSuffix)
 	}
+	resourceOwnersLabel, resourceOwnersLabelFound := leaderTracker.Data[lutils.ResourceOwnersKey]
 	// if ltpaNameSuffix does not exist in resources labels or resource labels don't exist so this instance is leader
 	if initialLeaderIndex == -1 {
 		if !createOrUpdateObject {
@@ -646,9 +647,25 @@ func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(sa *corev1
 		if err := r.CreateOrUpdate(leaderTracker, nil, func() error {
 			if resourcesLabelFound && resourcesLabel != "" {
 				leaderTracker.Data[lutils.ResourcesKey] += "," + ltpaMetadata.NameSuffix
-				leaderTracker.Data[lutils.ResourceOwnersKey] += "," + instance.Name
 				leaderTracker.Data[lutils.ResourcePathsKey] += "," + ltpaMetadata.Path
 				leaderTracker.Data[lutils.ResourcePathIndicesKey] += "," + ltpaMetadata.PathIndex
+				if resourceOwnersLabelFound {
+					resourceOwners := strings.Split(resourceOwnersLabel, ",")
+					n := len(resourceOwners)
+					newResourceOwners := make([]string, n+1)
+					for i, owner := range resourceOwners {
+						if owner == instance.Name { // if this instance was a previous leader, remove the reference
+							newResourceOwners[i] = ""
+						} else {
+							newResourceOwners[i] = owner
+						}
+					}
+					newResourceOwners[n] = instance.Name // Track this instance as leader
+					leaderTracker.Data[lutils.ResourceOwnersKey] = strings.Join(newResourceOwners, ",")
+				} else {
+					// something went wrong
+					return fmt.Errorf("something went wrong, elem_len(LTPAResourceOwnersLabel) != elem_len(LTPAResourcesLabel)")
+				}
 			} else {
 				leaderTracker.Data[lutils.ResourcesKey] = ltpaMetadata.NameSuffix
 				leaderTracker.Data[lutils.ResourceOwnersKey] = instance.Name
@@ -657,13 +674,15 @@ func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(sa *corev1
 			}
 			return nil
 		}); err != nil {
+			if deleteErr := r.DeleteResource(leaderTracker); deleteErr != nil {
+				return "", false, "", deleteErr
+			}
 			return "", false, "", err
 		}
 		return instance.Name, true, ltpaMetadata.PathIndex, nil
 	}
 	// otherwise, ltpaNameSuffix is being tracked
 	// if the leader of ltpaNameSuffix is non empty return that leader
-	resourceOwnersLabel, resourceOwnersLabelFound := leaderTracker.Data[lutils.ResourceOwnersKey]
 	if resourceOwnersLabelFound {
 		resourceOwners := strings.Split(resourceOwnersLabel, ",")
 		pathIndices := strings.Split(leaderTracker.Data[lutils.ResourcePathIndicesKey], ",")
