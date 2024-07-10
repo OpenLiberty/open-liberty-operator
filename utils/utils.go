@@ -124,10 +124,6 @@ func Validate(olapp *olv1.OpenLibertyApplication) (bool, error) {
 	return true, nil
 }
 
-func requiredFieldMessage(fieldPaths ...string) string {
-	return "must set the field(s): " + strings.Join(fieldPaths, ",")
-}
-
 // ExecuteCommandInContainer Execute command inside a container in a pod through API
 func ExecuteCommandInContainer(config *rest.Config, podName, podNamespace, containerName string, command []string) (string, error) {
 
