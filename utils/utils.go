@@ -81,6 +81,32 @@ type LTPAConfig struct {
 	EncryptionKeySharingEnabled bool // true or false
 }
 
+type LeaderTracker struct {
+	Name      string
+	Owner     string
+	PathIndex string
+	Path      string
+}
+
+func RemoveLeaderTracker(leaderTracker *[]LeaderTracker, i int) {
+	if leaderTracker == nil {
+		return
+	}
+	if i >= len(*leaderTracker) {
+		return
+	}
+	*leaderTracker = append((*leaderTracker)[:i], (*leaderTracker)[i+1:]...)
+}
+
+func (tracker *LeaderTracker) ClearOwnerIfMatching(owner string) {
+	if tracker == nil {
+		return
+	}
+	if tracker.Owner == owner {
+		tracker.Owner = ""
+	}
+}
+
 // Validate if the OpenLibertyApplication is valid
 func Validate(olapp *olv1.OpenLibertyApplication) (bool, error) {
 	// Serviceability validation

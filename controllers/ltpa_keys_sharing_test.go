@@ -102,7 +102,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	r := createReconcilerFromOpenLibertyApp(instance)
 
 	// First, get the LTPA leader tracker which is not initialized
-	configMap, err := r.getLTPALeaderTracker(instance)
+	configMap, _, err := r.getLTPALeaderTracker(instance)
 
 	emptyConfigMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -142,7 +142,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	configMap, err = r.getLTPALeaderTracker(instance)
+	configMap, _, err = r.getLTPALeaderTracker(instance)
 	expectedConfigMapData := map[string]string{}
 	expectedConfigMapData[lutils.ResourcesKey] = ""
 	expectedConfigMapData[lutils.ResourceOwnersKey] = ""
@@ -205,7 +205,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	}
 
 	// Fourth, check that the leader tracker received the new LTPA state
-	configMap, err = r.getLTPALeaderTracker(instance)
+	configMap, _, err = r.getLTPALeaderTracker(instance)
 	expectedConfigMapData = map[string]string{
 		lutils.ResourcesKey:           "-ab215",
 		lutils.ResourceOwnersKey:      name,
@@ -236,7 +236,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	}
 
 	// Lastly, check that the LTPA leader tracker was updated
-	configMap, err = r.getLTPALeaderTracker(instance)
+	configMap, _, err = r.getLTPALeaderTracker(instance)
 	expectedConfigMapData = map[string]string{
 		lutils.ResourcesKey:           "-ab215",
 		lutils.ResourceOwnersKey:      "", // The owner reference was removed
@@ -320,7 +320,7 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 	}
 
 	// Lastly, check that the LTPA leader tracker processes the two LTPA Secrets created
-	configMap, err := r.getLTPALeaderTracker(instance)
+	configMap, _, err := r.getLTPALeaderTracker(instance)
 	expectedConfigMapData := map[string]string{
 		lutils.ResourcesKey:           "-b12g1,-bazc1",
 		lutils.ResourceOwnersKey:      ",", // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
@@ -397,7 +397,7 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T
 	}
 
 	// Lastly, check that the LTPA leader tracker upgraded the two LTPA Secrets created
-	configMap, err := r.getLTPALeaderTracker(instance)
+	configMap, _, err := r.getLTPALeaderTracker(instance)
 	expectedConfigMapData := map[string]string{
 		lutils.ResourcesKey:           "-b12g1,-bazc1",
 		lutils.ResourceOwnersKey:      ",",                                       // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
@@ -486,7 +486,7 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndD
 	}
 
 	// Thirdly, check that the LTPA leader tracker upgraded the two LTPA Secrets created
-	configMap, err := r.getLTPALeaderTracker(instance)
+	configMap, _, err := r.getLTPALeaderTracker(instance)
 	expectedConfigMapData := map[string]string{
 		lutils.ResourcesKey:           "-b12g1,-bazc1,-ccccc",
 		lutils.ResourceOwnersKey:      ",,",                                                        // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
@@ -515,7 +515,7 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndD
 
 	r.initializeLTPALeaderTracker(instance, treeMap, replaceMap, latestOperandVersion)
 
-	configMap, err = r.getLTPALeaderTracker(instance)
+	configMap, _, err = r.getLTPALeaderTracker(instance)
 	expectedConfigMapData = map[string]string{
 		lutils.ResourcesKey:           "-b12g1,-bazc1,-ccccc",
 		lutils.ResourceOwnersKey:      ",,",                                             // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
