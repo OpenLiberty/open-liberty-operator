@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	tree "github.com/OpenLiberty/open-liberty-operator/tree"
@@ -524,6 +525,7 @@ func (r *ReconcileOpenLiberty) CustomizeLTPALeaderTracker(leaderTracker *corev1.
 	leaderTracker.Data[lutils.ResourceOwnersKey] = ""
 	leaderTracker.Data[lutils.ResourcePathsKey] = ""
 	leaderTracker.Data[lutils.ResourcePathIndicesKey] = ""
+	leaderTracker.Data[lutils.ResourceSubleasesKey] = ""
 	leaderTracker.ResourceVersion = ""
 
 	// initialize the leader tracker from existing LTPA Secrets
@@ -625,8 +627,9 @@ func (r *ReconcileOpenLiberty) getLTPALeaderTracker(instance *olv1.OpenLibertyAp
 	names, namesFound := leaderTracker.Data[lutils.ResourcesKey]
 	pathIndices, pathIndicesFound := leaderTracker.Data[lutils.ResourcePathIndicesKey]
 	paths, pathsFound := leaderTracker.Data[lutils.ResourcePathsKey]
+	subleases, subleasesFound := leaderTracker.Data[lutils.ResourceSubleasesKey]
 	// if flags are out of sync, delete the leader tracker
-	if ownersFound != namesFound || pathIndicesFound != pathsFound || namesFound != pathIndicesFound {
+	if ownersFound != namesFound || pathIndicesFound != pathsFound || namesFound != pathIndicesFound || pathIndicesFound != subleasesFound {
 		if err := r.DeleteResource(leaderTracker); err != nil {
 			return nil, nil, err
 		}
@@ -639,12 +642,14 @@ func (r *ReconcileOpenLiberty) getLTPALeaderTracker(instance *olv1.OpenLibertyAp
 	namesList := tree.GetCommaSeparatedArray(names)
 	pathIndicesList := tree.GetCommaSeparatedArray(pathIndices)
 	pathsList := tree.GetCommaSeparatedArray(paths)
+	subleasesList := tree.GetCommaSeparatedArray(subleases)
 	numOwners := len(ownersList)
 	numNames := len(namesList)
 	numPathIndices := len(pathIndicesList)
 	numPaths := len(pathsList)
+	numSubleases := len(subleasesList)
 	// check for array length equivalence
-	if numOwners != numNames || numNames != numPathIndices || numPathIndices != numPaths {
+	if numOwners != numNames || numNames != numPathIndices || numPathIndices != numPaths || numPaths != numSubleases {
 		if err := r.DeleteResource(leaderTracker); err != nil {
 			return nil, nil, err
 		}
@@ -657,6 +662,7 @@ func (r *ReconcileOpenLiberty) getLTPALeaderTracker(instance *olv1.OpenLibertyAp
 			Name:      string(namesList[i]),
 			PathIndex: string(pathIndicesList[i]),
 			Path:      string(pathsList[i]),
+			Sublease:  string(subleasesList[i]),
 		})
 	}
 	return leaderTracker, &leaderTrackers, nil
@@ -670,29 +676,33 @@ func (r *ReconcileOpenLiberty) SaveLTPALeaderTracker(leaderTracker *corev1.Confi
 			leaderTracker.Data[lutils.ResourcesKey] = ""
 			leaderTracker.Data[lutils.ResourcePathIndicesKey] = ""
 			leaderTracker.Data[lutils.ResourcePathsKey] = ""
+			leaderTracker.Data[lutils.ResourceSubleasesKey] = ""
 			return nil
 		})
 	}
 	return r.CreateOrUpdate(leaderTracker, nil, func() error {
 		leaderTracker.Data = make(map[string]string)
-		owners, names, pathIndices, paths := "", "", "", ""
+		owners, names, pathIndices, paths, subleases := "", "", "", "", ""
 		n := len(*trackerList)
 		for i, tracker := range *trackerList {
 			owners += tracker.Owner
 			names += tracker.Name
 			pathIndices += tracker.PathIndex
 			paths += tracker.Path
+			subleases += tracker.Sublease
 			if i < n-1 {
 				owners += ","
 				names += ","
 				pathIndices += ","
 				paths += ","
+				subleases += ","
 			}
 		}
 		leaderTracker.Data[lutils.ResourceOwnersKey] = owners
 		leaderTracker.Data[lutils.ResourcesKey] = names
 		leaderTracker.Data[lutils.ResourcePathIndicesKey] = pathIndices
 		leaderTracker.Data[lutils.ResourcePathsKey] = paths
+		leaderTracker.Data[lutils.ResourceSubleasesKey] = subleases
 		return nil
 	})
 }
@@ -733,6 +743,7 @@ func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(sa *corev1
 				Owner:     instance.Name,
 				PathIndex: ltpaMetadata.PathIndex,
 				Path:      ltpaMetadata.Path,
+				Sublease:  fmt.Sprint(time.Now().Unix()),
 			}
 			// append it to the list of leaders
 			*leaderTrackers = append(*leaderTrackers, newLeader)
@@ -744,23 +755,34 @@ func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(sa *corev1
 		return instance.Name, true, ltpaMetadata.PathIndex, nil
 	}
 	// otherwise, ltpaNameSuffix is being tracked
-	// if the leader of ltpaNameSuffix is non empty return that leader
+	// if the leader of ltpaNameSuffix is non empty decide whether or not to return the resource owner
 	candidateLeader := (*leaderTrackers)[initialLeaderIndex].Owner
 	if len(candidateLeader) > 0 {
 		// Return this other instance as the leader (the "other" instance could also be this instance)
 		// Before returning, if the candidate instance is not this instance, this instance must clean up its old owner references to avoid an resource owner cycle.
 		// A resource owner cycle can occur when instance A points to resource A and instance B points to resource B but then both instance A and B swap pointing to each other's resource.
 		if candidateLeader != instance.Name {
-			// clear instance.Name from ownership of any prior resources
+			// clear instance.Name from ownership of any prior resources and evict the owner if it has expired
 			for i := range *leaderTrackers {
 				(*leaderTrackers)[i].ClearOwnerIfMatching(instance.Name)
+				(*leaderTrackers)[i].EvictOwnerIfSubleaseHasExpired()
 			}
-			// save this new owner list
-			if err := r.SaveLTPALeaderTracker(leaderTracker, leaderTrackers); err != nil {
-				return "", false, "", err
-			}
+		} else {
+			// candidate is this instance, so renew the sublease
+			(*leaderTrackers)[initialLeaderIndex].RenewSublease()
 		}
-		return candidateLeader, candidateLeader == instance.Name, (*leaderTrackers)[initialLeaderIndex].PathIndex, nil
+
+		// If the old owner has been evicted, use this instance as the new owner
+		currentOwner := (*leaderTrackers)[initialLeaderIndex].Owner
+		if currentOwner == "" {
+			currentOwner = instance.Name
+			(*leaderTrackers)[initialLeaderIndex].SetOwner(currentOwner)
+		}
+		// save this new owner list
+		if err := r.SaveLTPALeaderTracker(leaderTracker, leaderTrackers); err != nil {
+			return "", false, "", err
+		}
+		return currentOwner, currentOwner == instance.Name, (*leaderTrackers)[initialLeaderIndex].PathIndex, nil
 	}
 	if !createOrUpdateObject {
 		return "", false, "", nil
@@ -769,8 +791,8 @@ func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(sa *corev1
 	pathIndex := ""
 	for i := range *leaderTrackers {
 		if i == initialLeaderIndex {
-			(*leaderTrackers)[i].Owner = instance.Name
 			pathIndex = (*leaderTrackers)[i].PathIndex
+			(*leaderTrackers)[i].SetOwner(instance.Name)
 		} else {
 			(*leaderTrackers)[i].ClearOwnerIfMatching(instance.Name)
 		}

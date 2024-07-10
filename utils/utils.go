@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	rcoutils "github.com/application-stacks/runtime-component-operator/utils"
@@ -52,6 +53,7 @@ const ResourcesKey = "names"
 const ResourceOwnersKey = "owners"
 const ResourcePathsKey = "paths"
 const ResourcePathIndicesKey = "pathIndices"
+const ResourceSubleasesKey = "subleases"
 
 // Mount constants
 const SecureMountPath = "/output/resources/liberty-operator"
@@ -86,6 +88,7 @@ type LeaderTracker struct {
 	Owner     string
 	PathIndex string
 	Path      string
+	Sublease  string
 }
 
 func RemoveLeaderTracker(leaderTracker *[]LeaderTracker, i int) {
@@ -98,13 +101,58 @@ func RemoveLeaderTracker(leaderTracker *[]LeaderTracker, i int) {
 	*leaderTracker = append((*leaderTracker)[:i], (*leaderTracker)[i+1:]...)
 }
 
-func (tracker *LeaderTracker) ClearOwnerIfMatching(owner string) {
+func (tracker *LeaderTracker) RenewSublease() {
 	if tracker == nil {
 		return
 	}
-	if tracker.Owner == owner {
+	tracker.Sublease = fmt.Sprint(time.Now().Unix())
+}
+
+func (tracker *LeaderTracker) SetOwner(instance string) {
+	if tracker == nil {
+		return
+	}
+	tracker.Owner = instance
+	tracker.RenewSublease()
+}
+
+func (tracker *LeaderTracker) ClearOwnerIfMatching(instance string) {
+	if tracker == nil {
+		return
+	}
+	if tracker.Owner == instance {
 		tracker.Owner = ""
 	}
+}
+
+// Removes the Owner and Sublease attribute from LeaderTracker to indicate the resource is no longer being tracked
+func (tracker *LeaderTracker) EvictOwner() {
+	if tracker == nil {
+		return
+	}
+	tracker.Owner = ""
+	tracker.Sublease = ""
+}
+
+func (tracker *LeaderTracker) EvictOwnerIfSubleaseHasExpired() {
+	if tracker == nil {
+		return
+	}
+	// Evict if the sublease could not be parsed
+	then, err := strconv.ParseInt(tracker.Sublease, 10, 64)
+	if err != nil {
+		tracker.EvictOwner()
+		return
+	}
+	// Evict if the sublease has surpassed the renew time
+	now := time.Now().Unix()
+	if now-then > 20 {
+		tracker.EvictOwner()
+	}
+}
+
+func PatchConfigMap(mapName string) {
+
 }
 
 // Validate if the OpenLibertyApplication is valid
