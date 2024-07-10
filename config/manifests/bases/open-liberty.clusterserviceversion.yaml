@@ -358,6 +358,12 @@ spec:
         path: securityContext
       - displayName: Topology Spread Constraints
         path: topologySpreadConstraints
+      - description: Disable information about services being injected into the application
+          pod's environment variables. Default to false.
+        displayName: Disable Service Links
+        path: disableServiceLinks
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Labels to set on ServiceMonitor.
         displayName: Monitoring Labels
         path: monitoring.labels
