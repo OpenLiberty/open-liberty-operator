@@ -441,7 +441,7 @@ func (r *ReconcileOpenLiberty) isLTPAKeySharingEnabled(instance *olv1.OpenLibert
 
 // Deletes resources used to create the LTPA keys file
 func (r *ReconcileOpenLiberty) deleteLTPAKeysResources(instance *olv1.OpenLibertyApplication) error {
-	leaderTracker, _, err := r.getLTPALeaderTracker(instance)
+	leaderTracker, leaderTrackers, err := r.getLTPALeaderTracker(instance)
 	if err != nil {
 		// when not found, assume there is nothing to delete because no LTPA secrets are being tracked
 		if kerrors.IsNotFound(err) {
@@ -449,50 +449,39 @@ func (r *ReconcileOpenLiberty) deleteLTPAKeysResources(instance *olv1.OpenLibert
 		}
 		return err
 	}
-	resourceOwners, found := leaderTracker.Data[lutils.ResourceOwnersKey]
-	if !found {
-		return fmt.Errorf("could not get LTPA leader tracker state (%s) for deletion", lutils.ResourceOwnersKey)
-	}
-	if i := tree.CommaSeparatedStringContains(resourceOwners, instance.Name); i != -1 {
-		resourceNames, found := leaderTracker.Data[lutils.ResourcesKey]
-		if !found {
-			return fmt.Errorf("could not get LTPA leader tracker state (%s) for deletion", lutils.ResourcesKey)
-		}
-		ownerNameSuffix, err := tree.GetCommaSeparatedString(resourceNames, i)
-		if err != nil {
-			return err
-		}
+	for _, tracker := range *leaderTrackers {
+		if tracker.Owner == instance.Name {
+			generateLTPAKeysJob := &v1.Job{}
+			generateLTPAKeysJob.Name = OperatorShortName + "-managed-ltpa-keys-generation" + tracker.Name
+			generateLTPAKeysJob.Namespace = instance.GetNamespace()
+			deletePropagationBackground := metav1.DeletePropagationBackground
+			err = r.GetClient().Delete(context.TODO(), generateLTPAKeysJob, &client.DeleteOptions{PropagationPolicy: &deletePropagationBackground})
+			if err != nil && !kerrors.IsNotFound(err) {
+				return err
+			}
 
-		generateLTPAKeysJob := &v1.Job{}
-		generateLTPAKeysJob.Name = OperatorShortName + "-managed-ltpa-keys-generation" + ownerNameSuffix
-		generateLTPAKeysJob.Namespace = instance.GetNamespace()
-		deletePropagationBackground := metav1.DeletePropagationBackground
-		err = r.GetClient().Delete(context.TODO(), generateLTPAKeysJob, &client.DeleteOptions{PropagationPolicy: &deletePropagationBackground})
-		if err != nil && !kerrors.IsNotFound(err) {
-			return err
-		}
+			ltpaKeysCreationScriptConfigMap := &corev1.ConfigMap{}
+			ltpaKeysCreationScriptConfigMap.Name = OperatorShortName + "-managed-ltpa-script" + tracker.Name
+			ltpaKeysCreationScriptConfigMap.Namespace = instance.GetNamespace()
+			err = r.DeleteResource(ltpaKeysCreationScriptConfigMap)
+			if err != nil {
+				return err
+			}
 
-		ltpaKeysCreationScriptConfigMap := &corev1.ConfigMap{}
-		ltpaKeysCreationScriptConfigMap.Name = OperatorShortName + "-managed-ltpa-script" + ownerNameSuffix
-		ltpaKeysCreationScriptConfigMap.Namespace = instance.GetNamespace()
-		err = r.DeleteResource(ltpaKeysCreationScriptConfigMap)
-		if err != nil {
-			return err
-		}
-
-		ltpaJobRequest := &corev1.ConfigMap{}
-		ltpaJobRequest.Name = OperatorShortName + "-managed-ltpa-job-request" + ownerNameSuffix
-		ltpaJobRequest.Namespace = instance.GetNamespace()
-		err = r.DeleteResource(ltpaJobRequest)
-		if err != nil {
-			return err
+			ltpaJobRequest := &corev1.ConfigMap{}
+			ltpaJobRequest.Name = OperatorShortName + "-managed-ltpa-job-request" + tracker.Name
+			ltpaJobRequest.Namespace = instance.GetNamespace()
+			err = r.DeleteResource(ltpaJobRequest)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	ltpaServiceAccount := &corev1.ServiceAccount{}
 	ltpaServiceAccount.Name = OperatorShortName + "-ltpa"
 	ltpaServiceAccount.Namespace = instance.GetNamespace()
-	hasNoOwners, err := r.DeleteResourceWithLeaderTrackingLabels(ltpaServiceAccount, instance)
+	hasNoOwners, err := r.DeleteResourceWithLeaderTrackingLabels(ltpaServiceAccount, instance, leaderTracker, leaderTrackers)
 	if err != nil {
 		return err
 	}
@@ -695,9 +684,8 @@ func (r *ReconcileOpenLiberty) SaveLTPALeaderTracker(leaderTracker *corev1.Confi
 }
 
 // Create or update the LTPA service account and track the LTPA state
-func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(sa *corev1.ServiceAccount, instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata, createOrUpdateObject bool) (string, bool, string, error) {
-	// Create the ServiceAccount
-	if createOrUpdateObject {
+func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(sa *corev1.ServiceAccount, instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata, createOrUpdateServiceAccount bool) (string, bool, string, error) {
+	if createOrUpdateServiceAccount {
 		r.CreateOrUpdate(sa, instance, func() error {
 			return nil
 		})
@@ -716,27 +704,25 @@ func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(sa *corev1
 	}
 	// if ltpaNameSuffix does not exist in resources labels or resource labels don't exist so this instance is leader
 	if initialLeaderIndex == -1 {
-		if !createOrUpdateObject {
+		if !createOrUpdateServiceAccount {
 			return "", false, "", nil
 		}
-		if err := r.CreateOrUpdate(leaderTracker, nil, func() error {
-			// clear instance.Name from ownership of any prior resources
-			for i := range *leaderTrackers {
-				(*leaderTrackers)[i].ClearOwnerIfMatching(instance.Name)
-			}
-			// make instance.Name the new leader
-			newLeader := lutils.LeaderTracker{
-				Name:      ltpaMetadata.NameSuffix,
-				Owner:     instance.Name,
-				PathIndex: ltpaMetadata.PathIndex,
-				Path:      ltpaMetadata.Path,
-				Sublease:  fmt.Sprint(time.Now().Unix()),
-			}
-			// append it to the list of leaders
-			*leaderTrackers = append(*leaderTrackers, newLeader)
-			// save the tracker state
-			return r.SaveLTPALeaderTracker(leaderTracker, leaderTrackers)
-		}); err != nil {
+		// clear instance.Name from ownership of any prior resources
+		for i := range *leaderTrackers {
+			(*leaderTrackers)[i].ClearOwnerIfMatching(instance.Name)
+		}
+		// make instance.Name the new leader
+		newLeader := lutils.LeaderTracker{
+			Name:      ltpaMetadata.NameSuffix,
+			Owner:     instance.Name,
+			PathIndex: ltpaMetadata.PathIndex,
+			Path:      ltpaMetadata.Path,
+			Sublease:  fmt.Sprint(time.Now().Unix()),
+		}
+		// append it to the list of leaders
+		*leaderTrackers = append(*leaderTrackers, newLeader)
+		// save the tracker state
+		if err := r.SaveLTPALeaderTracker(leaderTracker, leaderTrackers); err != nil {
 			return "", false, "", err
 		}
 		return instance.Name, true, ltpaMetadata.PathIndex, nil
@@ -771,7 +757,7 @@ func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(sa *corev1
 		}
 		return currentOwner, currentOwner == instance.Name, (*leaderTrackers)[initialLeaderIndex].PathIndex, nil
 	}
-	if !createOrUpdateObject {
+	if !createOrUpdateServiceAccount {
 		return "", false, "", nil
 	}
 	// there is either no leader (empty string) or the leader was deleted so now this instance is leader
@@ -793,23 +779,19 @@ func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(sa *corev1
 
 // Removes the instance owner reference and references in leader tracking labels
 // Precondition: instance must be the resource leader
-func (r *ReconcileOpenLiberty) DeleteResourceWithLeaderTrackingLabels(sa *corev1.ServiceAccount, instance *olv1.OpenLibertyApplication) (bool, error) {
-	leaderTracker, leaderTrackers, err := r.getLTPALeaderTracker(instance)
-	if err != nil {
-		return false, err
-	}
+func (r *ReconcileOpenLiberty) DeleteResourceWithLeaderTrackingLabels(sa *corev1.ServiceAccount, instance *olv1.OpenLibertyApplication, leaderTracker *corev1.ConfigMap, leaderTrackers *[]lutils.LeaderTracker) (bool, error) {
+	var err error
+	err = nil
 	hasNoOwners := true
-	if err := r.CreateOrUpdate(leaderTracker, nil, func() error {
-		// If the instance is being tracked, remove it
-		for i := range *leaderTrackers {
-			(*leaderTrackers)[i].ClearOwnerIfMatching(instance.Name)
-			if len((*leaderTrackers)[i].Owner) > 0 {
-				hasNoOwners = false
-			}
+	// If the instance is being tracked, remove it
+	for i := range *leaderTrackers {
+		(*leaderTrackers)[i].ClearOwnerIfMatching(instance.Name)
+		if len((*leaderTrackers)[i].Owner) > 0 {
+			hasNoOwners = false
 		}
-		// save this new owner list
-		return r.SaveLTPALeaderTracker(leaderTracker, leaderTrackers)
-	}); err != nil {
+	}
+	// save this new owner list
+	if err := r.SaveLTPALeaderTracker(leaderTracker, leaderTrackers); err != nil {
 		return hasNoOwners, err
 	}
 	if hasNoOwners {

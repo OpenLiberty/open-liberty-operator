@@ -210,7 +210,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	}
 
 	// Fourth, check that the leader tracker received the new LTPA state
-	configMap, _, err = r.getLTPALeaderTracker(instance)
+	configMap, leaderTrackers, err := r.getLTPALeaderTracker(instance)
 	expectedConfigMapData = map[string]string{
 		lutils.ResourcesKey:           "-ab215",
 		lutils.ResourceOwnersKey:      name,
@@ -230,7 +230,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 
 	// Fourthly, remove the LTPA leader
 	err1 = r.deleteLTPAKeysResources(instance)
-	hasNoOwners, err2 := r.DeleteResourceWithLeaderTrackingLabels(complexServiceAccount, instance)
+	hasNoOwners, err2 := r.DeleteResourceWithLeaderTrackingLabels(complexServiceAccount, instance, configMap, leaderTrackers)
 	tests = []Test{
 		{"remove LTPA - deleteLTPAKeysResource errors", nil, err1},
 		{"remove LTPA - DeleteResourceWithLeaderTrackingLabels errors", nil, err2},
