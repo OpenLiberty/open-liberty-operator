@@ -517,15 +517,9 @@ func (r *ReconcileOpenLiberty) deleteLTPAKeysResources(instance *olv1.OpenLibert
 	return nil
 }
 
-func (r *ReconcileOpenLiberty) CustomizeLTPALeaderTracker(leaderTracker *corev1.ConfigMap, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string) error {
+func (r *ReconcileOpenLiberty) CreateLTPALeaderTracker(leaderTracker *corev1.ConfigMap, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string) error {
 	// create the ConfigMap
 	leaderTracker.Labels[lutils.LTPAVersionLabel] = latestOperandVersion
-	leaderTracker.Data = make(map[string]string)
-	leaderTracker.Data[lutils.ResourcesKey] = ""
-	leaderTracker.Data[lutils.ResourceOwnersKey] = ""
-	leaderTracker.Data[lutils.ResourcePathsKey] = ""
-	leaderTracker.Data[lutils.ResourcePathIndicesKey] = ""
-	leaderTracker.Data[lutils.ResourceSubleasesKey] = ""
 	leaderTracker.ResourceVersion = ""
 
 	// initialize the leader tracker from existing LTPA Secrets
@@ -537,65 +531,58 @@ func (r *ReconcileOpenLiberty) CustomizeLTPALeaderTracker(leaderTracker *corev1.
 		return err
 	}
 	// only track LTPA Secrets with path indices
-	n := 0
-	for _, secret := range ltpaSecrets.Items {
-		if _, found := secret.Labels[lutils.LTPAPathIndexLabel]; found {
-			n += 1
-		}
-	}
-	if n > 0 {
-		resources := make([]string, n)
-		resourceOwners := make([]string, n)
-		resourcePaths := make([]string, n)
-		resourcePathIndices := make([]string, n)
-		k := 0
-		for i, secret := range ltpaSecrets.Items {
-			if val, found := secret.Labels[lutils.LTPAPathIndexLabel]; found {
-				resourcePathIndices[k] = val
-				// TODO: assert val contains a "." or skip this element
-				labelVersionArray := strings.Split(val, ".")
-				// TODO: assert labelVersionArray is 2 elements, or skip this element
-				intVal, _ := strconv.ParseInt(labelVersionArray[1], 10, 64)
-				path, pathErr := tree.GetPathFromLeafIndex(treeMap, labelVersionArray[0], int(intVal))
-				// If path comes from a different operand version, the path needs to be upgraded/downgraded to the latestOperandVersion
-				if labelVersionArray[0] != latestOperandVersion {
-					// If user error has occurred, based on whether or not a dev deleted the decision tree structure of an older version
-					// we must allow this process to error so that a deleted (older) revision of the decision tree that may be missing
-					// won't halt the operator when ReplacePath does a validation check
-					if path, err := tree.ReplacePath(path, latestOperandVersion, treeMap, replaceMap); err == nil {
-						newPathIndex := strings.Split(path, ".")[0] + "." + strconv.FormatInt(int64(tree.GetLeafIndex(treeMap, path)), 10)
-						resourcePathIndices[k] = newPathIndex
-						resourcePaths[k] = path
-						// the path may have changed so the path index reference needs to be updated directly in the LTPA Secret
-						if err := r.CreateOrUpdate(&ltpaSecrets.Items[i], nil, func() error {
-							ltpaSecrets.Items[i].Labels[lutils.LTPAPathIndexLabel] = newPathIndex
-							return nil
-						}); err != nil {
-							return err
-						}
-					}
-				} else if pathErr == nil { // only update the path metadata if this operator's decision tree structure recognizes the LTPA Secret found
-					resourcePaths[k] = path
-				}
-				resources[k] = secret.Name[len(ltpaRootName):]
-				k += 1
+	leaderTrackers := make([]lutils.LeaderTracker, 0)
+	for i, secret := range ltpaSecrets.Items {
+		if pathIndex, found := secret.Labels[lutils.LTPAPathIndexLabel]; found {
+			// Skip this LTPA Secret if path index does not contain a period separating delimeter
+			if !strings.Contains(pathIndex, ".") {
+				continue
 			}
-
+			labelVersionArray := strings.Split(pathIndex, ".")
+			// Skip this LTPA Secret if the path index is not a tuple representing the version and index
+			if len(labelVersionArray) != 2 {
+				continue
+			}
+			leader := lutils.LeaderTracker{
+				PathIndex: pathIndex,
+			}
+			indexIntVal, _ := strconv.ParseInt(labelVersionArray[1], 10, 64)
+			path, pathErr := tree.GetPathFromLeafIndex(treeMap, labelVersionArray[0], int(indexIntVal))
+			// If path comes from a different operand version, the path needs to be upgraded/downgraded to the latestOperandVersion
+			if labelVersionArray[0] != latestOperandVersion {
+				// If user error has occurred, based on whether or not a dev deleted the decision tree structure of an older version
+				// allow this condition to error (when err != nil) so that a deleted (older) revision of the decision tree that may be missing
+				// won't halt the operator when the ReplacePath validation is performed
+				if path, err := tree.ReplacePath(path, latestOperandVersion, treeMap, replaceMap); err == nil {
+					newPathIndex := strings.Split(path, ".")[0] + "." + strconv.FormatInt(int64(tree.GetLeafIndex(treeMap, path)), 10)
+					leader.PathIndex = newPathIndex
+					leader.Path = path
+					// the path may have changed so the path index reference needs to be updated directly in the LTPA Secret
+					if err := r.CreateOrUpdate(&ltpaSecrets.Items[i], nil, func() error {
+						ltpaSecrets.Items[i].Labels[lutils.LTPAPathIndexLabel] = newPathIndex
+						return nil
+					}); err != nil {
+						return err
+					}
+				}
+			} else if pathErr == nil { // only update the path metadata if this operator's decision tree structure recognizes the LTPA Secret
+				leader.Path = path
+			} else {
+				// A valid decision tree path could not be found, so it will not be used by the operator and this LTPA Secret will not be tracked
+				continue
+			}
+			leader.Name = secret.Name[len(ltpaRootName):]
+			leader.EvictOwner()
+			leaderTrackers = append(leaderTrackers, leader)
 		}
-		leaderTracker.Data[lutils.ResourcesKey] = strings.Join(resources, ",")
-		leaderTracker.Data[lutils.ResourceOwnersKey] = strings.Join(resourceOwners, ",")
-		leaderTracker.Data[lutils.ResourcePathsKey] = strings.Join(resourcePaths, ",")
-		leaderTracker.Data[lutils.ResourcePathIndicesKey] = strings.Join(resourcePathIndices, ",")
 	}
-	return nil
+	return r.SaveLTPALeaderTracker(leaderTracker, &leaderTrackers)
 }
 
 // Initializes a ConfigMap used to track LTPA Secrets' state
 func (r *ReconcileOpenLiberty) initializeLTPALeaderTracker(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string) error {
 	if leaderTracker, _, err := r.getLTPALeaderTracker(instance); err != nil && kerrors.IsNotFound(err) {
-		if err := r.CreateOrUpdate(leaderTracker, nil, func() error {
-			return r.CustomizeLTPALeaderTracker(leaderTracker, treeMap, replaceMap, latestOperandVersion)
-		}); err != nil {
+		if err := r.CreateLTPALeaderTracker(leaderTracker, treeMap, replaceMap, latestOperandVersion); err != nil {
 			return err
 		}
 	} else if err != nil {
@@ -618,7 +605,7 @@ func (r *ReconcileOpenLiberty) getLTPALeaderTracker(instance *olv1.OpenLibertyAp
 	leaderTracker.Namespace = instance.GetNamespace()
 	leaderTracker.Labels = lutils.GetRequiredLabels(leaderTracker.Name, "")
 	if err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: leaderTracker.Name, Namespace: leaderTracker.Namespace}, leaderTracker); err != nil {
-		// return leaderTracker which could be not found
+		// return a default leaderTracker
 		return leaderTracker, nil, err
 	}
 	// generate LTPALeaderTracker objects
@@ -635,7 +622,7 @@ func (r *ReconcileOpenLiberty) getLTPALeaderTracker(instance *olv1.OpenLibertyAp
 		}
 		return nil, nil, fmt.Errorf("the resource tracker is out of sync and has been deleted")
 	}
-	if len(owners) == 0 && len(names) == 0 && len(pathIndices) == 0 && len(paths) == 0 {
+	if len(owners) == 0 && len(names) == 0 && len(pathIndices) == 0 && len(paths) == 0 && len(subleases) == 0 {
 		return leaderTracker, &leaderTrackers, nil
 	}
 	ownersList := tree.GetCommaSeparatedArray(owners)

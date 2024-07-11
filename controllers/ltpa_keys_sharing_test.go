@@ -89,6 +89,11 @@ func getControllersFolder() string {
 	return cwd
 }
 
+func ignoreSubleases(leaderTracker map[string]string) map[string]string {
+	delete(leaderTracker, lutils.ResourceSubleasesKey)
+	return leaderTracker
+}
+
 func TestLTPALeaderTracker(t *testing.T) {
 	logger := zap.New()
 	logf.SetLogger(logger)
@@ -151,7 +156,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	tests = []Test{
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
 		{"get LTPA leader tracker namespace", namespace, configMap.Namespace},
-		{"get LTPA leader tracker data", expectedConfigMapData, configMap.Data},
+		{"get LTPA leader tracker data", expectedConfigMapData, ignoreSubleases(configMap.Data)},
 		{"get LTPA leader tracker label", latestOperandVersion, configMap.Labels[lutils.LTPAVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
 	}
@@ -215,7 +220,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	tests = []Test{
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
 		{"get LTPA leader tracker namespace", namespace, configMap.Namespace},
-		{"get LTPA leader tracker data", expectedConfigMapData, configMap.Data},
+		{"get LTPA leader tracker data", expectedConfigMapData, ignoreSubleases(configMap.Data)},
 		{"get LTPA leader tracker label", latestOperandVersion, configMap.Labels[lutils.LTPAVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
 	}
@@ -246,7 +251,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	tests = []Test{
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
 		{"get LTPA leader tracker namespace", namespace, configMap.Namespace},
-		{"get LTPA leader tracker data", expectedConfigMapData, configMap.Data},
+		{"get LTPA leader tracker data", expectedConfigMapData, ignoreSubleases(configMap.Data)},
 		{"get LTPA leader tracker label", latestOperandVersion, configMap.Labels[lutils.LTPAVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
 	}
@@ -328,11 +333,11 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 		lutils.ResourcePathIndicesKey: "v10_4_1.2,v10_4_1.3",
 	}
 	tests = []Test{
+		{"get LTPA leader tracker error", nil, err},
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
 		{"get LTPA leader tracker namespace", namespace, configMap.Namespace},
-		{"get LTPA leader tracker data", expectedConfigMapData, configMap.Data},
+		{"get LTPA leader tracker data", expectedConfigMapData, ignoreSubleases(configMap.Data)},
 		{"get LTPA leader tracker label", latestOperandVersion, configMap.Labels[lutils.LTPAVersionLabel]},
-		{"get LTPA leader tracker error", nil, err},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -407,7 +412,7 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T
 	tests = []Test{
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
 		{"get LTPA leader tracker namespace", namespace, configMap.Namespace},
-		{"get LTPA leader tracker data", expectedConfigMapData, configMap.Data},
+		{"get LTPA leader tracker data", expectedConfigMapData, ignoreSubleases(configMap.Data)},
 		{"get LTPA leader tracker label", latestOperandVersion, configMap.Labels[lutils.LTPAVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
 	}
@@ -496,7 +501,7 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndD
 	tests = []Test{
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
 		{"get LTPA leader tracker namespace", namespace, configMap.Namespace},
-		{"get LTPA leader tracker data", expectedConfigMapData, configMap.Data},
+		{"get LTPA leader tracker data", expectedConfigMapData, ignoreSubleases(configMap.Data)},
 		{"get LTPA leader tracker label", latestOperandVersion, configMap.Labels[lutils.LTPAVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
 	}
@@ -526,7 +531,7 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndD
 		{"get LTPA leader tracker error", nil, err},
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
 		{"get LTPA leader tracker namespace", namespace, configMap.Namespace},
-		{"get LTPA leader tracker data", expectedConfigMapData, configMap.Data},
+		{"get LTPA leader tracker data", expectedConfigMapData, ignoreSubleases(configMap.Data)},
 		{"get LTPA leader tracker label", latestOperandVersion, configMap.Labels[lutils.LTPAVersionLabel]},
 	}
 	if err := verifyTests(tests); err != nil {
