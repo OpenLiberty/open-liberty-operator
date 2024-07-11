@@ -328,7 +328,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 							EncryptionKeySecretName:     OperatorShortName + lutils.PasswordEncryptionKeySuffix,
 							EncryptionKeySharingEnabled: r.isUsingPasswordEncryptionKeySharing(instance),
 						}
-						lutils.CustomizeLTPAJob(generateLTPAKeysJob, instance, ltpaConfig)
+						lutils.CustomizeLTPAJob(generateLTPAKeysJob, instance, ltpaConfig, r.GetClient())
 						return nil
 					})
 					if err != nil {
@@ -337,7 +337,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 				} else if err == nil {
 					// If the LTPA Secret is not yet created (LTPA Job has not successfully completed)
 					// and the LTPA Job's configuration is outdated, retry LTPA generation with the new configuration
-					if lutils.IsLTPAJobConfigurationOutdated(generateLTPAKeysJob, instance) {
+					if lutils.IsLTPAJobConfigurationOutdated(generateLTPAKeysJob, instance, r.GetClient()) {
 						// Delete the Job request to restart the entire LTPA generation process (i.e. reloading the script, ltpa.xml, and Job)
 						err = r.DeleteResource(ltpaJobRequest)
 						if err != nil {
