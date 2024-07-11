@@ -28,6 +28,7 @@ COPY main.go main.go
 COPY api/ api/
 COPY controllers/ controllers/
 COPY utils/ utils/
+COPY tree/ tree/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -ldflags="-s -w" -a -o manager main.go

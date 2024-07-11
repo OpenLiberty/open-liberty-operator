@@ -6,12 +6,14 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"errors"
-	gherrors "github.com/pkg/errors"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	gherrors "github.com/pkg/errors"
 )
 
 type RegisterData struct {
@@ -235,7 +237,7 @@ func sendHTTPRequest(content string, URL string, method string, id string, passw
 	}
 
 	if !insecureTLS {
-		cert, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt")
+		cert, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt")
 		if err != nil {
 			return "", errors.New("Error reading TLS certificates: " + err.Error())
 		}
@@ -286,7 +288,7 @@ func sendHTTPRequest(content string, URL string, method string, id string, passw
 		return errorStr, errors.New(errorMsgPreamble + err.Error()) // timeout, conn reset, etc.
 	}
 
-	respBytes, err := ioutil.ReadAll(response.Body)
+	respBytes, err := io.ReadAll(response.Body)
 	if err != nil {
 		return errorStr, errors.New(errorMsgPreamble + err.Error())
 	}
