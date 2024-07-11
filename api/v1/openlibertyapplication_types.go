@@ -147,6 +147,10 @@ type OpenLibertyApplicationSpec struct {
 
 	// +operator-sdk:csv:customresourcedefinitions:order=32,type=spec,displayName="Topology Spread Constraints"
 	TopologySpreadConstraints *OpenLibertyApplicationTopologySpreadConstraints `json:"topologySpreadConstraints,omitempty"`
+
+	// Disable information about services being injected into the application pod's environment variables. Default to false.
+	// +operator-sdk:csv:customresourcedefinitions:order=33,type=spec,displayName="Disable Service Links",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	DisableServiceLinks *bool `json:"disableServiceLinks,omitempty"`
 }
 
 // Defines the topology spread constraints
@@ -1172,6 +1176,11 @@ func (cr *OpenLibertyApplicationTopologySpreadConstraints) GetConstraints() *[]c
 
 func (cr *OpenLibertyApplicationTopologySpreadConstraints) GetDisableOperatorDefaults() *bool {
 	return cr.DisableOperatorDefaults
+}
+
+// GetDisableServiceLinks returns whether service links should be disabled in the pod spec
+func (cr *OpenLibertyApplication) GetDisableServiceLinks() *bool {
+	return cr.Spec.DisableServiceLinks
 }
 
 // Initialize sets default values
