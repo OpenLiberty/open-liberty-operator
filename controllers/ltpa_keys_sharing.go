@@ -671,7 +671,7 @@ func (r *ReconcileOpenLiberty) SaveLTPALeaderTracker(leaderTracker *corev1.Confi
 // Create or update the LTPA service account and track the LTPA state
 func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(serviceAccount *corev1.ServiceAccount, instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata, createOrUpdateServiceAccount bool) (string, bool, string, error) {
 	if createOrUpdateServiceAccount {
-		r.CreateOrUpdate(serviceAccount, instance, func() error {
+		r.CreateOrUpdate(serviceAccount, nil, func() error {
 			return nil
 		})
 	}
