@@ -155,7 +155,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPASecret(instance *olv1.OpenLibertyApp
 
 // If the LTPA Secret is being created but does not exist yet, the LTPA instance leader will halt the process and restart creation of LTPA keys
 func (r *ReconcileOpenLiberty) restartLTPAKeysGeneration(instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata) error {
-	_, isLTPAKeySharingLeader, _, _, err := r.getLTPAKeysSharingLeader(instance, ltpaMetadata, false)
+	_, _, isLTPAKeySharingLeader, _, _, err := r.getLTPAKeysSharingLeader(instance, ltpaMetadata, false)
 	if err != nil {
 		return err
 	}
@@ -221,9 +221,12 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 	// If the LTPA Secret does not exist, run the Kubernetes Job to generate the shared ltpa.keys file and Secret
 	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaSecret.Name, Namespace: ltpaSecret.Namespace}, ltpaSecret)
 	if err != nil && kerrors.IsNotFound(err) {
-		ltpaKeySharingLeaderName, isLTPAKeySharingLeader, ltpaServiceAccountName, _, err := r.getLTPAKeysSharingLeader(instance, ltpaMetadata, true)
+		ltpaServiceAccount, ltpaKeySharingLeaderName, isLTPAKeySharingLeader, ltpaServiceAccountName, _, err := r.getLTPAKeysSharingLeader(instance, ltpaMetadata, true)
 		if err != nil {
 			return "", err
+		}
+		if ltpaServiceAccount == nil {
+			return "", fmt.Errorf("Waiting for the LTPA ServiceAccount to be created in namespace '" + instance.Namespace + "'.")
 		}
 		// If this instance is not the leader, exit the reconcile loop
 		if !isLTPAKeySharingLeader {
@@ -251,7 +254,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 				if err != nil && !kerrors.IsNotFound(err) {
 					return "", err
 				}
-				err := r.CreateOrUpdate(ltpaJobRequest, instance, func() error {
+				err := r.CreateOrUpdate(ltpaJobRequest, ltpaServiceAccount, func() error {
 					return nil
 				})
 				if err != nil {
@@ -273,7 +276,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 				},
 			}
 			ltpaRole.Labels = lutils.GetRequiredLabels(ltpaRole.Name, "")
-			r.CreateOrUpdate(ltpaRole, instance, func() error {
+			r.CreateOrUpdate(ltpaRole, ltpaServiceAccount, func() error {
 				return nil
 			})
 
@@ -293,7 +296,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 				Name:     ltpaRole.Name,
 			}
 			ltpaRoleBinding.Labels = lutils.GetRequiredLabels(ltpaRoleBinding.Name, "")
-			r.CreateOrUpdate(ltpaRoleBinding, instance, func() error {
+			r.CreateOrUpdate(ltpaRoleBinding, ltpaServiceAccount, func() error {
 				return nil
 			})
 
@@ -306,7 +309,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 					return "", err
 				}
 				ltpaKeysCreationScriptConfigMap.Data["create_ltpa_keys.sh"] = string(script)
-				r.CreateOrUpdate(ltpaKeysCreationScriptConfigMap, instance, func() error {
+				r.CreateOrUpdate(ltpaKeysCreationScriptConfigMap, nil, func() error {
 					return nil
 				})
 			}
@@ -317,7 +320,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 				// Run the Kubernetes Job to generate the shared ltpa.keys file and LTPA Secret
 				err = r.GetClient().Get(context.TODO(), types.NamespacedName{Name: generateLTPAKeysJob.Name, Namespace: generateLTPAKeysJob.Namespace}, generateLTPAKeysJob)
 				if err != nil && kerrors.IsNotFound(err) {
-					err = r.CreateOrUpdate(generateLTPAKeysJob, instance, func() error {
+					err = r.CreateOrUpdate(generateLTPAKeysJob, ltpaServiceAccount, func() error {
 						ltpaConfig := &lutils.LTPAConfig{
 							Metadata:                    ltpaMetadata,
 							SecretName:                  ltpaSecretRootName,
@@ -364,7 +367,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 	} else if err != nil {
 		return "", err
 	} else {
-		_, isLTPAKeySharingLeader, _, _, err := r.getLTPAKeysSharingLeader(instance, ltpaMetadata, true)
+		_, _, isLTPAKeySharingLeader, _, _, err := r.getLTPAKeysSharingLeader(instance, ltpaMetadata, true)
 		if err != nil {
 			return "", err
 		}
@@ -481,27 +484,9 @@ func (r *ReconcileOpenLiberty) deleteLTPAKeysResources(instance *olv1.OpenLibert
 	ltpaServiceAccount := &corev1.ServiceAccount{}
 	ltpaServiceAccount.Name = OperatorShortName + "-ltpa"
 	ltpaServiceAccount.Namespace = instance.GetNamespace()
-	hasNoOwners, err := r.DeleteResourceWithLeaderTrackingLabels(ltpaServiceAccount, instance, leaderTracker, leaderTrackers)
+	_, err = r.DeleteResourceWithLeaderTrackingLabels(ltpaServiceAccount, instance, leaderTracker, leaderTrackers)
 	if err != nil {
 		return err
-	}
-
-	if hasNoOwners {
-		ltpaRoleBinding := &rbacv1.RoleBinding{}
-		ltpaRoleBinding.Name = OperatorShortName + "-managed-ltpa-rolebinding"
-		ltpaRoleBinding.Namespace = instance.GetNamespace()
-		err = r.DeleteResource(ltpaRoleBinding)
-		if err != nil {
-			return err
-		}
-
-		ltpaRole := &rbacv1.Role{}
-		ltpaRole.Name = OperatorShortName + "-managed-ltpa-role"
-		ltpaRole.Namespace = instance.GetNamespace()
-		err = r.DeleteResource(ltpaRole)
-		if err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -684,9 +669,9 @@ func (r *ReconcileOpenLiberty) SaveLTPALeaderTracker(leaderTracker *corev1.Confi
 }
 
 // Create or update the LTPA service account and track the LTPA state
-func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(sa *corev1.ServiceAccount, instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata, createOrUpdateServiceAccount bool) (string, bool, string, error) {
+func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(serviceAccount *corev1.ServiceAccount, instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata, createOrUpdateServiceAccount bool) (string, bool, string, error) {
 	if createOrUpdateServiceAccount {
-		r.CreateOrUpdate(sa, instance, func() error {
+		r.CreateOrUpdate(serviceAccount, instance, func() error {
 			return nil
 		})
 	}
@@ -801,7 +786,7 @@ func (r *ReconcileOpenLiberty) DeleteResourceWithLeaderTrackingLabels(sa *corev1
 }
 
 // Returns true if the OpenLibertyApplication instance initiated the LTPA keys sharing process or sets the instance as the leader if the LTPA keys are not yet shared
-func (r *ReconcileOpenLiberty) getLTPAKeysSharingLeader(instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata, createOrUpdateServiceAccount bool) (string, bool, string, string, error) {
+func (r *ReconcileOpenLiberty) getLTPAKeysSharingLeader(instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata, createOrUpdateServiceAccount bool) (*corev1.ServiceAccount, string, bool, string, string, error) {
 	ltpaServiceAccount := &corev1.ServiceAccount{}
 	ltpaServiceAccount.Name = OperatorShortName + "-ltpa"
 	ltpaServiceAccount.Namespace = instance.GetNamespace()
@@ -809,12 +794,12 @@ func (r *ReconcileOpenLiberty) getLTPAKeysSharingLeader(instance *olv1.OpenLiber
 	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaServiceAccount.Name, Namespace: ltpaServiceAccount.Namespace}, ltpaServiceAccount)
 	if err != nil && kerrors.IsNotFound(err) {
 		if !createOrUpdateServiceAccount {
-			return "", false, "", "", nil
+			return nil, "", false, "", "", nil
 		}
 	} else if err != nil {
-		return "", false, ltpaServiceAccount.Name, "", err
+		return nil, "", false, ltpaServiceAccount.Name, "", err
 	}
 	// Service account is found, but a new owner could be added or one already exists
 	leaderName, thisInstanceIsLeader, secretRef, err := r.CreateOrUpdateWithLeaderTrackingLabels(ltpaServiceAccount, instance, ltpaMetadata, createOrUpdateServiceAccount)
-	return leaderName, thisInstanceIsLeader, ltpaServiceAccount.Name, secretRef, err
+	return ltpaServiceAccount, leaderName, thisInstanceIsLeader, ltpaServiceAccount.Name, secretRef, err
 }
