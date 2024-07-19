@@ -24,13 +24,13 @@ RUN if [ -z "${GO_VERSION_ARG}" ]; then \
 RUN go mod download
 
 # Copy the go source
-COPY main.go main.go
+COPY cmd/main.go cmd/main.go
 COPY api/ api/
-COPY controllers/ controllers/
+COPY internal/controller/ internal/controller/
 COPY utils/ utils/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -ldflags="-s -w" -a -o manager main.go
+RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -ldflags="-s -w" -a -o manager cmd/main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
@@ -63,7 +63,7 @@ LABEL name=$NAME \
 COPY --chown=${USER_ID}:${GROUP_ID} LICENSE /licenses/
 WORKDIR /
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/manager .
-COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/controllers/assets/ /controllers/assets
+COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/internal/controller/assets/ /internal/controller/assets
 
 USER ${USER_ID}:${GROUP_ID}
 

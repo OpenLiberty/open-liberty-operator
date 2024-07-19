@@ -1,4 +1,4 @@
-package controllers
+package controller
 
 import (
 	"context"
@@ -31,22 +31,22 @@ type EnqueueRequestsForCustomIndexField struct {
 }
 
 // Create implements EventHandler
-func (e *EnqueueRequestsForCustomIndexField) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueRequestsForCustomIndexField) Create(ctx context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
 	e.handle(evt.Object, evt.Object, q)
 }
 
 // Update implements EventHandler
-func (e *EnqueueRequestsForCustomIndexField) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueRequestsForCustomIndexField) Update(ctx context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
 	e.handle(evt.ObjectNew, evt.ObjectNew, q)
 }
 
 // Delete implements EventHandler
-func (e *EnqueueRequestsForCustomIndexField) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueRequestsForCustomIndexField) Delete(ctx context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
 	e.handle(evt.Object, evt.Object, q)
 }
 
 // Generic implements EventHandler
-func (e *EnqueueRequestsForCustomIndexField) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueRequestsForCustomIndexField) Generic(ctx context.Context, evt event.GenericEvent, q workqueue.RateLimitingInterface) {
 	e.handle(evt.Object, evt.Object, q)
 }
 
