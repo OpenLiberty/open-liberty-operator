@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-package controllers
+package controller
 
 import (
 	"context"
@@ -211,11 +211,11 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 				return nil
 			})
 
-			// Create a ConfigMap to store the controllers/assets/create_ltpa_keys.sh script
+			// Create a ConfigMap to store the internal/controller/assets/create_ltpa_keys.sh script
 			err = r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaKeysCreationScriptConfigMap.Name, Namespace: ltpaKeysCreationScriptConfigMap.Namespace}, ltpaKeysCreationScriptConfigMap)
 			if err != nil && kerrors.IsNotFound(err) {
 				ltpaKeysCreationScriptConfigMap.Data = make(map[string]string)
-				script, err := ioutil.ReadFile("controllers/assets/create_ltpa_keys.sh")
+				script, err := ioutil.ReadFile("internal/controller/assets/create_ltpa_keys.sh")
 				if err != nil {
 					return err, ""
 				}
@@ -225,7 +225,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 				})
 			}
 
-			// Verify the controllers/assets/create_ltpa_keys.sh script has been loaded before starting the LTPA Job
+			// Verify the internal/controller/assets/create_ltpa_keys.sh script has been loaded before starting the LTPA Job
 			err = r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaKeysCreationScriptConfigMap.Name, Namespace: ltpaKeysCreationScriptConfigMap.Namespace}, ltpaKeysCreationScriptConfigMap)
 			if err == nil {
 				// Run the Kubernetes Job to generate the shared ltpa.keys file and LTPA Secret

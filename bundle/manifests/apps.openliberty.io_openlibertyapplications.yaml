@@ -1585,9 +1585,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: |-
-                            GRPC specifies an action involving a GRPC port.
-                            This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                          description: GRPC specifies an action involving a GRPC port.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -1797,9 +1795,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: |-
-                            GRPC specifies an action involving a GRPC port.
-                            This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                          description: GRPC specifies an action involving a GRPC port.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -1925,6 +1921,28 @@ spec:
                           format: int32
                           type: integer
                       type: object
+                    resizePolicy:
+                      description: Resources resize policy for the container.
+                      items:
+                        description: ContainerResizePolicy represents resource resize
+                          policy for the container.
+                        properties:
+                          resourceName:
+                            description: |-
+                              Name of the resource to which this resource resize policy applies.
+                              Supported values: cpu, memory.
+                            type: string
+                          restartPolicy:
+                            description: |-
+                              Restart policy to apply when specified resource is resized.
+                              If not specified, it defaults to NotRequired.
+                            type: string
+                        required:
+                        - resourceName
+                        - restartPolicy
+                        type: object
+                      type: array
+                      x-kubernetes-list-type: atomic
                     resources:
                       description: |-
                         Compute Resources required by this container.
@@ -1979,7 +1997,7 @@ spec:
                           description: |-
                             Requests describes the minimum amount of compute resources required.
                             If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-                            otherwise to an implementation-defined value.
+                            otherwise to an implementation-defined value. Requests cannot exceed Limits.
                             More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                           type: object
                       type: object
@@ -2187,9 +2205,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: |-
-                            GRPC specifies an action involving a GRPC port.
-                            This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                          description: GRPC specifies an action involving a GRPC port.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -2456,8 +2472,8 @@ spec:
                           description: Authorization section for this endpoint
                           properties:
                             credentials:
-                              description: The secret's key that contains the credentials
-                                of the request
+                              description: Selects a key of a Secret in the namespace
+                                that contains the credentials for authentication.
                               properties:
                                 key:
                                   description: The key of the secret to select from.  Must
@@ -2479,8 +2495,13 @@ spec:
                               x-kubernetes-map-type: atomic
                             type:
                               description: |-
-                                Set the authentication type. Defaults to Bearer, Basic will cause an
-                                error
+                                Defines the authentication type. The value is case-insensitive.
+
+
+                                "Basic" is not a supported value.
+
+
+                                Default: "Bearer"
                               type: string
                           type: object
                         basicAuth:
@@ -2593,15 +2614,23 @@ spec:
                             ingestion.
                           items:
                             description: |-
-                              RelabelConfig allows dynamic rewriting of the label set, being applied to samples before ingestion.
-                              It defines `<metric_relabel_configs>`-section of Prometheus configuration.
-                              More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs
+                              RelabelConfig allows dynamic rewriting of the label set for targets, alerts,
+                              scraped samples and remote write samples.
+
+
+                              More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
                             properties:
                               action:
                                 default: replace
                                 description: |-
-                                  Action to perform based on regex matching. Default is 'replace'.
-                                  uppercase and lowercase actions require Prometheus >= 2.36.
+                                  Action to perform based on the regex matching.
+
+
+                                  `Uppercase` and `Lowercase` actions require Prometheus >= v2.36.0.
+                                  `DropEqual` and `KeepEqual` actions require Prometheus >= v2.41.0.
+
+
+                                  Default: "Replace"
                                 enum:
                                 - replace
                                 - Replace
@@ -2627,28 +2656,34 @@ spec:
                                 - DropEqual
                                 type: string
                               modulus:
-                                description: Modulus to take of the hash of the source
-                                  label values.
+                                description: |-
+                                  Modulus to take of the hash of the source label values.
+
+
+                                  Only applicable when the action is `HashMod`.
                                 format: int64
                                 type: integer
                               regex:
                                 description: Regular expression against which the
-                                  extracted value is matched. Default is '(.*)'
+                                  extracted value is matched.
                                 type: string
                               replacement:
                                 description: |-
-                                  Replacement value against which a regex replace is performed if the
-                                  regular expression matches. Regex capture groups are available. Default is '$1'
+                                  Replacement value against which a Replace action is performed if the
+                                  regular expression matches.
+
+
+                                  Regex capture groups are available.
                                 type: string
                               separator:
-                                description: Separator placed between concatenated
-                                  source label values. default is ';'.
+                                description: Separator is the string between concatenated
+                                  SourceLabels.
                                 type: string
                               sourceLabels:
                                 description: |-
-                                  The source labels select values from existing labels. Their content is concatenated
-                                  using the configured separator and matched against the configured regular expression
-                                  for the replace, keep, and drop actions.
+                                  The source labels select values from existing labels. Their content is
+                                  concatenated using the configured Separator and matched against the
+                                  configured regular expression.
                                 items:
                                   description: LabelName is a valid Prometheus label
                                     name which may only contain ASCII letters, numbers,
@@ -2658,8 +2693,14 @@ spec:
                                 type: array
                               targetLabel:
                                 description: |-
-                                  Label to which the resulting value is written in a replace action.
-                                  It is mandatory for replace actions. Regex capture groups are available.
+                                  Label to which the resulting string is written in a replacement.
+
+
+                                  It is mandatory for `Replace`, `HashMod`, `Lowercase`, `Uppercase`,
+                                  `KeepEqual` and `DropEqual` actions.
+
+
+                                  Regex capture groups are available.
                                 type: string
                             type: object
                           type: array
@@ -2784,15 +2825,23 @@ spec:
                             More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
                           items:
                             description: |-
-                              RelabelConfig allows dynamic rewriting of the label set, being applied to samples before ingestion.
-                              It defines `<metric_relabel_configs>`-section of Prometheus configuration.
-                              More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs
+                              RelabelConfig allows dynamic rewriting of the label set for targets, alerts,
+                              scraped samples and remote write samples.
+
+
+                              More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
                             properties:
                               action:
                                 default: replace
                                 description: |-
-                                  Action to perform based on regex matching. Default is 'replace'.
-                                  uppercase and lowercase actions require Prometheus >= 2.36.
+                                  Action to perform based on the regex matching.
+
+
+                                  `Uppercase` and `Lowercase` actions require Prometheus >= v2.36.0.
+                                  `DropEqual` and `KeepEqual` actions require Prometheus >= v2.41.0.
+
+
+                                  Default: "Replace"
                                 enum:
                                 - replace
                                 - Replace
@@ -2818,28 +2867,34 @@ spec:
                                 - DropEqual
                                 type: string
                               modulus:
-                                description: Modulus to take of the hash of the source
-                                  label values.
+                                description: |-
+                                  Modulus to take of the hash of the source label values.
+
+
+                                  Only applicable when the action is `HashMod`.
                                 format: int64
                                 type: integer
                               regex:
                                 description: Regular expression against which the
-                                  extracted value is matched. Default is '(.*)'
+                                  extracted value is matched.
                                 type: string
                               replacement:
                                 description: |-
-                                  Replacement value against which a regex replace is performed if the
-                                  regular expression matches. Regex capture groups are available. Default is '$1'
+                                  Replacement value against which a Replace action is performed if the
+                                  regular expression matches.
+
+
+                                  Regex capture groups are available.
                                 type: string
                               separator:
-                                description: Separator placed between concatenated
-                                  source label values. default is ';'.
+                                description: Separator is the string between concatenated
+                                  SourceLabels.
                                 type: string
                               sourceLabels:
                                 description: |-
-                                  The source labels select values from existing labels. Their content is concatenated
-                                  using the configured separator and matched against the configured regular expression
-                                  for the replace, keep, and drop actions.
+                                  The source labels select values from existing labels. Their content is
+                                  concatenated using the configured Separator and matched against the
+                                  configured regular expression.
                                 items:
                                   description: LabelName is a valid Prometheus label
                                     name which may only contain ASCII letters, numbers,
@@ -2849,13 +2904,25 @@ spec:
                                 type: array
                               targetLabel:
                                 description: |-
-                                  Label to which the resulting value is written in a replace action.
-                                  It is mandatory for replace actions. Regex capture groups are available.
+                                  Label to which the resulting string is written in a replacement.
+
+
+                                  It is mandatory for `Replace`, `HashMod`, `Lowercase`, `Uppercase`,
+                                  `KeepEqual` and `DropEqual` actions.
+
+
+                                  Regex capture groups are available.
                                 type: string
                             type: object
                           type: array
                         scheme:
-                          description: HTTP scheme to use for scraping.
+                          description: |-
+                            HTTP scheme to use for scraping.
+                            `http` and `https` are the expected values unless you rewrite the `__scheme__` label via relabeling.
+                            If empty, Prometheus uses the default value `http`.
+                          enum:
+                          - http
+                          - https
                           type: string
                         scrapeTimeout:
                           description: |-
@@ -3070,9 +3137,7 @@ spec:
                         format: int32
                         type: integer
                       grpc:
-                        description: |-
-                          GRPC specifies an action involving a GRPC port.
-                          This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                        description: GRPC specifies an action involving a GRPC port.
                         properties:
                           port:
                             description: Port number of the gRPC service. Number must
@@ -3223,9 +3288,7 @@ spec:
                         format: int32
                         type: integer
                       grpc:
-                        description: |-
-                          GRPC specifies an action involving a GRPC port.
-                          This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                        description: GRPC specifies an action involving a GRPC port.
                         properties:
                           port:
                             description: Port number of the gRPC service. Number must
@@ -3377,9 +3440,7 @@ spec:
                         format: int32
                         type: integer
                       grpc:
-                        description: |-
-                          GRPC specifies an action involving a GRPC port.
-                          This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                        description: GRPC specifies an action involving a GRPC port.
                         properties:
                           port:
                             description: Port number of the gRPC service. Number must
@@ -3570,7 +3631,7 @@ spec:
                     description: |-
                       Requests describes the minimum amount of compute resources required.
                       If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-                      otherwise to an implementation-defined value.
+                      otherwise to an implementation-defined value. Requests cannot exceed Limits.
                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                     type: object
                 type: object
@@ -3840,7 +3901,7 @@ spec:
                         description: |-
                           Requests describes the minimum amount of compute resources required.
                           If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-                          otherwise to an implementation-defined value.
+                          otherwise to an implementation-defined value. Requests cannot exceed Limits.
                           More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                         type: object
                     type: object
@@ -4434,9 +4495,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: |-
-                            GRPC specifies an action involving a GRPC port.
-                            This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                          description: GRPC specifies an action involving a GRPC port.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -4646,9 +4705,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: |-
-                            GRPC specifies an action involving a GRPC port.
-                            This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                          description: GRPC specifies an action involving a GRPC port.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -4774,6 +4831,28 @@ spec:
                           format: int32
                           type: integer
                       type: object
+                    resizePolicy:
+                      description: Resources resize policy for the container.
+                      items:
+                        description: ContainerResizePolicy represents resource resize
+                          policy for the container.
+                        properties:
+                          resourceName:
+                            description: |-
+                              Name of the resource to which this resource resize policy applies.
+                              Supported values: cpu, memory.
+                            type: string
+                          restartPolicy:
+                            description: |-
+                              Restart policy to apply when specified resource is resized.
+                              If not specified, it defaults to NotRequired.
+                            type: string
+                        required:
+                        - resourceName
+                        - restartPolicy
+                        type: object
+                      type: array
+                      x-kubernetes-list-type: atomic
                     resources:
                       description: |-
                         Compute Resources required by this container.
@@ -4828,7 +4907,7 @@ spec:
                           description: |-
                             Requests describes the minimum amount of compute resources required.
                             If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-                            otherwise to an implementation-defined value.
+                            otherwise to an implementation-defined value. Requests cannot exceed Limits.
                             More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                           type: object
                       type: object
@@ -5036,9 +5115,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: |-
-                            GRPC specifies an action involving a GRPC port.
-                            This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                          description: GRPC specifies an action involving a GRPC port.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -5634,7 +5711,7 @@ spec:
                                     description: |-
                                       Requests describes the minimum amount of compute resources required.
                                       If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-                                      otherwise to an implementation-defined value.
+                                      otherwise to an implementation-defined value. Requests cannot exceed Limits.
                                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                                     type: object
                                 type: object
@@ -5744,7 +5821,7 @@ spec:
                                   conditions is the current Condition of persistent volume claim. If underlying persistent volume is being
                                   resized then the Condition will be set to 'ResizeStarted'.
                                 items:
-                                  description: PersistentVolumeClaimCondition contails
+                                  description: PersistentVolumeClaimCondition contains
                                     details about state of pvc
                                   properties:
                                     lastProbeTime:
@@ -5893,8 +5970,13 @@ spec:
                             spreading will be calculated. The keys are used to lookup values from the
                             incoming pod labels, those key-value labels are ANDed with labelSelector
                             to select the group of existing pods over which spreading will be calculated
-                            for the incoming pod. Keys that don't exist in the incoming pod labels will
+                            for the incoming pod. The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
+                            MatchLabelKeys cannot be set when LabelSelector isn't set.
+                            Keys that don't exist in the incoming pod labels will
                             be ignored. A null or empty list means only match against labelSelector.
+
+
+                            This is a beta field and requires the MatchLabelKeysInPodTopologySpread feature gate to be enabled (enabled by default).
                           items:
                             type: string
                           type: array
@@ -6463,7 +6545,7 @@ spec:
                             The maximum usage on memory medium EmptyDir would be the minimum value between
                             the SizeLimit specified here and the sum of memory limits of all containers in a pod.
                             The default is nil which means that the limit is undefined.
-                            More info: http://kubernetes.io/docs/user-guide/volumes#emptydir
+                            More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                           x-kubernetes-int-or-string: true
                       type: object
@@ -6699,7 +6781,7 @@ spec:
                                       description: |-
                                         Requests describes the minimum amount of compute resources required.
                                         If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-                                        otherwise to an implementation-defined value.
+                                        otherwise to an implementation-defined value. Requests cannot exceed Limits.
                                         More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                                       type: object
                                   type: object
@@ -9288,9 +9370,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: |-
-                            GRPC specifies an action involving a GRPC port.
-                            This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                          description: GRPC specifies an action involving a GRPC port.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -9500,9 +9580,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: |-
-                            GRPC specifies an action involving a GRPC port.
-                            This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                          description: GRPC specifies an action involving a GRPC port.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -9628,6 +9706,28 @@ spec:
                           format: int32
                           type: integer
                       type: object
+                    resizePolicy:
+                      description: Resources resize policy for the container.
+                      items:
+                        description: ContainerResizePolicy represents resource resize
+                          policy for the container.
+                        properties:
+                          resourceName:
+                            description: |-
+                              Name of the resource to which this resource resize policy applies.
+                              Supported values: cpu, memory.
+                            type: string
+                          restartPolicy:
+                            description: |-
+                              Restart policy to apply when specified resource is resized.
+                              If not specified, it defaults to NotRequired.
+                            type: string
+                        required:
+                        - resourceName
+                        - restartPolicy
+                        type: object
+                      type: array
+                      x-kubernetes-list-type: atomic
                     resources:
                       description: |-
                         Compute Resources required by this container.
@@ -9682,7 +9782,7 @@ spec:
                           description: |-
                             Requests describes the minimum amount of compute resources required.
                             If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-                            otherwise to an implementation-defined value.
+                            otherwise to an implementation-defined value. Requests cannot exceed Limits.
                             More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                           type: object
                       type: object
@@ -9890,9 +9990,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: |-
-                            GRPC specifies an action involving a GRPC port.
-                            This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                          description: GRPC specifies an action involving a GRPC port.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -10152,8 +10250,8 @@ spec:
                           description: Authorization section for this endpoint
                           properties:
                             credentials:
-                              description: The secret's key that contains the credentials
-                                of the request
+                              description: Selects a key of a Secret in the namespace
+                                that contains the credentials for authentication.
                               properties:
                                 key:
                                   description: The key of the secret to select from.  Must
@@ -10175,8 +10273,13 @@ spec:
                               x-kubernetes-map-type: atomic
                             type:
                               description: |-
-                                Set the authentication type. Defaults to Bearer, Basic will cause an
-                                error
+                                Defines the authentication type. The value is case-insensitive.
+
+
+                                "Basic" is not a supported value.
+
+
+                                Default: "Bearer"
                               type: string
                           type: object
                         basicAuth:
@@ -10289,15 +10392,23 @@ spec:
                             ingestion.
                           items:
                             description: |-
-                              RelabelConfig allows dynamic rewriting of the label set, being applied to samples before ingestion.
-                              It defines `<metric_relabel_configs>`-section of Prometheus configuration.
-                              More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs
+                              RelabelConfig allows dynamic rewriting of the label set for targets, alerts,
+                              scraped samples and remote write samples.
+
+
+                              More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
                             properties:
                               action:
                                 default: replace
                                 description: |-
-                                  Action to perform based on regex matching. Default is 'replace'.
-                                  uppercase and lowercase actions require Prometheus >= 2.36.
+                                  Action to perform based on the regex matching.
+
+
+                                  `Uppercase` and `Lowercase` actions require Prometheus >= v2.36.0.
+                                  `DropEqual` and `KeepEqual` actions require Prometheus >= v2.41.0.
+
+
+                                  Default: "Replace"
                                 enum:
                                 - replace
                                 - Replace
@@ -10323,28 +10434,34 @@ spec:
                                 - DropEqual
                                 type: string
                               modulus:
-                                description: Modulus to take of the hash of the source
-                                  label values.
+                                description: |-
+                                  Modulus to take of the hash of the source label values.
+
+
+                                  Only applicable when the action is `HashMod`.
                                 format: int64
                                 type: integer
                               regex:
                                 description: Regular expression against which the
-                                  extracted value is matched. Default is '(.*)'
+                                  extracted value is matched.
                                 type: string
                               replacement:
                                 description: |-
-                                  Replacement value against which a regex replace is performed if the
-                                  regular expression matches. Regex capture groups are available. Default is '$1'
+                                  Replacement value against which a Replace action is performed if the
+                                  regular expression matches.
+
+
+                                  Regex capture groups are available.
                                 type: string
                               separator:
-                                description: Separator placed between concatenated
-                                  source label values. default is ';'.
+                                description: Separator is the string between concatenated
+                                  SourceLabels.
                                 type: string
                               sourceLabels:
                                 description: |-
-                                  The source labels select values from existing labels. Their content is concatenated
-                                  using the configured separator and matched against the configured regular expression
-                                  for the replace, keep, and drop actions.
+                                  The source labels select values from existing labels. Their content is
+                                  concatenated using the configured Separator and matched against the
+                                  configured regular expression.
                                 items:
                                   description: LabelName is a valid Prometheus label
                                     name which may only contain ASCII letters, numbers,
@@ -10354,8 +10471,14 @@ spec:
                                 type: array
                               targetLabel:
                                 description: |-
-                                  Label to which the resulting value is written in a replace action.
-                                  It is mandatory for replace actions. Regex capture groups are available.
+                                  Label to which the resulting string is written in a replacement.
+
+
+                                  It is mandatory for `Replace`, `HashMod`, `Lowercase`, `Uppercase`,
+                                  `KeepEqual` and `DropEqual` actions.
+
+
+                                  Regex capture groups are available.
                                 type: string
                             type: object
                           type: array
@@ -10480,15 +10603,23 @@ spec:
                             More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
                           items:
                             description: |-
-                              RelabelConfig allows dynamic rewriting of the label set, being applied to samples before ingestion.
-                              It defines `<metric_relabel_configs>`-section of Prometheus configuration.
-                              More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs
+                              RelabelConfig allows dynamic rewriting of the label set for targets, alerts,
+                              scraped samples and remote write samples.
+
+
+                              More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
                             properties:
                               action:
                                 default: replace
                                 description: |-
-                                  Action to perform based on regex matching. Default is 'replace'.
-                                  uppercase and lowercase actions require Prometheus >= 2.36.
+                                  Action to perform based on the regex matching.
+
+
+                                  `Uppercase` and `Lowercase` actions require Prometheus >= v2.36.0.
+                                  `DropEqual` and `KeepEqual` actions require Prometheus >= v2.41.0.
+
+
+                                  Default: "Replace"
                                 enum:
                                 - replace
                                 - Replace
@@ -10514,28 +10645,34 @@ spec:
                                 - DropEqual
                                 type: string
                               modulus:
-                                description: Modulus to take of the hash of the source
-                                  label values.
+                                description: |-
+                                  Modulus to take of the hash of the source label values.
+
+
+                                  Only applicable when the action is `HashMod`.
                                 format: int64
                                 type: integer
                               regex:
                                 description: Regular expression against which the
-                                  extracted value is matched. Default is '(.*)'
+                                  extracted value is matched.
                                 type: string
                               replacement:
                                 description: |-
-                                  Replacement value against which a regex replace is performed if the
-                                  regular expression matches. Regex capture groups are available. Default is '$1'
+                                  Replacement value against which a Replace action is performed if the
+                                  regular expression matches.
+
+
+                                  Regex capture groups are available.
                                 type: string
                               separator:
-                                description: Separator placed between concatenated
-                                  source label values. default is ';'.
+                                description: Separator is the string between concatenated
+                                  SourceLabels.
                                 type: string
                               sourceLabels:
                                 description: |-
-                                  The source labels select values from existing labels. Their content is concatenated
-                                  using the configured separator and matched against the configured regular expression
-                                  for the replace, keep, and drop actions.
+                                  The source labels select values from existing labels. Their content is
+                                  concatenated using the configured Separator and matched against the
+                                  configured regular expression.
                                 items:
                                   description: LabelName is a valid Prometheus label
                                     name which may only contain ASCII letters, numbers,
@@ -10545,13 +10682,25 @@ spec:
                                 type: array
                               targetLabel:
                                 description: |-
-                                  Label to which the resulting value is written in a replace action.
-                                  It is mandatory for replace actions. Regex capture groups are available.
+                                  Label to which the resulting string is written in a replacement.
+
+
+                                  It is mandatory for `Replace`, `HashMod`, `Lowercase`, `Uppercase`,
+                                  `KeepEqual` and `DropEqual` actions.
+
+
+                                  Regex capture groups are available.
                                 type: string
                             type: object
                           type: array
                         scheme:
-                          description: HTTP scheme to use for scraping.
+                          description: |-
+                            HTTP scheme to use for scraping.
+                            `http` and `https` are the expected values unless you rewrite the `__scheme__` label via relabeling.
+                            If empty, Prometheus uses the default value `http`.
+                          enum:
+                          - http
+                          - https
                           type: string
                         scrapeTimeout:
                           description: |-
@@ -10746,9 +10895,7 @@ spec:
                         format: int32
                         type: integer
                       grpc:
-                        description: |-
-                          GRPC specifies an action involving a GRPC port.
-                          This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                        description: GRPC specifies an action involving a GRPC port.
                         properties:
                           port:
                             description: Port number of the gRPC service. Number must
@@ -10899,9 +11046,7 @@ spec:
                         format: int32
                         type: integer
                       grpc:
-                        description: |-
-                          GRPC specifies an action involving a GRPC port.
-                          This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                        description: GRPC specifies an action involving a GRPC port.
                         properties:
                           port:
                             description: Port number of the gRPC service. Number must
@@ -11053,9 +11198,7 @@ spec:
                         format: int32
                         type: integer
                       grpc:
-                        description: |-
-                          GRPC specifies an action involving a GRPC port.
-                          This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                        description: GRPC specifies an action involving a GRPC port.
                         properties:
                           port:
                             description: Port number of the gRPC service. Number must
@@ -11246,7 +11389,7 @@ spec:
                     description: |-
                       Requests describes the minimum amount of compute resources required.
                       If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-                      otherwise to an implementation-defined value.
+                      otherwise to an implementation-defined value. Requests cannot exceed Limits.
                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                     type: object
                 type: object
@@ -11846,9 +11989,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: |-
-                            GRPC specifies an action involving a GRPC port.
-                            This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                          description: GRPC specifies an action involving a GRPC port.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -12058,9 +12199,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: |-
-                            GRPC specifies an action involving a GRPC port.
-                            This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                          description: GRPC specifies an action involving a GRPC port.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -12186,6 +12325,28 @@ spec:
                           format: int32
                           type: integer
                       type: object
+                    resizePolicy:
+                      description: Resources resize policy for the container.
+                      items:
+                        description: ContainerResizePolicy represents resource resize
+                          policy for the container.
+                        properties:
+                          resourceName:
+                            description: |-
+                              Name of the resource to which this resource resize policy applies.
+                              Supported values: cpu, memory.
+                            type: string
+                          restartPolicy:
+                            description: |-
+                              Restart policy to apply when specified resource is resized.
+                              If not specified, it defaults to NotRequired.
+                            type: string
+                        required:
+                        - resourceName
+                        - restartPolicy
+                        type: object
+                      type: array
+                      x-kubernetes-list-type: atomic
                     resources:
                       description: |-
                         Compute Resources required by this container.
@@ -12240,7 +12401,7 @@ spec:
                           description: |-
                             Requests describes the minimum amount of compute resources required.
                             If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-                            otherwise to an implementation-defined value.
+                            otherwise to an implementation-defined value. Requests cannot exceed Limits.
                             More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                           type: object
                       type: object
@@ -12448,9 +12609,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: |-
-                            GRPC specifies an action involving a GRPC port.
-                            This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                          description: GRPC specifies an action involving a GRPC port.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -13040,7 +13199,7 @@ spec:
                                     description: |-
                                       Requests describes the minimum amount of compute resources required.
                                       If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-                                      otherwise to an implementation-defined value.
+                                      otherwise to an implementation-defined value. Requests cannot exceed Limits.
                                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                                     type: object
                                 type: object
@@ -13150,7 +13309,7 @@ spec:
                                   conditions is the current Condition of persistent volume claim. If underlying persistent volume is being
                                   resized then the Condition will be set to 'ResizeStarted'.
                                 items:
-                                  description: PersistentVolumeClaimCondition contails
+                                  description: PersistentVolumeClaimCondition contains
                                     details about state of pvc
                                   properties:
                                     lastProbeTime:
@@ -13684,7 +13843,7 @@ spec:
                             The maximum usage on memory medium EmptyDir would be the minimum value between
                             the SizeLimit specified here and the sum of memory limits of all containers in a pod.
                             The default is nil which means that the limit is undefined.
-                            More info: http://kubernetes.io/docs/user-guide/volumes#emptydir
+                            More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                           x-kubernetes-int-or-string: true
                       type: object
@@ -13920,7 +14079,7 @@ spec:
                                       description: |-
                                         Requests describes the minimum amount of compute resources required.
                                         If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-                                        otherwise to an implementation-defined value.
+                                        otherwise to an implementation-defined value. Requests cannot exceed Limits.
                                         More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                                       type: object
                                   type: object
