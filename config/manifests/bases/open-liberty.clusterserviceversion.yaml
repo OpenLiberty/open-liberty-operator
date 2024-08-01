@@ -8,7 +8,7 @@ metadata:
     certified: "true"
     createdAt: "2022-03-01T09:00:00Z"
     description: Deploy and manage containerized Liberty applications
-    olm.skipRange: '>=0.8.0 <1.3.2'
+    olm.skipRange: '>=0.8.0 <1.3.3'
     operators.openshift.io/infrastructure-features: '["disconnected"]'
     repository: https://github.com/OpenLiberty/open-liberty-operator
     support: IBM
