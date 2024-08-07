@@ -89,7 +89,7 @@ func getControllersFolder() string {
 	return cwd
 }
 
-func ignoreSubleases(leaderTracker map[string]string) map[string]string {
+func ignoreSubleases(leaderTracker map[string][]byte) map[string][]byte {
 	delete(leaderTracker, lutils.ResourceSubleasesKey)
 	return leaderTracker
 }
@@ -107,9 +107,9 @@ func TestLTPALeaderTracker(t *testing.T) {
 	r := createReconcilerFromOpenLibertyApp(instance)
 
 	// First, get the LTPA leader tracker which is not initialized
-	configMap, _, err := r.getLTPALeaderTracker(instance)
+	leaderTracker, _, err := r.getLTPALeaderTracker(instance)
 
-	emptyConfigMap := &corev1.ConfigMap{
+	emptyLeaderTracker := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "olo-managed-leader-tracking-ltpa",
 			Namespace: namespace,
@@ -121,7 +121,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 		},
 	}
 	tests := []Test{
-		{"get LTPA leader tracker is nil", emptyConfigMap, configMap},
+		{"get LTPA leader tracker is nil", emptyLeaderTracker, leaderTracker},
 		{"get LTPA leader tracker is not found", true, kerrors.IsNotFound(err)},
 	}
 	if err := verifyTests(tests); err != nil {
@@ -147,17 +147,17 @@ func TestLTPALeaderTracker(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	configMap, _, err = r.getLTPALeaderTracker(instance)
-	expectedConfigMapData := map[string]string{}
-	expectedConfigMapData[lutils.ResourcesKey] = ""
-	expectedConfigMapData[lutils.ResourceOwnersKey] = ""
-	expectedConfigMapData[lutils.ResourcePathsKey] = ""
-	expectedConfigMapData[lutils.ResourcePathIndicesKey] = ""
+	leaderTracker, _, err = r.getLTPALeaderTracker(instance)
+	expectedLeaderTrackerData := map[string][]byte{}
+	expectedLeaderTrackerData[lutils.ResourcesKey] = []byte("")
+	expectedLeaderTrackerData[lutils.ResourceOwnersKey] = []byte("")
+	expectedLeaderTrackerData[lutils.ResourcePathsKey] = []byte("")
+	expectedLeaderTrackerData[lutils.ResourcePathIndicesKey] = []byte("")
 	tests = []Test{
-		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
-		{"get LTPA leader tracker namespace", namespace, configMap.Namespace},
-		{"get LTPA leader tracker data", expectedConfigMapData, ignoreSubleases(configMap.Data)},
-		{"get LTPA leader tracker label", latestOperandVersion, configMap.Labels[lutils.LTPAVersionLabel]},
+		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
+		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
+		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LTPAVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
 	}
 	if err := verifyTests(tests); err != nil {
@@ -210,18 +210,18 @@ func TestLTPALeaderTracker(t *testing.T) {
 	}
 
 	// Fourth, check that the leader tracker received the new LTPA state
-	configMap, leaderTrackers, err := r.getLTPALeaderTracker(instance)
-	expectedConfigMapData = map[string]string{
-		lutils.ResourcesKey:           "-ab215",
-		lutils.ResourceOwnersKey:      name,
-		lutils.ResourcePathsKey:       latestOperandVersion + ".a.b.e.true",
-		lutils.ResourcePathIndicesKey: latestOperandVersion + ".2",
+	leaderTracker, leaderTrackers, err := r.getLTPALeaderTracker(instance)
+	expectedLeaderTrackerData = map[string][]byte{
+		lutils.ResourcesKey:           []byte("-ab215"),
+		lutils.ResourceOwnersKey:      []byte(name),
+		lutils.ResourcePathsKey:       []byte(latestOperandVersion + ".a.b.e.true"),
+		lutils.ResourcePathIndicesKey: []byte(latestOperandVersion + ".2"),
 	}
 	tests = []Test{
-		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
-		{"get LTPA leader tracker namespace", namespace, configMap.Namespace},
-		{"get LTPA leader tracker data", expectedConfigMapData, ignoreSubleases(configMap.Data)},
-		{"get LTPA leader tracker label", latestOperandVersion, configMap.Labels[lutils.LTPAVersionLabel]},
+		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
+		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
+		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LTPAVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
 	}
 	if err := verifyTests(tests); err != nil {
@@ -230,7 +230,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 
 	// Fourthly, remove the LTPA leader
 	err1 = r.deleteLTPAKeysResources(instance)
-	hasNoOwners, err2 := r.DeleteResourceWithLeaderTrackingLabels(complexServiceAccount, instance, configMap, leaderTrackers)
+	hasNoOwners, err2 := r.DeleteResourceWithLeaderTrackingLabels(complexServiceAccount, instance, leaderTracker, leaderTrackers)
 	tests = []Test{
 		{"remove LTPA - deleteLTPAKeysResource errors", nil, err1},
 		{"remove LTPA - DeleteResourceWithLeaderTrackingLabels errors", nil, err2},
@@ -241,18 +241,18 @@ func TestLTPALeaderTracker(t *testing.T) {
 	}
 
 	// Lastly, check that the LTPA leader tracker was updated
-	configMap, _, err = r.getLTPALeaderTracker(instance)
-	expectedConfigMapData = map[string]string{
-		lutils.ResourcesKey:           "-ab215",
-		lutils.ResourceOwnersKey:      "", // The owner reference was removed
-		lutils.ResourcePathsKey:       latestOperandVersion + ".a.b.e.true",
-		lutils.ResourcePathIndicesKey: latestOperandVersion + ".2",
+	leaderTracker, _, err = r.getLTPALeaderTracker(instance)
+	expectedLeaderTrackerData = map[string][]byte{
+		lutils.ResourcesKey:           []byte("-ab215"),
+		lutils.ResourceOwnersKey:      []byte(""), // The owner reference was removed
+		lutils.ResourcePathsKey:       []byte(latestOperandVersion + ".a.b.e.true"),
+		lutils.ResourcePathIndicesKey: []byte(latestOperandVersion + ".2"),
 	}
 	tests = []Test{
-		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
-		{"get LTPA leader tracker namespace", namespace, configMap.Namespace},
-		{"get LTPA leader tracker data", expectedConfigMapData, ignoreSubleases(configMap.Data)},
-		{"get LTPA leader tracker label", latestOperandVersion, configMap.Labels[lutils.LTPAVersionLabel]},
+		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
+		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
+		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LTPAVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
 	}
 	if err := verifyTests(tests); err != nil {
@@ -325,19 +325,19 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 	}
 
 	// Lastly, check that the LTPA leader tracker processes the two LTPA Secrets created
-	configMap, _, err := r.getLTPALeaderTracker(instance)
-	expectedConfigMapData := map[string]string{
-		lutils.ResourcesKey:           "-b12g1,-bazc1",
-		lutils.ResourceOwnersKey:      ",", // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
-		lutils.ResourcePathsKey:       "v10_4_1.a.b.e.true,v10_4_1.a.b.e.false",
-		lutils.ResourcePathIndicesKey: "v10_4_1.2,v10_4_1.3",
+	leaderTracker, _, err := r.getLTPALeaderTracker(instance)
+	expectedLeaderTrackerData := map[string][]byte{
+		lutils.ResourcesKey:           []byte("-b12g1,-bazc1"),
+		lutils.ResourceOwnersKey:      []byte(","), // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
+		lutils.ResourcePathsKey:       []byte("v10_4_1.a.b.e.true,v10_4_1.a.b.e.false"),
+		lutils.ResourcePathIndicesKey: []byte("v10_4_1.2,v10_4_1.3"),
 	}
 	tests = []Test{
 		{"get LTPA leader tracker error", nil, err},
-		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
-		{"get LTPA leader tracker namespace", namespace, configMap.Namespace},
-		{"get LTPA leader tracker data", expectedConfigMapData, ignoreSubleases(configMap.Data)},
-		{"get LTPA leader tracker label", latestOperandVersion, configMap.Labels[lutils.LTPAVersionLabel]},
+		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
+		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
+		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LTPAVersionLabel]},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -402,18 +402,18 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T
 	}
 
 	// Lastly, check that the LTPA leader tracker upgraded the two LTPA Secrets created
-	configMap, _, err := r.getLTPALeaderTracker(instance)
-	expectedConfigMapData := map[string]string{
-		lutils.ResourcesKey:           "-b12g1,-bazc1",
-		lutils.ResourceOwnersKey:      ",",                                       // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
-		lutils.ResourcePathsKey:       "v10_4_20.a.b.e.foo,v10_4_20.a.f.g.i.bar", // These paths have been upgraded to v10_4_20 based on replaceMap
-		lutils.ResourcePathIndicesKey: "v10_4_20.2,v10_4_20.3",                   // These path indices have been upgraded to v10_4_20 based on replaceMap
+	leaderTracker, _, err := r.getLTPALeaderTracker(instance)
+	expectedLeaderTrackerData := map[string][]byte{
+		lutils.ResourcesKey:           []byte("-b12g1,-bazc1"),
+		lutils.ResourceOwnersKey:      []byte(","),                                       // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
+		lutils.ResourcePathsKey:       []byte("v10_4_20.a.b.e.foo,v10_4_20.a.f.g.i.bar"), // These paths have been upgraded to v10_4_20 based on replaceMap
+		lutils.ResourcePathIndicesKey: []byte("v10_4_20.2,v10_4_20.3"),                   // These path indices have been upgraded to v10_4_20 based on replaceMap
 	}
 	tests = []Test{
-		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
-		{"get LTPA leader tracker namespace", namespace, configMap.Namespace},
-		{"get LTPA leader tracker data", expectedConfigMapData, ignoreSubleases(configMap.Data)},
-		{"get LTPA leader tracker label", latestOperandVersion, configMap.Labels[lutils.LTPAVersionLabel]},
+		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
+		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
+		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LTPAVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
 	}
 	if err := verifyTests(tests); err != nil {
@@ -491,18 +491,18 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndD
 	}
 
 	// Thirdly, check that the LTPA leader tracker upgraded the two LTPA Secrets created
-	configMap, _, err := r.getLTPALeaderTracker(instance)
-	expectedConfigMapData := map[string]string{
-		lutils.ResourcesKey:           "-b12g1,-bazc1,-ccccc",
-		lutils.ResourceOwnersKey:      ",,",                                                        // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
-		lutils.ResourcePathsKey:       "v10_4_500.a.b.b.true,v10_4_500.a.f.g.i.bar,v10_4_1.j.fizz", // These paths have been upgraded to v10_4_500 based on replaceMap
-		lutils.ResourcePathIndicesKey: "v10_4_500.0,v10_4_500.4,v10_4_1.4",                         // These path indices have been upgraded to v10_4_500 based on replaceMap
+	leaderTracker, _, err := r.getLTPALeaderTracker(instance)
+	expectedLeaderTrackerData := map[string][]byte{
+		lutils.ResourcesKey:           []byte("-b12g1,-bazc1,-ccccc"),
+		lutils.ResourceOwnersKey:      []byte(",,"),                                                        // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
+		lutils.ResourcePathsKey:       []byte("v10_4_500.a.b.b.true,v10_4_500.a.f.g.i.bar,v10_4_1.j.fizz"), // These paths have been upgraded to v10_4_500 based on replaceMap
+		lutils.ResourcePathIndicesKey: []byte("v10_4_500.0,v10_4_500.4,v10_4_1.4"),                         // These path indices have been upgraded to v10_4_500 based on replaceMap
 	}
 	tests = []Test{
-		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
-		{"get LTPA leader tracker namespace", namespace, configMap.Namespace},
-		{"get LTPA leader tracker data", expectedConfigMapData, ignoreSubleases(configMap.Data)},
-		{"get LTPA leader tracker label", latestOperandVersion, configMap.Labels[lutils.LTPAVersionLabel]},
+		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
+		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
+		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LTPAVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
 	}
 	if err := verifyTests(tests); err != nil {
@@ -520,19 +520,19 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndD
 
 	r.initializeLTPALeaderTracker(instance, treeMap, replaceMap, latestOperandVersion)
 
-	configMap, _, err = r.getLTPALeaderTracker(instance)
-	expectedConfigMapData = map[string]string{
-		lutils.ResourcesKey:           "-b12g1,-bazc1,-ccccc",
-		lutils.ResourceOwnersKey:      ",,",                                             // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
-		lutils.ResourcePathsKey:       "v10_3_3.a.b,v10_4_1.a.b.e.false,v10_4_1.j.fizz", // v10_4_1 has no path to v10_3_3 so it is kept to be reference for a future upgrade
-		lutils.ResourcePathIndicesKey: "v10_3_3.0,v10_4_1.3,v10_4_1.4",                  // These path indices have been upgraded to v10_4_500 based on replaceMap
+	leaderTracker, _, err = r.getLTPALeaderTracker(instance)
+	expectedLeaderTrackerData = map[string][]byte{
+		lutils.ResourcesKey:           []byte("-b12g1,-bazc1,-ccccc"),
+		lutils.ResourceOwnersKey:      []byte(",,"),                                             // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
+		lutils.ResourcePathsKey:       []byte("v10_3_3.a.b,v10_4_1.a.b.e.false,v10_4_1.j.fizz"), // v10_4_1 has no path to v10_3_3 so it is kept to be reference for a future upgrade
+		lutils.ResourcePathIndicesKey: []byte("v10_3_3.0,v10_4_1.3,v10_4_1.4"),                  // These path indices have been upgraded to v10_4_500 based on replaceMap
 	}
 	tests = []Test{
 		{"get LTPA leader tracker error", nil, err},
-		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", configMap.Name},
-		{"get LTPA leader tracker namespace", namespace, configMap.Namespace},
-		{"get LTPA leader tracker data", expectedConfigMapData, ignoreSubleases(configMap.Data)},
-		{"get LTPA leader tracker label", latestOperandVersion, configMap.Labels[lutils.LTPAVersionLabel]},
+		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
+		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
+		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LTPAVersionLabel]},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)

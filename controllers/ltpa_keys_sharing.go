@@ -94,9 +94,9 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 	metadata.PathIndex = versionedPathIndex
 
 	// if an existing LTPA suffix for this key combination already exists, use it
-	loc := tree.CommaSeparatedStringContains(leaderTracker.Data[lutils.ResourcePathsKey], validSubPath)
+	loc := tree.CommaSeparatedStringContains(string(leaderTracker.Data[lutils.ResourcePathsKey]), validSubPath)
 	if loc != -1 {
-		suffix, _ := tree.GetCommaSeparatedString(leaderTracker.Data[lutils.ResourcesKey], loc)
+		suffix, _ := tree.GetCommaSeparatedString(string(leaderTracker.Data[lutils.ResourcesKey]), loc)
 		metadata.NameSuffix = suffix
 		return metadata, nil
 	}
@@ -110,7 +110,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 	if predeterminedSuffixes, hasEnv := hasLTPAResourceSuffixesEnv(instance); hasEnv {
 		predeterminedSuffixesArray := tree.GetCommaSeparatedArray(predeterminedSuffixes)
 		for _, suffix := range predeterminedSuffixesArray {
-			if len(suffix) == 5 && tree.IsLowerAlphanumericSuffix(suffix) && !strings.Contains(leaderTracker.Data[lutils.ResourcesKey], suffix) {
+			if len(suffix) == 5 && tree.IsLowerAlphanumericSuffix(suffix) && !strings.Contains(string(leaderTracker.Data[lutils.ResourcesKey]), suffix) {
 				metadata.NameSuffix = "-" + suffix
 				return metadata, nil
 			}
@@ -119,7 +119,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 
 	// otherwise, generate a random suffix
 	randomSuffix := tree.GetRandomLowerAlphanumericSuffix(5)
-	for strings.Contains(leaderTracker.Data[lutils.ResourcesKey], randomSuffix) {
+	for strings.Contains(string(leaderTracker.Data[lutils.ResourcesKey]), randomSuffix) {
 		randomSuffix = tree.GetRandomLowerAlphanumericSuffix(5)
 	}
 	metadata.NameSuffix = randomSuffix
@@ -492,7 +492,7 @@ func (r *ReconcileOpenLiberty) deleteLTPAKeysResources(instance *olv1.OpenLibert
 	return nil
 }
 
-func (r *ReconcileOpenLiberty) CreateLTPALeaderTracker(leaderTracker *corev1.ConfigMap, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string) error {
+func (r *ReconcileOpenLiberty) CreateLTPALeaderTracker(leaderTracker *corev1.Secret, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string) error {
 	// create the ConfigMap
 	leaderTracker.Labels[lutils.LTPAVersionLabel] = latestOperandVersion
 	leaderTracker.ResourceVersion = ""
@@ -574,8 +574,8 @@ func (r *ReconcileOpenLiberty) initializeLTPALeaderTracker(instance *olv1.OpenLi
 }
 
 // Gets the LTPA Leader Tracker ConfigMap or errors if it doesn't exist
-func (r *ReconcileOpenLiberty) getLTPALeaderTracker(instance *olv1.OpenLibertyApplication) (*corev1.ConfigMap, *[]lutils.LeaderTracker, error) {
-	leaderTracker := &corev1.ConfigMap{}
+func (r *ReconcileOpenLiberty) getLTPALeaderTracker(instance *olv1.OpenLibertyApplication) (*corev1.Secret, *[]lutils.LeaderTracker, error) {
+	leaderTracker := &corev1.Secret{}
 	leaderTracker.Name = OperatorShortName + "-managed-leader-tracking-ltpa"
 	leaderTracker.Namespace = instance.GetNamespace()
 	leaderTracker.Labels = lutils.GetRequiredLabels(leaderTracker.Name, "")
@@ -600,11 +600,11 @@ func (r *ReconcileOpenLiberty) getLTPALeaderTracker(instance *olv1.OpenLibertyAp
 	if len(owners) == 0 && len(names) == 0 && len(pathIndices) == 0 && len(paths) == 0 && len(subleases) == 0 {
 		return leaderTracker, &leaderTrackers, nil
 	}
-	ownersList := tree.GetCommaSeparatedArray(owners)
-	namesList := tree.GetCommaSeparatedArray(names)
-	pathIndicesList := tree.GetCommaSeparatedArray(pathIndices)
-	pathsList := tree.GetCommaSeparatedArray(paths)
-	subleasesList := tree.GetCommaSeparatedArray(subleases)
+	ownersList := tree.GetCommaSeparatedArray(string(owners))
+	namesList := tree.GetCommaSeparatedArray(string(names))
+	pathIndicesList := tree.GetCommaSeparatedArray(string(pathIndices))
+	pathsList := tree.GetCommaSeparatedArray(string(paths))
+	subleasesList := tree.GetCommaSeparatedArray(string(subleases))
 	numOwners := len(ownersList)
 	numNames := len(namesList)
 	numPathIndices := len(pathIndicesList)
@@ -630,20 +630,20 @@ func (r *ReconcileOpenLiberty) getLTPALeaderTracker(instance *olv1.OpenLibertyAp
 	return leaderTracker, &leaderTrackers, nil
 }
 
-func (r *ReconcileOpenLiberty) SaveLTPALeaderTracker(leaderTracker *corev1.ConfigMap, trackerList *[]lutils.LeaderTracker) error {
+func (r *ReconcileOpenLiberty) SaveLTPALeaderTracker(leaderTracker *corev1.Secret, trackerList *[]lutils.LeaderTracker) error {
 	if trackerList == nil {
 		return r.CreateOrUpdate(leaderTracker, nil, func() error {
-			leaderTracker.Data = make(map[string]string)
-			leaderTracker.Data[lutils.ResourceOwnersKey] = ""
-			leaderTracker.Data[lutils.ResourcesKey] = ""
-			leaderTracker.Data[lutils.ResourcePathIndicesKey] = ""
-			leaderTracker.Data[lutils.ResourcePathsKey] = ""
-			leaderTracker.Data[lutils.ResourceSubleasesKey] = ""
+			leaderTracker.Data = make(map[string][]byte)
+			leaderTracker.Data[lutils.ResourceOwnersKey] = []byte("")
+			leaderTracker.Data[lutils.ResourcesKey] = []byte("")
+			leaderTracker.Data[lutils.ResourcePathIndicesKey] = []byte("")
+			leaderTracker.Data[lutils.ResourcePathsKey] = []byte("")
+			leaderTracker.Data[lutils.ResourceSubleasesKey] = []byte("")
 			return nil
 		})
 	}
 	return r.CreateOrUpdate(leaderTracker, nil, func() error {
-		leaderTracker.Data = make(map[string]string)
+		leaderTracker.Data = make(map[string][]byte)
 		owners, names, pathIndices, paths, subleases := "", "", "", "", ""
 		n := len(*trackerList)
 		for i, tracker := range *trackerList {
@@ -660,11 +660,11 @@ func (r *ReconcileOpenLiberty) SaveLTPALeaderTracker(leaderTracker *corev1.Confi
 				subleases += ","
 			}
 		}
-		leaderTracker.Data[lutils.ResourceOwnersKey] = owners
-		leaderTracker.Data[lutils.ResourcesKey] = names
-		leaderTracker.Data[lutils.ResourcePathIndicesKey] = pathIndices
-		leaderTracker.Data[lutils.ResourcePathsKey] = paths
-		leaderTracker.Data[lutils.ResourceSubleasesKey] = subleases
+		leaderTracker.Data[lutils.ResourceOwnersKey] = []byte(owners)
+		leaderTracker.Data[lutils.ResourcesKey] = []byte(names)
+		leaderTracker.Data[lutils.ResourcePathIndicesKey] = []byte(pathIndices)
+		leaderTracker.Data[lutils.ResourcePathsKey] = []byte(paths)
+		leaderTracker.Data[lutils.ResourceSubleasesKey] = []byte(subleases)
 		return nil
 	})
 }
@@ -765,7 +765,7 @@ func (r *ReconcileOpenLiberty) CreateOrUpdateWithLeaderTrackingLabels(serviceAcc
 
 // Removes the instance owner reference and references in leader tracking labels
 // Precondition: instance must be the resource leader
-func (r *ReconcileOpenLiberty) DeleteResourceWithLeaderTrackingLabels(sa *corev1.ServiceAccount, instance *olv1.OpenLibertyApplication, leaderTracker *corev1.ConfigMap, leaderTrackers *[]lutils.LeaderTracker) (bool, error) {
+func (r *ReconcileOpenLiberty) DeleteResourceWithLeaderTrackingLabels(sa *corev1.ServiceAccount, instance *olv1.OpenLibertyApplication, leaderTracker *corev1.Secret, leaderTrackers *[]lutils.LeaderTracker) (bool, error) {
 	var err error
 	err = nil
 	hasNoOwners := true
