@@ -29,13 +29,13 @@ function error() {
 }
 
 rm -f $NOT_FOUND_LOG_FILE;
-curl --no-progress-meter --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${LTPA_SECRET_NAME} &> $NOT_FOUND_LOG_FILE;
+curl --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${LTPA_SECRET_NAME} &> $NOT_FOUND_LOG_FILE;
 NOT_FOUND_COUNT=$(cat $NOT_FOUND_LOG_FILE | grep -c "NotFound");
 
 if [ $NOT_FOUND_COUNT -eq 0 ]; then 
     log "Could not validate that Secret '$LTPA_SECRET_NAME' is missing from namespace '$NAMESPACE'."
     log "Trying again..."
-    curl --no-progress-meter --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${LTPA_SECRET_NAME} &> /dev/null
+    curl --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${LTPA_SECRET_NAME} &> /dev/null
     GET_SECRET_EXIT_CODE=$?
     if [[ "$GET_SECRET_EXIT_CODE" -ne 0 ]]; then
         error "cURL returned exit code $GET_SECRET_EXIT_CODE"
@@ -54,13 +54,13 @@ if [ $NOT_FOUND_COUNT -eq 0 ]; then
 fi
 
 rm -f $NOT_FOUND_LOG_FILE;
-curl --no-progress-meter --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${PASSWORD_KEY_SECRET_NAME} &> $NOT_FOUND_LOG_FILE;
+curl --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${PASSWORD_KEY_SECRET_NAME} &> $NOT_FOUND_LOG_FILE;
 NOT_FOUND_COUNT=$(cat $NOT_FOUND_LOG_FILE | grep -c "NotFound");
 TIME_SINCE_EPOCH_SECONDS=$(date '+%s');
 PASSWORD=$(openssl rand -base64 15);
 if [ "$ENCRYPTION_KEY_SHARING_ENABLED" == "true" ] && [ $NOT_FOUND_COUNT -eq 0 ]; then 
-    RESOURCE_VERSION=$(curl --no-progress-meter --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${PASSWORD_KEY_SECRET_NAME} | grep -o '"resourceVersion": "[^"]*' | grep -o '[^"]*$');
-    PASSWORD_KEY=$(curl --no-progress-meter --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${PASSWORD_KEY_SECRET_NAME} | grep -o '"passwordEncryptionKey": "[^"]*' | grep -o '[^"]*$' | base64 -d);
+    RESOURCE_VERSION=$(curl --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${PASSWORD_KEY_SECRET_NAME} | grep -o '"resourceVersion": "[^"]*' | grep -o '[^"]*$');
+    PASSWORD_KEY=$(curl --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${PASSWORD_KEY_SECRET_NAME} | grep -o '"passwordEncryptionKey": "[^"]*' | grep -o '[^"]*$' | base64 -d);
     securityUtility createLTPAKeys --file=${KEY_FILE} --password=${PASSWORD} --passwordEncoding=${ENCODING_TYPE} --passwordKey=${PASSWORD_KEY} &>/dev/null;
     cat ${KEY_FILE} | base64 > ${ENCODED_KEY_FILE};
     ENCODED_PASSWORD=$(securityUtility encode --encoding=${ENCODING_TYPE} --key=${PASSWORD_KEY} ${PASSWORD});
