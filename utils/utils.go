@@ -77,6 +77,7 @@ type LTPAConfig struct {
 	SecretName                  string
 	SecretInstanceName          string
 	ServiceAccountName          string
+	JobRequestConfigMapName     string
 	ConfigMapName               string
 	FileName                    string
 	EncryptionKeySecretName     string
@@ -781,7 +782,7 @@ func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaConfig *
 			SecurityContext: rcoutils.GetSecurityContext(la),
 			Command:         []string{"/bin/bash", "-c"},
 			// Usage: /bin/create_ltpa_keys.sh <namespace> <ltpa-secret-name> <securityUtility-encoding>
-			Args: []string{managedLTPAMountPath + "/bin/create_ltpa_keys.sh " + la.GetNamespace() + " " + ltpaConfig.SecretName + " " + ltpaConfig.SecretInstanceName + " " + ltpaConfig.FileName + " " + encodingType + " " + ltpaConfig.EncryptionKeySecretName + " " + strconv.FormatBool(ltpaConfig.EncryptionKeySharingEnabled) + " " + LTPAPathIndexLabel + " " + ltpaConfig.Metadata.PathIndex},
+			Args: []string{managedLTPAMountPath + "/bin/create_ltpa_keys.sh " + la.GetNamespace() + " " + ltpaConfig.SecretName + " " + ltpaConfig.SecretInstanceName + " " + ltpaConfig.FileName + " " + encodingType + " " + ltpaConfig.EncryptionKeySecretName + " " + strconv.FormatBool(ltpaConfig.EncryptionKeySharingEnabled) + " " + LTPAPathIndexLabel + " " + ltpaConfig.Metadata.PathIndex + " " + ltpaConfig.JobRequestConfigMapName},
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      ltpaVolumeMountName,

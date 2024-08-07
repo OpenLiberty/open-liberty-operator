@@ -327,6 +327,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 							SecretInstanceName:          ltpaSecret.Name,
 							ServiceAccountName:          ltpaServiceAccountName,
 							ConfigMapName:               ltpaKeysCreationScriptConfigMap.Name,
+							JobRequestConfigMapName:     ltpaJobRequest.Name,
 							FileName:                    lutils.LTPAKeysFileName,
 							EncryptionKeySecretName:     OperatorShortName + lutils.PasswordEncryptionKeySuffix,
 							EncryptionKeySharingEnabled: r.isUsingPasswordEncryptionKeySharing(instance),
