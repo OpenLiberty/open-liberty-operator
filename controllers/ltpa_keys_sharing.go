@@ -20,7 +20,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, latestOperandVersion string) (*lutils.LTPAMetadata, error) {
+const LTPA_RESOURCE_SHARING_FILE_NAME = "ltpa"
+
+func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, latestOperandVersion string, assetsFolder *string) (*lutils.LTPAMetadata, error) {
 	metadata := &lutils.LTPAMetadata{}
 	// During runtime, the OpenLibertyApplication instance will decide what LTPA Secret to track by populating array pathChoices
 	pathOptions, pathChoices := r.getLTPAPathOptionsAndChoices(instance, latestOperandVersion)
@@ -39,7 +41,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 		return metadata, err
 	}
 	// retrieve the LTPA leader tracker to re-use an existing name or to create a new metadata.Name
-	leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, "ltpa", r.GetClient())
+	leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	if err != nil {
 		return metadata, err
 	}
@@ -54,7 +56,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 
 	metadata.Path = validSubPath
 	metadata.PathIndex = versionedPathIndex
-	metadata.Name = r.getLTPAMetadataName(instance, leaderTracker, validSubPath)
+	metadata.Name = r.getLTPAMetadataName(instance, leaderTracker, validSubPath, assetsFolder)
 	return metadata, nil
 }
 
@@ -75,7 +77,7 @@ func (r *ReconcileOpenLiberty) getLTPAPathOptionsAndChoices(instance *olv1.OpenL
 	return pathOptions, pathChoices
 }
 
-func (r *ReconcileOpenLiberty) getLTPAMetadataName(instance *olv1.OpenLibertyApplication, leaderTracker *corev1.Secret, validSubPath string) string {
+func (r *ReconcileOpenLiberty) getLTPAMetadataName(instance *olv1.OpenLibertyApplication, leaderTracker *corev1.Secret, validSubPath string, assetsFolder *string) string {
 	// if an existing resource name (suffix) for this key combination already exists, use it
 	loc := lutils.CommaSeparatedStringContains(string(leaderTracker.Data[lutils.ResourcePathsKey]), validSubPath)
 	if loc != -1 {
@@ -105,7 +107,7 @@ func (r *ReconcileOpenLiberty) getLTPAMetadataName(instance *olv1.OpenLibertyApp
 	for strings.Contains(string(leaderTracker.Data[lutils.ResourcesKey]), randomSuffix) || suffixFoundInCluster {
 		randomSuffix = lutils.GetRandomLowerAlphanumericSuffix(lutils.ResourceSuffixLength)
 		// create the unstructured object; parse and obtain the sharedResourceName via the controllers/assets/ltpa-signature.yaml
-		if sharedResource, sharedResourceName, err := lutils.CreateUnstructuredResourceFromSignature("ltpa", OperatorShortName, randomSuffix); err == nil {
+		if sharedResource, sharedResourceName, err := lutils.CreateUnstructuredResourceFromSignature(LTPA_RESOURCE_SHARING_FILE_NAME, assetsFolder, OperatorShortName, randomSuffix); err == nil {
 			err := r.GetClient().Get(context.TODO(), types.NamespacedName{Namespace: instance.GetNamespace(), Name: sharedResourceName}, sharedResource)
 			if err != nil && kerrors.IsNotFound(err) {
 				suffixFoundInCluster = false
@@ -125,7 +127,7 @@ func hasLTPAResourceSuffixesEnv(instance *olv1.OpenLibertyApplication) (string, 
 }
 
 // Create or use an existing LTPA Secret identified by LTPA metadata for the OpenLibertyApplication instance
-func (r *ReconcileOpenLiberty) reconcileLTPASecret(instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata) (string, string, error) {
+func (r *ReconcileOpenLiberty) reconcileLTPAKeys(instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata) (string, string, error) {
 	var err error
 	ltpaSecretName := ""
 	if r.isLTPAKeySharingEnabled(instance) {
@@ -144,7 +146,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPASecret(instance *olv1.OpenLibertyApp
 
 // If the LTPA Secret is being created but does not exist yet, the LTPA instance leader will halt the process and restart creation of LTPA keys
 func (r *ReconcileOpenLiberty) restartLTPAKeysGeneration(instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata) error {
-	_, thisInstanceIsLeader, _, err := r.reconcileLeader(instance, ltpaMetadata, "ltpa", false)
+	_, thisInstanceIsLeader, _, err := r.reconcileLeader(instance, ltpaMetadata, LTPA_RESOURCE_SHARING_FILE_NAME, false)
 	if err != nil {
 		return err
 	}
@@ -215,7 +217,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 	// If the LTPA Secret does not exist, run the Kubernetes Job to generate the shared ltpa.keys file and Secret
 	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaSecret.Name, Namespace: ltpaSecret.Namespace}, ltpaSecret)
 	if err != nil && kerrors.IsNotFound(err) {
-		leaderName, thisInstanceIsLeader, _, err := r.reconcileLeader(instance, ltpaMetadata, "ltpa", true)
+		leaderName, thisInstanceIsLeader, _, err := r.reconcileLeader(instance, ltpaMetadata, LTPA_RESOURCE_SHARING_FILE_NAME, true)
 		if err != nil {
 			return "", err
 		}
@@ -387,7 +389,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 	} else if err != nil {
 		return "", err
 	} else {
-		_, thisInstanceIsLeader, _, err := r.reconcileLeader(instance, ltpaMetadata, "ltpa", true)
+		_, thisInstanceIsLeader, _, err := r.reconcileLeader(instance, ltpaMetadata, LTPA_RESOURCE_SHARING_FILE_NAME, true)
 		if err != nil {
 			return "", err
 		}
@@ -469,7 +471,7 @@ func (r *ReconcileOpenLiberty) isLTPAKeySharingEnabled(instance *olv1.OpenLibert
 
 // Deletes resources used to create the LTPA keys file
 func (r *ReconcileOpenLiberty) deleteLTPAKeysResources(instance *olv1.OpenLibertyApplication) error {
-	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(instance, OperatorShortName, "ltpa", r.GetClient())
+	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	if err != nil {
 		// when not found, assume there is nothing to delete because no LTPA secrets are being tracked
 		if kerrors.IsNotFound(err) {
@@ -505,12 +507,12 @@ func (r *ReconcileOpenLiberty) deleteLTPAKeysResources(instance *olv1.OpenLibert
 			}
 		}
 	}
-	return r.DeleteResourceWithLeaderTrackingLabels(instance, leaderTracker, leaderTrackers)
+	return r.RemoveLeader(instance, leaderTracker, leaderTrackers)
 }
 
-// Tracks existing LTPA Secrets by populating a LeaderTracker array used to initialize the LeaderTracker
-func (r *ReconcileOpenLiberty) GetLTPAResources(treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string) (*unstructured.UnstructuredList, string, error) {
-	ltpaResourceList, err := lutils.CreateUnstructuredResourceListFromSignature("ltpa", OperatorShortName)
+// Search the cluster namespace for existing LTPA Secrets
+func (r *ReconcileOpenLiberty) GetLTPAResources(treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, assetsFolder *string) (*unstructured.UnstructuredList, string, error) {
+	ltpaResourceList, err := lutils.CreateUnstructuredResourceListFromSignature(LTPA_RESOURCE_SHARING_FILE_NAME, assetsFolder, OperatorShortName)
 	if err != nil {
 		return nil, "", err
 	}

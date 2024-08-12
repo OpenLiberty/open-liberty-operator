@@ -201,8 +201,14 @@ func GetLeaderTracker(instance *olv1.OpenLibertyApplication, operatorShortName s
 	return leaderTracker, &leaderTrackers, nil
 }
 
-func getUnstructuredResourceSignature(leaderTrackerType string) (map[string]interface{}, error) {
-	signature, err := os.ReadFile("controllers/assets/" + leaderTrackerType + "-signature.yaml")
+func getUnstructuredResourceSignature(leaderTrackerType string, assetsPath *string) (map[string]interface{}, error) {
+	var folderPath string
+	if assetsPath != nil {
+		folderPath = *assetsPath
+	} else {
+		folderPath = "controllers/assets"
+	}
+	signature, err := os.ReadFile(folderPath + "/" + leaderTrackerType + "-signature.yaml")
 	if err != nil {
 		return nil, err
 	}
@@ -214,8 +220,8 @@ func getUnstructuredResourceSignature(leaderTrackerType string) (map[string]inte
 	return resourceSignatureYAML, nil
 }
 
-func CreateUnstructuredResourceFromSignature(leaderTrackerType string, args ...string) (*unstructured.Unstructured, string, error) {
-	resourceSignatureYAML, err := getUnstructuredResourceSignature(leaderTrackerType)
+func CreateUnstructuredResourceFromSignature(leaderTrackerType string, assetsFolder *string, args ...string) (*unstructured.Unstructured, string, error) {
+	resourceSignatureYAML, err := getUnstructuredResourceSignature(leaderTrackerType, assetsFolder)
 	if err != nil {
 		return nil, "", err
 	}
@@ -235,8 +241,8 @@ func CreateUnstructuredResourceFromSignature(leaderTrackerType string, args ...s
 	return sharedResource, sharedResourceName, nil
 }
 
-func CreateUnstructuredResourceListFromSignature(leaderTrackerType string, args ...string) (*unstructured.UnstructuredList, error) {
-	resourceSignatureYAML, err := getUnstructuredResourceSignature(leaderTrackerType)
+func CreateUnstructuredResourceListFromSignature(leaderTrackerType string, assetsFolder *string, args ...string) (*unstructured.UnstructuredList, error) {
+	resourceSignatureYAML, err := getUnstructuredResourceSignature(leaderTrackerType, assetsFolder)
 	if err != nil {
 		return nil, err
 	}

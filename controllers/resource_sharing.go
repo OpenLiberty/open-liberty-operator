@@ -29,20 +29,20 @@ func (r *ReconcileOpenLiberty) reconcileResourceTrackingState(instance *olv1.Ope
 	latestOperandVersion := "v1_4_0" // remove this when operator version switches to 1.4.0
 
 	// persist or create a Secret to store the shared resources' state
-	err = r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, leaderTrackerType)
+	err = r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// return the metadata specific to the operator version, instance configuration, and shared resource being reconciled
-	if leaderTrackerType == "ltpa" {
-		ltpaMetadata, err := r.reconcileLTPAMetadata(instance, treeMap, latestOperandVersion)
+	if leaderTrackerType == LTPA_RESOURCE_SHARING_FILE_NAME {
+		ltpaMetadata, err := r.reconcileLTPAMetadata(instance, treeMap, latestOperandVersion, nil)
 		if err != nil {
 			return nil, err
 		}
 		return ltpaMetadata, nil
 	}
-	if leaderTrackerType == "password-encryption" {
+	if leaderTrackerType == PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME {
 		passwordEncryptionMetadata, err := r.reconcilePasswordEncryptionMetadata(treeMap, latestOperandVersion)
 		if err != nil {
 			return nil, err
@@ -144,17 +144,17 @@ func (r *ReconcileOpenLiberty) reconcileLeaderWithState(instance *olv1.OpenLiber
 	return instance.Name, true, pathIndex, nil
 }
 
-func (r *ReconcileOpenLiberty) getPopulateLeaderTrackerArrayFunc(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, leaderTrackerType string) (*[]lutils.LeaderTracker, error) {
+func (r *ReconcileOpenLiberty) createNewLeaderTrackerList(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, leaderTrackerType string, assetsFolder *string) (*[]lutils.LeaderTracker, error) {
 	var resourcesList *unstructured.UnstructuredList
 	var resourceRootName string
 	var err error
 
-	if leaderTrackerType == "ltpa" {
-		resourcesList, resourceRootName, err = r.GetLTPAResources(treeMap, replaceMap, latestOperandVersion)
-	} else if leaderTrackerType == "password-encryption" {
-		resourcesList, resourceRootName, err = r.GetPasswordEncryptionResources(instance, treeMap, replaceMap, latestOperandVersion)
+	if leaderTrackerType == LTPA_RESOURCE_SHARING_FILE_NAME {
+		resourcesList, resourceRootName, err = r.GetLTPAResources(treeMap, replaceMap, latestOperandVersion, assetsFolder)
+	} else if leaderTrackerType == PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME {
+		resourcesList, resourceRootName, err = r.GetPasswordEncryptionResources(instance, treeMap, replaceMap, latestOperandVersion, assetsFolder)
 	} else {
-		err = fmt.Errorf("a valid leaderTrackerType was not specified for getPopulateLeaderTrackerArrayFunc")
+		err = fmt.Errorf("a valid leaderTrackerType was not specified for createNewLeaderTrackerList")
 	}
 	if err != nil {
 		return nil, err
@@ -163,13 +163,13 @@ func (r *ReconcileOpenLiberty) getPopulateLeaderTrackerArrayFunc(instance *olv1.
 }
 
 // Reconciles the latest LeaderTracker state to be used by the operator
-func (r *ReconcileOpenLiberty) reconcileLeaderTracker(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, leaderTrackerType string) error {
+func (r *ReconcileOpenLiberty) reconcileLeaderTracker(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, leaderTrackerType string, assetsFolder *string) error {
 	leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, leaderTrackerType, r.GetClient())
 	// If the Leader Tracker is missing, create from scratch
 	if err != nil && kerrors.IsNotFound(err) {
 		leaderTracker.Labels[lutils.LeaderVersionLabel] = latestOperandVersion
 		leaderTracker.ResourceVersion = ""
-		leaderTrackers, err := r.getPopulateLeaderTrackerArrayFunc(instance, treeMap, replaceMap, latestOperandVersion, leaderTrackerType)
+		leaderTrackers, err := r.createNewLeaderTrackerList(instance, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, assetsFolder)
 		if err != nil {
 			return err
 		}
@@ -193,9 +193,8 @@ func (r *ReconcileOpenLiberty) SaveLeaderTracker(leaderTracker *corev1.Secret, t
 	})
 }
 
-// Removes the instance owner reference and references in leader tracking labels
-// Precondition: instance must be the resource leader
-func (r *ReconcileOpenLiberty) DeleteResourceWithLeaderTrackingLabels(instance *olv1.OpenLibertyApplication, leaderTracker *corev1.Secret, leaderTrackers *[]lutils.LeaderTracker) error {
+// Removes the instance as leader if instance is the leader
+func (r *ReconcileOpenLiberty) RemoveLeader(instance *olv1.OpenLibertyApplication, leaderTracker *corev1.Secret, leaderTrackers *[]lutils.LeaderTracker) error {
 	changeDetected := false
 	// If the instance is being tracked, remove it
 	for i := range *leaderTrackers {

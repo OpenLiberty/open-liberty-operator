@@ -452,7 +452,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	// Create and manage the shared LTPA keys Secret if the feature is enabled
-	message, ltpaSecretName, err := r.reconcileLTPASecret(instance, ltpaMetadata)
+	message, ltpaSecretName, err := r.reconcileLTPAKeys(instance, ltpaMetadata)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)

@@ -15,6 +15,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+const PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME = "password-encryption"
+
 func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (string, string, error) {
 	if r.isPasswordEncryptionKeySharingEnabled(instance) {
 		// Does the namespace already have a password encryption key sharing Secret?
@@ -62,7 +64,7 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionMetadata(treeMap map[s
 	// Uncomment code below to extend to multiple password encryption keys per namespace. See ltpa_keys_sharing.go for an example.
 
 	// // retrieve the password encryption leader tracker to re-use an existing name or to create a new metadata.Name
-	// leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, "password-encryption", r.GetClient())
+	// leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	// if err != nil {
 	// 	return metadata, err
 	// }
@@ -94,7 +96,7 @@ func (r *ReconcileOpenLiberty) getPasswordEncryptionMetadataName() string {
 	// NOTE: there is only one possible password encryption key per namespace which corresponds to one shared resource name from password-encryption-signature.yaml
 	// If you would like to have more than one password encryption key in a single namespace, use ltpa-signature.yaml as a template
 	//
-	// _, sharedResourceName, err := lutils.CreateUnstructuredResourceFromSignature("password-encryption", OperatorShortName, "")
+	// _, sharedResourceName, err := lutils.CreateUnstructuredResourceFromSignature(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, OperatorShortName, "")
 	// if err != nil {
 	// 	return "", err
 	// }
@@ -133,7 +135,7 @@ func (r *ReconcileOpenLiberty) createPasswordEncryptionKeyLibertyConfig(instance
 		return fmt.Errorf("a password encryption key was not specified")
 	}
 
-	_, thisInstanceIsLeader, _, err := r.reconcileLeader(instance, passwordEncryptionMetadata, "password-encryption", true)
+	_, thisInstanceIsLeader, _, err := r.reconcileLeader(instance, passwordEncryptionMetadata, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, true)
 	if err != nil {
 		return err
 	}
@@ -183,23 +185,23 @@ func (r *ReconcileOpenLiberty) createPasswordEncryptionKeyLibertyConfig(instance
 }
 
 func (r *ReconcileOpenLiberty) deletePasswordEncryptionKeyResources(instance *olv1.OpenLibertyApplication) error {
-	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(instance, OperatorShortName, "password-encryption", r.GetClient())
+	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(instance, OperatorShortName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	if err != nil {
 		if kerrors.IsNotFound(err) {
 			return nil
 		}
 		return err
 	}
-	return r.DeleteResourceWithLeaderTrackingLabels(instance, leaderTracker, leaderTrackers)
+	return r.RemoveLeader(instance, leaderTracker, leaderTrackers)
 }
 
 // Tracks existing password encryption resources by populating a LeaderTracker array used to initialize the LeaderTracker
-func (r *ReconcileOpenLiberty) GetPasswordEncryptionResources(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string) (*unstructured.UnstructuredList, string, error) {
-	passwordEncryptionResources, err := lutils.CreateUnstructuredResourceListFromSignature("password-encryption", OperatorShortName)
+func (r *ReconcileOpenLiberty) GetPasswordEncryptionResources(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, assetsFolder *string) (*unstructured.UnstructuredList, string, error) {
+	passwordEncryptionResources, err := lutils.CreateUnstructuredResourceListFromSignature(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, assetsFolder, OperatorShortName)
 	if err != nil {
 		return nil, "", err
 	}
-	passwordEncryptionResource, passwordEncryptionResourceName, err := lutils.CreateUnstructuredResourceFromSignature("password-encryption", OperatorShortName, "")
+	passwordEncryptionResource, passwordEncryptionResourceName, err := lutils.CreateUnstructuredResourceFromSignature(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, assetsFolder, OperatorShortName, "")
 	if err != nil {
 		return nil, "", err
 	}

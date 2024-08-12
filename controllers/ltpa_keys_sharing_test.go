@@ -89,6 +89,10 @@ func getControllersFolder() string {
 	return cwd
 }
 
+func getAssetsFolder() string {
+	return getControllersFolder() + "/assets"
+}
+
 func ignoreSubleases(leaderTracker map[string][]byte) map[string][]byte {
 	delete(leaderTracker, lutils.ResourceSubleasesKey)
 	return leaderTracker
@@ -107,7 +111,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	r := createReconcilerFromOpenLibertyApp(instance)
 
 	// First, get the LTPA leader tracker which is not initialized
-	leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, "ltpa", r.GetClient())
+	leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 
 	emptyLeaderTracker := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -131,7 +135,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	// Second, initialize the LTPA leader tracker
 	latestOperandVersion := "v10_4_1"
 	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
-	treeMap, replaceMap, err := tree.ParseDecisionTree("ltpa", &fileName)
+	treeMap, replaceMap, err := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, &fileName)
 	tests = []Test{
 		{"parse decision tree complex", nil, err},
 	}
@@ -139,7 +143,8 @@ func TestLTPALeaderTracker(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	err = r.reconcileLeaderTracker(instance, treeMap, replaceMap, "v10_4_1", "ltpa")
+	assetsFolder := getAssetsFolder()
+	err = r.reconcileLeaderTracker(instance, treeMap, replaceMap, "v10_4_1", LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)
 	tests = []Test{
 		{"initialize LTPA leader tracker", nil, err},
 	}
@@ -147,7 +152,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	leaderTracker, _, err = lutils.GetLeaderTracker(instance, OperatorShortName, "ltpa", r.GetClient())
+	leaderTracker, _, err = lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData := map[string][]byte{}
 	expectedLeaderTrackerData[lutils.ResourcesKey] = []byte("")
 	expectedLeaderTrackerData[lutils.ResourceOwnersKey] = []byte("")
@@ -189,7 +194,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 		Path:      latestOperandVersion + ".a.b.e.true",
 		PathIndex: latestOperandVersion + ".2",
 		Name:      "-ab215",
-	}, "ltpa", true)
+	}, LTPA_RESOURCE_SHARING_FILE_NAME, true)
 	tests = []Test{
 		{"update leader tracker based on path index 2 of complex decision tree - error", nil, err},
 		{"update leader tracker based on path index 2 of complex decision tree - path index", pathIndex, latestOperandVersion + ".2"},
@@ -201,7 +206,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	}
 
 	// Fourth, check that the leader tracker received the new LTPA state
-	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(instance, OperatorShortName, "ltpa", r.GetClient())
+	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData = map[string][]byte{
 		lutils.ResourcesKey:           []byte("-ab215"),
 		lutils.ResourceOwnersKey:      []byte(name),
@@ -221,17 +226,17 @@ func TestLTPALeaderTracker(t *testing.T) {
 
 	// Fourthly, remove the LTPA leader
 	err1 = r.deleteLTPAKeysResources(instance)
-	err2 := r.DeleteResourceWithLeaderTrackingLabels(instance, leaderTracker, leaderTrackers)
+	err2 := r.RemoveLeader(instance, leaderTracker, leaderTrackers)
 	tests = []Test{
 		{"remove LTPA - deleteLTPAKeysResource errors", nil, err1},
-		{"remove LTPA - DeleteResourceWithLeaderTrackingLabels errors", nil, err2},
+		{"remove LTPA - RemoveLeader errors", nil, err2},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	// Lastly, check that the LTPA leader tracker was updated
-	leaderTracker, _, err = lutils.GetLeaderTracker(instance, OperatorShortName, "ltpa", r.GetClient())
+	leaderTracker, _, err = lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData = map[string][]byte{
 		lutils.ResourcesKey:           []byte("-ab215"),
 		lutils.ResourceOwnersKey:      []byte(""), // The owner reference was removed
@@ -266,7 +271,7 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 	// Using the LTPA Decision Tree (complex) at version v10_4_1
 	latestOperandVersion := "v10_4_1"
 	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
-	treeMap, replaceMap, err := tree.ParseDecisionTree("ltpa", &fileName)
+	treeMap, replaceMap, err := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, &fileName)
 	tests := []Test{
 		{"parse decision tree complex", nil, err},
 	}
@@ -307,15 +312,16 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 	}
 
 	// Second, initialize the LTPA leader tracker
+	assetsFolder := getAssetsFolder()
 	tests = []Test{
-		{"initialize LTPA leader tracker error", nil, r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, "ltpa")},
+		{"initialize LTPA leader tracker error", nil, r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	// Lastly, check that the LTPA leader tracker processes the two LTPA Secrets created
-	leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, "ltpa", r.GetClient())
+	leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData := map[string][]byte{
 		lutils.ResourcesKey:           []byte("-b12g1,-bazc1"),
 		lutils.ResourceOwnersKey:      []byte(","), // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
@@ -341,7 +347,7 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T) {
 	r := createReconcilerFromOpenLibertyApp(instance)
 
 	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
-	treeMap, replaceMap, err := tree.ParseDecisionTree("ltpa", &fileName)
+	treeMap, replaceMap, err := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, &fileName)
 	tests := []Test{
 		{"parse decision tree complex", nil, err},
 	}
@@ -384,15 +390,16 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T) {
 
 	// Second, initialize the leader tracker but on a higher version of the LTPA decision tree
 	latestOperandVersion = "v10_4_20" // upgrade the version
+	assetsFolder := getAssetsFolder()
 	tests = []Test{
-		{"reconcileLeaderTracker at version v10_4_20", nil, r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, "ltpa")},
+		{"reconcileLeaderTracker at version v10_4_20", nil, r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	// Lastly, check that the LTPA leader tracker upgraded the two LTPA Secrets created
-	leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, "ltpa", r.GetClient())
+	leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData := map[string][]byte{
 		lutils.ResourcesKey:           []byte("-b12g1,-bazc1"),
 		lutils.ResourceOwnersKey:      []byte(","),                                       // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
@@ -418,7 +425,7 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngr
 	r := createReconcilerFromOpenLibertyApp(instance)
 
 	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
-	treeMap, replaceMap, err := tree.ParseDecisionTree("ltpa", &fileName)
+	treeMap, replaceMap, err := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, &fileName)
 	tests := []Test{
 		{"parse decision tree complex", nil, err},
 	}
@@ -473,15 +480,16 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngr
 
 	// Second, initialize the leader tracker but on a higher version of the LTPA decision tree
 	latestOperandVersion = "v10_4_500" // upgrade the version
+	assetsFolder := getAssetsFolder()
 	tests = []Test{
-		{"reconcileLeaderTracker at version v10_4_500", nil, r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, "ltpa")},
+		{"reconcileLeaderTracker at version v10_4_500", nil, r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	// Thirdly, check that the LTPA leader tracker upgraded the two LTPA Secrets created
-	leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, "ltpa", r.GetClient())
+	leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData := map[string][]byte{
 		lutils.ResourcesKey:           []byte("-b12g1,-bazc1,-ccccc"),
 		lutils.ResourceOwnersKey:      []byte(",,"),                                                        // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
@@ -502,15 +510,15 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngr
 	// Fourthly, downgrade the decision tree version and initialize the leader tracker (run initialize once to delete the old configMap)
 	latestOperandVersion = "v10_3_3"
 	tests = []Test{
-		{"Downgrade LTPA Leader Tracker from v10_4_500 to v10_3_3", nil, r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, "ltpa")},
+		{"Downgrade LTPA Leader Tracker from v10_4_500 to v10_3_3", nil, r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
 	}
 
-	r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, "ltpa")
+	r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)
 
-	leaderTracker, _, err = lutils.GetLeaderTracker(instance, OperatorShortName, "ltpa", r.GetClient())
+	leaderTracker, _, err = lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData = map[string][]byte{
 		lutils.ResourcesKey:           []byte("-b12g1,-bazc1,-ccccc"),
 		lutils.ResourceOwnersKey:      []byte(",,"),                                             // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
