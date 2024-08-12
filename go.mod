@@ -10,6 +10,7 @@ require (
 	github.com/openshift/library-go v0.0.0-20231002074440-3f69f773d102
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.64.1
+	golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.26.10
 	k8s.io/apimachinery v0.26.10

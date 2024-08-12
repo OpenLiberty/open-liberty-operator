@@ -2,9 +2,13 @@ package tree
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
+
+	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
+	"gopkg.in/yaml.v3"
 )
 
 func castMap(someInterface interface{}) (map[string]interface{}, bool) {
@@ -479,4 +483,144 @@ func GetLabelFromDecisionPath(operandVersionString string, pathOptions []string,
 		}
 	}
 	return label, nil
+}
+
+func ParseDecisionTree(leaderTrackerType string, fileName *string) (map[string]interface{}, map[string]map[string]string, error) {
+	var tree []byte
+	var err error
+	// Allow specifying custom file for testing
+	if fileName != nil {
+		tree, err = os.ReadFile(*fileName)
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		tree, err = os.ReadFile("controllers/assets/" + leaderTrackerType + "-decision-tree.yaml")
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	ltpaDecisionTreeYAML := make(map[string]interface{})
+	err = yaml.Unmarshal(tree, ltpaDecisionTreeYAML)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	treeMap, err := CastTreeMap(ltpaDecisionTreeYAML)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	replaceMap, err := CastReplaceMap(ltpaDecisionTreeYAML)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err := ValidateMaps(treeMap, replaceMap); err != nil {
+		return nil, nil, err
+	}
+
+	return treeMap, replaceMap, nil
+}
+
+func getLatestTreeMapOperandVersion(treeMap map[string]interface{}, maxVersion string) (string, error) {
+	maxTreeVersion := "v0_0_0"
+	for version := range treeMap {
+		if !lutils.IsOperandVersionString(version) {
+			return "", fmt.Errorf("the tree map contained a key without a valid semantic version string of format 'va_b_c'")
+		}
+		if lutils.CompareOperandVersion(maxTreeVersion, version) < 0 && lutils.CompareOperandVersion(maxVersion, version) >= 0 {
+			maxTreeVersion = version
+		}
+	}
+	if _, found := treeMap[maxTreeVersion]; !found {
+		return "", fmt.Errorf("could not find a valid key in the tree map when searching for an operand version string less than or equal to version %s", maxVersion)
+	}
+	return maxTreeVersion, nil
+}
+
+func GetLatestOperandVersion(treeMap map[string]interface{}, currentOperandVersion string) (string, error) {
+	operandVersionString := ""
+	if len(currentOperandVersion) == 0 {
+		versionString, err := lutils.GetOperandVersionString()
+		if err != nil {
+			return "", err
+		}
+		operandVersionString = versionString
+	} else {
+		operandVersionString = currentOperandVersion
+	}
+	latestOperandVersionString, err := getLatestTreeMapOperandVersion(treeMap, operandVersionString)
+	if err != nil {
+		return "", err
+	}
+	return latestOperandVersionString, nil
+}
+
+// migrates path to a valid path existing in operator version targetVersion
+func ReplacePath(path string, targetVersion string, treeMap map[string]interface{}, replaceMap map[string]map[string]string) (string, error) {
+	// determine upgrade/downgrade strategy
+	currPath := path
+	currVersion := strings.Split(currPath, ".")[0]
+	sortedKeys := getSortedKeysFromReplaceMap(replaceMap)
+	if !lutils.IsValidOperandVersion(currVersion) || !lutils.IsValidOperandVersion(targetVersion) {
+		return "", fmt.Errorf("there was no valid upgrade path to migrate the LTPA Secret on path %s, this may occur when the LTPA decision tree was modified from the history of an older multi-LTPA Liberty operator, first delete the affected/outdated LTPA Secret(s) then delete the olo-managed-leader-tracking-ltpa ConfigMap to resolve the operator state", path)
+	}
+	cmp := lutils.CompareOperandVersion(currVersion, targetVersion)
+	latestOperandVersion, _ := GetLatestOperandVersion(treeMap, targetVersion)
+	// currVersion > targetVersion - downgrade
+	if cmp > 0 {
+		// fmt.Println("downgrading..." + path + " to " + targetVersion + " latest version " + latestOperandVersion)
+		lastVersion := ""
+		_, found := replaceMap[currVersion]
+		for found && lastVersion != currVersion {
+			lastVersion = currVersion
+			for prevPath, nextPath := range replaceMap[currVersion] {
+				potentialNextVersion := strings.Split(prevPath, ".")[0]
+				// only continue traversing the path if the new potential path is less than the version of the current path (this prevents cycles)
+				// also, the potential next path must be at least as large as the latest operand (decision tree) version for the target version
+				if nextPath == currPath && lutils.CompareOperandVersion(currVersion, potentialNextVersion) > 0 && lutils.CompareOperandVersion(potentialNextVersion, latestOperandVersion) >= 0 {
+					currPath = prevPath
+					currVersion = strings.Split(currPath, ".")[0]
+					break
+				}
+			}
+			_, found = replaceMap[currVersion]
+		}
+	}
+	// currVersion < targetVersion - upgrade
+	if cmp < 0 {
+		// fmt.Println("upgrading..." + path + " to " + targetVersion + " with latest version " + latestOperandVersion)
+		i := -1
+		for _, version := range sortedKeys {
+			i += 1
+			if lutils.CompareOperandVersion(version, currVersion) > 0 {
+				break
+			}
+		}
+		if i >= 0 {
+			for currVersion != targetVersion && i < len(sortedKeys) {
+				for prevPath, nextPath := range replaceMap[sortedKeys[i]] {
+					if prevPath == currPath {
+						currPath = nextPath
+						currVersion = strings.Split(currPath, ".")[0]
+						break
+					}
+				}
+				i += 1
+			}
+		}
+	}
+	return currPath, nil
+}
+
+func getSortedKeysFromReplaceMap(replaceMap map[string]map[string]string) []string {
+	keys := []string{}
+	for key := range replaceMap {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return lutils.CompareOperandVersion(keys[i], keys[j]) < 0
+	})
+	return keys
 }

@@ -316,3 +316,62 @@ func verifyTests(tests []Test) error {
 	}
 	return nil
 }
+
+func TestCompareOperandVersion(t *testing.T) {
+	tests := []Test{
+		{"same version", CompareOperandVersion("v0_0_0", "v0_0_0"), 0},
+		{"same version, multiple digits", CompareOperandVersion("v10_10_10", "v10_10_10"), 0},
+		{"same version, build tags", CompareOperandVersion("v2_0_0alpha", "v2_0_0alpha"), 0},
+		{"different patch version, build tags", CompareOperandVersion("v2_0_10alpha", "v2_0_2alpha"), 8},
+		{"different patch version, build tags, reversed", CompareOperandVersion("v2_0_2alpha", "v2_0_10alpha"), -8},
+		{"different patch version", CompareOperandVersion("v1_0_0", "v1_0_1"), -1},
+		{"different minor version", CompareOperandVersion("v1_0_0", "v1_1_0"), -1},
+		{"different major version", CompareOperandVersion("v2_0_0", "v1_0_0"), 1},
+		{"minor less than patch", CompareOperandVersion("v1_10_0", "v1_0_5"), 10},
+		{"major less than patch", CompareOperandVersion("v2_0_0", "v1_0_10"), 1},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestGetCommaSeparatedString(t *testing.T) {
+	emptyString, emptyStringErr := GetCommaSeparatedString("", 0)
+	oneElement, oneElementErr := GetCommaSeparatedString("one", 0)
+	oneElementAOOB, oneElementAOOBErr := GetCommaSeparatedString("one", 1)
+	multiElement, multiElementErr := GetCommaSeparatedString("one,two,three,four,five", 3)
+	multiElementAOOB, multiElementAOOBErr := GetCommaSeparatedString("one,two,three,four,five", 5)
+	tests := []Test{
+		{"empty string", "", emptyString},
+		{"empty string errors", fmt.Errorf("there is no element"), emptyStringErr},
+		{"one element", "one", oneElement},
+		{"one element errors", nil, oneElementErr},
+		{"one element array out of bounds", "", oneElementAOOB},
+		{"one element array out of bounds error", fmt.Errorf("cannot index string list with only one element"), oneElementAOOBErr},
+		{"multi element", "four", multiElement},
+		{"multi element error", nil, multiElementErr},
+		{"multi element array out of bounds", "", multiElementAOOB},
+		{"multi element array out of bounds error", fmt.Errorf("element not found"), multiElementAOOBErr},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestCommaSeparatedStringContains(t *testing.T) {
+	match := CommaSeparatedStringContains("one,two,three,four", "three")
+	substringNonMatch := CommaSeparatedStringContains("one,two,three,four", "thre")
+	substringNonMatch2 := CommaSeparatedStringContains("one,two,three,four", "threee")
+	oneElementMatch := CommaSeparatedStringContains("one", "one")
+	noElementNonMatch := CommaSeparatedStringContains("", "one")
+	tests := []Test{
+		{"single match", 2, match},
+		{"substring should not match", -1, substringNonMatch},
+		{"substring 2 should not match", -1, substringNonMatch2},
+		{"one element match", 0, oneElementMatch},
+		{"no element non match", -1, noElementNonMatch},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}

@@ -107,7 +107,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	r := createReconcilerFromOpenLibertyApp(instance)
 
 	// First, get the LTPA leader tracker which is not initialized
-	leaderTracker, _, err := r.getLTPALeaderTracker(instance)
+	leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, "ltpa", r.GetClient())
 
 	emptyLeaderTracker := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -131,7 +131,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	// Second, initialize the LTPA leader tracker
 	latestOperandVersion := "v10_4_1"
 	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
-	treeMap, replaceMap, err := tree.ParseLTPADecisionTree(&fileName)
+	treeMap, replaceMap, err := tree.ParseDecisionTree("ltpa", &fileName)
 	tests = []Test{
 		{"parse decision tree complex", nil, err},
 	}
@@ -139,7 +139,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	err = r.initializeLTPALeaderTracker(instance, treeMap, replaceMap, "v10_4_1")
+	err = r.reconcileLeaderTracker(instance, treeMap, replaceMap, "v10_4_1", "ltpa")
 	tests = []Test{
 		{"initialize LTPA leader tracker", nil, err},
 	}
@@ -147,7 +147,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	leaderTracker, _, err = r.getLTPALeaderTracker(instance)
+	leaderTracker, _, err = lutils.GetLeaderTracker(instance, OperatorShortName, "ltpa", r.GetClient())
 	expectedLeaderTrackerData := map[string][]byte{}
 	expectedLeaderTrackerData[lutils.ResourcesKey] = []byte("")
 	expectedLeaderTrackerData[lutils.ResourceOwnersKey] = []byte("")
@@ -157,7 +157,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
 		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
-		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LTPAVersionLabel]},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
 	}
 	if err := verifyTests(tests); err != nil {
@@ -170,35 +170,26 @@ func TestLTPALeaderTracker(t *testing.T) {
 			Name:      "olo-managed-ltpa-ab215",
 			Namespace: namespace,
 			Labels: map[string]string{
-				lutils.LTPAPathIndexLabel: latestOperandVersion + ".2", // choosing path index 2 under tree v10_4_1 (i.e. v10_4_1.a.b.e.true)
+				lutils.ResourcePathIndexLabel: latestOperandVersion + ".2", // choosing path index 2 under tree v10_4_1 (i.e. v10_4_1.a.b.e.true)
 			},
 		},
 		Data: map[string][]byte{}, // create empty data
 	}
-	// LTPA Secrets can't be created without a ServiceAccount (this mock ServiceAccount allows function CreateOrUpdateWithLeaderTrackingLabels to mock the LTPA Secret)
-	// In a live environment, the LTPA Secrets depend on the ServiceAccount to issue a Job that creates the LTPA Secret
-	complexServiceAccount := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "olo-ltpa",
-			Namespace: namespace,
-		},
-	}
+
 	err1 := r.CreateOrUpdate(complexSecret, nil, func() error { return nil })
-	err2 := r.CreateOrUpdate(complexServiceAccount, instance, func() error { return nil })
 	tests = []Test{
 		{"create LTPA Secret from based on path index 2 of complex decision tree", nil, err1},
-		{"create LTPA ServiceAccount", nil, err2},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	// Mock the process where the operator saves the LTPA Secret, storing it into the leader tracker
-	leaderName, isLeader, pathIndex, err := r.CreateOrUpdateWithLeaderTrackingLabels(complexServiceAccount, instance, &lutils.LTPAMetadata{
-		Path:       latestOperandVersion + ".a.b.e.true",
-		PathIndex:  latestOperandVersion + ".2",
-		NameSuffix: "-ab215",
-	}, true)
+	leaderName, isLeader, pathIndex, err := r.reconcileLeader(instance, &lutils.LTPAMetadata{
+		Path:      latestOperandVersion + ".a.b.e.true",
+		PathIndex: latestOperandVersion + ".2",
+		Name:      "-ab215",
+	}, "ltpa", true)
 	tests = []Test{
 		{"update leader tracker based on path index 2 of complex decision tree - error", nil, err},
 		{"update leader tracker based on path index 2 of complex decision tree - path index", pathIndex, latestOperandVersion + ".2"},
@@ -210,7 +201,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	}
 
 	// Fourth, check that the leader tracker received the new LTPA state
-	leaderTracker, leaderTrackers, err := r.getLTPALeaderTracker(instance)
+	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(instance, OperatorShortName, "ltpa", r.GetClient())
 	expectedLeaderTrackerData = map[string][]byte{
 		lutils.ResourcesKey:           []byte("-ab215"),
 		lutils.ResourceOwnersKey:      []byte(name),
@@ -221,7 +212,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
 		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
-		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LTPAVersionLabel]},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
 	}
 	if err := verifyTests(tests); err != nil {
@@ -230,18 +221,17 @@ func TestLTPALeaderTracker(t *testing.T) {
 
 	// Fourthly, remove the LTPA leader
 	err1 = r.deleteLTPAKeysResources(instance)
-	hasNoOwners, err2 := r.DeleteResourceWithLeaderTrackingLabels(complexServiceAccount, instance, leaderTracker, leaderTrackers)
+	err2 := r.DeleteResourceWithLeaderTrackingLabels(instance, leaderTracker, leaderTrackers)
 	tests = []Test{
 		{"remove LTPA - deleteLTPAKeysResource errors", nil, err1},
 		{"remove LTPA - DeleteResourceWithLeaderTrackingLabels errors", nil, err2},
-		{"remove LTPA - DeleteResourceWithLeaderTrackingLabels has no owners", true, hasNoOwners},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	// Lastly, check that the LTPA leader tracker was updated
-	leaderTracker, _, err = r.getLTPALeaderTracker(instance)
+	leaderTracker, _, err = lutils.GetLeaderTracker(instance, OperatorShortName, "ltpa", r.GetClient())
 	expectedLeaderTrackerData = map[string][]byte{
 		lutils.ResourcesKey:           []byte("-ab215"),
 		lutils.ResourceOwnersKey:      []byte(""), // The owner reference was removed
@@ -252,7 +242,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
 		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
-		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LTPAVersionLabel]},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
 	}
 	if err := verifyTests(tests); err != nil {
@@ -261,7 +251,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 }
 
 // This tests that the LTPA leader tracker can have cluster awareness of LTPA Secrets before operator reconciliation
-func TestInitializeLTPALeaderTrackerWhenLTPASecretsExist(t *testing.T) {
+func TestReconcileLeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 	logger := zap.New()
 	logf.SetLogger(logger)
 	os.Setenv("WATCH_NAMESPACE", namespace)
@@ -276,7 +266,7 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 	// Using the LTPA Decision Tree (complex) at version v10_4_1
 	latestOperandVersion := "v10_4_1"
 	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
-	treeMap, replaceMap, err := tree.ParseLTPADecisionTree(&fileName)
+	treeMap, replaceMap, err := tree.ParseDecisionTree("ltpa", &fileName)
 	tests := []Test{
 		{"parse decision tree complex", nil, err},
 	}
@@ -291,8 +281,8 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 			Name:      ltpaRootName + "-b12g1", // random lower alphanumeric suffix of length 5
 			Namespace: namespace,
 			Labels: map[string]string{
-				lutils.LTPAPathIndexLabel: latestOperandVersion + ".2", // choosing path index 2 under tree v10_4_1 (i.e. v10_4_1.a.b.e.true)
-				"app.kubernetes.io/name":  ltpaRootName,
+				lutils.ResourcePathIndexLabel: latestOperandVersion + ".2", // choosing path index 2 under tree v10_4_1 (i.e. v10_4_1.a.b.e.true)
+				"app.kubernetes.io/name":      ltpaRootName,
 			},
 		},
 		Data: map[string][]byte{}, // create empty data
@@ -302,8 +292,8 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 			Name:      ltpaRootName + "-bazc1", // random lower alphanumeric suffix of length 5
 			Namespace: namespace,
 			Labels: map[string]string{
-				lutils.LTPAPathIndexLabel: latestOperandVersion + ".3", // choosing path index 3 under tree v10_4_1 (i.e. v10_4_1.a.b.e.false)
-				"app.kubernetes.io/name":  ltpaRootName,
+				lutils.ResourcePathIndexLabel: latestOperandVersion + ".3", // choosing path index 3 under tree v10_4_1 (i.e. v10_4_1.a.b.e.false)
+				"app.kubernetes.io/name":      ltpaRootName,
 			},
 		},
 		Data: map[string][]byte{}, // create empty data
@@ -318,14 +308,14 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 
 	// Second, initialize the LTPA leader tracker
 	tests = []Test{
-		{"initialize LTPA leader tracker error", nil, r.initializeLTPALeaderTracker(instance, treeMap, replaceMap, latestOperandVersion)},
+		{"initialize LTPA leader tracker error", nil, r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, "ltpa")},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	// Lastly, check that the LTPA leader tracker processes the two LTPA Secrets created
-	leaderTracker, _, err := r.getLTPALeaderTracker(instance)
+	leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, "ltpa", r.GetClient())
 	expectedLeaderTrackerData := map[string][]byte{
 		lutils.ResourcesKey:           []byte("-b12g1,-bazc1"),
 		lutils.ResourceOwnersKey:      []byte(","), // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
@@ -337,7 +327,7 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
 		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
-		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LTPAVersionLabel]},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -345,13 +335,13 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 }
 
 // This tests that the LTPA leader tracker can have cluster awareness of LTPA Secrets before operator reconciliation and upgrade the LTPA Secrets to the latest decision tree version
-func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T) {
+func TestReconcileLeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T) {
 	spec := openlibertyv1.OpenLibertyApplicationSpec{}
 	instance := createOpenLibertyApp(name, namespace, spec)
 	r := createReconcilerFromOpenLibertyApp(instance)
 
 	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
-	treeMap, replaceMap, err := tree.ParseLTPADecisionTree(&fileName)
+	treeMap, replaceMap, err := tree.ParseDecisionTree("ltpa", &fileName)
 	tests := []Test{
 		{"parse decision tree complex", nil, err},
 	}
@@ -367,8 +357,8 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T
 			Name:      ltpaRootName + "-b12g1", // random lower alphanumeric suffix of length 5
 			Namespace: namespace,
 			Labels: map[string]string{
-				lutils.LTPAPathIndexLabel: latestOperandVersion + ".2", // choosing path index 2 under tree v10_4_1 (i.e. v10_4_1.a.b.e.true)
-				"app.kubernetes.io/name":  ltpaRootName,
+				lutils.ResourcePathIndexLabel: latestOperandVersion + ".2", // choosing path index 2 under tree v10_4_1 (i.e. v10_4_1.a.b.e.true)
+				"app.kubernetes.io/name":      ltpaRootName,
 			},
 		},
 		Data: map[string][]byte{}, // create empty data
@@ -378,8 +368,8 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T
 			Name:      ltpaRootName + "-bazc1", // random lower alphanumeric suffix of length 5
 			Namespace: namespace,
 			Labels: map[string]string{
-				lutils.LTPAPathIndexLabel: latestOperandVersion + ".3", // choosing path index 3 under tree v10_4_1 (i.e. v10_4_1.a.b.e.false)
-				"app.kubernetes.io/name":  ltpaRootName,
+				lutils.ResourcePathIndexLabel: latestOperandVersion + ".3", // choosing path index 3 under tree v10_4_1 (i.e. v10_4_1.a.b.e.false)
+				"app.kubernetes.io/name":      ltpaRootName,
 			},
 		},
 		Data: map[string][]byte{}, // create empty data
@@ -395,14 +385,14 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T
 	// Second, initialize the leader tracker but on a higher version of the LTPA decision tree
 	latestOperandVersion = "v10_4_20" // upgrade the version
 	tests = []Test{
-		{"initializeLTPALeaderTracker at version v10_4_20", nil, r.initializeLTPALeaderTracker(instance, treeMap, replaceMap, latestOperandVersion)},
+		{"reconcileLeaderTracker at version v10_4_20", nil, r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, "ltpa")},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	// Lastly, check that the LTPA leader tracker upgraded the two LTPA Secrets created
-	leaderTracker, _, err := r.getLTPALeaderTracker(instance)
+	leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, "ltpa", r.GetClient())
 	expectedLeaderTrackerData := map[string][]byte{
 		lutils.ResourcesKey:           []byte("-b12g1,-bazc1"),
 		lutils.ResourceOwnersKey:      []byte(","),                                       // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
@@ -413,7 +403,7 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
 		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
-		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LTPAVersionLabel]},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
 	}
 	if err := verifyTests(tests); err != nil {
@@ -422,13 +412,13 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T
 }
 
 // This tests that the LTPA leader tracker can have cluster awareness of LTPA Secrets before operator reconciliation and upgrade the LTPA Secrets to the latest decision tree version
-func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngrades(t *testing.T) {
+func TestReconcileLeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngrades(t *testing.T) {
 	spec := openlibertyv1.OpenLibertyApplicationSpec{}
 	instance := createOpenLibertyApp(name, namespace, spec)
 	r := createReconcilerFromOpenLibertyApp(instance)
 
 	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
-	treeMap, replaceMap, err := tree.ParseLTPADecisionTree(&fileName)
+	treeMap, replaceMap, err := tree.ParseDecisionTree("ltpa", &fileName)
 	tests := []Test{
 		{"parse decision tree complex", nil, err},
 	}
@@ -444,8 +434,8 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndD
 			Name:      ltpaRootName + "-b12g1", // random lower alphanumeric suffix of length 5
 			Namespace: namespace,
 			Labels: map[string]string{
-				lutils.LTPAPathIndexLabel: "v10_4_1.2", // choosing path index 2 under tree v10_4_1 (i.e. v10_4_1.a.b.e.true)
-				"app.kubernetes.io/name":  ltpaRootName,
+				lutils.ResourcePathIndexLabel: "v10_4_1.2", // choosing path index 2 under tree v10_4_1 (i.e. v10_4_1.a.b.e.true)
+				"app.kubernetes.io/name":      ltpaRootName,
 			},
 		},
 		Data: map[string][]byte{}, // create empty data
@@ -455,8 +445,8 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndD
 			Name:      ltpaRootName + "-bazc1", // random lower alphanumeric suffix of length 5
 			Namespace: namespace,
 			Labels: map[string]string{
-				lutils.LTPAPathIndexLabel: "v10_4_1.3", // choosing path index 3 under tree v10_4_1 (i.e. v10_4_1.a.b.e.false)
-				"app.kubernetes.io/name":  ltpaRootName,
+				lutils.ResourcePathIndexLabel: "v10_4_1.3", // choosing path index 3 under tree v10_4_1 (i.e. v10_4_1.a.b.e.false)
+				"app.kubernetes.io/name":      ltpaRootName,
 			},
 		},
 		Data: map[string][]byte{}, // create empty data
@@ -466,8 +456,8 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndD
 			Name:      ltpaRootName + "-ccccc", // random lower alphanumeric suffix of length 5
 			Namespace: namespace,
 			Labels: map[string]string{
-				lutils.LTPAPathIndexLabel: "v10_4_1.4", // choosing path index 4 under tree v10_4_1 (i.e. v10_4_1.j.fizz)
-				"app.kubernetes.io/name":  ltpaRootName,
+				lutils.ResourcePathIndexLabel: "v10_4_1.4", // choosing path index 4 under tree v10_4_1 (i.e. v10_4_1.j.fizz)
+				"app.kubernetes.io/name":      ltpaRootName,
 			},
 		},
 		Data: map[string][]byte{}, // create empty data
@@ -484,14 +474,14 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndD
 	// Second, initialize the leader tracker but on a higher version of the LTPA decision tree
 	latestOperandVersion = "v10_4_500" // upgrade the version
 	tests = []Test{
-		{"initializeLTPALeaderTracker at version v10_4_500", nil, r.initializeLTPALeaderTracker(instance, treeMap, replaceMap, latestOperandVersion)},
+		{"reconcileLeaderTracker at version v10_4_500", nil, r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, "ltpa")},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	// Thirdly, check that the LTPA leader tracker upgraded the two LTPA Secrets created
-	leaderTracker, _, err := r.getLTPALeaderTracker(instance)
+	leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, "ltpa", r.GetClient())
 	expectedLeaderTrackerData := map[string][]byte{
 		lutils.ResourcesKey:           []byte("-b12g1,-bazc1,-ccccc"),
 		lutils.ResourceOwnersKey:      []byte(",,"),                                                        // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
@@ -502,7 +492,7 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndD
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
 		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
-		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LTPAVersionLabel]},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
 	}
 	if err := verifyTests(tests); err != nil {
@@ -512,15 +502,15 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndD
 	// Fourthly, downgrade the decision tree version and initialize the leader tracker (run initialize once to delete the old configMap)
 	latestOperandVersion = "v10_3_3"
 	tests = []Test{
-		{"Downgrade LTPA Leader Tracker from v10_4_500 to v10_3_3", nil, r.initializeLTPALeaderTracker(instance, treeMap, replaceMap, latestOperandVersion)},
+		{"Downgrade LTPA Leader Tracker from v10_4_500 to v10_3_3", nil, r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, "ltpa")},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
 	}
 
-	r.initializeLTPALeaderTracker(instance, treeMap, replaceMap, latestOperandVersion)
+	r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, "ltpa")
 
-	leaderTracker, _, err = r.getLTPALeaderTracker(instance)
+	leaderTracker, _, err = lutils.GetLeaderTracker(instance, OperatorShortName, "ltpa", r.GetClient())
 	expectedLeaderTrackerData = map[string][]byte{
 		lutils.ResourcesKey:           []byte("-b12g1,-bazc1,-ccccc"),
 		lutils.ResourceOwnersKey:      []byte(",,"),                                             // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
@@ -532,7 +522,7 @@ func TestInitializeLTPALeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndD
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
 		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
-		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LTPAVersionLabel]},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)

@@ -9,12 +9,12 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	rcoutils "github.com/application-stacks/runtime-component-operator/utils"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
+	"golang.org/x/exp/rand"
 	v1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -45,15 +45,7 @@ const LTPAServerXMLMountSuffix = "-managed-ltpa-mount-server-xml"
 const LTPAKeysFileName = "ltpa.keys"
 const LTPAKeysXMLFileName = "managedLTPA.xml"
 const LTPAKeysMountXMLFileName = "managedLTPAMount.xml"
-const LTPAPathIndexLabel = "openlibertyapplications.apps.openliberty.io/ltpa-path-index"
-const LTPAVersionLabel = "openlibertyapplications.apps.openliberty.io/ltpa-version"
-
-// Leader tracking constants
-const ResourcesKey = "names"
-const ResourceOwnersKey = "owners"
-const ResourcePathsKey = "paths"
-const ResourcePathIndicesKey = "pathIndices"
-const ResourceSubleasesKey = "subleases"
+const LTPAKeysCreationScriptFileName = "create_ltpa_keys.sh"
 
 // Mount constants
 const SecureMountPath = "/output/resources/liberty-operator"
@@ -67,9 +59,51 @@ const EncryptionKeyXMLFileName = "encryptionKey.xml"
 const EncryptionKeyMountXMLFileName = "encryptionKeyMount.xml"
 
 type LTPAMetadata struct {
+	Kind       string
+	APIVersion string
+	Name       string
 	Path       string
 	PathIndex  string
-	NameSuffix string
+}
+
+func (m LTPAMetadata) GetName() string {
+	return m.Name
+}
+func (m LTPAMetadata) GetPath() string {
+	return m.Path
+}
+func (m LTPAMetadata) GetPathIndex() string {
+	return m.PathIndex
+}
+func (m LTPAMetadata) GetKind() string {
+	return m.Kind
+}
+func (m LTPAMetadata) GetAPIVersion() string {
+	return m.APIVersion
+}
+
+type PasswordEncryptionMetadata struct {
+	Kind       string
+	APIVersion string
+	Name       string
+	Path       string
+	PathIndex  string
+}
+
+func (m PasswordEncryptionMetadata) GetName() string {
+	return m.Name
+}
+func (m PasswordEncryptionMetadata) GetPath() string {
+	return m.Path
+}
+func (m PasswordEncryptionMetadata) GetPathIndex() string {
+	return m.PathIndex
+}
+func (m PasswordEncryptionMetadata) GetKind() string {
+	return m.Kind
+}
+func (m PasswordEncryptionMetadata) GetAPIVersion() string {
+	return m.APIVersion
 }
 
 type LTPAConfig struct {
@@ -82,78 +116,6 @@ type LTPAConfig struct {
 	FileName                    string
 	EncryptionKeySecretName     string
 	EncryptionKeySharingEnabled bool // true or false
-}
-
-type LeaderTracker struct {
-	Name      string
-	Owner     string
-	PathIndex string
-	Path      string
-	Sublease  string
-}
-
-func RemoveLeaderTracker(leaderTracker *[]LeaderTracker, i int) {
-	if leaderTracker == nil {
-		return
-	}
-	if i >= len(*leaderTracker) {
-		return
-	}
-	*leaderTracker = append((*leaderTracker)[:i], (*leaderTracker)[i+1:]...)
-}
-
-func (tracker *LeaderTracker) RenewSublease() {
-	if tracker == nil {
-		return
-	}
-	tracker.Sublease = fmt.Sprint(time.Now().Unix())
-}
-
-func (tracker *LeaderTracker) SetOwner(instance string) {
-	if tracker == nil {
-		return
-	}
-	tracker.Owner = instance
-	tracker.RenewSublease()
-}
-
-func (tracker *LeaderTracker) ClearOwnerIfMatching(instance string) {
-	if tracker == nil {
-		return
-	}
-	if tracker.Owner == instance {
-		tracker.Owner = ""
-	}
-}
-
-// Removes the Owner and Sublease attribute from LeaderTracker to indicate the resource is no longer being tracked
-func (tracker *LeaderTracker) EvictOwner() {
-	if tracker == nil {
-		return
-	}
-	tracker.Owner = ""
-	tracker.Sublease = ""
-}
-
-func (tracker *LeaderTracker) EvictOwnerIfSubleaseHasExpired() {
-	if tracker == nil {
-		return
-	}
-	// Evict if the sublease could not be parsed
-	then, err := strconv.ParseInt(tracker.Sublease, 10, 64)
-	if err != nil {
-		tracker.EvictOwner()
-		return
-	}
-	// Evict if the sublease has surpassed the renew time
-	now := time.Now().Unix()
-	if now-then > 20 {
-		tracker.EvictOwner()
-	}
-}
-
-func PatchConfigMap(mapName string) {
-
 }
 
 // Validate if the OpenLibertyApplication is valid
@@ -782,7 +744,7 @@ func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaConfig *
 			SecurityContext: rcoutils.GetSecurityContext(la),
 			Command:         []string{"/bin/bash", "-c"},
 			// Usage: /bin/create_ltpa_keys.sh <namespace> <ltpa-secret-name> <securityUtility-encoding>
-			Args: []string{managedLTPAMountPath + "/bin/create_ltpa_keys.sh " + la.GetNamespace() + " " + ltpaConfig.SecretName + " " + ltpaConfig.SecretInstanceName + " " + ltpaConfig.FileName + " " + encodingType + " " + ltpaConfig.EncryptionKeySecretName + " " + strconv.FormatBool(ltpaConfig.EncryptionKeySharingEnabled) + " " + LTPAPathIndexLabel + " " + ltpaConfig.Metadata.PathIndex + " " + ltpaConfig.JobRequestConfigMapName},
+			Args: []string{managedLTPAMountPath + "/bin/" + LTPAKeysCreationScriptFileName + " " + la.GetNamespace() + " " + ltpaConfig.SecretName + " " + ltpaConfig.SecretInstanceName + " " + ltpaConfig.FileName + " " + encodingType + " " + ltpaConfig.EncryptionKeySecretName + " " + strconv.FormatBool(ltpaConfig.EncryptionKeySharingEnabled) + " " + ResourcePathIndexLabel + " " + ltpaConfig.Metadata.PathIndex + " " + ltpaConfig.JobRequestConfigMapName},
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      ltpaVolumeMountName,
@@ -919,4 +881,101 @@ func GetOperandVersionString() (string, error) {
 		}
 	}
 	return finalVersion, nil
+}
+
+func GetCommaSeparatedArray(stringList string) []string {
+	if strings.Contains(stringList, ",") {
+		return strings.Split(stringList, ",")
+	}
+	return []string{stringList}
+}
+
+var letterNums = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
+
+func GetRandomLowerAlphanumericSuffix(length int) string {
+	b := make([]rune, length)
+	for i := range b {
+		b[i] = letterNums[rand.Intn(len(letterNums))]
+	}
+	return "-" + string(b)
+}
+
+func IsLowerAlphanumericSuffix(suffix string) bool {
+	for _, ch := range suffix {
+		numCheck := int(ch - '0')
+		lowerAlphaCheck := int(ch - 'a')
+		if !((numCheck >= 0 && numCheck <= 9) || (lowerAlphaCheck >= 0 && lowerAlphaCheck <= 25)) {
+			return false
+		}
+	}
+	return true
+}
+
+func GetCommaSeparatedString(stringList string, index int) (string, error) {
+	if stringList == "" {
+		return "", fmt.Errorf("there is no element")
+	}
+	if strings.Contains(stringList, ",") {
+		for i, val := range strings.Split(stringList, ",") {
+			if index == i {
+				return val, nil
+			}
+		}
+	} else {
+		if index == 0 {
+			return stringList, nil
+		}
+		return "", fmt.Errorf("cannot index string list with only one element")
+	}
+	return "", fmt.Errorf("element not found")
+}
+
+// returns the index of the contained value in stringList or else -1
+func CommaSeparatedStringContains(stringList string, value string) int {
+	if strings.Contains(stringList, ",") {
+		for i, label := range strings.Split(stringList, ",") {
+			if value == label {
+				return i
+			}
+		}
+	} else if stringList == value {
+		return 0
+	}
+	return -1
+}
+
+func IsValidOperandVersion(version string) bool {
+	if len(version) == 0 {
+		return false
+	}
+	if version[0] != 'v' {
+		return false
+	}
+	if !strings.Contains(version[1:], "_") {
+		return false
+	}
+	versions := strings.Split(version[1:], "_")
+	if len(versions) != 3 {
+		return false
+	}
+	for _, version := range versions {
+		if len(GetFirstNumberFromString(version)) == 0 {
+			return false
+		}
+	}
+
+	return true
+}
+
+func CompareOperandVersion(a string, b string) int {
+	arrA := strings.Split(a[1:], "_")
+	arrB := strings.Split(b[1:], "_")
+	for i := range arrA {
+		intA, _ := strconv.ParseInt(GetFirstNumberFromString(arrA[i]), 10, 64)
+		intB, _ := strconv.ParseInt(GetFirstNumberFromString(arrB[i]), 10, 64)
+		if intA != intB {
+			return int(intA - intB)
+		}
+	}
+	return 0
 }

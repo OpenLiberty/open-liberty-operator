@@ -222,13 +222,23 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 	}
 
-	// Builds the LTPA state and returns the metadata that describes this OpenLibertyApplication's LTPA Secret
+	// Reconciles the shared LTPA state for the instance namespace
 	var ltpaMetadata *lutils.LTPAMetadata
 	if r.isLTPAKeySharingEnabled(instance) {
-		ltpaMetadata, err = r.reconcileLTPAState(instance)
+		leaderMetadata, err := r.reconcileResourceTrackingState(instance, "ltpa")
 		if err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
+		ltpaMetadata = leaderMetadata.(*lutils.LTPAMetadata)
+	}
+	// Reconciles the shared password encryption key state for the instance namespace
+	var passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata
+	if r.isPasswordEncryptionKeySharingEnabled(instance) {
+		leaderMetadata, err := r.reconcileResourceTrackingState(instance, "password-encryption")
+		if err != nil {
+			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		}
+		passwordEncryptionMetadata = leaderMetadata.(*lutils.PasswordEncryptionMetadata)
 	}
 
 	if imageReferenceOld != instance.Status.ImageReference {
@@ -435,7 +445,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	// Manage the shared password encryption key Secret if it exists
-	message, encryptionSecretName, err := r.reconcileEncryptionKeySharing(instance)
+	message, encryptionSecretName, err := r.reconcilePasswordEncryptionKey(instance, passwordEncryptionMetadata)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -516,7 +526,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			}
 
 			if r.isLTPAKeySharingEnabled(instance) && len(ltpaSecretName) > 0 {
-				lutils.ConfigureLTPA(&statefulSet.Spec.Template, instance, OperatorShortName, ltpaSecretName, ltpaMetadata.NameSuffix)
+				lutils.ConfigureLTPA(&statefulSet.Spec.Template, instance, OperatorShortName, ltpaSecretName, ltpaMetadata.Name)
 				err := lutils.AddSecretResourceVersionAsEnvVar(&statefulSet.Spec.Template, instance, r.GetClient(), ltpaSecretName, "LTPA")
 				if err != nil {
 					return err
@@ -591,7 +601,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			}
 
 			if r.isLTPAKeySharingEnabled(instance) && len(ltpaSecretName) > 0 {
-				lutils.ConfigureLTPA(&deploy.Spec.Template, instance, OperatorShortName, ltpaSecretName, ltpaMetadata.NameSuffix)
+				lutils.ConfigureLTPA(&deploy.Spec.Template, instance, OperatorShortName, ltpaSecretName, ltpaMetadata.Name)
 				err := lutils.AddSecretResourceVersionAsEnvVar(&deploy.Spec.Template, instance, r.GetClient(), ltpaSecretName, "LTPA")
 				if err != nil {
 					return err
