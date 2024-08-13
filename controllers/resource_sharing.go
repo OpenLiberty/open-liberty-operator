@@ -193,21 +193,29 @@ func (r *ReconcileOpenLiberty) SaveLeaderTracker(leaderTracker *corev1.Secret, t
 	})
 }
 
-// Removes the instance as leader if instance is the leader
+// Removes the instance as leader if instance is the leader and if no leaders are being tracked then delete the leader tracking Secret
 func (r *ReconcileOpenLiberty) RemoveLeader(instance *olv1.OpenLibertyApplication, leaderTracker *corev1.Secret, leaderTrackers *[]lutils.LeaderTracker) error {
 	changeDetected := false
+	noOwners := true
 	// If the instance is being tracked, remove it
 	for i := range *leaderTrackers {
 		if (*leaderTrackers)[i].ClearOwnerIfMatching(instance.Name) {
 			changeDetected = true
 		}
+		if (*leaderTrackers)[i].Owner != "" {
+			noOwners = false
+		}
 	}
-	// Save this new owner list
-	if changeDetected {
+	if noOwners {
+		if err := r.DeleteResource(leaderTracker); err != nil {
+			return err
+		}
+	} else if changeDetected {
 		if err := r.SaveLeaderTracker(leaderTracker, leaderTrackers); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 

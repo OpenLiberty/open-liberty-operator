@@ -224,24 +224,40 @@ func TestLTPALeaderTracker(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	// Fourthly, remove the LTPA leader
-	err1 = r.deleteLTPAKeysResources(instance)
-	err2 := r.RemoveLeader(instance, leaderTracker, leaderTrackers)
+	// Fifth, add another Secret
+	complexSecretTwo := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "olo-managed-ltpa-cd123",
+			Namespace: namespace,
+			Labels: map[string]string{
+				lutils.ResourcePathIndexLabel: latestOperandVersion + ".1",
+			},
+		},
+		Data: map[string][]byte{}, // create empty data
+	}
+
+	err2 := r.CreateOrUpdate(complexSecretTwo, nil, func() error { return nil })
 	tests = []Test{
-		{"remove LTPA - deleteLTPAKeysResource errors", nil, err1},
-		{"remove LTPA - RemoveLeader errors", nil, err2},
+		{"create LTPA Secret from based on path index 1 of complex decision tree", nil, err2},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
 	}
 
-	// Lastly, check that the LTPA leader tracker was updated
+	// Mock the process where the operator saves the LTPA Secret, storing it into the leader tracker
+	r.reconcileLeader(instance, &lutils.LTPAMetadata{
+		Path:      latestOperandVersion + ".a.b.d.true",
+		PathIndex: latestOperandVersion + ".1",
+		Name:      "-cd123",
+	}, LTPA_RESOURCE_SHARING_FILE_NAME, true)
+
+	// Sixth, check that the LTPA leader tracker was updated
 	leaderTracker, _, err = lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData = map[string][]byte{
-		lutils.ResourcesKey:           []byte("-ab215"),
-		lutils.ResourceOwnersKey:      []byte(""), // The owner reference was removed
-		lutils.ResourcePathsKey:       []byte(latestOperandVersion + ".a.b.e.true"),
-		lutils.ResourcePathIndicesKey: []byte(latestOperandVersion + ".2"),
+		lutils.ResourcesKey:           []byte("-ab215,-cd123"),
+		lutils.ResourceOwnersKey:      []byte(fmt.Sprintf(",%s", instance.Name)), // The owner reference was removed for -ab215 and added for -cd123
+		lutils.ResourcePathsKey:       []byte(fmt.Sprintf("%s.a.b.e.true,%s.a.b.d.true", latestOperandVersion, latestOperandVersion)),
+		lutils.ResourcePathIndicesKey: []byte(fmt.Sprintf("%s.2,%s.1", latestOperandVersion, latestOperandVersion)),
 	}
 	tests = []Test{
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
@@ -249,6 +265,21 @@ func TestLTPALeaderTracker(t *testing.T) {
 		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
 		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// Lastly, remove the LTPA leader
+	err1 = r.deleteLTPAKeysResources(instance)
+	err2 = r.RemoveLeader(instance, leaderTracker, leaderTrackers)
+	_, leaderTrackers, leaderTrackerErr := lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	var nilLeaderTrackers *[]lutils.LeaderTracker
+	tests = []Test{
+		{"remove LTPA - deleteLTPAKeysResource errors", nil, err1},
+		{"remove LTPA - RemoveLeader errors", nil, err2},
+		{"remove LTPA - GetLeaderTracker is not found", true, kerrors.IsNotFound(leaderTrackerErr)},
+		{"remove LTPA - leader trackers list is nil", nilLeaderTrackers, leaderTrackers},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
