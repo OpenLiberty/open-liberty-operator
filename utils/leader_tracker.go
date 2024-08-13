@@ -142,7 +142,6 @@ func CustomizeLeaderTracker(leaderTracker *corev1.Secret, trackerList *[]LeaderT
 	leaderTracker.Data[ResourcePathIndicesKey] = []byte(pathIndices)
 	leaderTracker.Data[ResourcePathsKey] = []byte(paths)
 	leaderTracker.Data[ResourceSubleasesKey] = []byte(subleases)
-	return
 }
 
 func GetLeaderTracker(instance *olv1.OpenLibertyApplication, operatorShortName string, leaderTrackerType string, client client.Client) (*corev1.Secret, *[]LeaderTracker, error) {
@@ -254,9 +253,6 @@ func CreateUnstructuredResourceListFromSignature(leaderTrackerType string, asset
 	sharedResourceList := &unstructured.UnstructuredList{}
 	sharedResourceList.SetKind(kind.(string))
 	sharedResourceList.SetAPIVersion(apiVersion.(string))
-	if err != nil {
-		return nil, err
-	}
 	return sharedResourceList, nil
 }
 
