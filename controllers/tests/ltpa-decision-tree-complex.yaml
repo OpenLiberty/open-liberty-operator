@@ -6,10 +6,10 @@ tree:
     a:
       b: 
         c: true # 0
-        d: true # 1
         e:
           - true # 2
           - false # 3
+        d: true # 1
     j: fizz # 4 (this element appears only in v10_4_1, but is deprecated in all other versions because no replace command exists)
   v10_4_20:
     a:
@@ -24,14 +24,14 @@ tree:
   v10_4_500:
     a:
       b:
-        b: true # 0
-        c: true # 1
         d: false # 2
+        b: true # 0
         e: foo # 3
+        c: true # 1
       f:
+        h: element # 5
         g:
           i: bar # 4
-        h: element # 5
 replace:
   v10_3_3:
     "v10_2_2.test": "v10_3_3.a.b"
