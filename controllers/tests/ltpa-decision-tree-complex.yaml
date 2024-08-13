@@ -14,13 +14,13 @@ tree:
   v10_4_20:
     a:
       b:
+        e: foo # 2
         c: true # 0
         d: false # 1
-        e: foo # 2
       f:
+        h: element # 4
         g:
           i: bar # 3
-        h: element # 4
   v10_4_500:
     a:
       b:
