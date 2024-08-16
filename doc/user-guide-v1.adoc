@@ -1221,7 +1221,7 @@ spec:
 
 By default, network policies for an application isolate incoming traffic.
 
-* The default network policy created for applications that are not exposed limits incoming traffic to pods in the same namespace that are part of the same application. Traffic is limited to only the ports that are configured by the service.
+* The default network policy created for applications that are not exposed limits incoming traffic to pods in the same namespace that are part of the same application. Traffic is limited to only the ports that are configured by the service. By default, traffic will be exposed to `.spec.service.targetPort` when specified and otherwise fallback to using the `.spec.service.port`. Using the same logic, traffic will be exposed for each additional `targetPort` or `port` provided in the `.spec.service.ports[]` array.
 * Red Hat OpenShift supports network policies by default. For exposed applications on Red Hat OpenShift, the network policy allows incoming traffic from the Red Hat OpenShift ingress controller on the ports in the service configuration. The network policy also allows incoming traffic from the Red Hat OpenShift monitoring stack.
 * For exposed applications on other Kubernetes platforms, the network policy allows incoming traffic from any pods in any namespace on the ports in the service configuration. For deployments to other Kubernetes platforms, ensure that your network plug-in supports the Kubernetes network policies.
 

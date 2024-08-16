@@ -1,9 +1,9 @@
 module github.com/OpenLiberty/open-liberty-operator
 
-go 1.21
+go 1.22
 
 require (
-	github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20240506212440-64262a90d207
+	github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20240715223142-6577689c3b84
 	github.com/cert-manager/cert-manager v1.11.5
 	github.com/go-logr/logr v1.2.4
 	github.com/openshift/api v0.0.0-20230928134114-673ed0cfc7f1
@@ -83,11 +83,6 @@ require (
 )
 
 replace (
-	//To resolve license issue - https://github.com/operator-framework/operator-registry/issues/190
-	github.com/otiai10/copy => github.com/otiai10/copy v1.0.2
-	github.com/otiai10/mint => github.com/otiai10/mint v1.3.0
-	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.1
-	golang.org/x/text => golang.org/x/text v0.4.0
+	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.14.0
+	golang.org/x/text => golang.org/x/text v0.14.0
 )
-
-replace github.com/docker/docker => github.com/moby/moby v0.7.3-0.20190826074503-38ab9da00309 // Required by Helm
