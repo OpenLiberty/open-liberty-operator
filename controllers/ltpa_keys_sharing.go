@@ -158,9 +158,17 @@ func (r *ReconcileOpenLiberty) restartLTPAKeysGeneration(instance *olv1.OpenLibe
 		if err != nil && kerrors.IsNotFound(err) {
 			// Deleting the job request removes existing LTPA resources and restarts the LTPA generation process
 			ltpaJobRequest := &corev1.ConfigMap{}
-			ltpaJobRequest.Name = OperatorShortName + "-managed-ltpa-job-request"
+			ltpaJobRequest.Name = OperatorShortName + "-managed-ltpa-job-request" + ltpaMetadata.Name
 			ltpaJobRequest.Namespace = instance.GetNamespace()
 			err = r.DeleteResource(ltpaJobRequest)
+			if err != nil {
+				return err
+			}
+
+			ltpaServiceAccount := &corev1.ServiceAccount{}
+			ltpaServiceAccountRootName := OperatorShortName + "-ltpa"
+			ltpaServiceAccount.Name = ltpaServiceAccountRootName + ltpaMetadata.Name
+			err = r.DeleteResource(ltpaServiceAccount)
 			if err != nil {
 				return err
 			}
@@ -205,9 +213,10 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 	ltpaKeysCreationScriptConfigMap.Labels = lutils.GetRequiredLabels(ltpaKeysCreationScriptConfigMapRootName, ltpaKeysCreationScriptConfigMap.Name)
 
 	ltpaServiceAccount := &corev1.ServiceAccount{}
-	ltpaServiceAccount.Name = OperatorShortName + "-ltpa"
+	ltpaServiceAccountRootName := OperatorShortName + "-ltpa"
+	ltpaServiceAccount.Name = ltpaServiceAccountRootName + ltpaMetadata.Name
 	ltpaServiceAccount.Namespace = instance.GetNamespace()
-	ltpaServiceAccount.Labels = lutils.GetRequiredLabels(ltpaServiceAccount.Name, ltpaServiceAccount.Name)
+	ltpaServiceAccount.Labels = lutils.GetRequiredLabels(ltpaServiceAccountRootName, ltpaServiceAccount.Name)
 
 	ltpaSecret := &corev1.Secret{}
 	ltpaSecretRootName := OperatorShortName + "-managed-ltpa"
@@ -257,7 +266,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 				return "", fmt.Errorf("Failed to get ConfigMap " + ltpaJobRequest.Name)
 			}
 		} else {
-			// Create the ServiceAccount (cleaned up by deleting the Job Request)
+			// Create the ServiceAccount
 			r.CreateOrUpdate(ltpaServiceAccount, nil, func() error {
 				return nil
 			})
@@ -310,7 +319,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 				// prevent script from being modified
 				falseBool := false
 				ltpaKeysCreationScriptConfigMap.Immutable = &falseBool
-				r.CreateOrUpdate(ltpaKeysCreationScriptConfigMap, ltpaServiceAccount, func() error {
+				r.CreateOrUpdate(ltpaKeysCreationScriptConfigMap, nil, func() error {
 					return nil
 				})
 			}
@@ -341,7 +350,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 				// Run the Kubernetes Job to generate the shared ltpa.keys file and LTPA Secret
 				err = r.GetClient().Get(context.TODO(), types.NamespacedName{Name: generateLTPAKeysJob.Name, Namespace: generateLTPAKeysJob.Namespace}, generateLTPAKeysJob)
 				if err != nil && kerrors.IsNotFound(err) {
-					err = r.CreateOrUpdate(generateLTPAKeysJob, ltpaServiceAccount, func() error {
+					err = r.CreateOrUpdate(generateLTPAKeysJob, nil, func() error {
 						ltpaConfig := &lutils.LTPAConfig{
 							Metadata:                    ltpaMetadata,
 							SecretName:                  ltpaSecretRootName,
@@ -481,27 +490,39 @@ func (r *ReconcileOpenLiberty) deleteLTPAKeysResources(instance *olv1.OpenLibert
 	}
 	for _, tracker := range *leaderTrackers {
 		if tracker.Owner == instance.Name {
-			generateLTPAKeysJob := &v1.Job{}
-			generateLTPAKeysJob.Name = OperatorShortName + "-managed-ltpa-keys-generation" + tracker.Name
-			generateLTPAKeysJob.Namespace = instance.GetNamespace()
+			ltpaJobRequest := &corev1.ConfigMap{}
+			ltpaJobRequest.Name = OperatorShortName + "-managed-ltpa-job-request" + tracker.Name
+			ltpaJobRequest.Namespace = instance.GetNamespace()
+			err = r.DeleteResource(ltpaJobRequest)
+			if err != nil {
+				return err
+			}
+
+			ltpaServiceAccount := &corev1.ServiceAccount{}
+			ltpaServiceAccountRootName := OperatorShortName + "-ltpa"
+			ltpaServiceAccount.Name = ltpaServiceAccountRootName + tracker.Name
+			ltpaServiceAccount.Namespace = instance.GetNamespace()
+			err = r.DeleteResource(ltpaServiceAccount)
+			if err != nil {
+				return err
+			}
+
 			deletePropagationBackground := metav1.DeletePropagationBackground
+
+			generateLTPAKeysJob := &v1.Job{}
+			generateLTPAKeysJobRootName := OperatorShortName + "-managed-ltpa-keys-generation"
+			generateLTPAKeysJob.Name = generateLTPAKeysJobRootName + tracker.Name
+			generateLTPAKeysJob.Namespace = instance.GetNamespace()
 			err = r.GetClient().Delete(context.TODO(), generateLTPAKeysJob, &client.DeleteOptions{PropagationPolicy: &deletePropagationBackground})
 			if err != nil && !kerrors.IsNotFound(err) {
 				return err
 			}
 
 			ltpaKeysCreationScriptConfigMap := &corev1.ConfigMap{}
-			ltpaKeysCreationScriptConfigMap.Name = OperatorShortName + "-managed-ltpa-script" + tracker.Name
+			ltpaKeysCreationScriptConfigMapRootName := OperatorShortName + "-managed-ltpa-script"
+			ltpaKeysCreationScriptConfigMap.Name = ltpaKeysCreationScriptConfigMapRootName + tracker.Name
 			ltpaKeysCreationScriptConfigMap.Namespace = instance.GetNamespace()
 			err = r.DeleteResource(ltpaKeysCreationScriptConfigMap)
-			if err != nil {
-				return err
-			}
-
-			ltpaJobRequest := &corev1.ConfigMap{}
-			ltpaJobRequest.Name = OperatorShortName + "-managed-ltpa-job-request" + tracker.Name
-			ltpaJobRequest.Namespace = instance.GetNamespace()
-			err = r.DeleteResource(ltpaJobRequest)
 			if err != nil {
 				return err
 			}
@@ -511,7 +532,7 @@ func (r *ReconcileOpenLiberty) deleteLTPAKeysResources(instance *olv1.OpenLibert
 }
 
 // Search the cluster namespace for existing LTPA Secrets
-func (r *ReconcileOpenLiberty) GetLTPAResources(treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, assetsFolder *string) (*unstructured.UnstructuredList, string, error) {
+func (r *ReconcileOpenLiberty) GetLTPAResources(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, assetsFolder *string) (*unstructured.UnstructuredList, string, error) {
 	ltpaResourceList, err := lutils.CreateUnstructuredResourceListFromSignature(LTPA_RESOURCE_SHARING_FILE_NAME, assetsFolder, OperatorShortName)
 	if err != nil {
 		return nil, "", err
@@ -519,7 +540,7 @@ func (r *ReconcileOpenLiberty) GetLTPAResources(treeMap map[string]interface{}, 
 	ltpaRootName := OperatorShortName + "-managed-ltpa"
 	if err := r.GetClient().List(context.TODO(), ltpaResourceList, client.MatchingLabels{
 		"app.kubernetes.io/name": ltpaRootName,
-	}); err != nil {
+	}, client.InNamespace(instance.GetNamespace())); err != nil {
 		return nil, "", err
 	}
 	return ltpaResourceList, ltpaRootName, nil

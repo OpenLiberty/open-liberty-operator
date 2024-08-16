@@ -110,6 +110,22 @@ func (tracker *LeaderTracker) EvictOwnerIfSubleaseHasExpired() bool {
 	return false
 }
 
+func InsertIntoSortedLeaderTrackers(leaderTrackers *[]LeaderTracker, newLeader *LeaderTracker) {
+	insertIndex := -1
+	for i, leader := range *leaderTrackers {
+		if strings.Compare(newLeader.Name, leader.Name) < 0 {
+			insertIndex = i
+		}
+	}
+	if insertIndex == -1 {
+		*leaderTrackers = append(*leaderTrackers, *newLeader)
+	} else {
+		*leaderTrackers = append(*leaderTrackers, LeaderTracker{})
+		copy((*leaderTrackers)[insertIndex+1:], (*leaderTrackers)[insertIndex:])
+		(*leaderTrackers)[insertIndex] = *newLeader
+	}
+}
+
 func CustomizeLeaderTracker(leaderTracker *corev1.Secret, trackerList *[]LeaderTracker) {
 	if trackerList == nil {
 		leaderTracker.Data = make(map[string][]byte)

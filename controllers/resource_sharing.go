@@ -150,7 +150,7 @@ func (r *ReconcileOpenLiberty) createNewLeaderTrackerList(instance *olv1.OpenLib
 	var err error
 
 	if leaderTrackerType == LTPA_RESOURCE_SHARING_FILE_NAME {
-		resourcesList, resourceRootName, err = r.GetLTPAResources(treeMap, replaceMap, latestOperandVersion, assetsFolder)
+		resourcesList, resourceRootName, err = r.GetLTPAResources(instance, treeMap, replaceMap, latestOperandVersion, assetsFolder)
 	} else if leaderTrackerType == PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME {
 		resourcesList, resourceRootName, err = r.GetPasswordEncryptionResources(instance, treeMap, replaceMap, latestOperandVersion, assetsFolder)
 	} else {
@@ -278,7 +278,7 @@ func (r *ReconcileOpenLiberty) GetLeaderTrackersFromUnstructuredList(resourceLis
 			}
 			leader.Name = nameString[len(resourceRootName):]
 			leader.EvictOwner()
-			leaderTrackers = append(leaderTrackers, leader)
+			lutils.InsertIntoSortedLeaderTrackers(&leaderTrackers, &leader)
 		}
 	}
 	return &leaderTrackers, nil
