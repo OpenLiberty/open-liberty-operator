@@ -35,9 +35,9 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(instance *olv1.Ope
 			return "Failed to get the password encryption key Secret", "", err
 		}
 	} else {
-		err := r.deletePasswordEncryptionKeyResources(instance)
+		err := r.RemoveLeaderTrackerReference(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
-			return "Failed to delete cluster resources for sharing the password encryption key", "", err
+			return "Failed to remove leader tracking reference to the password encryption key", "", err
 		}
 	}
 	return "", "", nil
@@ -184,17 +184,6 @@ func (r *ReconcileOpenLiberty) createPasswordEncryptionKeyLibertyConfig(instance
 	}
 
 	return nil
-}
-
-func (r *ReconcileOpenLiberty) deletePasswordEncryptionKeyResources(instance *olv1.OpenLibertyApplication) error {
-	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(instance, OperatorShortName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, r.GetClient())
-	if err != nil {
-		if kerrors.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-	return r.RemoveLeader(instance, leaderTracker, leaderTrackers)
 }
 
 // Tracks existing password encryption resources by populating a LeaderTracker array used to initialize the LeaderTracker

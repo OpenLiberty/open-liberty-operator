@@ -235,6 +235,18 @@ func AddSecretResourceVersionAsEnvVar(pts *corev1.PodTemplateSpec, la *olv1.Open
 	return nil
 }
 
+func AddSecretLastRotationAsEnvVar(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, client client.Client, secretName string, envNamePrefix string) error {
+	secret := &corev1.Secret{}
+	err := client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: la.GetNamespace()}, secret)
+	if err != nil {
+		return errors.Wrapf(err, "Secret %q was not found in namespace %q", secretName, la.GetNamespace())
+	}
+	pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, corev1.EnvVar{
+		Name:  envNamePrefix + "_SECRET_LAST_ROTATION",
+		Value: string(secret.Data["lastRotation"])})
+	return nil
+}
+
 func CustomizeLibertyAnnotations(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication) {
 	libertyAnnotations := map[string]string{
 		"libertyOperator": "Open Liberty",

@@ -134,12 +134,12 @@ func (r *ReconcileOpenLiberty) reconcileLTPAKeys(instance *olv1.OpenLibertyAppli
 	if r.isLTPAKeySharingEnabled(instance) {
 		ltpaSecretName, err = r.generateLTPAKeys(instance, ltpaMetadata)
 		if err != nil {
-			return "Failed to generate the shared LTPA Keys file", ltpaSecretName, err
+			return "Failed to generate the shared LTPA keys Secret", ltpaSecretName, err
 		}
 	} else {
-		err := r.deleteLTPAKeysResources(instance)
+		err := r.RemoveLeaderTrackerReference(instance, LTPA_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
-			return "Failed to delete LTPA Keys Resource", ltpaSecretName, err
+			return "Failed to remove leader tracking reference to the LTPA keys", ltpaSecretName, err
 		}
 	}
 	return "", ltpaSecretName, nil
@@ -494,18 +494,6 @@ func (r *ReconcileOpenLiberty) isLTPAKeySharingEnabled(instance *olv1.OpenLibert
 		return true
 	}
 	return false
-}
-
-// Deletes resources used to create the LTPA keys file
-func (r *ReconcileOpenLiberty) deleteLTPAKeysResources(instance *olv1.OpenLibertyApplication) error {
-	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
-	if err != nil {
-		if kerrors.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-	return r.RemoveLeader(instance, leaderTracker, leaderTrackers)
 }
 
 // Search the cluster namespace for existing LTPA Secrets

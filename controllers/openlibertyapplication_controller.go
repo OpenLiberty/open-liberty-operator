@@ -527,7 +527,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 			if r.isLTPAKeySharingEnabled(instance) && len(ltpaSecretName) > 0 {
 				lutils.ConfigureLTPA(&statefulSet.Spec.Template, instance, OperatorShortName, ltpaSecretName, ltpaMetadata.Name)
-				err := lutils.AddSecretResourceVersionAsEnvVar(&statefulSet.Spec.Template, instance, r.GetClient(), ltpaSecretName, "LTPA")
+				err := lutils.AddSecretLastRotationAsEnvVar(&statefulSet.Spec.Template, instance, r.GetClient(), ltpaSecretName, "LTPA")
 				if err != nil {
 					return err
 				}
@@ -602,7 +602,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 			if r.isLTPAKeySharingEnabled(instance) && len(ltpaSecretName) > 0 {
 				lutils.ConfigureLTPA(&deploy.Spec.Template, instance, OperatorShortName, ltpaSecretName, ltpaMetadata.Name)
-				err := lutils.AddSecretResourceVersionAsEnvVar(&deploy.Spec.Template, instance, r.GetClient(), ltpaSecretName, "LTPA")
+				err := lutils.AddSecretLastRotationAsEnvVar(&deploy.Spec.Template, instance, r.GetClient(), ltpaSecretName, "LTPA")
 				if err != nil {
 					return err
 				}

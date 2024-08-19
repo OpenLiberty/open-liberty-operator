@@ -282,3 +282,14 @@ func (r *ReconcileOpenLiberty) GetLeaderTrackersFromUnstructuredList(resourceLis
 	}
 	return &leaderTrackers, nil
 }
+
+func (r *ReconcileOpenLiberty) RemoveLeaderTrackerReference(instance *olv1.OpenLibertyApplication, resourceSharingFileName string) error {
+	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(instance, OperatorShortName, resourceSharingFileName, r.GetClient())
+	if err != nil {
+		if kerrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	return r.RemoveLeader(instance, leaderTracker, leaderTrackers)
+}
