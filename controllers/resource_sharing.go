@@ -215,7 +215,6 @@ func (r *ReconcileOpenLiberty) RemoveLeader(instance *olv1.OpenLibertyApplicatio
 			return err
 		}
 	}
-
 	return nil
 }
 

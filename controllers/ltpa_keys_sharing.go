@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const LTPA_RESOURCE_SHARING_FILE_NAME = "ltpa"
@@ -317,8 +318,8 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 				}
 				ltpaKeysCreationScriptConfigMap.Data[lutils.LTPAKeysCreationScriptFileName] = string(script)
 				// prevent script from being modified
-				falseBool := false
-				ltpaKeysCreationScriptConfigMap.Immutable = &falseBool
+				trueBool := true
+				ltpaKeysCreationScriptConfigMap.Immutable = &trueBool
 				r.CreateOrUpdate(ltpaKeysCreationScriptConfigMap, nil, func() error {
 					return nil
 				})
@@ -418,6 +419,23 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 		return ltpaSecret.Name, err
 	}
 
+	// Set LTPA Secret as owner of LTPA Job
+	err = r.CreateOrUpdate(generateLTPAKeysJob, nil, func() error {
+		controllerutil.SetControllerReference(ltpaSecret, generateLTPAKeysJob, r.GetClient().Scheme())
+		return nil
+	})
+	if err != nil {
+		return ltpaSecret.Name, err
+	}
+	// Set LTPA Secret as owner of LTPA script
+	err = r.CreateOrUpdate(ltpaKeysCreationScriptConfigMap, nil, func() error {
+		controllerutil.SetControllerReference(ltpaSecret, ltpaKeysCreationScriptConfigMap, r.GetClient().Scheme())
+		return nil
+	})
+	if err != nil {
+		return ltpaSecret.Name, err
+	}
+
 	// The Secret to hold the server.xml that will import the LTPA keys into the Liberty server
 	// This server.xml will be mounted in /config/configDropins/overrides/ltpaKeysMount.xml
 	serverXMLMountSecretErr := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaXMLMountSecret.Name, Namespace: ltpaXMLMountSecret.Namespace}, ltpaXMLMountSecret)
@@ -482,51 +500,10 @@ func (r *ReconcileOpenLiberty) isLTPAKeySharingEnabled(instance *olv1.OpenLibert
 func (r *ReconcileOpenLiberty) deleteLTPAKeysResources(instance *olv1.OpenLibertyApplication) error {
 	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	if err != nil {
-		// when not found, assume there is nothing to delete because no LTPA secrets are being tracked
 		if kerrors.IsNotFound(err) {
 			return nil
 		}
 		return err
-	}
-	for _, tracker := range *leaderTrackers {
-		if tracker.Owner == instance.Name {
-			ltpaJobRequest := &corev1.ConfigMap{}
-			ltpaJobRequest.Name = OperatorShortName + "-managed-ltpa-job-request" + tracker.Name
-			ltpaJobRequest.Namespace = instance.GetNamespace()
-			err = r.DeleteResource(ltpaJobRequest)
-			if err != nil {
-				return err
-			}
-
-			ltpaServiceAccount := &corev1.ServiceAccount{}
-			ltpaServiceAccountRootName := OperatorShortName + "-ltpa"
-			ltpaServiceAccount.Name = ltpaServiceAccountRootName + tracker.Name
-			ltpaServiceAccount.Namespace = instance.GetNamespace()
-			err = r.DeleteResource(ltpaServiceAccount)
-			if err != nil {
-				return err
-			}
-
-			deletePropagationBackground := metav1.DeletePropagationBackground
-
-			generateLTPAKeysJob := &v1.Job{}
-			generateLTPAKeysJobRootName := OperatorShortName + "-managed-ltpa-keys-generation"
-			generateLTPAKeysJob.Name = generateLTPAKeysJobRootName + tracker.Name
-			generateLTPAKeysJob.Namespace = instance.GetNamespace()
-			err = r.GetClient().Delete(context.TODO(), generateLTPAKeysJob, &client.DeleteOptions{PropagationPolicy: &deletePropagationBackground})
-			if err != nil && !kerrors.IsNotFound(err) {
-				return err
-			}
-
-			ltpaKeysCreationScriptConfigMap := &corev1.ConfigMap{}
-			ltpaKeysCreationScriptConfigMapRootName := OperatorShortName + "-managed-ltpa-script"
-			ltpaKeysCreationScriptConfigMap.Name = ltpaKeysCreationScriptConfigMapRootName + tracker.Name
-			ltpaKeysCreationScriptConfigMap.Namespace = instance.GetNamespace()
-			err = r.DeleteResource(ltpaKeysCreationScriptConfigMap)
-			if err != nil {
-				return err
-			}
-		}
 	}
 	return r.RemoveLeader(instance, leaderTracker, leaderTrackers)
 }

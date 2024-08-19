@@ -31,6 +31,8 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(instance *olv1.Ope
 				}
 				return "", encryptionSecret.Name, nil
 			}
+		} else if !kerrors.IsNotFound(err) {
+			return "Failed to get the password encryption key Secret", "", err
 		}
 	} else {
 		err := r.deletePasswordEncryptionKeyResources(instance)
