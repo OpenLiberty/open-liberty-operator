@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	tree "github.com/OpenLiberty/open-liberty-operator/tree"
@@ -19,8 +20,13 @@ const PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME = "password-encryption"
 
 func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (string, string, error) {
 	if r.isPasswordEncryptionKeySharingEnabled(instance) {
+		// Is there a password encryption key to duplicate for internal use?
+		if err := r.mirrorEncryptionKeySecretState(instance, passwordEncryptionMetadata); err != nil {
+			return "Failed to process the password encryption key Secret", "", err
+		}
+
 		// Does the namespace already have a password encryption key sharing Secret?
-		encryptionSecret, err := r.hasEncryptionKeySecret(instance)
+		encryptionSecret, err := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata)
 		if err == nil {
 			// Is the password encryption key field in the Secret valid?
 			if encryptionKey := string(encryptionSecret.Data["passwordEncryptionKey"]); len(encryptionKey) > 0 {
@@ -56,7 +62,7 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionMetadata(treeMap map[s
 	}
 	// validate that the decision path such as "v1_4_0.managePasswordEncryption.true" is a valid subpath in treeMap
 	// an error here indicates a build time error created by the operator developer or pollution of the password-encryption-decision-tree.yaml
-	// Note: validSubPath is a substring of labelString and a valid path within treeMap; it will always hold that len(validSubPath) <= len(labelString)
+	// NOTE: validSubPath is a substring of labelString and a valid path within treeMap; it will always hold that len(validSubPath) <= len(labelString)
 	validSubPath, err := tree.CanTraverseTree(treeMap, labelString, true)
 	if err != nil {
 		return metadata, err
@@ -81,7 +87,7 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionMetadata(treeMap map[s
 
 	metadata.Path = validSubPath
 	metadata.PathIndex = versionedPathIndex
-	metadata.Name = r.getPasswordEncryptionMetadataName() // Augment this function to extend to multiple password encryption keys per namespace. See ltpa_keys_sharing.go for an example.
+	metadata.Name = r.getPasswordEncryptionMetadataName() // You could augment this function to extend to multiple password encryption keys per namespace. See ltpa_keys_sharing.go for an example.
 	return metadata, nil
 }
 
@@ -113,22 +119,67 @@ func (r *ReconcileOpenLiberty) isPasswordEncryptionKeySharingEnabled(instance *o
 	return false
 }
 
-func (r *ReconcileOpenLiberty) isUsingPasswordEncryptionKeySharing(instance *olv1.OpenLibertyApplication) bool {
+func (r *ReconcileOpenLiberty) isUsingPasswordEncryptionKeySharing(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) bool {
 	if r.isPasswordEncryptionKeySharingEnabled(instance) {
-		_, err := r.hasEncryptionKeySecret(instance)
+		_, err := r.hasUserEncryptionKeySecret(instance, passwordEncryptionMetadata)
 		return err == nil
 	}
 	return false
 }
 
-func (r *ReconcileOpenLiberty) hasEncryptionKeySecret(instance *olv1.OpenLibertyApplication) (*corev1.Secret, error) {
-	// The Secret that contains the password encryption key
-	passwordKeySecret := &corev1.Secret{}
-	passwordKeySecret.Name = OperatorShortName + lutils.PasswordEncryptionKeySuffix
-	passwordKeySecret.Namespace = instance.GetNamespace()
-	passwordKeySecret.Labels = lutils.GetRequiredLabels(passwordKeySecret.Name, "")
-	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: passwordKeySecret.Name, Namespace: passwordKeySecret.Namespace}, passwordKeySecret)
-	return passwordKeySecret, err
+// Returns the Secret that contains the password encryption key used internally by the operator
+func (r *ReconcileOpenLiberty) hasInternalEncryptionKeySecret(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (*corev1.Secret, error) {
+	return r.getSecret(instance, OperatorShortName+lutils.PasswordEncryptionKeySuffix+passwordEncryptionMetadata.Name+"-internal")
+}
+
+// Returns the Secret that contains the password encryption key provided by the user
+func (r *ReconcileOpenLiberty) hasUserEncryptionKeySecret(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (*corev1.Secret, error) {
+	return r.getSecret(instance, OperatorShortName+lutils.PasswordEncryptionKeySuffix+passwordEncryptionMetadata.Name)
+}
+
+func (r *ReconcileOpenLiberty) mirrorEncryptionKeySecretState(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) error {
+	userEncryptionSecret, userEncryptionSecretErr := r.hasUserEncryptionKeySecret(instance, passwordEncryptionMetadata)
+	// Case 0: no user encryption secret, no internal encryption secret: secrets already mirrored
+	// Case 1: no user encryption secret, internal encryption secret exists: userEncryptionSecret is the resource owner of internalEncryptionSecret and will be GC'd by k8s controller
+	if userEncryptionSecretErr != nil {
+		// Error if there was an issue getting the userEncryptionSecret
+		if !kerrors.IsNotFound(userEncryptionSecretErr) {
+			return userEncryptionSecretErr
+		}
+		return nil
+	}
+	internalEncryptionSecret, internalEncryptionSecretErr := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata)
+	// Error if there was an issue getting the internalEncryptionSecret
+	if internalEncryptionSecretErr != nil && !kerrors.IsNotFound(internalEncryptionSecretErr) {
+		return internalEncryptionSecretErr
+	}
+
+	// Case 2: user encryption secret exists, no internal secret: Create internalEncryptionSecret
+	// Case 3: user encryption secret exists, internal secret exists: Update internalEncryptionSecret
+	return r.CreateOrUpdate(internalEncryptionSecret, userEncryptionSecret, func() error {
+		if internalEncryptionSecret.Data == nil {
+			internalEncryptionSecret.Data = make(map[string][]byte)
+		}
+		if userEncryptionSecret.Data == nil {
+			userEncryptionSecret.Data = make(map[string][]byte)
+		}
+		internalPasswordEncryptionKey := internalEncryptionSecret.Data["passwordEncryptionKey"]
+		userPasswordEncryptionKey := userEncryptionSecret.Data["passwordEncryptionKey"]
+		if string(internalPasswordEncryptionKey) != string(userPasswordEncryptionKey) {
+			internalEncryptionSecret.Data["passwordEncryptionKey"] = userPasswordEncryptionKey
+			internalEncryptionSecret.Data["lastRotation"] = []byte(fmt.Sprint(time.Now().Unix()))
+		}
+		return nil
+	})
+}
+
+func (r *ReconcileOpenLiberty) getSecret(instance *olv1.OpenLibertyApplication, secretName string) (*corev1.Secret, error) {
+	secret := &corev1.Secret{}
+	secret.Name = secretName
+	secret.Namespace = instance.GetNamespace()
+	secret.Labels = lutils.GetRequiredLabels(secret.Name, "")
+	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secret.Name, Namespace: secret.Namespace}, secret)
+	return secret, err
 }
 
 // Creates the Liberty XML to mount the password encryption keys Secret into the application pods
@@ -146,13 +197,13 @@ func (r *ReconcileOpenLiberty) createPasswordEncryptionKeyLibertyConfig(instance
 		return nil
 	}
 
-	encrytionKeySecret, err := r.hasEncryptionKeySecret(instance)
+	encrytionKeySecret, err := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata)
 	if err != nil {
 		return err
 	}
 	// The Secret to hold the server.xml that will override the password encryption key for the Liberty server
 	// This server.xml will be mounted in /output/resources/liberty-operator/encryptionKey.xml
-	encryptionXMLSecretName := OperatorShortName + lutils.ManagedEncryptionServerXML
+	encryptionXMLSecretName := OperatorShortName + lutils.ManagedEncryptionServerXML + passwordEncryptionMetadata.Name
 	encryptionXMLSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      encryptionXMLSecretName,
@@ -168,7 +219,7 @@ func (r *ReconcileOpenLiberty) createPasswordEncryptionKeyLibertyConfig(instance
 
 	// The Secret to hold the server.xml that will import the password encryption key into the Liberty server
 	// This server.xml will be mounted in /config/configDropins/overrides/encryptionKeyMount.xml
-	mountingXMLSecretName := OperatorShortName + lutils.ManagedEncryptionMountServerXML
+	mountingXMLSecretName := OperatorShortName + lutils.ManagedEncryptionMountServerXML + passwordEncryptionMetadata.Name
 	mountingXMLSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      mountingXMLSecretName,

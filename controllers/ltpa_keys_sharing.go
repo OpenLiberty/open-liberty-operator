@@ -64,8 +64,8 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 func (r *ReconcileOpenLiberty) getLTPAPathOptionsAndChoices(instance *olv1.OpenLibertyApplication, latestOperandVersion string) ([]string, []string) {
 	var pathOptions, pathChoices []string
 	if latestOperandVersion == "v1_4_0" {
-		pathOptions = []string{"managePasswordEncryption"} // ordering matters, it must follow the nodes of the LTPA decision tree in ltpa-decision-tree.yaml
-		pathChoices = []string{strconv.FormatBool(r.isUsingPasswordEncryptionKeySharing(instance))}
+		pathOptions = []string{"managePasswordEncryption"}                                                                                        // ordering matters, it must follow the nodes of the LTPA decision tree in ltpa-decision-tree.yaml
+		pathChoices = []string{strconv.FormatBool(r.isUsingPasswordEncryptionKeySharing(instance, &lutils.PasswordEncryptionMetadata{Name: ""}))} // fix LTPA to use the default password encryption key (no suffix)
 	}
 	// else if latestOperandVersion == "v1_4_1" {
 	// 	// for instance, say v1_4_1 introduces a new "type" variable with options "aes", "xor" or "hash"
@@ -181,6 +181,8 @@ func (r *ReconcileOpenLiberty) restartLTPAKeysGeneration(instance *olv1.OpenLibe
 // Generates the LTPA keys file and returns the name of the Secret storing its metadata
 func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata) (string, error) {
 	// Initialize LTPA resources
+	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{Name: ""}
+
 	ltpaXMLSecret := &corev1.Secret{}
 	ltpaXMLSecretRootName := OperatorShortName + lutils.LTPAServerXMLSuffix
 	ltpaXMLSecret.Name = ltpaXMLSecretRootName + ltpaMetadata.Name
@@ -360,8 +362,8 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 							ConfigMapName:               ltpaKeysCreationScriptConfigMap.Name,
 							JobRequestConfigMapName:     ltpaJobRequest.Name,
 							FileName:                    lutils.LTPAKeysFileName,
-							EncryptionKeySecretName:     OperatorShortName + lutils.PasswordEncryptionKeySuffix,
-							EncryptionKeySharingEnabled: r.isUsingPasswordEncryptionKeySharing(instance),
+							EncryptionKeySecretName:     OperatorShortName + lutils.PasswordEncryptionKeySuffix + passwordEncryptionMetadata.Name + "-internal",
+							EncryptionKeySharingEnabled: r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata), // fix LTPA to use the default password encryption key (no suffix)
 						}
 						lutils.CustomizeLTPAJob(generateLTPAKeysJob, instance, ltpaConfig, r.GetClient())
 						return nil
@@ -466,20 +468,20 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 
 	// Validate whether or not password encryption settings match the way LTPA keys were created
 	hasConfigurationMismatch := false
-	ltpaEncryptionRV, ltpaEncryptionRVFound := ltpaSecret.Data["encryptionSecretResourceVersion"]
+	ltpaEncryptionLR, ltpaEncryptionLRFound := ltpaSecret.Data["encryptionSecretLastRotation"]
 	if r.isPasswordEncryptionKeySharingEnabled(instance) {
-		if encryptionKeySecret, err := r.hasEncryptionKeySecret(instance); err == nil {
-			if !ltpaEncryptionRVFound || string(ltpaEncryptionRV) != encryptionKeySecret.ResourceVersion {
+		if encryptionKeySecret, err := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata); err == nil {
+			if !ltpaEncryptionLRFound || string(ltpaEncryptionLR) != string(encryptionKeySecret.Data["lastRotation"]) {
 				hasConfigurationMismatch = true // managePasswordEncryption is true, the shared encryption key exists but LTPA keys are either not encrypted or not updated
 			}
-		} else if kerrors.IsNotFound(err) && ltpaEncryptionRVFound {
+		} else if kerrors.IsNotFound(err) && ltpaEncryptionLRFound {
 			hasConfigurationMismatch = true // managePasswordEncryption is true, the shared encryption key is missing but LTPA keys are still encrypted
 		}
-	} else if ltpaEncryptionRVFound {
+	} else if ltpaEncryptionLRFound {
 		hasConfigurationMismatch = true // managePasswordEncryption is false but LTPA keys are encrypted
 	}
 
-	// Delete the LTPA Secret and depend on the create_ltpa_keys.sh script to add/remove/update the encryptionSecretResourceVersion field
+	// Delete the LTPA Secret and depend on the create_ltpa_keys.sh script to add/remove/update the lastRotation field
 	if hasConfigurationMismatch {
 		err = r.DeleteResource(ltpaSecret)
 		if err != nil {

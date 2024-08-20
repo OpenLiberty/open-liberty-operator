@@ -59,12 +59,12 @@ NOT_FOUND_COUNT=$(cat $NOT_FOUND_LOG_FILE | grep -c "NotFound");
 TIME_SINCE_EPOCH_SECONDS=$(date '+%s');
 PASSWORD=$(openssl rand -base64 15);
 if [ "$ENCRYPTION_KEY_SHARING_ENABLED" == "true" ] && [ $NOT_FOUND_COUNT -eq 0 ]; then 
-    RESOURCE_VERSION=$(curl --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${PASSWORD_KEY_SECRET_NAME} | grep -o '"resourceVersion": "[^"]*' | grep -o '[^"]*$');
+    LAST_ROTATION=$(curl --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${PASSWORD_KEY_SECRET_NAME} | grep -o '"lastRotation": "[^"]*' | grep -o '[^"]*$' | base64 -d);
     PASSWORD_KEY=$(curl --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${PASSWORD_KEY_SECRET_NAME} | grep -o '"passwordEncryptionKey": "[^"]*' | grep -o '[^"]*$' | base64 -d);
     securityUtility createLTPAKeys --file=${KEY_FILE} --password=${PASSWORD} --passwordEncoding=${ENCODING_TYPE} --passwordKey=${PASSWORD_KEY} &>/dev/null;
     cat ${KEY_FILE} | base64 > ${ENCODED_KEY_FILE};
     ENCODED_PASSWORD=$(securityUtility encode --encoding=${ENCODING_TYPE} --key=${PASSWORD_KEY} ${PASSWORD});
-    BEFORE_LTPA_KEYS="{\"apiVersion\": \"v1\", \"stringData\": {\"encryptionSecretResourceVersion\": \"${RESOURCE_VERSION}\", \"lastRotation\": \"$TIME_SINCE_EPOCH_SECONDS\", \"password\": \"$ENCODED_PASSWORD\"}, \"data\": {\"${LTPA_FILE_NAME}\": \"";
+    BEFORE_LTPA_KEYS="{\"apiVersion\": \"v1\", \"stringData\": {\"encryptionSecretLastRotation\": \"${LAST_ROTATION}\", \"lastRotation\": \"$TIME_SINCE_EPOCH_SECONDS\", \"password\": \"$ENCODED_PASSWORD\"}, \"data\": {\"${LTPA_FILE_NAME}\": \"";
 else
     securityUtility createLTPAKeys --file=${KEY_FILE} --password=${PASSWORD} --passwordEncoding=${ENCODING_TYPE} &>/dev/null;
     cat ${KEY_FILE} | base64 > ${ENCODED_KEY_FILE};

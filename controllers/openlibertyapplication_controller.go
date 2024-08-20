@@ -233,7 +233,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 	// Reconciles the shared password encryption key state for the instance namespace only if the shared key already exists
 	var passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata
-	if r.isUsingPasswordEncryptionKeySharing(instance) {
+	if r.isUsingPasswordEncryptionKeySharing(instance, &lutils.PasswordEncryptionMetadata{Name: ""}) {
 		leaderMetadata, err := r.reconcileResourceTrackingState(instance, "password-encryption")
 		if err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -519,7 +519,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 			if r.isPasswordEncryptionKeySharingEnabled(instance) && len(encryptionSecretName) > 0 {
 				lutils.ConfigurePasswordEncryption(&statefulSet.Spec.Template, instance, OperatorShortName)
-				err := lutils.AddSecretResourceVersionAsEnvVar(&statefulSet.Spec.Template, instance, r.GetClient(), encryptionSecretName, "PASSWORD_ENCRYPTION")
+				err := lutils.AddSecretLastRotationAsEnvVar(&statefulSet.Spec.Template, instance, r.GetClient(), encryptionSecretName, "PASSWORD_ENCRYPTION")
 				if err != nil {
 					return err
 				}
@@ -594,7 +594,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 			if r.isPasswordEncryptionKeySharingEnabled(instance) && len(encryptionSecretName) > 0 {
 				lutils.ConfigurePasswordEncryption(&deploy.Spec.Template, instance, OperatorShortName)
-				err := lutils.AddSecretResourceVersionAsEnvVar(&deploy.Spec.Template, instance, r.GetClient(), encryptionSecretName, "PASSWORD_ENCRYPTION")
+				err := lutils.AddSecretLastRotationAsEnvVar(&deploy.Spec.Template, instance, r.GetClient(), encryptionSecretName, "PASSWORD_ENCRYPTION")
 				if err != nil {
 					return err
 				}
