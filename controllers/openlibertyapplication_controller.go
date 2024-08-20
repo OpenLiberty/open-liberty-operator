@@ -232,8 +232,8 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		ltpaMetadata = leaderMetadata.(*lutils.LTPAMetadata)
 	}
 	// Reconciles the shared password encryption key state for the instance namespace only if the shared key already exists
-	var passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata
-	if r.isUsingPasswordEncryptionKeySharing(instance, &lutils.PasswordEncryptionMetadata{Name: ""}) {
+	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{Name: ""}
+	if r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata) {
 		leaderMetadata, err := r.reconcileResourceTrackingState(instance, "password-encryption")
 		if err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)

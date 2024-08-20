@@ -102,7 +102,7 @@ func (r *ReconcileOpenLiberty) reconcileLeaderWithState(instance *olv1.OpenLiber
 		// Before returning, if the candidate instance is not this instance, this instance must clean up its old owner references to avoid an resource owner cycle.
 		// A resource owner cycle can occur when instance A points to resource A and instance B points to resource B but then both instance A and B swap pointing to each other's resource.
 		if candidateLeader != instance.Name {
-			// clear instance.Name from ownership of any prior resources and evict the owner if it has expired
+			// clear instance.Name from ownership of any prior resources and evict the owner if the sublease has expired
 			for i := range *leaderTrackers {
 				(*leaderTrackers)[i].ClearOwnerIfMatching(instance.Name)
 				(*leaderTrackers)[i].EvictOwnerIfSubleaseHasExpired()
@@ -112,7 +112,7 @@ func (r *ReconcileOpenLiberty) reconcileLeaderWithState(instance *olv1.OpenLiber
 			(*leaderTrackers)[initialLeaderIndex].RenewSublease()
 		}
 
-		// If the old owner has been evicted, use this instance as the new owner
+		// If the current owner has been evicted, use this instance as the new owner
 		currentOwner := (*leaderTrackers)[initialLeaderIndex].Owner
 		if currentOwner == "" {
 			currentOwner = instance.Name
