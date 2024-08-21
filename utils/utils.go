@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	rcoutils "github.com/application-stacks/runtime-component-operator/utils"
@@ -926,6 +927,7 @@ func GetCommaSeparatedArray(stringList string) []string {
 var letterNums = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 
 func GetRandomLowerAlphanumericSuffix(length int) string {
+	rand.Seed(uint64(time.Now().UnixNano()))
 	b := make([]rune, length)
 	for i := range b {
 		b[i] = letterNums[rand.Intn(len(letterNums))]
