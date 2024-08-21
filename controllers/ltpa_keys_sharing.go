@@ -421,49 +421,40 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 		return ltpaSecret.Name, err
 	}
 
-	// Set LTPA Secret as owner of LTPA Job
-	err = r.CreateOrUpdate(generateLTPAKeysJob, nil, func() error {
+	// Set LTPA Secret as owner of LTPA Job, allow error because it might not exist
+	r.CreateOrUpdate(generateLTPAKeysJob, nil, func() error {
 		controllerutil.SetControllerReference(ltpaSecret, generateLTPAKeysJob, r.GetClient().Scheme())
 		return nil
 	})
-	if err != nil {
-		return ltpaSecret.Name, err
-	}
-	// Set LTPA Secret as owner of LTPA script
-	err = r.CreateOrUpdate(ltpaKeysCreationScriptConfigMap, nil, func() error {
+	// Set LTPA Secret as owner of LTPA script, allow error because it might not exist
+	r.CreateOrUpdate(ltpaKeysCreationScriptConfigMap, nil, func() error {
 		controllerutil.SetControllerReference(ltpaSecret, ltpaKeysCreationScriptConfigMap, r.GetClient().Scheme())
 		return nil
 	})
-	if err != nil {
-		return ltpaSecret.Name, err
-	}
 
-	// The Secret to hold the server.xml that will import the LTPA keys into the Liberty server
+	// Create/update the Secret to hold the server.xml that will import the LTPA keys into the Liberty server
 	// This server.xml will be mounted in /config/configDropins/overrides/ltpaKeysMount.xml
 	serverXMLMountSecretErr := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaXMLMountSecret.Name, Namespace: ltpaXMLMountSecret.Namespace}, ltpaXMLMountSecret)
-	if serverXMLMountSecretErr != nil {
-		if kerrors.IsNotFound(serverXMLMountSecretErr) {
-			if err := r.CreateOrUpdate(ltpaXMLMountSecret, ltpaSecret, func() error {
-				mountDir := strings.Replace(lutils.SecureMountPath+"/"+lutils.LTPAKeysXMLFileName, "/output", "${server.output.dir}", 1)
-				return lutils.CustomizeLibertyFileMountXML(ltpaXMLMountSecret, lutils.LTPAKeysMountXMLFileName, mountDir)
-			}); err != nil {
-				return "", err
-			}
-		} else {
-			return "", serverXMLMountSecretErr
-		}
+	if serverXMLMountSecretErr != nil && !kerrors.IsNotFound(serverXMLMountSecretErr) {
+		return "", serverXMLMountSecretErr
+	}
+	if err := r.CreateOrUpdate(ltpaXMLMountSecret, ltpaSecret, func() error {
+		mountDir := strings.Replace(lutils.SecureMountPath+"/"+lutils.LTPAKeysXMLFileName, "/output", "${server.output.dir}", 1)
+		return lutils.CustomizeLibertyFileMountXML(ltpaXMLMountSecret, lutils.LTPAKeysMountXMLFileName, mountDir)
+	}); err != nil {
+		return "", err
 	}
 
-	// Create the Liberty Server XML Secret if it doesn't exist
+	// Create/update the Liberty Server XML Secret
 	serverXMLSecretErr := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaXMLSecret.Name, Namespace: ltpaXMLSecret.Namespace}, ltpaXMLSecret)
-	if serverXMLSecretErr != nil {
-		if kerrors.IsNotFound(serverXMLSecretErr) {
-			r.CreateOrUpdate(ltpaXMLSecret, ltpaSecret, func() error {
-				return lutils.CustomizeLTPAServerXML(ltpaXMLSecret, instance, string(ltpaSecret.Data["password"]))
-			})
-		} else {
-			return "", serverXMLSecretErr
-		}
+	if serverXMLSecretErr != nil && !kerrors.IsNotFound(serverXMLSecretErr) {
+		return "", serverXMLSecretErr
+	}
+	// NOTE: Update is important here for compatibility with an operator upgrade from version 1,3,3 that did not use ltpaXMLMountSecret
+	if err := r.CreateOrUpdate(ltpaXMLSecret, ltpaSecret, func() error {
+		return lutils.CustomizeLTPAServerXML(ltpaXMLSecret, instance, string(ltpaSecret.Data["password"]))
+	}); err != nil {
+		return "", err
 	}
 
 	// Validate whether or not password encryption settings match the way LTPA keys were created
@@ -510,5 +501,77 @@ func (r *ReconcileOpenLiberty) GetLTPAResources(instance *olv1.OpenLibertyApplic
 	}, client.InNamespace(instance.GetNamespace())); err != nil {
 		return nil, "", err
 	}
+
+	// If "olo-managed-ltpa" exists and there is no collision, patch the olo-managed-ltpa with a leader tracking label to work on the current resource tracking impl.
+	if defaultLTPAKeyIndex := defaultLTPAKeyExists(ltpaResourceList, ltpaRootName); defaultLTPAKeyIndex != -1 {
+		defaultUpdatedPathIndex := ""
+		// the "olo-managed-ltpa" would only exist on 1.3.3, so the path is hardcoded to start replaceMap translation at "v1_3_3.default"
+		if path, err := tree.ReplacePath("v1_3_3.default", latestOperandVersion, treeMap, replaceMap); err == nil {
+			defaultUpdatedPathIndex = strings.Split(path, ".")[0] + "." + strconv.FormatInt(int64(tree.GetLeafIndex(treeMap, path)), 10)
+		}
+		// to prevent collisions, for each LTPA key, check that the default LTPA key does not already exist
+		if defaultUpdatedPathIndex != "" {
+			defaultKeyAlreadyExists := false
+			for _, resource := range ltpaResourceList.Items {
+				if resource.GetName() != ltpaRootName {
+					labelsMap, _, err := unstructured.NestedMap(resource.Object, "metadata", "labels")
+					if err != nil {
+						return nil, "", err
+					}
+					if pathIndexInterface, found := labelsMap[lutils.ResourcePathIndexLabel]; found {
+						pathIndex := pathIndexInterface.(string)
+						// Skip this resource if path index does not contain a period separating delimeter
+						if !strings.Contains(pathIndex, ".") {
+							continue
+						}
+						labelVersionArray := strings.Split(pathIndex, ".")
+						// Skip this resource if the path index is not a tuple representing the version and index
+						if len(labelVersionArray) != 2 {
+							continue
+						}
+						indexIntVal, _ := strconv.ParseInt(labelVersionArray[1], 10, 64)
+						path, pathErr := tree.GetPathFromLeafIndex(treeMap, labelVersionArray[0], int(indexIntVal))
+						if pathErr == nil && labelVersionArray[0] != latestOperandVersion {
+							if path, err := tree.ReplacePath(path, latestOperandVersion, treeMap, replaceMap); err == nil {
+								updatedPathIndex := strings.Split(path, ".")[0] + "." + strconv.FormatInt(int64(tree.GetLeafIndex(treeMap, path)), 10)
+								if defaultUpdatedPathIndex == updatedPathIndex {
+									defaultKeyAlreadyExists = true
+									break
+								}
+							}
+						}
+
+					}
+				}
+			}
+			// it was determined that no collisions for the default key exists, so "olo-managed-ltpa" can be reused in this operator
+			if !defaultKeyAlreadyExists {
+				if err := r.CreateOrUpdate(&ltpaResourceList.Items[defaultLTPAKeyIndex], nil, func() error {
+					// add the ResourcePathIndexLabel which does not exist in 1,3,3
+					labelsMap, _, err := unstructured.NestedMap(ltpaResourceList.Items[defaultLTPAKeyIndex].Object, "metadata", "labels")
+					if err != nil {
+						return err
+					}
+					labelsMap[lutils.ResourcePathIndexLabel] = defaultUpdatedPathIndex
+					if err := unstructured.SetNestedMap(ltpaResourceList.Items[defaultLTPAKeyIndex].Object, labelsMap, "metadata", "labels"); err != nil {
+						return err
+					}
+					return nil
+				}); err != nil {
+					return nil, "", err
+				}
+
+			}
+		}
+	}
 	return ltpaResourceList, ltpaRootName, nil
+}
+
+func defaultLTPAKeyExists(ltpaResourceList *unstructured.UnstructuredList, defaultKeyName string) int {
+	for i, resource := range ltpaResourceList.Items {
+		if resource.GetName() == defaultKeyName {
+			return i
+		}
+	}
+	return -1
 }

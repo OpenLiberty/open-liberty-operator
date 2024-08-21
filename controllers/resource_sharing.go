@@ -242,7 +242,7 @@ func (r *ReconcileOpenLiberty) GetLeaderTrackersFromUnstructuredList(resourceLis
 			indexIntVal, _ := strconv.ParseInt(labelVersionArray[1], 10, 64)
 			path, pathErr := tree.GetPathFromLeafIndex(treeMap, labelVersionArray[0], int(indexIntVal))
 			// If path comes from a different operand version, the path needs to be upgraded/downgraded to the latestOperandVersion
-			if labelVersionArray[0] != latestOperandVersion {
+			if pathErr == nil && labelVersionArray[0] != latestOperandVersion {
 				// If user error has occurred, based on whether or not a dev deleted the decision tree structure of an older version
 				// allow this condition to error (when err != nil) so that a deleted (older) revision of the decision tree that may be missing
 				// won't halt the operator when the ReplacePath validation is performed
