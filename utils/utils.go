@@ -223,6 +223,17 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplic
 	return nil
 }
 
+func GetSecretLastRotationAsLabelMap(la *olv1.OpenLibertyApplication, client client.Client, secretName string, sharedResourceName string) (map[string]string, error) {
+	secret := &corev1.Secret{}
+	err := client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: la.GetNamespace()}, secret)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Secret %q was not found in namespace %q", secretName, la.GetNamespace())
+	}
+	return map[string]string{
+		getLastRotationLabel(sharedResourceName): string(secret.Data["lastRotation"]),
+	}, nil
+}
+
 func AddSecretResourceVersionAsEnvVar(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, client client.Client, secretName string, envNamePrefix string) error {
 	secret := &corev1.Secret{}
 	err := client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: la.GetNamespace()}, secret)
@@ -232,18 +243,6 @@ func AddSecretResourceVersionAsEnvVar(pts *corev1.PodTemplateSpec, la *olv1.Open
 	pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, corev1.EnvVar{
 		Name:  envNamePrefix + "_SECRET_RESOURCE_VERSION",
 		Value: secret.ResourceVersion})
-	return nil
-}
-
-func AddSecretLastRotationAsEnvVar(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, client client.Client, secretName string, envNamePrefix string) error {
-	secret := &corev1.Secret{}
-	err := client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: la.GetNamespace()}, secret)
-	if err != nil {
-		return errors.Wrapf(err, "Secret %q was not found in namespace %q", secretName, la.GetNamespace())
-	}
-	pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, corev1.EnvVar{
-		Name:  envNamePrefix + "_SECRET_LAST_ROTATION",
-		Value: string(secret.Data["lastRotation"])})
 	return nil
 }
 
@@ -824,6 +823,28 @@ func parseMountName(fileName string) string {
 		i += 1
 	}
 	return mountName
+}
+
+func kebabToCamelCase(inputString string) string {
+	i := 0
+	n := len(inputString)
+	outputString := ""
+	for i < n && string(inputString[i]) == "-" {
+		i += 1
+	}
+	for i < n {
+		ch := string(inputString[i])
+		if ch == "-" {
+			if i < n-1 {
+				outputString += strings.ToUpper(string(inputString[i+1]))
+			}
+			i += 2
+		} else {
+			outputString += ch
+			i += 1
+		}
+	}
+	return outputString
 }
 
 func CreateVolumeMount(mountPath string, fileName string) corev1.VolumeMount {

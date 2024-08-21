@@ -23,10 +23,19 @@ const ResourcePathsKey = "paths"
 const ResourcePathIndicesKey = "pathIndices"
 const ResourceSubleasesKey = "subleases"
 
-const LeaderVersionLabel = "openlibertyapplications.apps.openliberty.io/leader-version"
-const ResourcePathIndexLabel = "openlibertyapplications.apps.openliberty.io/resource-path-index"
+const LibertyURI = "openlibertyapplications.apps.openliberty.io"
+const LeaderVersionLabel = LibertyURI + "/leader-version"
+const ResourcePathIndexLabel = LibertyURI + "/resource-path-index"
 
 const ResourceSuffixLength = 5
+
+func getLastRotationLabel(sharedResourceName string) string {
+	return LibertyURI + "/" + sharedResourceName + "-last-rotation"
+}
+
+func GetTrackedResourceName(sharedResourceName string) string {
+	return kebabToCamelCase(sharedResourceName) + "TrackedResourceName"
+}
 
 type LeaderTracker struct {
 	Name      string

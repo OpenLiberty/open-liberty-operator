@@ -375,3 +375,20 @@ func TestCommaSeparatedStringContains(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 }
+
+func Test_kebabToCamelCase(t *testing.T) {
+	tests := []Test{
+		{"single replace 1", "passwordEncryption", kebabToCamelCase("password-encryption")},
+		{"single replace 1, corner case 1", "passwordEncryption", kebabToCamelCase("-password-encryption")},
+		{"single replace 1, corner case 2", "passwordEncryption", kebabToCamelCase("-password-encryption-")},
+		{"single replace 1, corner case 3", "passWordEncryption", kebabToCamelCase("---pass-word-encryption")},
+		{"double replace 1", "passwordEncryptionKey", kebabToCamelCase("password-encryption-key")},
+		{"double replace 1", "passwordEncryptionKey", kebabToCamelCase("-password-encryption-key")},
+		{"single replace 2", "ltpa", kebabToCamelCase("ltpa")},
+		{"single replace 2, corner case 1", "ltpa1", kebabToCamelCase("ltpa-1")},
+		{"single replace 2, corner case 2", "ltpa.", kebabToCamelCase("ltpa-.")},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}

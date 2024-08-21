@@ -225,7 +225,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// Reconciles the shared LTPA state for the instance namespace
 	var ltpaMetadata *lutils.LTPAMetadata
 	if r.isLTPAKeySharingEnabled(instance) {
-		leaderMetadata, err := r.reconcileResourceTrackingState(instance, "ltpa")
+		leaderMetadata, err := r.reconcileResourceTrackingState(instance, LTPA_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
@@ -458,6 +458,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
+	updateAnnotations := false
 	if instance.Spec.StatefulSet != nil {
 		// Delete Deployment if exists
 		deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
@@ -519,18 +520,24 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 			if r.isPasswordEncryptionKeySharingEnabled(instance) && len(encryptionSecretName) > 0 {
 				lutils.ConfigurePasswordEncryption(&statefulSet.Spec.Template, instance, OperatorShortName)
-				err := lutils.AddSecretLastRotationAsEnvVar(&statefulSet.Spec.Template, instance, r.GetClient(), encryptionSecretName, "PASSWORD_ENCRYPTION")
+				lastRotationAnnotation, err := lutils.GetSecretLastRotationAsLabelMap(instance, r.GetClient(), encryptionSecretName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 				if err != nil {
 					return err
 				}
+				instance.Annotations = oputils.MergeMaps(instance.Annotations, lastRotationAnnotation)
+				instance.Status.SetReference(lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME), encryptionSecretName)
+				updateAnnotations = true
 			}
 
 			if r.isLTPAKeySharingEnabled(instance) && len(ltpaSecretName) > 0 {
 				lutils.ConfigureLTPA(&statefulSet.Spec.Template, instance, OperatorShortName, ltpaSecretName, ltpaMetadata.Name)
-				err := lutils.AddSecretLastRotationAsEnvVar(&statefulSet.Spec.Template, instance, r.GetClient(), ltpaSecretName, "LTPA")
+				lastRotationAnnotation, err := lutils.GetSecretLastRotationAsLabelMap(instance, r.GetClient(), ltpaSecretName, LTPA_RESOURCE_SHARING_FILE_NAME)
 				if err != nil {
 					return err
 				}
+				instance.Annotations = oputils.MergeMaps(instance.Annotations, lastRotationAnnotation)
+				instance.Status.SetReference(lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME), ltpaSecretName)
+				updateAnnotations = true
 			}
 			return nil
 		})
@@ -594,18 +601,24 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 			if r.isPasswordEncryptionKeySharingEnabled(instance) && len(encryptionSecretName) > 0 {
 				lutils.ConfigurePasswordEncryption(&deploy.Spec.Template, instance, OperatorShortName)
-				err := lutils.AddSecretLastRotationAsEnvVar(&deploy.Spec.Template, instance, r.GetClient(), encryptionSecretName, "PASSWORD_ENCRYPTION")
+				lastRotationAnnotation, err := lutils.GetSecretLastRotationAsLabelMap(instance, r.GetClient(), encryptionSecretName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 				if err != nil {
 					return err
 				}
+				instance.Annotations = oputils.MergeMaps(instance.Annotations, lastRotationAnnotation)
+				instance.Status.SetReference(lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME), encryptionSecretName)
+				updateAnnotations = true
 			}
 
 			if r.isLTPAKeySharingEnabled(instance) && len(ltpaSecretName) > 0 {
 				lutils.ConfigureLTPA(&deploy.Spec.Template, instance, OperatorShortName, ltpaSecretName, ltpaMetadata.Name)
-				err := lutils.AddSecretLastRotationAsEnvVar(&deploy.Spec.Template, instance, r.GetClient(), ltpaSecretName, "LTPA")
+				lastRotationAnnotation, err := lutils.GetSecretLastRotationAsLabelMap(instance, r.GetClient(), ltpaSecretName, LTPA_RESOURCE_SHARING_FILE_NAME)
 				if err != nil {
 					return err
 				}
+				instance.Annotations = oputils.MergeMaps(instance.Annotations, lastRotationAnnotation)
+				instance.Status.SetReference(lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME), ltpaSecretName)
+				updateAnnotations = true
 			}
 			return nil
 		})
@@ -614,6 +627,18 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
 
+	}
+	if updateAnnotations {
+		err = r.UpdateStatus(instance)
+		if err != nil {
+			reqLogger.Error(err, "Error updating Open Liberty application status")
+			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		}
+		err = r.GetClient().Update(context.TODO(), instance)
+		if err != nil {
+			reqLogger.Error(err, "Error updating Open Liberty application annotations")
+			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		}
 	}
 
 	if instance.Spec.Autoscaling != nil {
