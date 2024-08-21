@@ -20,11 +20,18 @@ const PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME = "password-encryption"
 
 func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (string, string, error) {
 	if r.isPasswordEncryptionKeySharingEnabled(instance) {
+		_, thisInstanceIsLeader, _, err := r.reconcileLeader(instance, passwordEncryptionMetadata, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, true)
+		if err != nil {
+			return "", "", err
+		}
+		// If this instance is not the leader, exit this procedure
+		if !thisInstanceIsLeader {
+			return "", "", nil
+		}
 		// Is there a password encryption key to duplicate for internal use?
 		if err := r.mirrorEncryptionKeySecretState(instance, passwordEncryptionMetadata); err != nil {
 			return "Failed to process the password encryption key Secret", "", err
 		}
-
 		// Does the namespace already have a password encryption key sharing Secret?
 		encryptionSecret, err := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata)
 		if err == nil {
@@ -186,15 +193,6 @@ func (r *ReconcileOpenLiberty) getSecret(instance *olv1.OpenLibertyApplication, 
 func (r *ReconcileOpenLiberty) createPasswordEncryptionKeyLibertyConfig(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, encryptionKey string) error {
 	if len(encryptionKey) == 0 {
 		return fmt.Errorf("a password encryption key was not specified")
-	}
-
-	_, thisInstanceIsLeader, _, err := r.reconcileLeader(instance, passwordEncryptionMetadata, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, true)
-	if err != nil {
-		return err
-	}
-	// If this instance is not the leader, exit the reconcile loop
-	if !thisInstanceIsLeader {
-		return nil
 	}
 
 	encrytionKeySecret, err := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata)
