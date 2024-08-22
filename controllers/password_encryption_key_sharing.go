@@ -21,7 +21,7 @@ const PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME = "password-encryption"
 func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (string, string, error) {
 	if r.isPasswordEncryptionKeySharingEnabled(instance) {
 		_, thisInstanceIsLeader, _, err := r.reconcileLeader(instance, passwordEncryptionMetadata, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, true)
-		if err != nil {
+		if err != nil && !kerrors.IsNotFound(err) {
 			return "", "", err
 		}
 		// non-leaders should still be able to pass this process to return the encryption secret name
