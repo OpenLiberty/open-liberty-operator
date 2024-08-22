@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<server>
+    <ltpa keysFileName="LTPA_KEYS_FILE_NAME" keysPassword="LTPA_KEYS_PASSWORD" />
+</server>
