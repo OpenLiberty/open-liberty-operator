@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	tree "github.com/OpenLiberty/open-liberty-operator/tree"
@@ -84,7 +83,7 @@ func (r *ReconcileOpenLiberty) reconcileLeaderWithState(instance *olv1.OpenLiber
 			Owner:     instance.Name,
 			PathIndex: leaderMetadata.GetPathIndex(),
 			Path:      leaderMetadata.GetPath(),
-			Sublease:  fmt.Sprint(time.Now().Unix()),
+			// Sublease:  fmt.Sprint(time.Now().Unix()),
 		}
 		// append it to the list of leaders
 		*leaderTrackers = append(*leaderTrackers, newLeader)
@@ -105,12 +104,13 @@ func (r *ReconcileOpenLiberty) reconcileLeaderWithState(instance *olv1.OpenLiber
 			// clear instance.Name from ownership of any prior resources and evict the owner if the sublease has expired
 			for i := range *leaderTrackers {
 				(*leaderTrackers)[i].ClearOwnerIfMatching(instance.Name)
-				(*leaderTrackers)[i].EvictOwnerIfSubleaseHasExpired()
+				// (*leaderTrackers)[i].EvictOwnerIfSubleaseHasExpired()
 			}
-		} else {
-			// candidate is this instance, so renew the sublease
-			(*leaderTrackers)[initialLeaderIndex].RenewSublease()
 		}
+		// else {
+		// candidate is this instance, so renew the sublease
+		// (*leaderTrackers)[initialLeaderIndex].RenewSublease()
+		// }
 
 		// If the current owner has been evicted, use this instance as the new owner
 		currentOwner := (*leaderTrackers)[initialLeaderIndex].Owner

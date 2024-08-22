@@ -459,6 +459,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	updateAnnotations := false
+	updateStatus := false
 	if instance.Spec.StatefulSet != nil {
 		// Delete Deployment if exists
 		deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
@@ -525,7 +526,10 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 					return err
 				}
 				instance.Annotations = oputils.MergeMaps(instance.Annotations, lastRotationAnnotation)
-				instance.Status.SetReference(lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME), encryptionSecretName)
+				if instance.Status.GetReferences()[lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)] != encryptionSecretName {
+					instance.Status.SetReference(lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME), encryptionSecretName)
+					updateStatus = true
+				}
 				updateAnnotations = true
 			}
 
@@ -536,7 +540,10 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 					return err
 				}
 				instance.Annotations = oputils.MergeMaps(instance.Annotations, lastRotationAnnotation)
-				instance.Status.SetReference(lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME), ltpaSecretName)
+				if instance.Status.GetReferences()[lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME)] != ltpaSecretName {
+					instance.Status.SetReference(lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME), ltpaSecretName)
+					updateStatus = true
+				}
 				updateAnnotations = true
 			}
 			return nil
@@ -606,7 +613,10 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 					return err
 				}
 				instance.Annotations = oputils.MergeMaps(instance.Annotations, lastRotationAnnotation)
-				instance.Status.SetReference(lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME), encryptionSecretName)
+				if instance.Status.GetReferences()[lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)] != encryptionSecretName {
+					instance.Status.SetReference(lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME), encryptionSecretName)
+					updateStatus = true
+				}
 				updateAnnotations = true
 			}
 
@@ -617,7 +627,10 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 					return err
 				}
 				instance.Annotations = oputils.MergeMaps(instance.Annotations, lastRotationAnnotation)
-				instance.Status.SetReference(lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME), ltpaSecretName)
+				if instance.Status.GetReferences()[lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME)] != ltpaSecretName {
+					instance.Status.SetReference(lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME), ltpaSecretName)
+					updateStatus = true
+				}
 				updateAnnotations = true
 			}
 			return nil
@@ -629,10 +642,12 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 	}
 	if updateAnnotations {
-		err = r.UpdateStatus(instance)
-		if err != nil {
-			reqLogger.Error(err, "Error updating Open Liberty application status")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		if updateStatus {
+			err = r.UpdateStatus(instance)
+			if err != nil {
+				reqLogger.Error(err, "Error updating Open Liberty application status")
+				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			}
 		}
 		err = r.GetClient().Update(context.TODO(), instance)
 		if err != nil {

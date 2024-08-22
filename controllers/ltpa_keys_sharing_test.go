@@ -93,11 +93,6 @@ func getAssetsFolder() string {
 	return getControllersFolder() + "/assets"
 }
 
-func ignoreSubleases(leaderTracker map[string][]byte) map[string][]byte {
-	delete(leaderTracker, lutils.ResourceSubleasesKey)
-	return leaderTracker
-}
-
 func TestLTPALeaderTracker(t *testing.T) {
 	logger := zap.New()
 	logf.SetLogger(logger)
@@ -161,7 +156,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	tests = []Test{
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
-		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
+		{"get LTPA leader tracker data", expectedLeaderTrackerData, leaderTracker.Data},
 		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
 	}
@@ -216,7 +211,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	tests = []Test{
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
-		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
+		{"get LTPA leader tracker data", expectedLeaderTrackerData, leaderTracker.Data},
 		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
 	}
@@ -262,7 +257,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	tests = []Test{
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
-		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
+		{"get LTPA leader tracker data", expectedLeaderTrackerData, leaderTracker.Data},
 		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
 	}
@@ -363,7 +358,7 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 		{"get LTPA leader tracker error", nil, err},
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
-		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
+		{"get LTPA leader tracker data", expectedLeaderTrackerData, leaderTracker.Data},
 		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
 	}
 	if err := verifyTests(tests); err != nil {
@@ -440,7 +435,7 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T) {
 	tests = []Test{
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
-		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
+		{"get LTPA leader tracker data", expectedLeaderTrackerData, leaderTracker.Data},
 		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
 	}
@@ -530,7 +525,7 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngr
 	tests = []Test{
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
-		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
+		{"get LTPA leader tracker data", expectedLeaderTrackerData, leaderTracker.Data},
 		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
 		{"get LTPA leader tracker error", nil, err},
 	}
@@ -560,7 +555,7 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngr
 		{"get LTPA leader tracker error", nil, err},
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
-		{"get LTPA leader tracker data", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
+		{"get LTPA leader tracker data", expectedLeaderTrackerData, leaderTracker.Data},
 		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
 	}
 	if err := verifyTests(tests); err != nil {

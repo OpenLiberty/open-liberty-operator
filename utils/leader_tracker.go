@@ -21,7 +21,8 @@ const ResourcesKey = "names"
 const ResourceOwnersKey = "owners"
 const ResourcePathsKey = "paths"
 const ResourcePathIndicesKey = "pathIndices"
-const ResourceSubleasesKey = "subleases"
+
+// const ResourceSubleasesKey = "subleases"
 
 const LibertyURI = "openlibertyapplications.apps.openliberty.io"
 const LeaderVersionLabel = LibertyURI + "/leader-version"
@@ -77,7 +78,8 @@ func (tracker *LeaderTracker) SetOwner(instance string) bool {
 		return false
 	}
 	tracker.Owner = instance
-	return tracker.RenewSublease()
+	return true
+	// return tracker.RenewSublease()
 }
 
 // Clears the LeaderTracker owner if it matches instance, returning true if the LeaderTracker has changed and false otherwise
@@ -98,7 +100,7 @@ func (tracker *LeaderTracker) EvictOwner() bool {
 		return false
 	}
 	tracker.Owner = ""
-	tracker.Sublease = ""
+	// tracker.Sublease = ""
 	return true
 }
 
@@ -142,31 +144,32 @@ func CustomizeLeaderTracker(leaderTracker *corev1.Secret, trackerList *[]LeaderT
 		leaderTracker.Data[ResourcesKey] = []byte("")
 		leaderTracker.Data[ResourcePathIndicesKey] = []byte("")
 		leaderTracker.Data[ResourcePathsKey] = []byte("")
-		leaderTracker.Data[ResourceSubleasesKey] = []byte("")
+		// leaderTracker.Data[ResourceSubleasesKey] = []byte("")
 		return
 	}
 	leaderTracker.Data = make(map[string][]byte)
-	owners, names, pathIndices, paths, subleases := "", "", "", "", ""
+	// owners, names, pathIndices, paths, subleases := "", "", "", "", ""
+	owners, names, pathIndices, paths := "", "", "", ""
 	n := len(*trackerList)
 	for i, tracker := range *trackerList {
 		owners += tracker.Owner
 		names += tracker.Name
 		pathIndices += tracker.PathIndex
 		paths += tracker.Path
-		subleases += tracker.Sublease
+		// subleases += tracker.Sublease
 		if i < n-1 {
 			owners += ","
 			names += ","
 			pathIndices += ","
 			paths += ","
-			subleases += ","
+			// subleases += ","
 		}
 	}
 	leaderTracker.Data[ResourceOwnersKey] = []byte(owners)
 	leaderTracker.Data[ResourcesKey] = []byte(names)
 	leaderTracker.Data[ResourcePathIndicesKey] = []byte(pathIndices)
 	leaderTracker.Data[ResourcePathsKey] = []byte(paths)
-	leaderTracker.Data[ResourceSubleasesKey] = []byte(subleases)
+	// leaderTracker.Data[ResourceSubleasesKey] = []byte(subleases)
 }
 
 func GetLeaderTracker(instance *olv1.OpenLibertyApplication, operatorShortName string, leaderTrackerType string, client client.Client) (*corev1.Secret, *[]LeaderTracker, error) {
@@ -184,29 +187,29 @@ func GetLeaderTracker(instance *olv1.OpenLibertyApplication, operatorShortName s
 	names, namesFound := leaderTracker.Data[ResourcesKey]
 	pathIndices, pathIndicesFound := leaderTracker.Data[ResourcePathIndicesKey]
 	paths, pathsFound := leaderTracker.Data[ResourcePathsKey]
-	subleases, subleasesFound := leaderTracker.Data[ResourceSubleasesKey]
+	// subleases, subleasesFound := leaderTracker.Data[ResourceSubleasesKey]
 	// If flags are out of sync, delete the leader tracker
-	if ownersFound != namesFound || pathIndicesFound != pathsFound || namesFound != pathIndicesFound || pathIndicesFound != subleasesFound {
+	if ownersFound != namesFound || pathIndicesFound != pathsFound || namesFound != pathIndicesFound { // || pathIndicesFound != subleasesFound {
 		if err := client.Delete(context.TODO(), leaderTracker); err != nil {
 			return nil, nil, err
 		}
 		return nil, nil, fmt.Errorf("the resource tracker is out of sync and has been deleted")
 	}
-	if len(owners) == 0 && len(names) == 0 && len(pathIndices) == 0 && len(paths) == 0 && len(subleases) == 0 {
+	if len(owners) == 0 && len(names) == 0 && len(pathIndices) == 0 && len(paths) == 0 { // && len(subleases) == 0 {
 		return leaderTracker, &leaderTrackers, nil
 	}
 	ownersList := GetCommaSeparatedArray(string(owners))
 	namesList := GetCommaSeparatedArray(string(names))
 	pathIndicesList := GetCommaSeparatedArray(string(pathIndices))
 	pathsList := GetCommaSeparatedArray(string(paths))
-	subleasesList := GetCommaSeparatedArray(string(subleases))
+	// subleasesList := GetCommaSeparatedArray(string(subleases))
 	numOwners := len(ownersList)
 	numNames := len(namesList)
 	numPathIndices := len(pathIndicesList)
 	numPaths := len(pathsList)
-	numSubleases := len(subleasesList)
+	// numSubleases := len(subleasesList)
 	// check for array length equivalence
-	if numOwners != numNames || numNames != numPathIndices || numPathIndices != numPaths || numPaths != numSubleases {
+	if numOwners != numNames || numNames != numPathIndices || numPathIndices != numPaths { // || numPaths != numSubleases {
 		if err := client.Delete(context.TODO(), leaderTracker); err != nil {
 			return nil, nil, err
 		}
@@ -219,7 +222,7 @@ func GetLeaderTracker(instance *olv1.OpenLibertyApplication, operatorShortName s
 			Name:      string(namesList[i]),
 			PathIndex: string(pathIndicesList[i]),
 			Path:      string(pathsList[i]),
-			Sublease:  string(subleasesList[i]),
+			// Sublease:  string(subleasesList[i]),
 		})
 	}
 	return leaderTracker, &leaderTrackers, nil

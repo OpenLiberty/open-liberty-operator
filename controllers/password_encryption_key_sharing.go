@@ -24,23 +24,26 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(instance *olv1.Ope
 		if err != nil {
 			return "", "", err
 		}
-		// If this instance is not the leader, exit this procedure
-		if !thisInstanceIsLeader {
-			return "", "", nil
+		// non-leaders should still be able to pass this process to return the encryption secret name
+		if thisInstanceIsLeader {
+			// Is there a password encryption key to duplicate for internal use?
+			if err := r.mirrorEncryptionKeySecretState(instance, passwordEncryptionMetadata); err != nil {
+				return "Failed to process the password encryption key Secret", "", err
+			}
 		}
-		// Is there a password encryption key to duplicate for internal use?
-		if err := r.mirrorEncryptionKeySecretState(instance, passwordEncryptionMetadata); err != nil {
-			return "Failed to process the password encryption key Secret", "", err
-		}
+
 		// Does the namespace already have a password encryption key sharing Secret?
 		encryptionSecret, err := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata)
 		if err == nil {
 			// Is the password encryption key field in the Secret valid?
 			if encryptionKey := string(encryptionSecret.Data["passwordEncryptionKey"]); len(encryptionKey) > 0 {
-				// Create the Liberty config that will mount into the pods
-				err := r.createPasswordEncryptionKeyLibertyConfig(instance, passwordEncryptionMetadata, encryptionKey)
-				if err != nil {
-					return "Failed to create Liberty resources to share the password encryption key", "", err
+				// non-leaders should still be able to pass this process to return the encryption secret name
+				if thisInstanceIsLeader {
+					// Create the Liberty config that will mount into the pods
+					err := r.createPasswordEncryptionKeyLibertyConfig(instance, passwordEncryptionMetadata, encryptionKey)
+					if err != nil {
+						return "Failed to create Liberty resources to share the password encryption key", "", err
+					}
 				}
 				return "", encryptionSecret.Name, nil
 			}

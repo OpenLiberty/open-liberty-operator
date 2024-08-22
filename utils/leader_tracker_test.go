@@ -4,10 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +30,7 @@ func TestCustomizeLeaderTrackerNil(t *testing.T) {
 	expectedLeaderTrackerData[ResourcePathsKey] = []byte("")
 
 	tests := []Test{
-		{"nil leader tracker list", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
+		{"nil leader tracker list", expectedLeaderTrackerData, leaderTracker.Data},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -53,7 +51,7 @@ func TestCustomizeLeaderTrackerEmpty(t *testing.T) {
 	expectedLeaderTrackerData[ResourcePathsKey] = []byte("")
 
 	tests := []Test{
-		{"empty leader tracker list", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
+		{"empty leader tracker list", expectedLeaderTrackerData, leaderTracker.Data},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -77,7 +75,7 @@ func TestCustomizeLeaderTrackerSingle(t *testing.T) {
 	expectedLeaderTrackerData[ResourcePathsKey] = []byte(ref1LeaderTracker.Path)
 
 	tests := []Test{
-		{"single entry leader tracker", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
+		{"single entry leader tracker", expectedLeaderTrackerData, leaderTracker.Data},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -102,7 +100,7 @@ func TestCustomizeLeaderTrackerMultiple(t *testing.T) {
 	expectedLeaderTrackerData[ResourcePathsKey] = []byte(fmt.Sprintf("%s,%s", ref1LeaderTracker.Path, ref2LeaderTracker.Path))
 
 	tests := []Test{
-		{"multiple entry leader tracker", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
+		{"multiple entry leader tracker", expectedLeaderTrackerData, leaderTracker.Data},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -116,72 +114,72 @@ func TestCustomizeLeaderTrackerMultiple(t *testing.T) {
 	expectedLeaderTrackerData[ResourcePathsKey] = []byte(ref2LeaderTracker.Path)
 
 	tests = []Test{
-		{"remove entry leader tracker", expectedLeaderTrackerData, ignoreSubleases(leaderTracker.Data)},
+		{"remove entry leader tracker", expectedLeaderTrackerData, leaderTracker.Data},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
 
-func TestEvictOwnerIfSubleaseHasExpired(t *testing.T) {
-	leaderTracker, referenceLeaderTracker := createMock1LeaderTracker(), createMock1LeaderTracker()
-	changeDetected := leaderTracker.EvictOwnerIfSubleaseHasExpired()
+// func TestEvictOwnerIfSubleaseHasExpired(t *testing.T) {
+// 	leaderTracker, referenceLeaderTracker := createMock1LeaderTracker(), createMock1LeaderTracker()
+// 	changeDetected := leaderTracker.EvictOwnerIfSubleaseHasExpired()
 
-	tests := []Test{
-		{"evict owner if sublease has expired - change detected", true, changeDetected},
-		{"evict owner if sublease has expired - name unchanged", referenceLeaderTracker.Name, leaderTracker.Name},
-		{"evict owner if sublease has expired - owner evicted", "", leaderTracker.Owner},
-		{"evict owner if sublease has expired - path unchanged", referenceLeaderTracker.Path, leaderTracker.Path},
-		{"evict owner if sublease has expired - path index unchanged", referenceLeaderTracker.PathIndex, leaderTracker.PathIndex},
-		{"evict owner if sublease has expired - sublease removed", "", leaderTracker.Sublease},
-	}
-	if err := verifyTests(tests); err != nil {
-		t.Fatalf("%v", err)
-	}
-}
+// 	tests := []Test{
+// 		{"evict owner if sublease has expired - change detected", true, changeDetected},
+// 		{"evict owner if sublease has expired - name unchanged", referenceLeaderTracker.Name, leaderTracker.Name},
+// 		{"evict owner if sublease has expired - owner evicted", "", leaderTracker.Owner},
+// 		{"evict owner if sublease has expired - path unchanged", referenceLeaderTracker.Path, leaderTracker.Path},
+// 		{"evict owner if sublease has expired - path index unchanged", referenceLeaderTracker.PathIndex, leaderTracker.PathIndex},
+// 		{"evict owner if sublease has expired - sublease removed", "", leaderTracker.Sublease},
+// 	}
+// 	if err := verifyTests(tests); err != nil {
+// 		t.Fatalf("%v", err)
+// 	}
+// }
 
-func TestEvictOwnerIfSubleaseHasExpiredWithValidSublease(t *testing.T) {
-	leaderTracker, referenceLeaderTracker := createMock1LeaderTracker(), createMock1LeaderTracker()
-	leaderTracker.SetOwner("sublease-test")
-	sublease, subleaseErr := strconv.ParseInt(leaderTracker.Sublease, 10, 64)
-	now := time.Now().Unix()
-	timeDiff := sublease - now
-	changeDetected := leaderTracker.EvictOwnerIfSubleaseHasExpired()
-	nextSublease, nextSubleaseErr := strconv.ParseInt(leaderTracker.Sublease, 10, 64)
+// func TestEvictOwnerIfSubleaseHasExpiredWithValidSublease(t *testing.T) {
+// 	leaderTracker, referenceLeaderTracker := createMock1LeaderTracker(), createMock1LeaderTracker()
+// 	leaderTracker.SetOwner("sublease-test")
+// 	sublease, subleaseErr := strconv.ParseInt(leaderTracker.Sublease, 10, 64)
+// 	now := time.Now().Unix()
+// 	timeDiff := sublease - now
+// 	changeDetected := leaderTracker.EvictOwnerIfSubleaseHasExpired()
+// 	nextSublease, nextSubleaseErr := strconv.ParseInt(leaderTracker.Sublease, 10, 64)
 
-	tests := []Test{
-		{"evict owner if sublease has expired with valid sublease - sublease can convert to int64", nil, subleaseErr},
-		{"evict owner if sublease has expired with valid sublease - sublease set in less than 20 seconds", true, timeDiff < 20},
-		{"evict owner if sublease has expired with valid sublease - next sublease can convert to int64", nil, nextSubleaseErr},
-		{"evict owner if sublease has expired with valid sublease - next sublease matches original sublease", sublease, nextSublease},
-		{"evict owner if sublease has expired with valid sublease - no change detected", false, changeDetected},
-		{"evict owner if sublease has expired with valid sublease - name unchanged", referenceLeaderTracker.Name, leaderTracker.Name},
-		{"evict owner if sublease has expired with valid sublease - owner set", "sublease-test", leaderTracker.Owner},
-		{"evict owner if sublease has expired with valid sublease - path unchanged", referenceLeaderTracker.Path, leaderTracker.Path},
-		{"evict owner if sublease has expired with valid sublease - path index unchanged", referenceLeaderTracker.PathIndex, leaderTracker.PathIndex},
-	}
-	if err := verifyTests(tests); err != nil {
-		t.Fatalf("%v", err)
-	}
-}
+// 	tests := []Test{
+// 		{"evict owner if sublease has expired with valid sublease - sublease can convert to int64", nil, subleaseErr},
+// 		{"evict owner if sublease has expired with valid sublease - sublease set in less than 20 seconds", true, timeDiff < 20},
+// 		{"evict owner if sublease has expired with valid sublease - next sublease can convert to int64", nil, nextSubleaseErr},
+// 		{"evict owner if sublease has expired with valid sublease - next sublease matches original sublease", sublease, nextSublease},
+// 		{"evict owner if sublease has expired with valid sublease - no change detected", false, changeDetected},
+// 		{"evict owner if sublease has expired with valid sublease - name unchanged", referenceLeaderTracker.Name, leaderTracker.Name},
+// 		{"evict owner if sublease has expired with valid sublease - owner set", "sublease-test", leaderTracker.Owner},
+// 		{"evict owner if sublease has expired with valid sublease - path unchanged", referenceLeaderTracker.Path, leaderTracker.Path},
+// 		{"evict owner if sublease has expired with valid sublease - path index unchanged", referenceLeaderTracker.PathIndex, leaderTracker.PathIndex},
+// 	}
+// 	if err := verifyTests(tests); err != nil {
+// 		t.Fatalf("%v", err)
+// 	}
+// }
 
-func TestEvictOwnerIfSubleaseHasExpiredWithInvalidSublease(t *testing.T) {
-	leaderTracker, referenceLeaderTracker := createMock1LeaderTracker(), createMock1LeaderTracker()
-	leaderTracker.Sublease = "abc123" // when specifying an invalid sublease duration that can not be parsed into type int, the operator evicts the owner
-	changeDetected := leaderTracker.EvictOwnerIfSubleaseHasExpired()
+// func TestEvictOwnerIfSubleaseHasExpiredWithInvalidSublease(t *testing.T) {
+// 	leaderTracker, referenceLeaderTracker := createMock1LeaderTracker(), createMock1LeaderTracker()
+// 	leaderTracker.Sublease = "abc123" // when specifying an invalid sublease duration that can not be parsed into type int, the operator evicts the owner
+// 	changeDetected := leaderTracker.EvictOwnerIfSubleaseHasExpired()
 
-	tests := []Test{
-		{"evict owner if sublease has expired with invalid sublease - change detected", true, changeDetected},
-		{"evict owner if sublease has expired with invalid sublease - name unchanged", referenceLeaderTracker.Name, leaderTracker.Name},
-		{"evict owner if sublease has expired with invalid sublease - owner evicted", "", leaderTracker.Owner},
-		{"evict owner if sublease has expired with invalid sublease - path unchanged", referenceLeaderTracker.Path, leaderTracker.Path},
-		{"evict owner if sublease has expired with invalid sublease - path index unchanged", referenceLeaderTracker.PathIndex, leaderTracker.PathIndex},
-		{"evict owner if sublease has expired with invalid sublease - sublease removed", "", leaderTracker.Sublease},
-	}
-	if err := verifyTests(tests); err != nil {
-		t.Fatalf("%v", err)
-	}
-}
+// 	tests := []Test{
+// 		{"evict owner if sublease has expired with invalid sublease - change detected", true, changeDetected},
+// 		{"evict owner if sublease has expired with invalid sublease - name unchanged", referenceLeaderTracker.Name, leaderTracker.Name},
+// 		{"evict owner if sublease has expired with invalid sublease - owner evicted", "", leaderTracker.Owner},
+// 		{"evict owner if sublease has expired with invalid sublease - path unchanged", referenceLeaderTracker.Path, leaderTracker.Path},
+// 		{"evict owner if sublease has expired with invalid sublease - path index unchanged", referenceLeaderTracker.PathIndex, leaderTracker.PathIndex},
+// 		{"evict owner if sublease has expired with invalid sublease - sublease removed", "", leaderTracker.Sublease},
+// 	}
+// 	if err := verifyTests(tests); err != nil {
+// 		t.Fatalf("%v", err)
+// 	}
+// }
 
 func TestClearOwnerIfMatching(t *testing.T) {
 	leaderTracker, referenceLeaderTracker := createMock1LeaderTracker(), createMock1LeaderTracker()
@@ -219,15 +217,15 @@ func TestClearOwnerIfMatching(t *testing.T) {
 func TestSetOwner(t *testing.T) {
 	leaderTracker, referenceLeaderTracker := createMock1LeaderTracker(), createMock1LeaderTracker()
 	changeDetected := leaderTracker.SetOwner("new-owner-name")
-	currTime, currErr := strconv.ParseInt(leaderTracker.Sublease, 10, 64)
+	// currTime, currErr := strconv.ParseInt(leaderTracker.Sublease, 10, 64)
 	tests := []Test{
 		{"set owner - change detected", true, changeDetected},
 		{"set owner - name unchanged", referenceLeaderTracker.Name, leaderTracker.Name},
 		{"set owner - owner changed", "new-owner-name", leaderTracker.Owner},
 		{"set owner - path unchanged", referenceLeaderTracker.Path, leaderTracker.Path},
 		{"set owner - path index unchanged", referenceLeaderTracker.PathIndex, leaderTracker.PathIndex},
-		{"set owner - sublease converts to int64 without error", nil, currErr},
-		{"set owner - new sublease time greater or equal to current time", true, currTime >= time.Now().Unix()},
+		// {"set owner - sublease converts to int64 without error", nil, currErr},
+		// {"set owner - new sublease time greater or equal to current time", true, currTime >= time.Now().Unix()},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -378,7 +376,7 @@ func TestGetLeaderTrackerWithOneSecretEntry(t *testing.T) {
 	oneSecret.Data[ResourceOwnersKey] = []byte(mockLeaderTracker.Owner)
 	oneSecret.Data[ResourcePathIndicesKey] = []byte(mockLeaderTracker.PathIndex)
 	oneSecret.Data[ResourcePathsKey] = []byte(mockLeaderTracker.Path)
-	oneSecret.Data[ResourceSubleasesKey] = []byte(mockLeaderTracker.Sublease)
+	// oneSecret.Data[ResourceSubleasesKey] = []byte(mockLeaderTracker.Sublease)
 	createOneSecretErr := cl.Create(context.TODO(), oneSecret)
 
 	_, leaderTrackers, err := GetLeaderTracker(instance, "olo", "ltpa", cl)
@@ -390,7 +388,7 @@ func TestGetLeaderTrackerWithOneSecretEntry(t *testing.T) {
 		{"get leader tracker with one secret entry - owner unchanged", mockLeaderTracker.Owner, (*leaderTrackers)[0].Owner},
 		{"get leader tracker with one secret entry - path index unchanged", mockLeaderTracker.PathIndex, (*leaderTrackers)[0].PathIndex},
 		{"get leader tracker with one secret entry - path unchanged", mockLeaderTracker.Path, (*leaderTrackers)[0].Path},
-		{"get leader tracker with one secret entry - sublease unchanged", mockLeaderTracker.Sublease, (*leaderTrackers)[0].Sublease},
+		// {"get leader tracker with one secret entry - sublease unchanged", mockLeaderTracker.Sublease, (*leaderTrackers)[0].Sublease},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -417,8 +415,7 @@ func TestGetLeaderTrackerWithOneSecretEntryWithMissingKey(t *testing.T) {
 	oneSecret.Data[ResourcesKey] = []byte(mockLeaderTracker.Name)
 	oneSecret.Data[ResourceOwnersKey] = []byte(mockLeaderTracker.Owner)
 	oneSecret.Data[ResourcePathIndicesKey] = []byte(mockLeaderTracker.PathIndex)
-	oneSecret.Data[ResourcePathsKey] = []byte(mockLeaderTracker.Path)
-	// oneSecret.Data[ResourceSubleasesKey] = []byte(mockLeaderTracker.Sublease) // remove sublease key
+	// oneSecret.Data[ResourcePathsKey] = []byte(mockLeaderTracker.Path) // remove path key
 	createOneSecretErr := cl.Create(context.TODO(), oneSecret)
 	_, leaderTrackers, err := GetLeaderTracker(instance, "olo", "ltpa", cl)
 
@@ -461,7 +458,7 @@ func TestGetLeaderTrackerWithTwoSecretEntries(t *testing.T) {
 	twoSecret.Data[ResourceOwnersKey] = []byte(fmt.Sprintf("%s,%s", mock1LeaderTracker.Owner, mock2LeaderTracker.Owner))
 	twoSecret.Data[ResourcePathIndicesKey] = []byte(fmt.Sprintf("%s,%s", mock1LeaderTracker.PathIndex, mock2LeaderTracker.PathIndex))
 	twoSecret.Data[ResourcePathsKey] = []byte(fmt.Sprintf("%s,%s", mock1LeaderTracker.Path, mock2LeaderTracker.Path))
-	twoSecret.Data[ResourceSubleasesKey] = []byte(fmt.Sprintf("%s,%s", mock1LeaderTracker.Sublease, mock2LeaderTracker.Sublease))
+	// twoSecret.Data[ResourceSubleasesKey] = []byte(fmt.Sprintf("%s,%s", mock1LeaderTracker.Sublease, mock2LeaderTracker.Sublease))
 	createTwoSecretErr := cl.Create(context.TODO(), twoSecret)
 	_, leaderTrackers, err := GetLeaderTracker(instance, "olo", "ltpa", cl)
 
@@ -473,12 +470,12 @@ func TestGetLeaderTrackerWithTwoSecretEntries(t *testing.T) {
 		{"get leader tracker with two secret entries - (1) owner unchanged", mock1LeaderTracker.Owner, (*leaderTrackers)[0].Owner},
 		{"get leader tracker with two secret entries - (1) path index unchanged", mock1LeaderTracker.PathIndex, (*leaderTrackers)[0].PathIndex},
 		{"get leader tracker with two secret entries - (1) path unchanged", mock1LeaderTracker.Path, (*leaderTrackers)[0].Path},
-		{"get leader tracker with two secret entries - (1) sublease unchanged", mock1LeaderTracker.Sublease, (*leaderTrackers)[0].Sublease},
+		// {"get leader tracker with two secret entries - (1) sublease unchanged", mock1LeaderTracker.Sublease, (*leaderTrackers)[0].Sublease},
 		{"get leader tracker with two secret entries - (2) name unchanged", mock2LeaderTracker.Name, (*leaderTrackers)[1].Name},
 		{"get leader tracker with two secret entries - (2) owner unchanged", mock2LeaderTracker.Owner, (*leaderTrackers)[1].Owner},
 		{"get leader tracker with two secret entries - (2) path index unchanged", mock2LeaderTracker.PathIndex, (*leaderTrackers)[1].PathIndex},
 		{"get leader tracker with two secret entries - (2) path unchanged", mock2LeaderTracker.Path, (*leaderTrackers)[1].Path},
-		{"get leader tracker with two secret entries - (2) sublease unchanged", mock2LeaderTracker.Sublease, (*leaderTrackers)[1].Sublease},
+		// {"get leader tracker with two secret entries - (2) sublease unchanged", mock2LeaderTracker.Sublease, (*leaderTrackers)[1].Sublease},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -505,8 +502,7 @@ func TestGetLeaderTrackerWithTwoSecretEntriesAndMissingEntry(t *testing.T) {
 	twoSecret.Data[ResourcesKey] = []byte(fmt.Sprintf("%s,%s", mock1LeaderTracker.Name, mock2LeaderTracker.Name))
 	twoSecret.Data[ResourceOwnersKey] = []byte(fmt.Sprintf("%s,%s", mock1LeaderTracker.Owner, mock2LeaderTracker.Owner))
 	twoSecret.Data[ResourcePathIndicesKey] = []byte(fmt.Sprintf("%s,%s", mock1LeaderTracker.PathIndex, mock2LeaderTracker.PathIndex))
-	twoSecret.Data[ResourcePathsKey] = []byte(fmt.Sprintf("%s,%s", mock1LeaderTracker.Path, mock2LeaderTracker.Path))
-	twoSecret.Data[ResourceSubleasesKey] = []byte(fmt.Sprint(mock1LeaderTracker.Sublease)) // missing mock2LeaderTracker.Sublease
+	// twoSecret.Data[ResourcePathsKey] = []byte(fmt.Sprintf("%s,%s", mock1LeaderTracker.Path, mock2LeaderTracker.Path)) // missing mock2LeaderTracker.Sublease
 	createTwoSecretErr := cl.Create(context.TODO(), twoSecret)
 	_, leaderTrackers, err := GetLeaderTracker(instance, "olo", "ltpa", cl)
 
@@ -702,9 +698,4 @@ func createMock2LeaderTracker() LeaderTracker {
 		PathIndex: "v1_0_0.1",
 		Sublease:  "0",
 	}
-}
-
-func ignoreSubleases(leaderTracker map[string][]byte) map[string][]byte {
-	delete(leaderTracker, ResourceSubleasesKey)
-	return leaderTracker
 }
