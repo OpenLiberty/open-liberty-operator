@@ -893,6 +893,8 @@ func getMonitoringEnabledLabelName(ba common.BaseComponent) string {
 }
 
 func (r *ReconcileOpenLiberty) finalizeOpenLibertyApplication(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, pvcName string, pvcNamespace string) error {
+	r.RemoveLeaderTrackerReference(olapp, LTPA_RESOURCE_SHARING_FILE_NAME)
+	r.RemoveLeaderTrackerReference(olapp, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 	r.deletePVC(reqLogger, pvcName, pvcNamespace)
 	return nil
 }
