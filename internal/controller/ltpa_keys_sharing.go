@@ -221,7 +221,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 	ltpaServiceAccount.Namespace = instance.GetNamespace()
 	ltpaServiceAccount.Labels = lutils.GetRequiredLabels(ltpaServiceAccountRootName, ltpaServiceAccount.Name)
 
-	ltpaRole := &corev1.Role{}
+	ltpaRole := &rbacv1.Role{}
 	ltpaRoleRootName := OperatorShortName + "-ltpa-role"
 	ltpaRole.Name = ltpaRoleRootName + ltpaMetadata.Name
 	ltpaRole.Namespace = instance.GetNamespace()
@@ -234,8 +234,8 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 		},
 	}
 
-	ltpaRoleBinding := &corev1.RoleBinding{}
-	ltpaRoleBindingRootName := OperatorShortName + "-ltpa-role-binding"
+	ltpaRoleBinding := &rbacv1.RoleBinding{}
+	ltpaRoleBindingRootName := OperatorShortName + "-ltpa-rolebinding"
 	ltpaRoleBinding.Name = ltpaRoleBindingRootName + ltpaMetadata.Name
 	ltpaRoleBinding.Namespace = instance.GetNamespace()
 	ltpaRoleBinding.Labels = lutils.GetRequiredLabels(ltpaRoleBindingRootName, ltpaRoleBinding.Name)
