@@ -221,6 +221,37 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 	ltpaServiceAccount.Namespace = instance.GetNamespace()
 	ltpaServiceAccount.Labels = lutils.GetRequiredLabels(ltpaServiceAccountRootName, ltpaServiceAccount.Name)
 
+	ltpaRole := &corev1.Role{}
+	ltpaRoleRootName := OperatorShortName + "-ltpa-role"
+	ltpaRole.Name = ltpaRoleRootName + ltpaMetadata.Name
+	ltpaRole.Namespace = instance.GetNamespace()
+	ltpaRole.Labels = lutils.GetRequiredLabels(ltpaRoleRootName, ltpaRole.Name)
+	ltpaRole.Rules = []rbacv1.PolicyRule{
+		{
+			Verbs:     []string{"create", "get"},
+			APIGroups: []string{""},
+			Resources: []string{"secrets"},
+		},
+	}
+
+	ltpaRoleBinding := &corev1.RoleBinding{}
+	ltpaRoleBindingRootName := OperatorShortName + "-ltpa-role-binding"
+	ltpaRoleBinding.Name = ltpaRoleBindingRootName + ltpaMetadata.Name
+	ltpaRoleBinding.Namespace = instance.GetNamespace()
+	ltpaRoleBinding.Labels = lutils.GetRequiredLabels(ltpaRoleBindingRootName, ltpaRoleBinding.Name)
+	ltpaRoleBinding.Subjects = []rbacv1.Subject{
+		{
+			Kind:      "ServiceAccount",
+			Name:      ltpaServiceAccount.Name,
+			Namespace: instance.GetNamespace(),
+		},
+	}
+	ltpaRoleBinding.RoleRef = rbacv1.RoleRef{
+		APIGroup: "rbac.authorization.k8s.io",
+		Kind:     "Role",
+		Name:     ltpaRole.Name,
+	}
+
 	ltpaSecret := &corev1.Secret{}
 	ltpaSecretRootName := OperatorShortName + "-managed-ltpa"
 	ltpaSecret.Name = ltpaSecretRootName + ltpaMetadata.Name
@@ -270,45 +301,23 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 			}
 		} else {
 			// Create the ServiceAccount
-			r.CreateOrUpdate(ltpaServiceAccount, nil, func() error {
+			if err := r.CreateOrUpdate(ltpaServiceAccount, nil, func() error {
 				return nil
-			})
+			}); err != nil && !kerrors.IsNotFound(err) {
+				return "", fmt.Errorf("Failed to create ServiceAccount " + ltpaServiceAccount.Name)
+			}
 
 			// Create the Role/RoleBinding
-			ltpaRole := &rbacv1.Role{}
-			ltpaRole.Name = OperatorShortName + "-managed-ltpa-role"
-			ltpaRole.Namespace = instance.GetNamespace()
-			ltpaRole.Rules = []rbacv1.PolicyRule{
-				{
-					Verbs:     []string{"create", "get"},
-					APIGroups: []string{""},
-					Resources: []string{"secrets"},
-				},
-			}
-			ltpaRole.Labels = lutils.GetRequiredLabels(ltpaRole.Name, "")
-			r.CreateOrUpdate(ltpaRole, ltpaServiceAccount, func() error {
+			if err := r.CreateOrUpdate(ltpaRole, nil, func() error {
 				return nil
-			})
-
-			ltpaRoleBinding := &rbacv1.RoleBinding{}
-			ltpaRoleBinding.Name = OperatorShortName + "-managed-ltpa-rolebinding"
-			ltpaRoleBinding.Namespace = instance.GetNamespace()
-			ltpaRoleBinding.Subjects = []rbacv1.Subject{
-				{
-					Kind:      "ServiceAccount",
-					Name:      ltpaServiceAccount.Name,
-					Namespace: instance.GetNamespace(),
-				},
+			}); err != nil && !kerrors.IsNotFound(err) {
+				return "", fmt.Errorf("Failed to create Role " + ltpaRole.Name)
 			}
-			ltpaRoleBinding.RoleRef = rbacv1.RoleRef{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     "Role",
-				Name:     ltpaRole.Name,
-			}
-			ltpaRoleBinding.Labels = lutils.GetRequiredLabels(ltpaRoleBinding.Name, "")
-			r.CreateOrUpdate(ltpaRoleBinding, ltpaServiceAccount, func() error {
+			if err := r.CreateOrUpdate(ltpaRoleBinding, nil, func() error {
 				return nil
-			})
+			}); err != nil && !kerrors.IsNotFound(err) {
+				return "", fmt.Errorf("Failed to create RoleBinding " + ltpaRoleBinding.Name)
+			}
 
 			// Create a ConfigMap to store the internal/controller/assets/create_ltpa_keys.sh script
 			err = r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaKeysCreationScriptConfigMap.Name, Namespace: ltpaKeysCreationScriptConfigMap.Namespace}, ltpaKeysCreationScriptConfigMap)
@@ -415,8 +424,16 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 	if err != nil {
 		return ltpaSecret.Name, err
 	}
-	// The LTPA Secret is created so delete the ServiceAccount
+	// The LTPA Secret is created so delete the ServiceAccount, Role and RoleBinding
 	err = r.DeleteResource(ltpaServiceAccount)
+	if err != nil {
+		return ltpaSecret.Name, err
+	}
+	err = r.DeleteResource(ltpaRole)
+	if err != nil {
+		return ltpaSecret.Name, err
+	}
+	err = r.DeleteResource(ltpaRoleBinding)
 	if err != nil {
 		return ltpaSecret.Name, err
 	}
