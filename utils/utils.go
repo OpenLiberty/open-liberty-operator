@@ -55,7 +55,7 @@ const overridesMountPath = "/config/configDropins/overrides"
 // Password encryption constants
 const ManagedEncryptionServerXML = "-managed-encryption-server-xml"
 const ManagedEncryptionMountServerXML = "-managed-encryption-mount-server-xml"
-const PasswordEncryptionKeySuffix = "-wlp-password-encryption-key"
+const PasswordEncryptionKeyRootName = "wlp-password-encryption-key"
 const EncryptionKeyXMLFileName = "encryptionKey.xml"
 const EncryptionKeyMountXMLFileName = "encryptionKeyMount.xml"
 

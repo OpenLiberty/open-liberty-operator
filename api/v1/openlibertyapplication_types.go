@@ -54,8 +54,8 @@ type OpenLibertyApplicationSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=8,type=spec,displayName="Expose",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
 	Expose *bool `json:"expose,omitempty"`
 
-	// Enable management of password encryption key sharing amongst Liberty containers. Defaults to true.
-	// +operator-sdk:csv:customresourcedefinitions:order=9,type=spec,displayName="Manage LTPA",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	// Enable management of password encryption key sharing amongst Liberty containers. Defaults to false.
+	// +operator-sdk:csv:customresourcedefinitions:order=9,type=spec,displayName="Manage Password Encryption",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
 	ManagePasswordEncryption *bool `json:"managePasswordEncryption,omitempty"`
 
 	// Enable management of LTPA key sharing amongst Liberty containers. Defaults to false.

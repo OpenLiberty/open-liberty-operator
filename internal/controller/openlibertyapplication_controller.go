@@ -128,6 +128,8 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
+	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{Name: ""}
+
 	// Check if the OpenLibertyApplication instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
 	isInstanceMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
@@ -135,7 +137,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		if lutils.Contains(instance.GetFinalizers(), applicationFinalizer) {
 			// Run finalization logic for applicationFinalizer. If the finalization logic fails, don't remove the
 			// finalizer so that we can retry during the next reconciliation.
-			if err := r.finalizeOpenLibertyApplication(reqLogger, instance, instance.Name+"-serviceability", instance.Namespace); err != nil {
+			if err := r.finalizeOpenLibertyApplication(reqLogger, instance, instance.Name+"-serviceability", instance.Namespace, passwordEncryptionMetadata); err != nil {
 				return reconcile.Result{}, err
 			}
 
@@ -231,7 +233,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		ltpaMetadata = leaderMetadata.(*lutils.LTPAMetadata)
 	}
 	// Reconciles the shared password encryption key state for the instance namespace only if the shared key already exists
-	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{Name: ""}
 	if r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata) {
 		leaderMetadata, err := r.reconcileResourceTrackingState(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
@@ -906,8 +907,19 @@ func getMonitoringEnabledLabelName(ba common.BaseComponent) string {
 	return "monitor." + ba.GetGroupName() + "/enabled"
 }
 
-func (r *ReconcileOpenLiberty) finalizeOpenLibertyApplication(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, pvcName string, pvcNamespace string) error {
+func (r *ReconcileOpenLiberty) finalizeOpenLibertyApplication(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, pvcName string, pvcNamespace string, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) error {
 	r.RemoveLeaderTrackerReference(olapp, LTPA_RESOURCE_SHARING_FILE_NAME)
+	if r.isPasswordEncryptionKeySharingEnabled(olapp) {
+		_, thisInstanceIsLeader, _, err := r.reconcileLeader(olapp, passwordEncryptionMetadata, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, true)
+		if err != nil && !kerrors.IsNotFound(err) {
+			return err
+		}
+		if thisInstanceIsLeader {
+			if err := r.deleteMirroredEncryptionKeySecret(olapp, passwordEncryptionMetadata); err != nil {
+				return err
+			}
+		}
+	}
 	r.RemoveLeaderTrackerReference(olapp, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 	r.deletePVC(reqLogger, pvcName, pvcNamespace)
 	return nil

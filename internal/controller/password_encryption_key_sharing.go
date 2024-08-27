@@ -123,10 +123,7 @@ func (r *ReconcileOpenLiberty) getPasswordEncryptionMetadataName() string {
 }
 
 func (r *ReconcileOpenLiberty) isPasswordEncryptionKeySharingEnabled(instance *olv1.OpenLibertyApplication) bool {
-	if instance.GetManagePasswordEncryption() == nil || *instance.GetManagePasswordEncryption() {
-		return true
-	}
-	return false
+	return instance.GetManagePasswordEncryption() != nil && *instance.GetManagePasswordEncryption()
 }
 
 func (r *ReconcileOpenLiberty) isUsingPasswordEncryptionKeySharing(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) bool {
@@ -139,34 +136,40 @@ func (r *ReconcileOpenLiberty) isUsingPasswordEncryptionKeySharing(instance *olv
 
 // Returns the Secret that contains the password encryption key used internally by the operator
 func (r *ReconcileOpenLiberty) hasInternalEncryptionKeySecret(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (*corev1.Secret, error) {
-	return r.getSecret(instance, OperatorShortName+lutils.PasswordEncryptionKeySuffix+passwordEncryptionMetadata.Name+"-internal")
+	return r.getSecret(instance, lutils.PasswordEncryptionKeyRootName+passwordEncryptionMetadata.Name+"-internal")
 }
 
 // Returns the Secret that contains the password encryption key provided by the user
 func (r *ReconcileOpenLiberty) hasUserEncryptionKeySecret(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (*corev1.Secret, error) {
-	return r.getSecret(instance, OperatorShortName+lutils.PasswordEncryptionKeySuffix+passwordEncryptionMetadata.Name)
+	return r.getSecret(instance, lutils.PasswordEncryptionKeyRootName+passwordEncryptionMetadata.Name)
 }
 
 func (r *ReconcileOpenLiberty) mirrorEncryptionKeySecretState(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) error {
 	userEncryptionSecret, userEncryptionSecretErr := r.hasUserEncryptionKeySecret(instance, passwordEncryptionMetadata)
-	// Case 0: no user encryption secret, no internal encryption secret: secrets already mirrored
-	// Case 1: no user encryption secret, internal encryption secret exists: userEncryptionSecret is the resource owner of internalEncryptionSecret and will be GC'd by k8s controller
-	if userEncryptionSecretErr != nil {
-		// Error if there was an issue getting the userEncryptionSecret
-		if !kerrors.IsNotFound(userEncryptionSecretErr) {
-			return userEncryptionSecretErr
-		}
-		return nil
+	// Error if there was an issue getting the userEncryptionSecret
+	if userEncryptionSecretErr != nil && !kerrors.IsNotFound(userEncryptionSecretErr) {
+		return userEncryptionSecretErr
 	}
 	internalEncryptionSecret, internalEncryptionSecretErr := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata)
 	// Error if there was an issue getting the internalEncryptionSecret
 	if internalEncryptionSecretErr != nil && !kerrors.IsNotFound(internalEncryptionSecretErr) {
 		return internalEncryptionSecretErr
 	}
+	// Case 0: no user encryption secret, no internal encryption secret: secrets already mirrored
+	// Case 1: no user encryption secret, internal encryption secret exists: so delete internalEncryptionSecret
+	if kerrors.IsNotFound(userEncryptionSecretErr) {
+		if kerrors.IsNotFound(internalEncryptionSecretErr) {
+			return nil
+		} else {
+			if err := r.DeleteResource(internalEncryptionSecret); err != nil {
+				return err
+			}
+		}
+	}
 
 	// Case 2: user encryption secret exists, no internal secret: Create internalEncryptionSecret
 	// Case 3: user encryption secret exists, internal secret exists: Update internalEncryptionSecret
-	return r.CreateOrUpdate(internalEncryptionSecret, userEncryptionSecret, func() error {
+	return r.CreateOrUpdate(internalEncryptionSecret, nil, func() error {
 		if internalEncryptionSecret.Data == nil {
 			internalEncryptionSecret.Data = make(map[string][]byte)
 		}
@@ -181,6 +184,27 @@ func (r *ReconcileOpenLiberty) mirrorEncryptionKeySecretState(instance *olv1.Ope
 		}
 		return nil
 	})
+}
+
+// Deletes the mirrored encryption key secret if the initial encryption key secret no longer exists
+func (r *ReconcileOpenLiberty) deleteMirroredEncryptionKeySecret(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) error {
+	_, userEncryptionSecretErr := r.hasUserEncryptionKeySecret(instance, passwordEncryptionMetadata)
+	// Error if there was an issue getting the userEncryptionSecret
+	if userEncryptionSecretErr != nil && !kerrors.IsNotFound(userEncryptionSecretErr) {
+		return userEncryptionSecretErr
+	}
+	internalEncryptionSecret, internalEncryptionSecretErr := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata)
+	// Error if there was an issue getting the internalEncryptionSecret
+	if internalEncryptionSecretErr != nil && !kerrors.IsNotFound(internalEncryptionSecretErr) {
+		return internalEncryptionSecretErr
+	}
+	// Case 1: no user encryption secret, internal encryption secret exists: so delete internalEncryptionSecret
+	if kerrors.IsNotFound(userEncryptionSecretErr) && !kerrors.IsNotFound(internalEncryptionSecretErr) {
+		if err := r.DeleteResource(internalEncryptionSecret); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *ReconcileOpenLiberty) getSecret(instance *olv1.OpenLibertyApplication, secretName string) (*corev1.Secret, error) {
@@ -240,11 +264,11 @@ func (r *ReconcileOpenLiberty) createPasswordEncryptionKeyLibertyConfig(instance
 
 // Tracks existing password encryption resources by populating a LeaderTracker array used to initialize the LeaderTracker
 func (r *ReconcileOpenLiberty) GetPasswordEncryptionResources(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, assetsFolder *string) (*unstructured.UnstructuredList, string, error) {
-	passwordEncryptionResources, err := lutils.CreateUnstructuredResourceListFromSignature(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, assetsFolder, OperatorShortName)
+	passwordEncryptionResources, err := lutils.CreateUnstructuredResourceListFromSignature(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, assetsFolder, "") // TODO: replace prefix "" to specify operator precedence such as with prefix "olo-"
 	if err != nil {
 		return nil, "", err
 	}
-	passwordEncryptionResource, passwordEncryptionResourceName, err := lutils.CreateUnstructuredResourceFromSignature(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, assetsFolder, OperatorShortName, "")
+	passwordEncryptionResource, passwordEncryptionResourceName, err := lutils.CreateUnstructuredResourceFromSignature(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, assetsFolder, "", "") // TODO: replace prefix "" to specify operator precedence such as with prefix "olo-"
 	if err != nil {
 		return nil, "", err
 	}

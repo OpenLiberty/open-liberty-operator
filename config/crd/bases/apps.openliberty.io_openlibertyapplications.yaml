@@ -2513,7 +2513,7 @@ spec:
                 type: boolean
               managePasswordEncryption:
                 description: Enable management of password encryption key sharing
-                  amongst Liberty containers. Defaults to true.
+                  amongst Liberty containers. Defaults to false.
                 type: boolean
               manageTLS:
                 description: Enable management of TLS certificates. Defaults to true.
