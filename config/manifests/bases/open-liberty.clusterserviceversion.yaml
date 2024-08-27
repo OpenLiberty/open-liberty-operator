@@ -375,6 +375,10 @@ spec:
         path: monitoring.labels
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Tolerations to be added to application pods. Tolerations allow
+          the scheduler to schedule pods on nodes with matching taints.
+        displayName: Tolerations
+        path: tolerations
       - description: A YAML snippet representing an array of Endpoint component from
           ServiceMonitor.
         displayName: Monitoring Endpoints
