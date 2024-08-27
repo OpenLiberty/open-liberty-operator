@@ -92,7 +92,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2024-08-01T20:19:13Z"
+    createdAt: "2024-08-27T08:34:23Z"
     description: Deploy and manage containerized Liberty applications
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "true"
@@ -463,6 +463,10 @@ spec:
         path: monitoring.labels
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Tolerations to be added to application pods. Tolerations allow
+          the scheduler to schedule pods on nodes with matching taints.
+        displayName: Tolerations
+        path: tolerations
       - description: A YAML snippet representing an array of Endpoint component from
           ServiceMonitor.
         displayName: Monitoring Endpoints
