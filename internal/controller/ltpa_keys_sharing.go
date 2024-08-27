@@ -455,7 +455,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 	if serverXMLMountSecretErr != nil && !kerrors.IsNotFound(serverXMLMountSecretErr) {
 		return "", serverXMLMountSecretErr
 	}
-	if err := r.CreateOrUpdate(ltpaXMLMountSecret, ltpaSecret, func() error {
+	if err := r.CreateOrUpdate(ltpaXMLMountSecret, nil, func() error {
 		mountDir := strings.Replace(lutils.SecureMountPath+"/"+lutils.LTPAKeysXMLFileName, "/output", "${server.output.dir}", 1)
 		return lutils.CustomizeLibertyFileMountXML(ltpaXMLMountSecret, lutils.LTPAKeysMountXMLFileName, mountDir)
 	}); err != nil {
@@ -468,7 +468,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 		return "", serverXMLSecretErr
 	}
 	// NOTE: Update is important here for compatibility with an operator upgrade from version 1,3,3 that did not use ltpaXMLMountSecret
-	if err := r.CreateOrUpdate(ltpaXMLSecret, ltpaSecret, func() error {
+	if err := r.CreateOrUpdate(ltpaXMLSecret, nil, func() error {
 		return lutils.CustomizeLTPAServerXML(ltpaXMLSecret, instance, string(ltpaSecret.Data["password"]))
 	}); err != nil {
 		return "", err
