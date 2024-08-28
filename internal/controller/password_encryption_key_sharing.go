@@ -7,8 +7,8 @@ import (
 	"time"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
-	tree "github.com/OpenLiberty/open-liberty-operator/tree"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
+	tree "github.com/OpenLiberty/open-liberty-operator/utils/tree"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

@@ -247,11 +247,15 @@ func AddSecretResourceVersionAsEnvVar(pts *corev1.PodTemplateSpec, la *olv1.Open
 	return nil
 }
 
+func AddPodTemplateSpecAnnotation(pts *corev1.PodTemplateSpec, annotation map[string]string) {
+	pts.Annotations = rcoutils.MergeMaps(pts.Annotations, annotation)
+}
+
 func CustomizeLibertyAnnotations(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication) {
 	libertyAnnotations := map[string]string{
 		"libertyOperator": "Open Liberty",
 	}
-	pts.Annotations = rcoutils.MergeMaps(pts.Annotations, libertyAnnotations)
+	AddPodTemplateSpecAnnotation(pts, libertyAnnotations)
 }
 
 // findEnvVars checks if the environment variable is already present

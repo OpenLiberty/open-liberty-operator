@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
-	tree "github.com/OpenLiberty/open-liberty-operator/tree"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
+	tree "github.com/OpenLiberty/open-liberty-operator/utils/tree"
 	v1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
