@@ -155,6 +155,21 @@ type OpenLibertyApplicationSpec struct {
 	// Tolerations to be added to application pods. Tolerations allow the scheduler to schedule pods on nodes with matching taints.
 	// +operator-sdk:csv:customresourcedefinitions:order=34,type=spec,displayName="Tolerations"
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+
+	// DNS settings for the application pod.
+	// +operator-sdk:csv:customresourcedefinitions:order=35,type=spec,displayName="DNS"
+	DNS *OpenLibertyApplicationDNS `json:"dns,omitempty"`
+}
+
+// Defines the DNS
+type OpenLibertyApplicationDNS struct {
+	// The DNS Policy for the application pod. Defaults to ClusterFirst.
+	// +operator-sdk:csv:customresourcedefinitions:order=1,type=spec,displayName="DNS Policy"
+	DNSPolicy *corev1.DNSPolicy `json:"policy,omitempty"`
+
+	// The DNS Config for the application pod.
+	// +operator-sdk:csv:customresourcedefinitions:order=2,type=spec,displayName="DNS Config"
+	PodDNSConfig *corev1.PodDNSConfig `json:"config,omitempty"`
 }
 
 // Defines the topology spread constraints
@@ -164,7 +179,7 @@ type OpenLibertyApplicationTopologySpreadConstraints struct {
 	Constraints *[]corev1.TopologySpreadConstraint `json:"constraints,omitempty"`
 
 	// Whether the operator should disable its default set of TopologySpreadConstraints. Defaults to false.
-	// +operator-sdk:csv:customresourcedefinitions:order=1,type=spec,displayName="Disable Operator Defaults",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	// +operator-sdk:csv:customresourcedefinitions:order=2,type=spec,displayName="Disable Operator Defaults",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
 	DisableOperatorDefaults *bool `json:"disableOperatorDefaults,omitempty"`
 }
 
@@ -1190,6 +1205,21 @@ func (cr *OpenLibertyApplication) GetDisableServiceLinks() *bool {
 // GetToleration returns pod tolerations slice
 func (cr *OpenLibertyApplication) GetTolerations() []corev1.Toleration {
 	return cr.Spec.Tolerations
+}
+
+func (cr *OpenLibertyApplication) GetDNS() common.BaseComponentDNS {
+	if cr.Spec.DNS == nil {
+		return nil
+	}
+	return cr.Spec.DNS
+}
+
+func (d *OpenLibertyApplicationDNS) GetPolicy() *corev1.DNSPolicy {
+	return d.DNSPolicy
+}
+
+func (d *OpenLibertyApplicationDNS) GetConfig() *corev1.PodDNSConfig {
+	return d.PodDNSConfig
 }
 
 // Initialize sets default values
