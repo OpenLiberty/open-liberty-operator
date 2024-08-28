@@ -222,10 +222,6 @@ func (r *ReconcileOpenLiberty) createPasswordEncryptionKeyLibertyConfig(instance
 		return fmt.Errorf("a password encryption key was not specified")
 	}
 
-	encrytionKeySecret, err := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata)
-	if err != nil {
-		return err
-	}
 	// The Secret to hold the server.xml that will override the password encryption key for the Liberty server
 	// This server.xml will be mounted in /output/resources/liberty-operator/encryptionKey.xml
 	encryptionXMLSecretName := OperatorShortName + lutils.ManagedEncryptionServerXML + passwordEncryptionMetadata.Name
@@ -236,7 +232,7 @@ func (r *ReconcileOpenLiberty) createPasswordEncryptionKeyLibertyConfig(instance
 			Labels:    lutils.GetRequiredLabels(encryptionXMLSecretName, ""),
 		},
 	}
-	if err := r.CreateOrUpdate(encryptionXMLSecret, encrytionKeySecret, func() error {
+	if err := r.CreateOrUpdate(encryptionXMLSecret, nil, func() error {
 		return lutils.CustomizeEncryptionKeyXML(encryptionXMLSecret, encryptionKey)
 	}); err != nil {
 		return err
@@ -252,7 +248,7 @@ func (r *ReconcileOpenLiberty) createPasswordEncryptionKeyLibertyConfig(instance
 			Labels:    lutils.GetRequiredLabels(mountingXMLSecretName, ""),
 		},
 	}
-	if err := r.CreateOrUpdate(mountingXMLSecret, encrytionKeySecret, func() error {
+	if err := r.CreateOrUpdate(mountingXMLSecret, nil, func() error {
 		mountDir := strings.Replace(lutils.SecureMountPath+"/"+lutils.EncryptionKeyXMLFileName, "/output", "${server.output.dir}", 1)
 		return lutils.CustomizeLibertyFileMountXML(mountingXMLSecret, lutils.EncryptionKeyMountXMLFileName, mountDir)
 	}); err != nil {

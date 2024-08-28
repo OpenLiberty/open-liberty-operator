@@ -885,17 +885,6 @@ func getMonitoringEnabledLabelName(ba common.BaseComponent) string {
 
 func (r *ReconcileOpenLiberty) finalizeOpenLibertyApplication(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, pvcName string, pvcNamespace string, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) error {
 	r.RemoveLeaderTrackerReference(olapp, LTPA_RESOURCE_SHARING_FILE_NAME)
-	if r.isPasswordEncryptionKeySharingEnabled(olapp) {
-		_, thisInstanceIsLeader, _, err := r.reconcileLeader(olapp, passwordEncryptionMetadata, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, true)
-		if err != nil && !kerrors.IsNotFound(err) {
-			return err
-		}
-		if thisInstanceIsLeader {
-			if err := r.deleteMirroredEncryptionKeySecret(olapp, passwordEncryptionMetadata); err != nil {
-				return err
-			}
-		}
-	}
 	r.RemoveLeaderTrackerReference(olapp, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 	r.deletePVC(reqLogger, pvcName, pvcNamespace)
 	return nil
