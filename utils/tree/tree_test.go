@@ -444,7 +444,7 @@ func testGetPathFromLeafIndex(testName string, treeMap map[string]interface{}, v
 func getControllersFolder() string {
 	cwd, err := os.Getwd()
 	if err != nil {
-		return "/../controllers"
+		return "/../../controllers"
 	}
-	return cwd + "/../controllers"
+	return cwd + "/../../controllers"
 }
