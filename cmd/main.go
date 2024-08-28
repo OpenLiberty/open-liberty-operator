@@ -27,11 +27,13 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
-	"github.com/OpenLiberty/open-liberty-operator/controllers"
+	"github.com/OpenLiberty/open-liberty-operator/internal/controller"
 
 	"github.com/application-stacks/runtime-component-operator/utils"
 	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
@@ -39,6 +41,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	prometheusv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -89,30 +92,38 @@ func main() {
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     "0",
-		Port:                   9443,
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: "0",
+		},
+		WebhookServer: &webhook.DefaultServer{
+			Options: webhook.Options{
+				Port: 9443,
+			},
+		},
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "7111f50b.apps.openliberty.io",
 		LeaseDuration:          &leaseDuration,
 		RenewDeadline:          &renewDeadline,
-		Namespace:              watchNamespace,
+		Cache: cache.Options{
+			DefaultNamespaces: map[string]cache.Config{watchNamespace: cache.Config{}},
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 
-	if err = (&controllers.ReconcileOpenLiberty{
+	if err = (&controller.ReconcileOpenLiberty{
 		ReconcilerBase: utils.NewReconcilerBase(mgr.GetAPIReader(), mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor("open-liberty-operator")),
-		Log:            ctrl.Log.WithName("controllers").WithName("OpenLibertyApplication"),
+		Log:            ctrl.Log.WithName("controller").WithName("OpenLibertyApplication"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenLibertyApplication")
 		os.Exit(1)
 	}
-	if err = (&controllers.ReconcileOpenLibertyDump{
-		Log:        ctrl.Log.WithName("controllers").WithName("OpenLibertyDump"),
+	if err = (&controller.ReconcileOpenLibertyDump{
+		Log:        ctrl.Log.WithName("controller").WithName("OpenLibertyDump"),
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		RestConfig: mgr.GetConfig(),
@@ -121,8 +132,8 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenLibertyDump")
 		os.Exit(1)
 	}
-	if err = (&controllers.ReconcileOpenLibertyTrace{
-		Log:        ctrl.Log.WithName("controllers").WithName("OpenLibertyTrace"),
+	if err = (&controller.ReconcileOpenLibertyTrace{
+		Log:        ctrl.Log.WithName("controller").WithName("OpenLibertyTrace"),
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		RestConfig: mgr.GetConfig(),
@@ -142,7 +153,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	utils.CreateConfigMap(controllers.OperatorName)
+	utils.CreateConfigMap(controller.OperatorName)
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
