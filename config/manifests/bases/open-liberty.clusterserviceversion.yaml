@@ -71,6 +71,9 @@ spec:
         path: autoscaling.maxReplicas
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:number
+      - description: The DNS Policy for the application pod. Defaults to ClusterFirst.
+        displayName: DNS Policy
+        path: dns.policy
       - description: Whether the Service Account token should be mounted into the
           application pods. Defaults to true.
         displayName: Mount Service Account Token
@@ -86,12 +89,6 @@ spec:
           and if applicable, the Semeru Cloud Compiler instance.
         displayName: Constraints
         path: topologySpreadConstraints.constraints
-      - description: Whether the operator should disable its default set of TopologySpreadConstraints.
-          Defaults to false.
-        displayName: Disable Operator Defaults
-        path: topologySpreadConstraints.disableOperatorDefaults
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Name of the application. Defaults to the name of this custom
           resource.
         displayName: Application Name
@@ -103,6 +100,9 @@ spec:
         path: autoscaling.minReplicas
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:number
+      - description: The DNS Config for the application pod.
+        displayName: DNS Config
+        path: dns.config
       - description: Name of the service account to use for deploying the application.
           A service account is automatically created if it's not specified.
         displayName: Service Account Name
@@ -115,6 +115,12 @@ spec:
           Required field.
         displayName: Discovery Endpoint
         path: sso.oidc[0].discoveryEndpoint
+      - description: Whether the operator should disable its default set of TopologySpreadConstraints.
+          Defaults to false.
+        displayName: Disable Operator Defaults
+        path: topologySpreadConstraints.disableOperatorDefaults
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Version of the application.
         displayName: Application Version
         path: applicationVersion
@@ -379,6 +385,9 @@ spec:
           the scheduler to schedule pods on nodes with matching taints.
         displayName: Tolerations
         path: tolerations
+      - description: DNS settings for the application pod.
+        displayName: DNS
+        path: dns
       - description: A YAML snippet representing an array of Endpoint component from
           ServiceMonitor.
         displayName: Monitoring Endpoints
