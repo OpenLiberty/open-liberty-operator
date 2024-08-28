@@ -1,4 +1,4 @@
-package controllers
+package controller
 
 import (
 	"context"
@@ -106,7 +106,7 @@ func (r *ReconcileOpenLiberty) getLTPAMetadataName(instance *olv1.OpenLibertyApp
 	suffixFoundInCluster := true // MUST check that the operator is not overriding another instance's untracked shared resource
 	for strings.Contains(string(leaderTracker.Data[lutils.ResourcesKey]), randomSuffix) || suffixFoundInCluster {
 		randomSuffix = lutils.GetRandomLowerAlphanumericSuffix(lutils.ResourceSuffixLength)
-		// create the unstructured object; parse and obtain the sharedResourceName via the controllers/assets/ltpa-signature.yaml
+		// create the unstructured object; parse and obtain the sharedResourceName via the internal/controller/assets/ltpa-signature.yaml
 		if sharedResource, sharedResourceName, err := lutils.CreateUnstructuredResourceFromSignature(LTPA_RESOURCE_SHARING_FILE_NAME, assetsFolder, OperatorShortName, randomSuffix); err == nil {
 			err := r.GetClient().Get(context.TODO(), types.NamespacedName{Namespace: instance.GetNamespace(), Name: sharedResourceName}, sharedResource)
 			if err != nil && kerrors.IsNotFound(err) {
@@ -322,7 +322,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 			err = r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaKeysCreationScriptConfigMap.Name, Namespace: ltpaKeysCreationScriptConfigMap.Namespace}, ltpaKeysCreationScriptConfigMap)
 			if err != nil && kerrors.IsNotFound(err) {
 				ltpaKeysCreationScriptConfigMap.Data = make(map[string]string)
-				script, err := os.ReadFile("internal/controllers/assets/" + lutils.LTPAKeysCreationScriptFileName)
+				script, err := os.ReadFile("internal/controller/assets/" + lutils.LTPAKeysCreationScriptFileName)
 				if err != nil {
 					return "", err
 				}
@@ -339,7 +339,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 			err = r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaKeysCreationScriptConfigMap.Name, Namespace: ltpaKeysCreationScriptConfigMap.Namespace}, ltpaKeysCreationScriptConfigMap)
 			if err == nil {
 				// Compare the bundle script against the ltpaKeysCreationScriptConfigMap's saved script
-				script, err := os.ReadFile("controllers/assets/" + lutils.LTPAKeysCreationScriptFileName)
+				script, err := os.ReadFile("internal/controller/assets/" + lutils.LTPAKeysCreationScriptFileName)
 				if err != nil {
 					return "", err
 				}

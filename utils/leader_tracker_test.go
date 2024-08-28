@@ -673,11 +673,11 @@ func getUtilsFolder() string {
 }
 
 func getAssetsFolder() string {
-	return getUtilsFolder() + "/../controllers/assets"
+	return getUtilsFolder() + "/../internal/controller/assets"
 }
 
 func getTestsFolder() string {
-	return getUtilsFolder() + "/../controllers/tests"
+	return getUtilsFolder() + "/../internal/controller/tests"
 }
 
 func createMock1LeaderTracker() LeaderTracker {

@@ -683,7 +683,7 @@ func CustomizeEncryptionKeyXML(managedEncryptionXMLSecret *corev1.Secret, encryp
 	if managedEncryptionXMLSecret.StringData == nil {
 		managedEncryptionXMLSecret.StringData = make(map[string]string)
 	}
-	serverXML, err := os.ReadFile("controllers/assets/encryption.xml")
+	serverXML, err := os.ReadFile("internal/controller/assets/encryption.xml")
 	if err != nil {
 		return err
 	}
@@ -695,7 +695,7 @@ func CustomizeEncryptionKeyXML(managedEncryptionXMLSecret *corev1.Secret, encryp
 func CustomizeLTPAServerXML(xmlSecret *corev1.Secret, la *olv1.OpenLibertyApplication, encryptedPassword string) error {
 	xmlSecret.StringData = make(map[string]string)
 	managedLTPADir := strings.Replace(SecureMountPath, "/output", "${server.output.dir}", 1)
-	serverXML, err := os.ReadFile("controllers/assets/ltpa.xml")
+	serverXML, err := os.ReadFile("internal/controller/assets/ltpa.xml")
 	if err != nil {
 		return err
 	}
@@ -709,7 +709,7 @@ func CustomizeLibertyFileMountXML(mountingPasswordKeySecret *corev1.Secret, moun
 	if mountingPasswordKeySecret.StringData == nil {
 		mountingPasswordKeySecret.StringData = make(map[string]string)
 	}
-	serverXML, err := os.ReadFile("controllers/assets/mount.xml")
+	serverXML, err := os.ReadFile("internal/controller/assets/mount.xml")
 	if err != nil {
 		return err
 	}

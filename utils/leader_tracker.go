@@ -233,7 +233,7 @@ func getUnstructuredResourceSignature(leaderTrackerType string, assetsPath *stri
 	if assetsPath != nil {
 		folderPath = *assetsPath
 	} else {
-		folderPath = "controllers/assets"
+		folderPath = "internal/controller/assets"
 	}
 	signature, err := os.ReadFile(folderPath + "/" + leaderTrackerType + "-signature.yaml")
 	if err != nil {

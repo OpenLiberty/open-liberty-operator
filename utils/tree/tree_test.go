@@ -25,7 +25,7 @@ func verifyTests(tests []Test) error {
 
 func TestParseDecisionTree(t *testing.T) {
 	// Test 2 generations
-	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-2-generations.yaml"
+	fileName := getControllerFolder() + "/tests/ltpa-decision-tree-2-generations.yaml"
 	treeMap, replaceMap, err := ParseDecisionTree("ltpa", &fileName)
 
 	// Expect tree map
@@ -60,7 +60,7 @@ func TestParseDecisionTree(t *testing.T) {
 	}
 
 	// Test 3 generations
-	fileName = getControllersFolder() + "/tests/ltpa-decision-tree-3-generations.yaml"
+	fileName = getControllerFolder() + "/tests/ltpa-decision-tree-3-generations.yaml"
 	treeMap, replaceMap, err = ParseDecisionTree("ltpa", &fileName)
 
 	// Expect tree map
@@ -100,7 +100,7 @@ func TestParseDecisionTree(t *testing.T) {
 	}
 
 	// Test 1 generation
-	fileName = getControllersFolder() + "/tests/ltpa-decision-tree-1-generation.yaml"
+	fileName = getControllerFolder() + "/tests/ltpa-decision-tree-1-generation.yaml"
 	treeMap, replaceMap, err = ParseDecisionTree("ltpa", &fileName)
 
 	expectedTreeMap = make(map[string]interface{})
@@ -140,22 +140,22 @@ func TestGetLabelFromDecisionPath(t *testing.T) {
 
 func TestGetLatestOperandVersion(t *testing.T) {
 	// Test 1 generation
-	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-1-generation.yaml"
+	fileName := getControllerFolder() + "/tests/ltpa-decision-tree-1-generation.yaml"
 	treeMap, _, _ := ParseDecisionTree("ltpa", &fileName)
 	latestOperandVersion1, err1 := GetLatestOperandVersion(treeMap, "v10_3_3")
 
 	// Test 2 generations
-	fileName = getControllersFolder() + "/tests/ltpa-decision-tree-2-generations.yaml"
+	fileName = getControllerFolder() + "/tests/ltpa-decision-tree-2-generations.yaml"
 	treeMap, _, _ = ParseDecisionTree("ltpa", &fileName)
 	latestOperandVersion2, err2 := GetLatestOperandVersion(treeMap, "v10_3_999")
 
 	// Test 3 generations
-	fileName = getControllersFolder() + "/tests/ltpa-decision-tree-3-generations.yaml"
+	fileName = getControllerFolder() + "/tests/ltpa-decision-tree-3-generations.yaml"
 	treeMap, _, _ = ParseDecisionTree("ltpa", &fileName)
 	latestOperandVersion3, err3 := GetLatestOperandVersion(treeMap, "v10_4_1")
 
 	// Test complex
-	fileName = getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
+	fileName = getControllerFolder() + "/tests/ltpa-decision-tree-complex.yaml"
 	treeMap, _, _ = ParseDecisionTree("ltpa", &fileName)
 	latestOperandVersion4, err4 := GetLatestOperandVersion(treeMap, "v10_4_499")
 
@@ -176,7 +176,7 @@ func TestGetLatestOperandVersion(t *testing.T) {
 
 func TestReplacePath(t *testing.T) {
 	// Test 1 generation - empty replace map
-	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-1-generation.yaml"
+	fileName := getControllerFolder() + "/tests/ltpa-decision-tree-1-generation.yaml"
 	treeMap, replaceMap, _ := ParseDecisionTree("ltpa", &fileName)
 	newPath1a, err1a := ReplacePath("v10_3_3", "v10_3_3", treeMap, replaceMap)
 
@@ -184,7 +184,7 @@ func TestReplacePath(t *testing.T) {
 	newPath1b, err1b := ReplacePath("v10_3_3", "v20_30_30", treeMap, replaceMap)
 
 	// Test 2 generations - upgrade from first to second generation
-	fileName = getControllersFolder() + "/tests/ltpa-decision-tree-2-generations.yaml"
+	fileName = getControllerFolder() + "/tests/ltpa-decision-tree-2-generations.yaml"
 	treeMap, replaceMap, _ = ParseDecisionTree("ltpa", &fileName)
 	newPath2a, err2a := ReplacePath("v10_4_0.managePasswordEncryption.false", "v10_4_1", treeMap, replaceMap)
 
@@ -192,7 +192,7 @@ func TestReplacePath(t *testing.T) {
 	newPath2b, err2b := ReplacePath("v10_4_1.type.aes.managePasswordEncryption.true", "v10_4_0", treeMap, replaceMap)
 
 	// Test 3 generations - upgrade from first to third generation
-	fileName = getControllersFolder() + "/tests/ltpa-decision-tree-3-generations.yaml"
+	fileName = getControllerFolder() + "/tests/ltpa-decision-tree-3-generations.yaml"
 	treeMap, replaceMap, _ = ParseDecisionTree("ltpa", &fileName)
 	newPath3a, err3a := ReplacePath("v10_3_3.manageLTPA.true", "v10_4_1", treeMap, replaceMap)
 
@@ -207,7 +207,7 @@ func TestReplacePath(t *testing.T) {
 	newPath3d, err3d := ReplacePath("v10_4_0.managePasswordEncryption.true", "v10_3_3", treeMap, replaceMap)
 
 	// Test complex
-	fileName = getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
+	fileName = getControllerFolder() + "/tests/ltpa-decision-tree-complex.yaml"
 	treeMap, replaceMap, _ = ParseDecisionTree("ltpa", &fileName)
 	newPath4a, err4a := ReplacePath("v10_4_500.a.f.g.i.bar", "v10_4_21", treeMap, replaceMap)
 
@@ -244,7 +244,7 @@ func TestReplacePath(t *testing.T) {
 
 func TestGetLeafIndex(t *testing.T) {
 	// Test 1 generation - empty path
-	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-1-generation.yaml"
+	fileName := getControllerFolder() + "/tests/ltpa-decision-tree-1-generation.yaml"
 	treeMap, _, _ := ParseDecisionTree("ltpa", &fileName)
 	tests := []Test{
 		{"get leaf index - 1 generation a", -1, GetLeafIndex(treeMap, "")},
@@ -255,7 +255,7 @@ func TestGetLeafIndex(t *testing.T) {
 	}
 
 	// Test 2 generations
-	fileName = getControllersFolder() + "/tests/ltpa-decision-tree-2-generations.yaml"
+	fileName = getControllerFolder() + "/tests/ltpa-decision-tree-2-generations.yaml"
 	treeMap, _, _ = ParseDecisionTree("ltpa", &fileName)
 	tests = []Test{
 		{"get leaf index - 2 generations", -1, GetLeafIndex(treeMap, "")},
@@ -282,7 +282,7 @@ func TestGetLeafIndex(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 	// Test 3 generations
-	fileName = getControllersFolder() + "/tests/ltpa-decision-tree-3-generations.yaml"
+	fileName = getControllerFolder() + "/tests/ltpa-decision-tree-3-generations.yaml"
 	treeMap, _, _ = ParseDecisionTree("ltpa", &fileName)
 	tests = []Test{
 		{"get leaf index - 3 generations", -1, GetLeafIndex(treeMap, "")},
@@ -305,7 +305,7 @@ func TestGetLeafIndex(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 	// Test complex
-	fileName = getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
+	fileName = getControllerFolder() + "/tests/ltpa-decision-tree-complex.yaml"
 	treeMap, _, _ = ParseDecisionTree("ltpa", &fileName)
 	tests = []Test{
 		{"get leaf index - complex generations", -1, GetLeafIndex(treeMap, "")},
@@ -333,7 +333,7 @@ func TestGetLeafIndex(t *testing.T) {
 
 func TestGetPathFromLeafIndex(t *testing.T) {
 	// Test 1 generation
-	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-1-generation.yaml"
+	fileName := getControllerFolder() + "/tests/ltpa-decision-tree-1-generation.yaml"
 	treeMap, _, _ := ParseDecisionTree("ltpa", &fileName)
 	tests := []Test{}
 	validPaths := []string{"v10_3_3.test"}
@@ -344,7 +344,7 @@ func TestGetPathFromLeafIndex(t *testing.T) {
 	}
 
 	// Test 2 generations
-	fileName = getControllersFolder() + "/tests/ltpa-decision-tree-2-generations.yaml"
+	fileName = getControllerFolder() + "/tests/ltpa-decision-tree-2-generations.yaml"
 	treeMap, _, _ = ParseDecisionTree("ltpa", &fileName)
 	// valid paths
 	validPaths = []string{"v10_4_0.managePasswordEncryption.true", "v10_4_0.managePasswordEncryption.false",
@@ -356,7 +356,7 @@ func TestGetPathFromLeafIndex(t *testing.T) {
 	}
 
 	// Test 3 generations
-	fileName = getControllersFolder() + "/tests/ltpa-decision-tree-3-generations.yaml"
+	fileName = getControllerFolder() + "/tests/ltpa-decision-tree-3-generations.yaml"
 	treeMap, _, _ = ParseDecisionTree("ltpa", &fileName)
 	// valid paths
 	validPaths = []string{"v10_3_3.manageLTPA.true", "v10_4_0.managePasswordEncryption.true", "v10_4_0.managePasswordEncryption.false",
@@ -368,7 +368,7 @@ func TestGetPathFromLeafIndex(t *testing.T) {
 	}
 
 	// Test complex
-	fileName = getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
+	fileName = getControllerFolder() + "/tests/ltpa-decision-tree-complex.yaml"
 	treeMap, _, _ = ParseDecisionTree("ltpa", &fileName)
 	// valid paths
 	validPaths = []string{"v10_2_2.test", "v10_3_3.a.b", "v10_4_1.a.b.c.true", "v10_4_1.a.b.d.true", "v10_4_1.a.b.e.true", "v10_4_1.a.b.e.false",
@@ -386,7 +386,7 @@ func TestGetPathFromLeafIndex(t *testing.T) {
 }
 
 func TestCanTraverseTreeSubPath(t *testing.T) {
-	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-3-generations.yaml"
+	fileName := getControllerFolder() + "/tests/ltpa-decision-tree-3-generations.yaml"
 	treeMap, _, _ := ParseDecisionTree("ltpa", &fileName)
 
 	subPath1, err1 := CanTraverseTree(treeMap, "v10_4_1.type.xor.type.a.b", true)
@@ -441,10 +441,10 @@ func testGetPathFromLeafIndex(testName string, treeMap map[string]interface{}, v
 		}
 }
 
-func getControllersFolder() string {
+func getControllerFolder() string {
 	cwd, err := os.Getwd()
 	if err != nil {
-		return "/../../controllers"
+		return "/../../internal/controller"
 	}
-	return cwd + "/../../controllers"
+	return cwd + "/../../internal/controller"
 }

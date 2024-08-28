@@ -1,4 +1,4 @@
-package controllers
+package controller
 
 import (
 	"fmt"
@@ -81,16 +81,16 @@ func TestIsLTPAKeySharingEnabled(t *testing.T) {
 	}
 }
 
-func getControllersFolder() string {
+func getControllerFolder() string {
 	cwd, err := os.Getwd()
-	if err != nil || !strings.HasSuffix(cwd, "/controllers") {
-		return "controllers"
+	if err != nil || !strings.HasSuffix(cwd, "internal/controller") {
+		return "internal/controller"
 	}
 	return cwd
 }
 
 func getAssetsFolder() string {
-	return getControllersFolder() + "/assets"
+	return getControllerFolder() + "/assets"
 }
 
 func TestLTPALeaderTracker(t *testing.T) {
@@ -129,7 +129,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 
 	// Second, initialize the LTPA leader tracker
 	latestOperandVersion := "v10_4_1"
-	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
+	fileName := getControllerFolder() + "/tests/ltpa-decision-tree-complex.yaml"
 	treeMap, replaceMap, err := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, &fileName)
 	tests = []Test{
 		{"parse decision tree complex", nil, err},
@@ -296,7 +296,7 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 
 	// Using the LTPA Decision Tree (complex) at version v10_4_1
 	latestOperandVersion := "v10_4_1"
-	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
+	fileName := getControllerFolder() + "/tests/ltpa-decision-tree-complex.yaml"
 	treeMap, replaceMap, err := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, &fileName)
 	tests := []Test{
 		{"parse decision tree complex", nil, err},
@@ -372,7 +372,7 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T) {
 	instance := createOpenLibertyApp(name, namespace, spec)
 	r := createReconcilerFromOpenLibertyApp(instance)
 
-	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
+	fileName := getControllerFolder() + "/tests/ltpa-decision-tree-complex.yaml"
 	treeMap, replaceMap, err := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, &fileName)
 	tests := []Test{
 		{"parse decision tree complex", nil, err},
@@ -450,7 +450,7 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngr
 	instance := createOpenLibertyApp(name, namespace, spec)
 	r := createReconcilerFromOpenLibertyApp(instance)
 
-	fileName := getControllersFolder() + "/tests/ltpa-decision-tree-complex.yaml"
+	fileName := getControllerFolder() + "/tests/ltpa-decision-tree-complex.yaml"
 	treeMap, replaceMap, err := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, &fileName)
 	tests := []Test{
 		{"parse decision tree complex", nil, err},

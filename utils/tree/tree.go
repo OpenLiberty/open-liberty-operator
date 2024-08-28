@@ -495,7 +495,7 @@ func ParseDecisionTree(leaderTrackerType string, fileName *string) (map[string]i
 			return nil, nil, err
 		}
 	} else {
-		tree, err = os.ReadFile("controllers/assets/" + leaderTrackerType + "-decision-tree.yaml")
+		tree, err = os.ReadFile("internal/controller/assets/" + leaderTrackerType + "-decision-tree.yaml")
 		if err != nil {
 			return nil, nil, err
 		}
