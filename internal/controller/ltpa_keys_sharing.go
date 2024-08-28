@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const LTPA_RESOURCE_SHARING_FILE_NAME = "ltpa"
@@ -437,17 +436,6 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 	if err != nil {
 		return ltpaSecret.Name, err
 	}
-
-	// Set LTPA Secret as owner of LTPA Job, allow error because it might not exist
-	r.CreateOrUpdate(generateLTPAKeysJob, nil, func() error {
-		controllerutil.SetControllerReference(ltpaSecret, generateLTPAKeysJob, r.GetClient().Scheme())
-		return nil
-	})
-	// Set LTPA Secret as owner of LTPA script, allow error because it might not exist
-	r.CreateOrUpdate(ltpaKeysCreationScriptConfigMap, nil, func() error {
-		controllerutil.SetControllerReference(ltpaSecret, ltpaKeysCreationScriptConfigMap, r.GetClient().Scheme())
-		return nil
-	})
 
 	// Create/update the Secret to hold the server.xml that will import the LTPA keys into the Liberty server
 	// This server.xml will be mounted in /config/configDropins/overrides/ltpaKeysMount.xml
