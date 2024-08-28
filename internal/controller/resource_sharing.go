@@ -20,12 +20,10 @@ func (r *ReconcileOpenLiberty) reconcileResourceTrackingState(instance *olv1.Ope
 		return nil, err
 	}
 
-	// TODO: uncomment when operator version switches to 1.4.0
-	// latestOperandVersion, err := tree.GetLatestOperandVersion(treeMap, "")
-	// if err != nil {
-	// 	return nil, err
-	// }
-	latestOperandVersion := "v1_4_0" // remove this when operator version switches to 1.4.0
+	latestOperandVersion, err := tree.GetLatestOperandVersion(treeMap, "")
+	if err != nil {
+		return nil, err
+	}
 
 	// persist or create a Secret to store the shared resources' state
 	err = r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, nil)
