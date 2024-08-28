@@ -231,7 +231,7 @@ func GetSecretLastRotationAsLabelMap(la *olv1.OpenLibertyApplication, client cli
 		return nil, errors.Wrapf(err, "Secret %q was not found in namespace %q", secretName, la.GetNamespace())
 	}
 	return map[string]string{
-		getLastRotationLabel(sharedResourceName): string(secret.Data["lastRotation"]),
+		GetLastRotationLabelKey(sharedResourceName): string(secret.Data["lastRotation"]),
 	}, nil
 }
 
@@ -245,6 +245,16 @@ func AddSecretResourceVersionAsEnvVar(pts *corev1.PodTemplateSpec, la *olv1.Open
 		Name:  envNamePrefix + "_SECRET_RESOURCE_VERSION",
 		Value: secret.ResourceVersion})
 	return nil
+}
+
+func RemovePodTemplateSpecAnnotationByKey(pts *corev1.PodTemplateSpec, annotationKey string) {
+	RemoveMapElementByKey(pts.Annotations, annotationKey)
+}
+
+func RemoveMapElementByKey(refMap map[string]string, labelKey string) {
+	if _, found := refMap[labelKey]; found {
+		delete(refMap, labelKey)
+	}
 }
 
 func AddPodTemplateSpecAnnotation(pts *corev1.PodTemplateSpec, annotation map[string]string) {

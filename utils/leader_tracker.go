@@ -30,7 +30,7 @@ const ResourcePathIndexLabel = LibertyURI + "/resource-path-index"
 
 const ResourceSuffixLength = 5
 
-func getLastRotationLabel(sharedResourceName string) string {
+func GetLastRotationLabelKey(sharedResourceName string) string {
 	return LibertyURI + "/" + sharedResourceName + "-last-rotation"
 }
 
