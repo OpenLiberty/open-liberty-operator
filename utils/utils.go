@@ -9,13 +9,13 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
+
+	"math/rand/v2"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	rcoutils "github.com/application-stacks/runtime-component-operator/utils"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
-	"golang.org/x/exp/rand"
 	v1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -941,10 +941,9 @@ func GetCommaSeparatedArray(stringList string) []string {
 var letterNums = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 
 func GetRandomLowerAlphanumericSuffix(length int) string {
-	rand.Seed(uint64(time.Now().UnixNano()))
 	b := make([]rune, length)
 	for i := range b {
-		b[i] = letterNums[rand.Intn(len(letterNums))]
+		b[i] = letterNums[rand.IntN(len(letterNums))]
 	}
 	return "-" + string(b)
 }
