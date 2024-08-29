@@ -11,7 +11,7 @@ metadata:
             "name": "openliberty-app-sample"
           },
           "spec": {
-            "applicationImage": "icr.io/appcafe/open-liberty/samples/getting-started@sha256:422a7a00edc338497c0a91890b09204b8505ef0e377bb9b5944ace0102055e91",
+            "applicationImage": "icr.io/appcafe/open-liberty/samples/getting-started@sha256:91589e8e215d416595b045c739724385ffe34364df06d36794dca0d6964053e7",
             "expose": true,
             "manageTLS": true,
             "replicas": 1,
@@ -53,7 +53,7 @@ metadata:
             "name": "openliberty-app-sample"
           },
           "spec": {
-            "applicationImage": "icr.io/appcafe/open-liberty/samples/getting-started@sha256:422a7a00edc338497c0a91890b09204b8505ef0e377bb9b5944ace0102055e91",
+            "applicationImage": "icr.io/appcafe/open-liberty/samples/getting-started@sha256:91589e8e215d416595b045c739724385ffe34364df06d36794dca0d6964053e7",
             "expose": true,
             "replicas": 1,
             "service": {
@@ -1145,7 +1145,7 @@ spec:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
                 - name: RELATED_IMAGE_LIBERTY_SAMPLE_APP
-                  value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:422a7a00edc338497c0a91890b09204b8505ef0e377bb9b5944ace0102055e91
+                  value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:91589e8e215d416595b045c739724385ffe34364df06d36794dca0d6964053e7
                 - name: RELATED_IMAGE_OPEN_LIBERTY_OPERATOR
                   value: icr.io/appcafe/open-liberty-operator:daily
                 image: icr.io/appcafe/open-liberty-operator:daily
@@ -1448,7 +1448,7 @@ spec:
   provider:
     name: IBM
   relatedImages:
-  - image: icr.io/appcafe/open-liberty/samples/getting-started@sha256:422a7a00edc338497c0a91890b09204b8505ef0e377bb9b5944ace0102055e91
+  - image: icr.io/appcafe/open-liberty/samples/getting-started@sha256:91589e8e215d416595b045c739724385ffe34364df06d36794dca0d6964053e7
     name: liberty-sample-app
   - image: icr.io/appcafe/open-liberty-operator:daily
     name: open-liberty-operator
