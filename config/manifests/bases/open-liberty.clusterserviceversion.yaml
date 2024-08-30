@@ -16,6 +16,7 @@ metadata:
     features.operators.openshift.io/token-auth-azure: "false"
     features.operators.openshift.io/token-auth-gcp: "false"
     olm.skipRange: '>=0.8.0 <1.4.0'
+    operators.openshift.io/infrastructure-features: '["disconnected"]'
     repository: https://github.com/OpenLiberty/open-liberty-operator
     support: IBM
   labels:
