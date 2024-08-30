@@ -1383,14 +1383,14 @@ spec:
       - weight: 60
         preference:
           matchExpressions:
-          - key: failure-domain.beta.kubernetes.io/zone
+          - key: topology.kubernetes.io/zone
             operator: In
             values:
             - zoneA
       - weight: 20
         preference:
           matchExpressions:
-          - key: failure-domain.beta.kubernetes.io/zone
+          - key: topology.kubernetes.io/zone
             operator: In
             values:
             - zoneB
@@ -1416,7 +1416,7 @@ spec:
             operator: In
             values:
             - Service-A
-        topologyKey: failure-domain.beta.kubernetes.io/zone
+        topologyKey: topology.kubernetes.io/zone
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
       - weight: 100
