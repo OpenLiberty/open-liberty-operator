@@ -137,7 +137,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		if lutils.Contains(instance.GetFinalizers(), applicationFinalizer) {
 			// Run finalization logic for applicationFinalizer. If the finalization logic fails, don't remove the
 			// finalizer so that we can retry during the next reconciliation.
-			if err := r.finalizeOpenLibertyApplication(reqLogger, instance, instance.Name+"-serviceability", instance.Namespace, passwordEncryptionMetadata); err != nil {
+			if err := r.finalizeOpenLibertyApplication(reqLogger, instance, instance.Name+"-serviceability", instance.Namespace); err != nil {
 				return reconcile.Result{}, err
 			}
 
@@ -895,7 +895,7 @@ func getMonitoringEnabledLabelName(ba common.BaseComponent) string {
 	return "monitor." + ba.GetGroupName() + "/enabled"
 }
 
-func (r *ReconcileOpenLiberty) finalizeOpenLibertyApplication(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, pvcName string, pvcNamespace string, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) error {
+func (r *ReconcileOpenLiberty) finalizeOpenLibertyApplication(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, pvcName string, pvcNamespace string) error {
 	r.RemoveLeaderTrackerReference(olapp, LTPA_RESOURCE_SHARING_FILE_NAME)
 	r.RemoveLeaderTrackerReference(olapp, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 	r.deletePVC(reqLogger, pvcName, pvcNamespace)

@@ -260,6 +260,7 @@ func envSliceToMap(env []corev1.EnvVar, data map[string][]byte, t *testing.T) ma
 	}
 	return out
 }
+
 func createOpenLibertyApp(n, ns string, spec openlibertyv1.OpenLibertyApplicationSpec) *openlibertyv1.OpenLibertyApplication {
 	app := &openlibertyv1.OpenLibertyApplication{
 		ObjectMeta: metav1.ObjectMeta{Name: n, Namespace: ns},
