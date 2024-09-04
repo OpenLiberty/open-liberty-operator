@@ -478,7 +478,7 @@ func GetLabelFromDecisionPath(operandVersionString string, pathOptions []string,
 	n := len(pathOptions)
 	for i, option := range pathOptions {
 		label += option + "." + pathChoices[i]
-		if i < n-1 {
+		if i < n-1 && pathChoices[i] != "" {
 			label += "."
 		}
 	}

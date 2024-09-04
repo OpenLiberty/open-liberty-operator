@@ -14,7 +14,7 @@ import (
 )
 
 // Validates the resource decision tree YAML and generates the leader tracking state (Secret) for maintaining multiple shared resources
-func (r *ReconcileOpenLiberty) reconcileResourceTrackingState(instance *olv1.OpenLibertyApplication, leaderTrackerType string) (lutils.LeaderTrackerMetadata, error) {
+func (r *ReconcileOpenLiberty) reconcileResourceTrackingState(instance *olv1.OpenLibertyApplication, leaderTrackerType string) (lutils.LeaderTrackerMetadataList, error) {
 	treeMap, replaceMap, err := tree.ParseDecisionTree(leaderTrackerType, nil)
 	if err != nil {
 		return nil, err
@@ -33,18 +33,18 @@ func (r *ReconcileOpenLiberty) reconcileResourceTrackingState(instance *olv1.Ope
 
 	// return the metadata specific to the operator version, instance configuration, and shared resource being reconciled
 	if leaderTrackerType == LTPA_RESOURCE_SHARING_FILE_NAME {
-		ltpaMetadata, err := r.reconcileLTPAMetadata(instance, treeMap, latestOperandVersion, nil)
+		ltpaMetadataList, err := r.reconcileLTPAMetadata(instance, treeMap, latestOperandVersion, nil)
 		if err != nil {
 			return nil, err
 		}
-		return ltpaMetadata, nil
+		return ltpaMetadataList, nil
 	}
 	if leaderTrackerType == PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME {
-		passwordEncryptionMetadata, err := r.reconcilePasswordEncryptionMetadata(treeMap, latestOperandVersion)
+		passwordEncryptionMetadataList, err := r.reconcilePasswordEncryptionMetadata(treeMap, latestOperandVersion)
 		if err != nil {
 			return nil, err
 		}
-		return passwordEncryptionMetadata, nil
+		return passwordEncryptionMetadataList, nil
 	}
 	return nil, fmt.Errorf("a leaderTrackerType was not provided when running reconcileResourceTrackingState")
 }
@@ -73,7 +73,7 @@ func (r *ReconcileOpenLiberty) reconcileLeaderWithState(instance *olv1.OpenLiber
 		}
 		// clear instance.Name from ownership of any prior resources
 		for i := range *leaderTrackers {
-			(*leaderTrackers)[i].ClearOwnerIfMatching(instance.Name)
+			(*leaderTrackers)[i].ClearOwnerIfMatchingAndSharesPathAncestor(instance.Name, leaderMetadata.GetPath())
 		}
 		// make instance.Name the new leader
 		newLeader := lutils.LeaderTracker{
@@ -101,7 +101,7 @@ func (r *ReconcileOpenLiberty) reconcileLeaderWithState(instance *olv1.OpenLiber
 		if candidateLeader != instance.Name {
 			// clear instance.Name from ownership of any prior resources and evict the owner if the sublease has expired
 			for i := range *leaderTrackers {
-				(*leaderTrackers)[i].ClearOwnerIfMatching(instance.Name)
+				(*leaderTrackers)[i].ClearOwnerIfMatchingAndSharesPathAncestor(instance.Name, leaderMetadata.GetPath())
 				// (*leaderTrackers)[i].EvictOwnerIfSubleaseHasExpired()
 			}
 		}
@@ -132,7 +132,7 @@ func (r *ReconcileOpenLiberty) reconcileLeaderWithState(instance *olv1.OpenLiber
 			pathIndex = (*leaderTrackers)[i].PathIndex
 			(*leaderTrackers)[i].SetOwner(instance.Name)
 		} else {
-			(*leaderTrackers)[i].ClearOwnerIfMatching(instance.Name)
+			(*leaderTrackers)[i].ClearOwnerIfMatchingAndSharesPathAncestor(instance.Name, leaderMetadata.GetPath())
 		}
 	}
 	// save this new owner list

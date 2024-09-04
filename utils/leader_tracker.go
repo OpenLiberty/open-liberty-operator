@@ -54,6 +54,10 @@ type LeaderTrackerMetadata interface {
 	GetPathIndex() string
 }
 
+type LeaderTrackerMetadataList interface {
+	GetItems() []LeaderTrackerMetadata
+}
+
 func RemoveLeaderTracker(leaderTracker *[]LeaderTracker, i int) bool {
 	if leaderTracker == nil {
 		return false
@@ -88,6 +92,20 @@ func (tracker *LeaderTracker) ClearOwnerIfMatching(instance string) bool {
 		return false
 	}
 	if tracker.Owner == instance {
+		tracker.Owner = ""
+		return true
+	}
+	return false
+}
+
+func (tracker *LeaderTracker) ClearOwnerIfMatchingAndSharesPathAncestor(instance string, path string) bool {
+	if tracker == nil || !strings.Contains(path, ".") || !strings.Contains(tracker.Path, ".") {
+		return false
+	}
+	pathArr := strings.Split(path, ".")
+	trackerPathArr := strings.Split(tracker.Path, ".")
+
+	if tracker.Owner == instance && strings.Join(pathArr[:len(pathArr)-1], ".") == strings.Join(trackerPathArr[:len(trackerPathArr)-1], ".") {
 		tracker.Owner = ""
 		return true
 	}
