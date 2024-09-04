@@ -59,55 +59,64 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(instance *olv1.Ope
 	return "", "", nil
 }
 
-func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionMetadata(treeMap map[string]interface{}, latestOperandVersion string) (*lutils.PasswordEncryptionMetadata, error) {
-	metadata := &lutils.PasswordEncryptionMetadata{}
+func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionMetadata(treeMap map[string]interface{}, latestOperandVersion string) (lutils.LeaderTrackerMetadataList, error) {
+	metadataList := &lutils.PasswordEncryptionMetadataList{}
+	metadataList.Items = []lutils.LeaderTrackerMetadata{}
 
-	pathOptions, pathChoices := r.getPasswordEncryptionPathOptionsAndChoices(latestOperandVersion)
+	pathOptionsList, pathChoicesList := r.getPasswordEncryptionPathOptionsAndChoices(latestOperandVersion)
+	for i := range pathOptionsList {
+		metadata := &lutils.PasswordEncryptionMetadata{}
+		pathOptions := pathOptionsList[i]
+		pathChoices := pathChoicesList[i]
 
-	// convert the path options and choices into a labelString, for a path of length n, the labelString is
-	// constructed as a weaved array in format "<pathOptions[0]>.<pathChoices[0]>.<pathOptions[1]>.<pathChoices[1]>...<pathOptions[n-1]>.<pathChoices[n-1]>"
-	labelString, err := tree.GetLabelFromDecisionPath(latestOperandVersion, pathOptions, pathChoices)
-	if err != nil {
-		return metadata, err
+		// convert the path options and choices into a labelString, for a path of length n, the labelString is
+		// constructed as a weaved array in format "<pathOptions[0]>.<pathChoices[0]>.<pathOptions[1]>.<pathChoices[1]>...<pathOptions[n-1]>.<pathChoices[n-1]>"
+		labelString, err := tree.GetLabelFromDecisionPath(latestOperandVersion, pathOptions, pathChoices)
+		if err != nil {
+			return metadataList, err
+		}
+		// validate that the decision path such as "v1_4_0.managePasswordEncryption.true" is a valid subpath in treeMap
+		// an error here indicates a build time error created by the operator developer or pollution of the password-encryption-decision-tree.yaml
+		// NOTE: validSubPath is a substring of labelString and a valid path within treeMap; it will always hold that len(validSubPath) <= len(labelString)
+		validSubPath, err := tree.CanTraverseTree(treeMap, labelString, true)
+		if err != nil {
+			return metadataList, err
+		}
+		// NOTE: Checking the leaderTracker can be skipped assuming there is only one password encryption key per namespace
+		// Leader tracker reconcile is only required to prevent overriding other shared resources (i.e. password encryption keys) in the same namespace
+		// Uncomment code below to extend to multiple password encryption keys per namespace. See ltpa_keys_sharing.go for an example.
+
+		// // retrieve the password encryption leader tracker to re-use an existing name or to create a new metadata.Name
+		// leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+		// if err != nil {
+		// 	return metadataList, err
+		// }
+		// // if the leaderTracker is on a mismatched version, wait for a subsequent reconcile loop to re-create the leader tracker
+		// if leaderTracker.Labels[lutils.LeaderVersionLabel] != latestOperandVersion {
+		// 	return metadataList, fmt.Errorf("waiting for the Leader Tracker to be updated")
+		// }
+
+		// to avoid limitation with Kubernetes label values having a max length of 63, translate validSubPath into a path index
+		pathIndex := tree.GetLeafIndex(treeMap, validSubPath)
+		versionedPathIndex := fmt.Sprintf("%s.%d", latestOperandVersion, pathIndex)
+
+		metadata.Path = validSubPath
+		metadata.PathIndex = versionedPathIndex
+		metadata.Name = r.getPasswordEncryptionMetadataName() // You could augment this function to extend to multiple password encryption keys per namespace. See ltpa_keys_sharing.go for an example.
+		metadataList.Items = append(metadataList.Items, metadata)
 	}
-	// validate that the decision path such as "v1_4_0.managePasswordEncryption.true" is a valid subpath in treeMap
-	// an error here indicates a build time error created by the operator developer or pollution of the password-encryption-decision-tree.yaml
-	// NOTE: validSubPath is a substring of labelString and a valid path within treeMap; it will always hold that len(validSubPath) <= len(labelString)
-	validSubPath, err := tree.CanTraverseTree(treeMap, labelString, true)
-	if err != nil {
-		return metadata, err
-	}
-	// NOTE: Checking the leaderTracker can be skipped assuming there is only one password encryption key per namespace
-	// Leader tracker reconcile is only required to prevent overriding other shared resources (i.e. password encryption keys) in the same namespace
-	// Uncomment code below to extend to multiple password encryption keys per namespace. See ltpa_keys_sharing.go for an example.
-
-	// // retrieve the password encryption leader tracker to re-use an existing name or to create a new metadata.Name
-	// leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, r.GetClient())
-	// if err != nil {
-	// 	return metadata, err
-	// }
-	// // if the leaderTracker is on a mismatched version, wait for a subsequent reconcile loop to re-create the leader tracker
-	// if leaderTracker.Labels[lutils.LeaderVersionLabel] != latestOperandVersion {
-	// 	return metadata, fmt.Errorf("waiting for the Leader Tracker to be updated")
-	// }
-
-	// to avoid limitation with Kubernetes label values having a max length of 63, translate validSubPath into a path index
-	pathIndex := tree.GetLeafIndex(treeMap, validSubPath)
-	versionedPathIndex := fmt.Sprintf("%s.%d", latestOperandVersion, pathIndex)
-
-	metadata.Path = validSubPath
-	metadata.PathIndex = versionedPathIndex
-	metadata.Name = r.getPasswordEncryptionMetadataName() // You could augment this function to extend to multiple password encryption keys per namespace. See ltpa_keys_sharing.go for an example.
-	return metadata, nil
+	return metadataList, nil
 }
 
-func (r *ReconcileOpenLiberty) getPasswordEncryptionPathOptionsAndChoices(latestOperandVersion string) ([]string, []string) {
-	var pathOptions, pathChoices []string
+func (r *ReconcileOpenLiberty) getPasswordEncryptionPathOptionsAndChoices(latestOperandVersion string) ([][]string, [][]string) {
+	var pathOptionsList, pathChoicesList [][]string
 	if latestOperandVersion == "v1_4_0" {
-		pathOptions = []string{"managePasswordEncryption"}
-		pathChoices = []string{"true"} // there is only one possible password encryption key per namespace which corresponds to one path only
+		pathOptions := []string{"managePasswordEncryption"}
+		pathChoices := []string{"true"} // there is only one possible password encryption key per namespace which corresponds to one path only
+		pathOptionsList = append(pathOptionsList, pathOptions)
+		pathChoicesList = append(pathChoicesList, pathChoices)
 	}
-	return pathOptions, pathChoices
+	return pathOptionsList, pathChoicesList
 }
 
 func (r *ReconcileOpenLiberty) getPasswordEncryptionMetadataName() string {

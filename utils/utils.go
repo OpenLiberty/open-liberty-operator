@@ -47,6 +47,7 @@ const LTPAKeysFileName = "ltpa.keys"
 const LTPAKeysXMLFileName = "managedLTPA.xml"
 const LTPAKeysMountXMLFileName = "managedLTPAMount.xml"
 const LTPAKeysCreationScriptFileName = "create_ltpa_keys.sh"
+const LTPAConfigCreationScriptFileName = "create_ltpa_config.sh"
 
 // Mount constants
 const SecureMountPath = "/output/resources/liberty-operator"
@@ -83,6 +84,14 @@ func (m LTPAMetadata) GetAPIVersion() string {
 	return m.APIVersion
 }
 
+type LTPAMetadataList struct {
+	Items []LeaderTrackerMetadata
+}
+
+func (ml LTPAMetadataList) GetItems() []LeaderTrackerMetadata {
+	return ml.Items
+}
+
 type PasswordEncryptionMetadata struct {
 	Kind       string
 	APIVersion string
@@ -105,6 +114,14 @@ func (m PasswordEncryptionMetadata) GetKind() string {
 }
 func (m PasswordEncryptionMetadata) GetAPIVersion() string {
 	return m.APIVersion
+}
+
+type PasswordEncryptionMetadataList struct {
+	Items []LeaderTrackerMetadata
+}
+
+func (ml PasswordEncryptionMetadataList) GetItems() []LeaderTrackerMetadata {
+	return ml.Items
 }
 
 type LTPAConfig struct {
@@ -638,16 +655,16 @@ func isVolumeFound(pts *corev1.PodTemplateSpec, name string) bool {
 	return false
 }
 
-func ConfigurePasswordEncryption(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string) {
+func ConfigurePasswordEncryption(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string, passwordEncryptionMetadata *PasswordEncryptionMetadata) {
 	// Mount a volume /output/resources/liberty-operator/encryptionKey.xml to store the Liberty Password Encryption Key
-	MountSecretAsVolume(pts, operatorShortName+ManagedEncryptionServerXML, CreateVolumeMount(SecureMountPath, EncryptionKeyXMLFileName))
+	MountSecretAsVolume(pts, operatorShortName+ManagedEncryptionServerXML+passwordEncryptionMetadata.Name, CreateVolumeMount(SecureMountPath, EncryptionKeyXMLFileName))
 
 	// Mount a volume /config/configDropins/overrides/encryptionKeyMount.xml to import the Liberty Password Encryption Key
-	MountSecretAsVolume(pts, operatorShortName+ManagedEncryptionMountServerXML, CreateVolumeMount(overridesMountPath, EncryptionKeyMountXMLFileName))
+	MountSecretAsVolume(pts, operatorShortName+ManagedEncryptionMountServerXML+passwordEncryptionMetadata.Name, CreateVolumeMount(overridesMountPath, EncryptionKeyMountXMLFileName))
 }
 
 // ConfigureLTPA setups the shared-storage for LTPA keys file generation
-func ConfigureLTPA(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string, ltpaSecretName string, ltpaSuffixName string) {
+func ConfigureLTPAConfig(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string, ltpaSecretName string, ltpaSuffixName string) {
 	// Mount a volume /output/resources/liberty-operator/ltpa.keys to store the ltpa.keys file
 	MountSecretAsVolume(pts, ltpaSecretName, CreateVolumeMount(SecureMountPath, LTPAKeysFileName))
 
@@ -758,7 +775,7 @@ func IsLTPAJobConfigurationOutdated(job *v1.Job, appLeaderInstance *olv1.OpenLib
 	return false
 }
 
-func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaConfig *LTPAConfig, client client.Client) {
+func CustomizeLTPAKeysJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaConfig *LTPAConfig, client client.Client) {
 	ltpaVolumeMountName := parseMountName(ltpaConfig.FileName)
 	encodingType := "aes" // the password encoding type for securityUtility (one of "xor", "aes", or "hash")
 	job.Spec.Template.ObjectMeta.Name = "liberty"
@@ -771,6 +788,61 @@ func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaConfig *
 			Command:         []string{"/bin/bash", "-c"},
 			// Usage: /bin/create_ltpa_keys.sh <namespace> <ltpa-secret-name> <securityUtility-encoding>
 			Args: []string{managedLTPAMountPath + "/bin/" + LTPAKeysCreationScriptFileName + " " + la.GetNamespace() + " " + ltpaConfig.SecretName + " " + ltpaConfig.SecretInstanceName + " " + ltpaConfig.FileName + " " + encodingType + " " + ltpaConfig.EncryptionKeySecretName + " " + strconv.FormatBool(ltpaConfig.EncryptionKeySharingEnabled) + " " + ResourcePathIndexLabel + " " + ltpaConfig.Metadata.PathIndex + " " + ltpaConfig.JobRequestConfigMapName},
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      ltpaVolumeMountName,
+					MountPath: managedLTPAMountPath + "/bin",
+				},
+			},
+		},
+	}
+	if la.GetPullSecret() != nil && *la.GetPullSecret() != "" {
+		job.Spec.Template.Spec.ImagePullSecrets = append(job.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{
+			Name: *la.GetPullSecret(),
+		})
+	}
+	job.Spec.Template.Spec.ServiceAccountName = ltpaConfig.ServiceAccountName
+	// If there is a custom ServiceAccount, include it's pull secrets into the LTPA Job
+	if leaderSAName := rcoutils.GetServiceAccountName(la); len(leaderSAName) > 0 {
+		customServiceAccount := &corev1.ServiceAccount{}
+		if err := client.Get(context.TODO(), types.NamespacedName{Name: leaderSAName, Namespace: la.GetNamespace()}, customServiceAccount); err == nil {
+			// For each of the custom SA's pull secret's, if it is not found within the Job, append it to the Job
+			for _, customSAObjectReference := range customServiceAccount.ImagePullSecrets {
+				if !LocalObjectReferenceContainsName(job.Spec.Template.Spec.ImagePullSecrets, customSAObjectReference.Name) {
+					job.Spec.Template.Spec.ImagePullSecrets = append(job.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{
+						Name: customSAObjectReference.Name,
+					})
+				}
+			}
+		}
+	}
+	job.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyOnFailure
+	number := int32(0777)
+	job.Spec.Template.Spec.Volumes = append(job.Spec.Template.Spec.Volumes, corev1.Volume{
+		Name: ltpaVolumeMountName,
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: ltpaConfig.ConfigMapName,
+				},
+				DefaultMode: &number,
+			},
+		},
+	})
+}
+
+func CustomizeLTPAConfigJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaConfig *LTPAConfig, client client.Client) {
+	ltpaVolumeMountName := parseMountName(ltpaConfig.FileName)
+	encodingType := "aes" // the password encoding type for securityUtility (one of "xor", "aes", or "hash")
+	job.Spec.Template.ObjectMeta.Name = "liberty"
+	job.Spec.Template.Spec.Containers = []corev1.Container{
+		{
+			Name:            job.Spec.Template.ObjectMeta.Name,
+			Image:           la.GetStatus().GetImageReference(),
+			ImagePullPolicy: *la.GetPullPolicy(),
+			SecurityContext: rcoutils.GetSecurityContext(la),
+			Command:         []string{"/bin/bash", "-c"},
+			Args:            []string{managedLTPAMountPath + "/bin/" + LTPAConfigCreationScriptFileName + " " + la.GetNamespace() + " " + ltpaConfig.SecretName + " " + ltpaConfig.SecretInstanceName + " " + ltpaConfig.FileName + " " + encodingType + " " + ltpaConfig.EncryptionKeySecretName + " " + strconv.FormatBool(ltpaConfig.EncryptionKeySharingEnabled) + " " + ResourcePathIndexLabel + " " + ltpaConfig.Metadata.PathIndex + " " + ltpaConfig.JobRequestConfigMapName},
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      ltpaVolumeMountName,
