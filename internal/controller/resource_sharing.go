@@ -73,7 +73,7 @@ func (r *ReconcileOpenLiberty) reconcileLeaderWithState(instance *olv1.OpenLiber
 		}
 		// clear instance.Name from ownership of any prior resources
 		for i := range *leaderTrackers {
-			(*leaderTrackers)[i].ClearOwnerIfMatchingAndSharesPathAncestor(instance.Name, leaderMetadata.GetPath())
+			(*leaderTrackers)[i].ClearOwnerIfMatchingAndSharesLastPathParent(instance.Name, leaderMetadata.GetPath())
 		}
 		// make instance.Name the new leader
 		newLeader := lutils.LeaderTracker{
@@ -101,7 +101,7 @@ func (r *ReconcileOpenLiberty) reconcileLeaderWithState(instance *olv1.OpenLiber
 		if candidateLeader != instance.Name {
 			// clear instance.Name from ownership of any prior resources and evict the owner if the sublease has expired
 			for i := range *leaderTrackers {
-				(*leaderTrackers)[i].ClearOwnerIfMatchingAndSharesPathAncestor(instance.Name, leaderMetadata.GetPath())
+				(*leaderTrackers)[i].ClearOwnerIfMatchingAndSharesLastPathParent(instance.Name, leaderMetadata.GetPath())
 				// (*leaderTrackers)[i].EvictOwnerIfSubleaseHasExpired()
 			}
 		}
@@ -132,7 +132,7 @@ func (r *ReconcileOpenLiberty) reconcileLeaderWithState(instance *olv1.OpenLiber
 			pathIndex = (*leaderTrackers)[i].PathIndex
 			(*leaderTrackers)[i].SetOwner(instance.Name)
 		} else {
-			(*leaderTrackers)[i].ClearOwnerIfMatchingAndSharesPathAncestor(instance.Name, leaderMetadata.GetPath())
+			(*leaderTrackers)[i].ClearOwnerIfMatchingAndSharesLastPathParent(instance.Name, leaderMetadata.GetPath())
 		}
 	}
 	// save this new owner list

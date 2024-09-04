@@ -98,7 +98,7 @@ func (tracker *LeaderTracker) ClearOwnerIfMatching(instance string) bool {
 	return false
 }
 
-func (tracker *LeaderTracker) ClearOwnerIfMatchingAndSharesPathAncestor(instance string, path string) bool {
+func (tracker *LeaderTracker) ClearOwnerIfMatchingAndSharesLastPathParent(instance string, path string) bool {
 	if tracker == nil || !strings.Contains(path, ".") || !strings.Contains(tracker.Path, ".") {
 		return false
 	}
