@@ -563,7 +563,7 @@ func Test_getUnstructuredResourceSignatureWithMissingSignature(t *testing.T) {
 
 func TestCreateUnstructuredResourceFromSignature(t *testing.T) {
 	testsFolder := getTestsFolder()
-	unstructuredLibertyApp, unstructuredLibertyAppName, err := CreateUnstructuredResourceFromSignature("olo", &testsFolder, "olo")
+	unstructuredLibertyApp, unstructuredLibertyAppName, _, err := CreateUnstructuredResourceFromSignature("olo", &testsFolder, "olo")
 	tests := []Test{
 		{"create unstructured resource from signature - no error", nil, err},
 		{"create unstructured resource from signature - liberty app kind ", "OpenLibertyApplication", unstructuredLibertyApp.GetKind()},
@@ -577,7 +577,7 @@ func TestCreateUnstructuredResourceFromSignature(t *testing.T) {
 
 func TestCreateUnstructuredResourceFromSignatureWithInvalidSignature(t *testing.T) {
 	testsFolder := getTestsFolder()
-	unstructuredLibertyApp, unstructuredLibertyAppName, err := CreateUnstructuredResourceFromSignature("invalid-olo", &testsFolder, "olo")
+	unstructuredLibertyApp, unstructuredLibertyAppName, _, err := CreateUnstructuredResourceFromSignature("invalid-olo", &testsFolder, "olo")
 	var nilUnstructuredLibertyApp *unstructured.Unstructured
 	tests := []Test{
 		{"create unstructured resource from signature, invalid YAML - has error", false, err == nil},
@@ -589,7 +589,7 @@ func TestCreateUnstructuredResourceFromSignatureWithInvalidSignature(t *testing.
 	}
 
 	// check when more arguments are provided than replacement tokens in olo-signature.yaml
-	unstructuredLibertyApp, unstructuredLibertyAppName, err = CreateUnstructuredResourceFromSignature("olo", &testsFolder, "olo", "one", "two", "three", "four")
+	unstructuredLibertyApp, unstructuredLibertyAppName, _, err = CreateUnstructuredResourceFromSignature("olo", &testsFolder, "olo", "one", "two", "three", "four")
 	tests = []Test{
 		{"create unstructured resource from signature, invalid name replacement 1 - has error", false, err == nil},
 		{"create unstructured resource from signature, invalid name replacement 1 - liberty app is nil", nilUnstructuredLibertyApp, unstructuredLibertyApp},
@@ -600,7 +600,7 @@ func TestCreateUnstructuredResourceFromSignatureWithInvalidSignature(t *testing.
 	}
 
 	// check when less arguments are provided than replacement tokens in olo-signature.yaml
-	unstructuredLibertyApp, unstructuredLibertyAppName, err = CreateUnstructuredResourceFromSignature("invalid-olo", &testsFolder)
+	unstructuredLibertyApp, unstructuredLibertyAppName, _, err = CreateUnstructuredResourceFromSignature("invalid-olo", &testsFolder)
 	tests = []Test{
 		{"create unstructured resource from signature, invalid name replacement 2 - has error", false, err == nil},
 		{"create unstructured resource from signature, invalid name replacement 2 - liberty app is nil", nilUnstructuredLibertyApp, unstructuredLibertyApp},
@@ -613,7 +613,7 @@ func TestCreateUnstructuredResourceFromSignatureWithInvalidSignature(t *testing.
 
 func TestCreateUnstructuredResourceListFromSignature(t *testing.T) {
 	testsFolder := getTestsFolder()
-	unstructuredLibertyAppList, err := CreateUnstructuredResourceListFromSignature("olo", &testsFolder, "olo")
+	unstructuredLibertyAppList, _, err := CreateUnstructuredResourceListFromSignature("olo", &testsFolder, "olo")
 	tests := []Test{
 		{"create unstructured resource list from signature - no error", nil, err},
 		{"create unstructured resource list from signature - liberty app list kind ", "OpenLibertyApplication", unstructuredLibertyAppList.GetKind()},
@@ -626,7 +626,7 @@ func TestCreateUnstructuredResourceListFromSignature(t *testing.T) {
 
 func TestCreateUnstructuredResourceListFromSignatureWithInvalidSignature(t *testing.T) {
 	testsFolder := getTestsFolder()
-	unstructuredLibertyAppList, err := CreateUnstructuredResourceListFromSignature("invalid-olo", &testsFolder, "olo")
+	unstructuredLibertyAppList, _, err := CreateUnstructuredResourceListFromSignature("invalid-olo", &testsFolder, "olo")
 	var nilUnstructuredLibertyAppList *unstructured.UnstructuredList
 	tests := []Test{
 		{"create unstructured resource list from signature, invalid YAML - has error", false, err == nil},
@@ -639,7 +639,7 @@ func TestCreateUnstructuredResourceListFromSignatureWithInvalidSignature(t *test
 
 func TestCreateUnstructuredResourceFromSignatureWithUserError(t *testing.T) {
 	testsFolder := getTestsFolder()
-	unstructuredLibertyApp, unstructuredLibertyAppName, err := CreateUnstructuredResourceFromSignature("user-error-olo", &testsFolder)
+	unstructuredLibertyApp, unstructuredLibertyAppName, _, err := CreateUnstructuredResourceFromSignature("user-error-olo", &testsFolder)
 	var nilUnstructuredLibertyApp *unstructured.Unstructured
 	tests := []Test{
 		{"create unstructured resource from signature, invalid YAML - has error", false, err == nil},
@@ -653,7 +653,7 @@ func TestCreateUnstructuredResourceFromSignatureWithUserError(t *testing.T) {
 
 func TestCreateUnstructuredResourceListFromSignatureWithUserError(t *testing.T) {
 	testsFolder := getTestsFolder()
-	unstructuredLibertyAppList, err := CreateUnstructuredResourceListFromSignature("user-error-olo", &testsFolder)
+	unstructuredLibertyAppList, _, err := CreateUnstructuredResourceListFromSignature("user-error-olo", &testsFolder)
 	var nilUnstructuredLibertyAppList *unstructured.UnstructuredList
 	tests := []Test{
 		{"create unstructured resource from signature, invalid YAML - has error", false, err == nil},

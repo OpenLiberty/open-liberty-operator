@@ -3,13 +3,15 @@
 NAMESPACE=$1;
 LTPA_SECRET_BASE_NAME=$2;
 LTPA_SECRET_NAME=$3;
-LTPA_FILE_NAME=$4;
-ENCODING_TYPE=$5;
-PASSWORD_KEY_SECRET_NAME=$6;
-ENCRYPTION_KEY_SHARING_ENABLED=$7;
-LTPA_LABEL_KEY=$8;
-LTPA_LABEL_VALUE=$9;
-LTPA_JOB_REQUEST_NAME=${10};
+LTPA_CONFIG_BASE_NAME=$4;
+LTPA_CONFIG_SECRET_NAME=$5;
+LTPA_FILE_NAME=$6;
+ENCODING_TYPE=$7;
+PASSWORD_KEY_SECRET_NAME=$8;
+ENCRYPTION_KEY_SHARING_ENABLED=$9;
+LTPA_LABEL_KEY=${10};
+LTPA_LABEL_VALUE=${11};
+LTPA_JOB_REQUEST_NAME=${12};
 KEY_FILE="/tmp/${LTPA_FILE_NAME}";
 ENCODED_KEY_FILE="/tmp/${LTPA_FILE_NAME}-encoded";
 ENCODED_PASSWORD_FILE="/tmp/${LTPA_FILE_NAME}-encoded-password";
@@ -61,23 +63,22 @@ LAST_ROTATION=$(curl --cacert ${CACERT} --header "Content-Type: application/json
 PASSWORD=$(curl --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${LTPA_SECRET_NAME} | grep -o '"password": "[^"]*' | grep -o '[^"]*$' | base64 -d);
 
 if [ "$ENCRYPTION_KEY_SHARING_ENABLED" == "true" ] && [ $NOT_FOUND_COUNT -eq 0 ]; then
-    SECRET_NAME="${LTPA_SECRET_NAME}-keyed-password"
     PASSWORD_KEY_LAST_ROTATION=$(curl --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${PASSWORD_KEY_SECRET_NAME} | grep -o '"lastRotation": "[^"]*' | grep -o '[^"]*$' | base64 -d);
     PASSWORD_KEY=$(curl --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${PASSWORD_KEY_SECRET_NAME} | grep -o '"passwordEncryptionKey": "[^"]*' | grep -o '[^"]*$' | base64 -d);
     ENCODED_PASSWORD=$(securityUtility encode --encoding=${ENCODING_TYPE} --key=${PASSWORD_KEY} ${PASSWORD});
-    LTPA_ENCODED_PASSWORD="{\"apiVersion\": \"v1\", \"stringData\": {\"lastRotation\": \"$LAST_ROTATION\", \"password\": \"$ENCODED_PASSWORD\"}, \"kind\": \"Secret\",\"metadata\": {\"name\": \"$SECRET_NAME\", \"passwordKeyLastRotation\": \"$PASSWORD_KEY_LAST_ROTATION\", \"namespace\": \"$NAMESPACE\",\"labels\": {\"app.kubernetes.io/name\": \"${LTPA_SECRET_BASE_NAME}-keyed-password\", \"app.kubernetes.io/instance\": \"${LTPA_SECRET_NAME}-keyed-password\", \"$LTPA_LABEL_KEY\": \"$LTPA_LABEL_VALUE\"}},\"type\": \"Opaque\"}";
+    LTPA_ENCODED_PASSWORD="{\"apiVersion\": \"v1\", \"stringData\": {\"lastRotation\": \"$LAST_ROTATION\", \"password\": \"$ENCODED_PASSWORD\"}, \"kind\": \"Secret\",\"metadata\": {\"name\": \"$LTPA_CONFIG_SECRET_NAME\", \"passwordKeyLastRotation\": \"$PASSWORD_KEY_LAST_ROTATION\", \"namespace\": \"$NAMESPACE\",\"labels\": {\"app.kubernetes.io/name\": \"${LTPA_CONFIG_BASE_NAME}\", \"app.kubernetes.io/instance\": \"${LTPA_CONFIG_SECRET_NAME}\", \"$LTPA_LABEL_KEY\": \"$LTPA_LABEL_VALUE\"}},\"type\": \"Opaque\"}";
 else
     SECRET_NAME="${LTPA_SECRET_NAME}-password"
     ENCODED_PASSWORD=$(securityUtility encode --encoding=${ENCODING_TYPE} ${PASSWORD});
-    LTPA_ENCODED_PASSWORD="{\"apiVersion\": \"v1\", \"stringData\": {\"lastRotation\": \"$LAST_ROTATION\", \"password\": \"$ENCODED_PASSWORD\"}, \"kind\": \"Secret\",\"metadata\": {\"name\": \"$SECRET_NAME\",\"namespace\": \"$NAMESPACE\",\"labels\": {\"app.kubernetes.io/name\": \"${LTPA_SECRET_BASE_NAME}-password\", \"app.kubernetes.io/instance\": \"${LTPA_SECRET_NAME}-password\", \"$LTPA_LABEL_KEY\": \"$LTPA_LABEL_VALUE\"}},\"type\": \"Opaque\"}";
+    LTPA_ENCODED_PASSWORD="{\"apiVersion\": \"v1\", \"stringData\": {\"lastRotation\": \"$LAST_ROTATION\", \"password\": \"$ENCODED_PASSWORD\"}, \"kind\": \"Secret\",\"metadata\": {\"name\": \"$LTPA_CONFIG_SECRET_NAME\",\"namespace\": \"$NAMESPACE\",\"labels\": {\"app.kubernetes.io/name\": \"${LTPA_CONFIG_BASE_NAME}\", \"app.kubernetes.io/instance\": \"${LTPA_CONFIG_SECRET_NAME}\", \"$LTPA_LABEL_KEY\": \"$LTPA_LABEL_VALUE\"}},\"type\": \"Opaque\"}";
 fi
 
 echo $LTPA_ENCODED_PASSWORD > /tmp/tmp.password && mv /tmp/tmp.password ${ENCODED_PASSWORD_FILE};
 CREATE_SECRET_STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X POST ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets --data "@${ENCODED_PASSWORD_FILE}");
 if [[ "$CREATE_SECRET_STATUS_CODE" == "201" ]]; then
-    log "Successfully created Secret '$SECRET_NAME' in namespace '$NAMESPACE'."
+    log "Successfully created Secret '$LTPA_CONFIG_SECRET_NAME' in namespace '$NAMESPACE'."
 else
-    error "Failed to create Secret '$SECRET_NAME' in namespace '$NAMESPACE'. Received status code $CREATE_SECRET_STATUS_CODE."
+    error "Failed to create Secret '$LTPA_CONFIG_SECRET_NAME' in namespace '$NAMESPACE'. Received status code $CREATE_SECRET_STATUS_CODE."
     log "$RETRY_MESSAGE"
     curl --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X POST ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets --data "@${ENCODED_PASSWORD_FILE}"
 fi

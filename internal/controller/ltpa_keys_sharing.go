@@ -21,6 +21,16 @@ import (
 )
 
 const LTPA_RESOURCE_SHARING_FILE_NAME = "ltpa"
+const LTPA_KEY_RESOURCE_SHARING_FILE_NAME = LTPA_RESOURCE_SHARING_FILE_NAME
+const LTPA_CONFIG_1_RESOURCE_SHARING_FILE_NAME = "ltpa-config-1"
+const LTPA_CONFIG_2_RESOURCE_SHARING_FILE_NAME = "ltpa-config-2"
+
+type LTPAResource int
+
+const (
+	LTPAKey LTPAResource = iota
+	LTPAConfig
+)
 
 func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, latestOperandVersion string, assetsFolder *string) (lutils.LeaderTrackerMetadataList, error) {
 	metadataList := &lutils.LTPAMetadataList{}
@@ -63,7 +73,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 
 		metadata.Path = validSubPath
 		metadata.PathIndex = versionedPathIndex
-		metadata.Name = r.getLTPAMetadataName(instance, leaderTracker, validSubPath, assetsFolder)
+		metadata.Name = r.getLTPAMetadataName(instance, leaderTracker, validSubPath, assetsFolder, LTPAResource(i))
 		metadataList.Items = append(metadataList.Items, metadata)
 	}
 	return metadataList, nil
@@ -74,13 +84,13 @@ func (r *ReconcileOpenLiberty) getLTPAPathOptionsAndChoices(instance *olv1.OpenL
 	if latestOperandVersion == "v1_4_0" {
 		isKeySharingEnabled := r.isLTPAKeySharingEnabled(instance)
 		if isKeySharingEnabled {
-			// 1. Generate a path option/choice for a leader to manage LTPA Secret creation
+			// 1. Generate a path option/choice for a leader to manage the LTPA key
 			pathOptions := []string{"key"}  // ordering matters, it must follow the nodes of the LTPA decision tree in ltpa-decision-tree.yaml
 			pathChoices := []string{"true"} // fix LTPA to use the default password encryption key (no suffix)
 			pathOptionsList = append(pathOptionsList, pathOptions)
 			pathChoicesList = append(pathChoicesList, pathChoices)
 
-			// 2. Generate a path option/choice for a leader to manage the Liberty XML
+			// 2. Generate a path option/choice for a leader to manage the Liberty config
 			pathOptions = []string{"config"}
 			configChoice := "default"
 			if r.isUsingPasswordEncryptionKeySharing(instance, &lutils.PasswordEncryptionMetadata{Name: ""}) {
@@ -102,7 +112,7 @@ func (r *ReconcileOpenLiberty) getLTPAPathOptionsAndChoices(instance *olv1.OpenL
 	return pathOptionsList, pathChoicesList
 }
 
-func (r *ReconcileOpenLiberty) getLTPAMetadataName(instance *olv1.OpenLibertyApplication, leaderTracker *corev1.Secret, validSubPath string, assetsFolder *string) string {
+func (r *ReconcileOpenLiberty) getLTPAMetadataName(instance *olv1.OpenLibertyApplication, leaderTracker *corev1.Secret, validSubPath string, assetsFolder *string, ltpaResourceType LTPAResource) string {
 	// if an existing resource name (suffix) for this key combination already exists, use it
 	loc := lutils.CommaSeparatedStringContains(string(leaderTracker.Data[lutils.ResourcePathsKey]), validSubPath)
 	if loc != -1 {
@@ -110,18 +120,36 @@ func (r *ReconcileOpenLiberty) getLTPAMetadataName(instance *olv1.OpenLibertyApp
 		return suffix
 	}
 
-	// For example, if the env variable LTPA_RESOURCE_SUFFIXES is set,
-	// it can provide a comma separated string of length lutils.ResourceSuffixLength suffixes to exhaust
-	//
-	// spec:
-	//   env:
-	//     - name: LTPA_RESOURCE_SUFFIXES
-	//       value: "aaaaa,bbbbb,ccccc,zzzzz,a1b2c"
-	if predeterminedSuffixes, hasEnv := hasLTPAResourceSuffixesEnv(instance); hasEnv {
-		predeterminedSuffixesArray := lutils.GetCommaSeparatedArray(predeterminedSuffixes)
-		for _, suffix := range predeterminedSuffixesArray {
-			if len(suffix) == lutils.ResourceSuffixLength && lutils.IsLowerAlphanumericSuffix(suffix) && !strings.Contains(string(leaderTracker.Data[lutils.ResourcesKey]), suffix) {
-				return "-" + suffix
+	if ltpaResourceType == LTPAKey {
+		// For example, if the env variable LTPA_KEY_RESOURCE_SUFFIXES is set,
+		// it can provide a comma separated string of length lutils.ResourceSuffixLength suffixes to exhaust
+		//
+		// spec:
+		//   env:
+		//     - name: LTPA_KEY_RESOURCE_SUFFIXES
+		//       value: "aaaaa,bbbbb,ccccc,zzzzz,a1b2c"
+		if predeterminedSuffixes, hasEnv := hasLTPAKeyResourceSuffixesEnv(instance); hasEnv {
+			predeterminedSuffixesArray := lutils.GetCommaSeparatedArray(predeterminedSuffixes)
+			for _, suffix := range predeterminedSuffixesArray {
+				if len(suffix) == lutils.ResourceSuffixLength && lutils.IsLowerAlphanumericSuffix(suffix) && !strings.Contains(string(leaderTracker.Data[lutils.ResourcesKey]), suffix) {
+					return "-" + suffix
+				}
+			}
+		}
+	} else if ltpaResourceType == LTPAConfig {
+		// For example, if the env variable LTPA_CONFIG_RESOURCE_SUFFIXES is set,
+		// it can provide a comma separated string of length lutils.ResourceSuffixLength suffixes to exhaust
+		//
+		// spec:
+		//   env:
+		//     - name: LTPA_CONFIG_RESOURCE_SUFFIXES
+		//       value: "aaaaa,bbbbb,ccccc,zzzzz,a1b2c"
+		if predeterminedSuffixes, hasEnv := hasLTPAConfigResourceSuffixesEnv(instance); hasEnv {
+			predeterminedSuffixesArray := lutils.GetCommaSeparatedArray(predeterminedSuffixes)
+			for _, suffix := range predeterminedSuffixesArray {
+				if len(suffix) == lutils.ResourceSuffixLength && lutils.IsLowerAlphanumericSuffix(suffix) && !strings.Contains(string(leaderTracker.Data[lutils.ResourcesKey]), suffix) {
+					return "-" + suffix
+				}
 			}
 		}
 	}
@@ -132,7 +160,7 @@ func (r *ReconcileOpenLiberty) getLTPAMetadataName(instance *olv1.OpenLibertyApp
 	for strings.Contains(string(leaderTracker.Data[lutils.ResourcesKey]), randomSuffix) || suffixFoundInCluster {
 		randomSuffix = lutils.GetRandomLowerAlphanumericSuffix(lutils.ResourceSuffixLength)
 		// create the unstructured object; parse and obtain the sharedResourceName via the internal/controller/assets/ltpa-signature.yaml
-		if sharedResource, sharedResourceName, err := lutils.CreateUnstructuredResourceFromSignature(LTPA_RESOURCE_SHARING_FILE_NAME, assetsFolder, OperatorShortName, randomSuffix); err == nil {
+		if sharedResource, sharedResourceName, _, err := lutils.CreateUnstructuredResourceFromSignature(LTPA_RESOURCE_SHARING_FILE_NAME, assetsFolder, OperatorShortName, randomSuffix); err == nil {
 			err := r.GetClient().Get(context.TODO(), types.NamespacedName{Namespace: instance.GetNamespace(), Name: sharedResourceName}, sharedResource)
 			if err != nil && kerrors.IsNotFound(err) {
 				suffixFoundInCluster = false
@@ -142,17 +170,16 @@ func (r *ReconcileOpenLiberty) getLTPAMetadataName(instance *olv1.OpenLibertyApp
 	return randomSuffix
 }
 
-func hasLTPAResourceSuffixesEnv(instance *olv1.OpenLibertyApplication) (string, bool) {
-	for _, env := range instance.GetEnv() {
-		if env.Name == "LTPA_RESOURCE_SUFFIXES" {
-			return env.Value, true
-		}
-	}
-	return "", false
+func hasLTPAKeyResourceSuffixesEnv(instance *olv1.OpenLibertyApplication) (string, bool) {
+	return hasResourceSuffixesEnv(instance, "LTPA_KEY_RESOURCE_SUFFIXES")
+}
+
+func hasLTPAConfigResourceSuffixesEnv(instance *olv1.OpenLibertyApplication) (string, bool) {
+	return hasResourceSuffixesEnv(instance, "LTPA_CONFIG_RESOURCE_SUFFIXES")
 }
 
 // Create or use an existing LTPA Secret identified by LTPA metadata for the OpenLibertyApplication instance
-func (r *ReconcileOpenLiberty) reconcileLTPAKeys(instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (string, string, error) {
+func (r *ReconcileOpenLiberty) reconcileLTPAKeys(instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata) (string, string, error) {
 	var err error
 	ltpaSecretName := ""
 	if r.isLTPAKeySharingEnabled(instance) {
@@ -581,11 +608,13 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 	deletePropagationBackground := metav1.DeletePropagationBackground
 
 	ltpaConfigSecret := &corev1.Secret{}
-	ltpaConfigSecretRootName := OperatorShortName + "-managed-ltpa" + ltpaKeysMetadata.Name
+	ltpaConfigSecretRootName := OperatorShortName + "-managed-ltpa"
 	if r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata) {
-		ltpaConfigSecret.Name = ltpaConfigSecretRootName + "-keyed-password"
+		ltpaConfigSecretRootName += "-keyed-password"
+		ltpaConfigSecret.Name = ltpaConfigSecretRootName + ltpaConfigMetadata.Name
 	} else {
-		ltpaConfigSecret.Name = ltpaConfigSecretRootName + "-password"
+		ltpaConfigSecretRootName += "-password"
+		ltpaConfigSecret.Name = ltpaConfigSecretRootName + ltpaConfigMetadata.Name
 	}
 	ltpaConfigSecret.Namespace = instance.GetNamespace()
 	ltpaConfigSecret.Labels = lutils.GetRequiredLabels(ltpaConfigSecretRootName, ltpaConfigSecret.Name)
@@ -696,9 +725,11 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 				if err != nil && kerrors.IsNotFound(err) {
 					err = r.CreateOrUpdate(generateLTPAConfigJob, nil, func() error {
 						ltpaConfig := &lutils.LTPAConfig{
-							Metadata:                    ltpaKeysMetadata,
+							Metadata:                    ltpaConfigMetadata,
 							SecretName:                  ltpaSecretRootName,
 							SecretInstanceName:          ltpaSecret.Name,
+							ConfigSecretName:            ltpaConfigSecretRootName,
+							ConfigSecretInstanceName:    ltpaConfigSecret.Name,
 							ServiceAccountName:          ltpaServiceAccount.Name,
 							ConfigMapName:               ltpaConfigCreationScriptConfigMap.Name,
 							JobRequestConfigMapName:     ltpaJobRequest.Name,
@@ -804,21 +835,20 @@ func (r *ReconcileOpenLiberty) isLTPAKeySharingEnabled(instance *olv1.OpenLibert
 	return false
 }
 
-// Search the cluster namespace for existing LTPA Secrets
-func (r *ReconcileOpenLiberty) GetLTPAResources(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, assetsFolder *string) (*unstructured.UnstructuredList, string, error) {
-	ltpaResourceList, err := lutils.CreateUnstructuredResourceListFromSignature(LTPA_RESOURCE_SHARING_FILE_NAME, assetsFolder, OperatorShortName)
+// Search the cluster namespace for existing LTPA keys
+func (r *ReconcileOpenLiberty) GetLTPAKeyResources(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, assetsFolder *string) (*unstructured.UnstructuredList, string, error) {
+	ltpaResourceList, ltpaResourceRootName, err := lutils.CreateUnstructuredResourceListFromSignature(LTPA_KEY_RESOURCE_SHARING_FILE_NAME, assetsFolder, OperatorShortName)
 	if err != nil {
 		return nil, "", err
 	}
-	ltpaRootName := OperatorShortName + "-managed-ltpa"
 	if err := r.GetClient().List(context.TODO(), ltpaResourceList, client.MatchingLabels{
-		"app.kubernetes.io/name": ltpaRootName,
+		"app.kubernetes.io/name": ltpaResourceRootName,
 	}, client.InNamespace(instance.GetNamespace())); err != nil {
 		return nil, "", err
 	}
 
 	// If "olo-managed-ltpa" exists and there is no collision, patch the olo-managed-ltpa with a leader tracking label to work on the current resource tracking impl.
-	if defaultLTPAKeyIndex := defaultLTPAKeyExists(ltpaResourceList, ltpaRootName); defaultLTPAKeyIndex != -1 {
+	if defaultLTPAKeyIndex := defaultLTPAKeyExists(ltpaResourceList, ltpaResourceRootName); defaultLTPAKeyIndex != -1 {
 		defaultUpdatedPathIndex := ""
 		// the "olo-managed-ltpa" would only exist on 1.3.3, so the path is hardcoded to start replaceMap translation at "v1_3_3.default"
 		if path, err := tree.ReplacePath("v1_3_3.default", latestOperandVersion, treeMap, replaceMap); err == nil {
@@ -828,7 +858,7 @@ func (r *ReconcileOpenLiberty) GetLTPAResources(instance *olv1.OpenLibertyApplic
 		if defaultUpdatedPathIndex != "" {
 			defaultKeyAlreadyExists := false
 			for _, resource := range ltpaResourceList.Items {
-				if resource.GetName() != ltpaRootName {
+				if resource.GetName() != ltpaResourceRootName {
 					labelsMap, _, err := unstructured.NestedMap(resource.Object, "metadata", "labels")
 					if err != nil {
 						return nil, "", err
@@ -879,7 +909,21 @@ func (r *ReconcileOpenLiberty) GetLTPAResources(instance *olv1.OpenLibertyApplic
 			}
 		}
 	}
-	return ltpaResourceList, ltpaRootName, nil
+	return ltpaResourceList, ltpaResourceRootName, nil
+}
+
+// Search the cluster namespace for existing LTPA password Secrets
+func (r *ReconcileOpenLiberty) GetLTPAConfigResources(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, assetsFolder *string, fileName string) (*unstructured.UnstructuredList, string, error) {
+	ltpaResourceList, ltpaResourceRootName, err := lutils.CreateUnstructuredResourceListFromSignature(fileName, assetsFolder, OperatorShortName)
+	if err != nil {
+		return nil, "", err
+	}
+	if err := r.GetClient().List(context.TODO(), ltpaResourceList, client.MatchingLabels{
+		"app.kubernetes.io/name": ltpaResourceRootName,
+	}, client.InNamespace(instance.GetNamespace())); err != nil {
+		return nil, "", err
+	}
+	return ltpaResourceList, ltpaResourceRootName, nil
 }
 
 func defaultLTPAKeyExists(ltpaResourceList *unstructured.UnstructuredList, defaultKeyName string) int {
