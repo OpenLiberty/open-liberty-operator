@@ -265,10 +265,10 @@ func getUnstructuredResourceSignature(leaderTrackerType string, assetsPath *stri
 	return resourceSignatureYAML, nil
 }
 
-func CreateUnstructuredResourceFromSignature(leaderTrackerType string, assetsFolder *string, args ...string) (*unstructured.Unstructured, string, string, error) {
+func CreateUnstructuredResourceFromSignature(leaderTrackerType string, assetsFolder *string, args ...string) (*unstructured.Unstructured, string, error) {
 	resourceSignatureYAML, err := getUnstructuredResourceSignature(leaderTrackerType, assetsFolder)
 	if err != nil {
-		return nil, "", "", err
+		return nil, "", err
 	}
 	apiVersion, apiVersionFound := resourceSignatureYAML["apiVersion"]
 	kind, kindFound := resourceSignatureYAML["kind"]
@@ -282,13 +282,9 @@ func CreateUnstructuredResourceFromSignature(leaderTrackerType string, assetsFol
 	sharedResource.SetAPIVersion(apiVersion.(string))
 	sharedResourceName, err := parseUnstructuredResourceName(leaderTrackerType, name.(string), args...)
 	if err != nil {
-		return nil, "", "", err
+		return nil, "", err
 	}
-	sharedResourceRootName, err := parseUnstructuredResourceName(leaderTrackerType, rootName.(string), args[0])
-	if err != nil {
-		return nil, "", "", err
-	}
-	return sharedResource, sharedResourceName, sharedResourceRootName, nil
+	return sharedResource, sharedResourceName, nil
 }
 
 func CreateUnstructuredResourceListFromSignature(leaderTrackerType string, assetsFolder *string, args ...string) (*unstructured.UnstructuredList, string, error) {
