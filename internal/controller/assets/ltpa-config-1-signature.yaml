@@ -1,0 +1,4 @@
+apiVersion: v1
+kind: Secret
+name: "{0}-managed-ltpa-keyed-password{1}"
+rootName: "{0}-managed-ltpa-keyed-password"
