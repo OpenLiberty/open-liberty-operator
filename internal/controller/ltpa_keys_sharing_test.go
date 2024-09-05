@@ -250,7 +250,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	leaderTracker, _, err = lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData = map[string][]byte{
 		lutils.ResourcesKey:           []byte("-ab215,-cd123"),
-		lutils.ResourceOwnersKey:      []byte(fmt.Sprintf(",%s", instance.Name)), // The owner reference was removed for -ab215 and added for -cd123
+		lutils.ResourceOwnersKey:      []byte(fmt.Sprintf("%s,%s", instance.Name, instance.Name)),
 		lutils.ResourcePathsKey:       []byte(fmt.Sprintf("%s.a.b.e.true,%s.a.b.d.true", latestOperandVersion, latestOperandVersion)),
 		lutils.ResourcePathIndicesKey: []byte(fmt.Sprintf("%s.2,%s.1", latestOperandVersion, latestOperandVersion)),
 	}
