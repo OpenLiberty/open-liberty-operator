@@ -161,7 +161,7 @@ func (r *ReconcileOpenLiberty) getLTPAMetadataName(instance *olv1.OpenLibertyApp
 	for strings.Contains(string(leaderTracker.Data[lutils.ResourcesKey]), randomSuffix) || suffixFoundInCluster {
 		randomSuffix = lutils.GetRandomLowerAlphanumericSuffix(lutils.ResourceSuffixLength)
 		// create the unstructured object; parse and obtain the sharedResourceName via the internal/controller/assets/ltpa-signature.yaml
-		if sharedResource, sharedResourceName, err := lutils.CreateUnstructuredResourceFromSignature(LTPA_RESOURCE_SHARING_FILE_NAME, assetsFolder, OperatorShortName, randomSuffix); err == nil {
+		if sharedResource, sharedResourceName, _, err := lutils.CreateUnstructuredResourceFromSignature(LTPA_RESOURCE_SHARING_FILE_NAME, assetsFolder, OperatorShortName, randomSuffix); err == nil {
 			err := r.GetClient().Get(context.TODO(), types.NamespacedName{Namespace: instance.GetNamespace(), Name: sharedResourceName}, sharedResource)
 			if err != nil && kerrors.IsNotFound(err) {
 				suffixFoundInCluster = false
@@ -984,11 +984,13 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 	deletePropagationBackground := metav1.DeletePropagationBackground
 
 	ltpaConfigSecret := &corev1.Secret{}
-	ltpaConfigSecretRootName := OperatorShortName + "-managed-ltpa" + ltpaKeysMetadata.Name
+	ltpaConfigSecretRootName := OperatorShortName + "-managed-ltpa"
 	if r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata) {
-		ltpaConfigSecret.Name = ltpaConfigSecretRootName + "-keyed-password"
+		ltpaConfigSecretRootName += "-keyed-password"
+		ltpaConfigSecret.Name = ltpaConfigSecretRootName + ltpaConfigMetadata.Name
 	} else {
-		ltpaConfigSecret.Name = ltpaConfigSecretRootName + "-password"
+		ltpaConfigSecretRootName += "-password"
+		ltpaConfigSecret.Name = ltpaConfigSecretRootName + ltpaConfigMetadata.Name
 	}
 	ltpaConfigSecret.Namespace = instance.GetNamespace()
 	ltpaConfigSecret.Labels = lutils.GetRequiredLabels(ltpaConfigSecretRootName, ltpaConfigSecret.Name)
@@ -1099,9 +1101,11 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 				if err != nil && kerrors.IsNotFound(err) {
 					err = r.CreateOrUpdate(generateLTPAConfigJob, nil, func() error {
 						ltpaConfig := &lutils.LTPAConfig{
-							Metadata:                    ltpaKeysMetadata,
+							Metadata:                    ltpaConfigMetadata,
 							SecretName:                  ltpaSecretRootName,
 							SecretInstanceName:          ltpaSecret.Name,
+							ConfigSecretName:            ltpaConfigSecretRootName,
+							ConfigSecretInstanceName:    ltpaConfigSecret.Name,
 							ServiceAccountName:          ltpaServiceAccount.Name,
 							ConfigMapName:               ltpaConfigCreationScriptConfigMap.Name,
 							JobRequestConfigMapName:     ltpaJobRequest.Name,
