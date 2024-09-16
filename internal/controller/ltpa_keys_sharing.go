@@ -439,7 +439,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 							ConfigMapName:               ltpaKeysCreationScriptConfigMap.Name,
 							JobRequestConfigMapName:     ltpaJobRequest.Name,
 							FileName:                    lutils.LTPAKeysFileName,
-							EncryptionKeySecretName:     lutils.PasswordEncryptionKeyRootName + passwordEncryptionMetadata.Name + "-internal",
+							EncryptionKeySecretName:     lutils.LocalPasswordEncryptionKeyRootName + passwordEncryptionMetadata.Name + "-internal",
 							EncryptionKeySharingEnabled: r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata), // fix LTPA to use the default password encryption key (no suffix)
 						}
 						lutils.CustomizeLTPAKeysJob(generateLTPAKeysJob, instance, ltpaConfig, r.GetClient())
@@ -734,7 +734,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 							ConfigMapName:               ltpaConfigCreationScriptConfigMap.Name,
 							JobRequestConfigMapName:     ltpaJobRequest.Name,
 							FileName:                    lutils.LTPAKeysFileName,
-							EncryptionKeySecretName:     lutils.PasswordEncryptionKeyRootName + passwordEncryptionMetadata.Name + "-internal",
+							EncryptionKeySecretName:     lutils.LocalPasswordEncryptionKeyRootName + passwordEncryptionMetadata.Name + "-internal",
 							EncryptionKeySharingEnabled: r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata), // fix LTPA to use the default password encryption key (no suffix)
 						}
 						lutils.CustomizeLTPAConfigJob(generateLTPAConfigJob, instance, ltpaConfig, r.GetClient())
