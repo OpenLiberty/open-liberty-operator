@@ -362,10 +362,14 @@ spec:
           privileged: false
           readOnlyRootFilesystem: true
           runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
       hostIPC: false
       hostNetwork: false
       hostPID: false
       securityContext:
         runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: olo-controller-manager
       terminationGracePeriodSeconds: 10
