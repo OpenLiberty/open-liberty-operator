@@ -985,7 +985,8 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 
 	ltpaConfigSecret := &corev1.Secret{}
 	ltpaConfigSecretRootName := OperatorShortName + "-managed-ltpa"
-	if r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata) {
+	isPasswordEncryptionKeySharing := r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata)
+	if isPasswordEncryptionKeySharing {
 		ltpaConfigSecretRootName += "-keyed-password"
 		ltpaConfigSecret.Name = ltpaConfigSecretRootName + ltpaConfigMetadata.Name
 	} else {
@@ -1175,6 +1176,33 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 	err = r.DeleteResource(ltpaRoleBinding)
 	if err != nil {
 		return err
+	}
+
+	// if using encryption key, check if the key has been rotated and requires a regeneration of the LTPA keyed password
+	if isPasswordEncryptionKeySharing {
+		internalEncryptionKeySecret, err := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata)
+		if err != nil {
+			return err
+		}
+		lastRotation, found := internalEncryptionKeySecret.Data["lastRotation"]
+		if !found {
+			// lastRotation field is not present so the Secret was not initialized correctly
+			err := r.DeleteResource(internalEncryptionKeySecret)
+			if err != nil {
+				return err
+			}
+			return fmt.Errorf("the internal encryption key secret does not contain field 'lastRotation'")
+		}
+
+		if encryptionKeyLastRotation, found := ltpaConfigSecret.Data["encryptionKeyLastRotation"]; found {
+			if string(encryptionKeyLastRotation) != string(lastRotation) {
+				err := r.DeleteResource(ltpaConfigSecret)
+				if err != nil {
+					return err
+				}
+				return fmt.Errorf("the encryption key has been modified; waiting for a new LTPA password to be generated")
+			}
+		}
 	}
 
 	// Create/update the Secret to hold the server.xml that will import the LTPA keys into the Liberty server
