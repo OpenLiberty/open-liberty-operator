@@ -244,6 +244,22 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplic
 	return nil
 }
 
+func GetSecretLastRotationLabel(la *olv1.OpenLibertyApplication, client client.Client, secretName string, sharedResourceName string) (map[string]string, error) {
+	secret := &corev1.Secret{}
+	err := client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: la.GetNamespace()}, secret)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Secret %q was not found in namespace %q", secretName, la.GetNamespace())
+	}
+	labelKey := GetLastRotationLabelKey(sharedResourceName)
+	lastRotationLabel, found := secret.Labels[labelKey]
+	if !found {
+		return nil, fmt.Errorf("Secret %q does not have label key %q", secretName, labelKey)
+	}
+	return map[string]string{
+		labelKey: string(lastRotationLabel),
+	}, nil
+}
+
 func GetSecretLastRotationAsLabelMap(la *olv1.OpenLibertyApplication, client client.Client, secretName string, sharedResourceName string) (map[string]string, error) {
 	secret := &corev1.Secret{}
 	err := client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: la.GetNamespace()}, secret)
@@ -265,6 +281,40 @@ func AddSecretResourceVersionAsEnvVar(pts *corev1.PodTemplateSpec, la *olv1.Open
 		Name:  envNamePrefix + "_SECRET_RESOURCE_VERSION",
 		Value: secret.ResourceVersion})
 	return nil
+}
+
+func GetMaxTime(args ...string) (string, error) {
+	maxVal := -1
+	for _, arg := range args {
+		val := 0
+		if arg != "" {
+			t, err := strconv.Atoi(arg)
+			if err != nil {
+				return "", err
+			}
+			val = t
+		}
+		if val > maxVal {
+			maxVal = val
+		}
+	}
+	if maxVal == -1 {
+		return "", fmt.Errorf("no arguments were passed to function GetLatestTimeAsString")
+	}
+	return strconv.Itoa(maxVal), nil
+}
+
+// if time1 >= time2 then return true, otherwise false
+func CompareStringTimeGreaterThanOrEqual(time1 string, time2 string) (bool, error) {
+	t1, err := strconv.Atoi(time1)
+	if err != nil {
+		return false, err
+	}
+	t2, err := strconv.Atoi(time2)
+	if err != nil {
+		return false, err
+	}
+	return t1 >= t2, nil
 }
 
 func RemovePodTemplateSpecAnnotationByKey(pts *corev1.PodTemplateSpec, annotationKey string) {
