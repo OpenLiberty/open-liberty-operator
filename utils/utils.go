@@ -47,6 +47,7 @@ const LTPAKeysFileName = "ltpa.keys"
 const LTPAKeysXMLFileName = "managedLTPA.xml"
 const LTPAKeysMountXMLFileName = "managedLTPAMount.xml"
 const LTPAKeysCreationScriptFileName = "create_ltpa_keys.sh"
+const LTPAConfigCreationScriptFileName = "create_ltpa_config.sh"
 
 // Mount constants
 const SecureMountPath = "/output/resources/liberty-operator"
@@ -56,6 +57,7 @@ const overridesMountPath = "/config/configDropins/overrides"
 const ManagedEncryptionServerXML = "-managed-encryption-server-xml"
 const ManagedEncryptionMountServerXML = "-managed-encryption-mount-server-xml"
 const PasswordEncryptionKeyRootName = "wlp-password-encryption-key"
+const LocalPasswordEncryptionKeyRootName = "olo-wlp-password-encryption-key"
 const EncryptionKeyXMLFileName = "encryptionKey.xml"
 const EncryptionKeyMountXMLFileName = "encryptionKeyMount.xml"
 
@@ -83,6 +85,14 @@ func (m LTPAMetadata) GetAPIVersion() string {
 	return m.APIVersion
 }
 
+type LTPAMetadataList struct {
+	Items []LeaderTrackerMetadata
+}
+
+func (ml LTPAMetadataList) GetItems() []LeaderTrackerMetadata {
+	return ml.Items
+}
+
 type PasswordEncryptionMetadata struct {
 	Kind       string
 	APIVersion string
@@ -107,10 +117,20 @@ func (m PasswordEncryptionMetadata) GetAPIVersion() string {
 	return m.APIVersion
 }
 
+type PasswordEncryptionMetadataList struct {
+	Items []LeaderTrackerMetadata
+}
+
+func (ml PasswordEncryptionMetadataList) GetItems() []LeaderTrackerMetadata {
+	return ml.Items
+}
+
 type LTPAConfig struct {
 	Metadata                    *LTPAMetadata
 	SecretName                  string
 	SecretInstanceName          string
+	ConfigSecretName            string
+	ConfigSecretInstanceName    string
 	ServiceAccountName          string
 	JobRequestConfigMapName     string
 	ConfigMapName               string
@@ -224,6 +244,22 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplic
 	return nil
 }
 
+func GetSecretLastRotationLabel(la *olv1.OpenLibertyApplication, client client.Client, secretName string, sharedResourceName string) (map[string]string, error) {
+	secret := &corev1.Secret{}
+	err := client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: la.GetNamespace()}, secret)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Secret %q was not found in namespace %q", secretName, la.GetNamespace())
+	}
+	labelKey := GetLastRotationLabelKey(sharedResourceName)
+	lastRotationLabel, found := secret.Labels[labelKey]
+	if !found {
+		return nil, fmt.Errorf("Secret %q does not have label key %q", secretName, labelKey)
+	}
+	return map[string]string{
+		labelKey: string(lastRotationLabel),
+	}, nil
+}
+
 func GetSecretLastRotationAsLabelMap(la *olv1.OpenLibertyApplication, client client.Client, secretName string, sharedResourceName string) (map[string]string, error) {
 	secret := &corev1.Secret{}
 	err := client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: la.GetNamespace()}, secret)
@@ -245,6 +281,40 @@ func AddSecretResourceVersionAsEnvVar(pts *corev1.PodTemplateSpec, la *olv1.Open
 		Name:  envNamePrefix + "_SECRET_RESOURCE_VERSION",
 		Value: secret.ResourceVersion})
 	return nil
+}
+
+func GetMaxTime(args ...string) (string, error) {
+	maxVal := -1
+	for _, arg := range args {
+		val := 0
+		if arg != "" {
+			t, err := strconv.Atoi(arg)
+			if err != nil {
+				return "", err
+			}
+			val = t
+		}
+		if val > maxVal {
+			maxVal = val
+		}
+	}
+	if maxVal == -1 {
+		return "", fmt.Errorf("no arguments were passed to function GetLatestTimeAsString")
+	}
+	return strconv.Itoa(maxVal), nil
+}
+
+// if time1 >= time2 then return true, otherwise false
+func CompareStringTimeGreaterThanOrEqual(time1 string, time2 string) (bool, error) {
+	t1, err := strconv.Atoi(time1)
+	if err != nil {
+		return false, err
+	}
+	t2, err := strconv.Atoi(time2)
+	if err != nil {
+		return false, err
+	}
+	return t1 >= t2, nil
 }
 
 func RemovePodTemplateSpecAnnotationByKey(pts *corev1.PodTemplateSpec, annotationKey string) {
@@ -638,16 +708,16 @@ func isVolumeFound(pts *corev1.PodTemplateSpec, name string) bool {
 	return false
 }
 
-func ConfigurePasswordEncryption(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string) {
+func ConfigurePasswordEncryption(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string, passwordEncryptionMetadata *PasswordEncryptionMetadata) {
 	// Mount a volume /output/resources/liberty-operator/encryptionKey.xml to store the Liberty Password Encryption Key
-	MountSecretAsVolume(pts, operatorShortName+ManagedEncryptionServerXML, CreateVolumeMount(SecureMountPath, EncryptionKeyXMLFileName))
+	MountSecretAsVolume(pts, operatorShortName+ManagedEncryptionServerXML+passwordEncryptionMetadata.Name, CreateVolumeMount(SecureMountPath, EncryptionKeyXMLFileName))
 
 	// Mount a volume /config/configDropins/overrides/encryptionKeyMount.xml to import the Liberty Password Encryption Key
-	MountSecretAsVolume(pts, operatorShortName+ManagedEncryptionMountServerXML, CreateVolumeMount(overridesMountPath, EncryptionKeyMountXMLFileName))
+	MountSecretAsVolume(pts, operatorShortName+ManagedEncryptionMountServerXML+passwordEncryptionMetadata.Name, CreateVolumeMount(overridesMountPath, EncryptionKeyMountXMLFileName))
 }
 
 // ConfigureLTPA setups the shared-storage for LTPA keys file generation
-func ConfigureLTPA(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string, ltpaSecretName string, ltpaSuffixName string) {
+func ConfigureLTPAConfig(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string, ltpaSecretName string, ltpaSuffixName string) {
 	// Mount a volume /output/resources/liberty-operator/ltpa.keys to store the ltpa.keys file
 	MountSecretAsVolume(pts, ltpaSecretName, CreateVolumeMount(SecureMountPath, LTPAKeysFileName))
 
@@ -758,7 +828,7 @@ func IsLTPAJobConfigurationOutdated(job *v1.Job, appLeaderInstance *olv1.OpenLib
 	return false
 }
 
-func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaConfig *LTPAConfig, client client.Client) {
+func CustomizeLTPAKeysJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaConfig *LTPAConfig, client client.Client) {
 	ltpaVolumeMountName := parseMountName(ltpaConfig.FileName)
 	encodingType := "aes" // the password encoding type for securityUtility (one of "xor", "aes", or "hash")
 	job.Spec.Template.ObjectMeta.Name = "liberty"
@@ -771,6 +841,61 @@ func CustomizeLTPAJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaConfig *
 			Command:         []string{"/bin/bash", "-c"},
 			// Usage: /bin/create_ltpa_keys.sh <namespace> <ltpa-secret-name> <securityUtility-encoding>
 			Args: []string{managedLTPAMountPath + "/bin/" + LTPAKeysCreationScriptFileName + " " + la.GetNamespace() + " " + ltpaConfig.SecretName + " " + ltpaConfig.SecretInstanceName + " " + ltpaConfig.FileName + " " + encodingType + " " + ltpaConfig.EncryptionKeySecretName + " " + strconv.FormatBool(ltpaConfig.EncryptionKeySharingEnabled) + " " + ResourcePathIndexLabel + " " + ltpaConfig.Metadata.PathIndex + " " + ltpaConfig.JobRequestConfigMapName},
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      ltpaVolumeMountName,
+					MountPath: managedLTPAMountPath + "/bin",
+				},
+			},
+		},
+	}
+	if la.GetPullSecret() != nil && *la.GetPullSecret() != "" {
+		job.Spec.Template.Spec.ImagePullSecrets = append(job.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{
+			Name: *la.GetPullSecret(),
+		})
+	}
+	job.Spec.Template.Spec.ServiceAccountName = ltpaConfig.ServiceAccountName
+	// If there is a custom ServiceAccount, include it's pull secrets into the LTPA Job
+	if leaderSAName := rcoutils.GetServiceAccountName(la); len(leaderSAName) > 0 {
+		customServiceAccount := &corev1.ServiceAccount{}
+		if err := client.Get(context.TODO(), types.NamespacedName{Name: leaderSAName, Namespace: la.GetNamespace()}, customServiceAccount); err == nil {
+			// For each of the custom SA's pull secret's, if it is not found within the Job, append it to the Job
+			for _, customSAObjectReference := range customServiceAccount.ImagePullSecrets {
+				if !LocalObjectReferenceContainsName(job.Spec.Template.Spec.ImagePullSecrets, customSAObjectReference.Name) {
+					job.Spec.Template.Spec.ImagePullSecrets = append(job.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{
+						Name: customSAObjectReference.Name,
+					})
+				}
+			}
+		}
+	}
+	job.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyOnFailure
+	number := int32(0777)
+	job.Spec.Template.Spec.Volumes = append(job.Spec.Template.Spec.Volumes, corev1.Volume{
+		Name: ltpaVolumeMountName,
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: ltpaConfig.ConfigMapName,
+				},
+				DefaultMode: &number,
+			},
+		},
+	})
+}
+
+func CustomizeLTPAConfigJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaConfig *LTPAConfig, client client.Client) {
+	ltpaVolumeMountName := parseMountName(ltpaConfig.FileName)
+	encodingType := "aes" // the password encoding type for securityUtility (one of "xor", "aes", or "hash")
+	job.Spec.Template.ObjectMeta.Name = "liberty"
+	job.Spec.Template.Spec.Containers = []corev1.Container{
+		{
+			Name:            job.Spec.Template.ObjectMeta.Name,
+			Image:           la.GetStatus().GetImageReference(),
+			ImagePullPolicy: *la.GetPullPolicy(),
+			SecurityContext: rcoutils.GetSecurityContext(la),
+			Command:         []string{"/bin/bash", "-c"},
+			Args:            []string{managedLTPAMountPath + "/bin/" + LTPAConfigCreationScriptFileName + " " + la.GetNamespace() + " " + ltpaConfig.SecretName + " " + ltpaConfig.SecretInstanceName + " " + ltpaConfig.ConfigSecretName + " " + ltpaConfig.ConfigSecretInstanceName + " " + ltpaConfig.FileName + " " + encodingType + " " + ltpaConfig.EncryptionKeySecretName + " " + strconv.FormatBool(ltpaConfig.EncryptionKeySharingEnabled) + " " + ResourcePathIndexLabel + " " + ltpaConfig.Metadata.PathIndex + " " + ltpaConfig.JobRequestConfigMapName},
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      ltpaVolumeMountName,

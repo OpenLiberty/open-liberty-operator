@@ -54,6 +54,10 @@ type LeaderTrackerMetadata interface {
 	GetPathIndex() string
 }
 
+type LeaderTrackerMetadataList interface {
+	GetItems() []LeaderTrackerMetadata
+}
+
 func RemoveLeaderTracker(leaderTracker *[]LeaderTracker, i int) bool {
 	if leaderTracker == nil {
 		return false
@@ -88,6 +92,20 @@ func (tracker *LeaderTracker) ClearOwnerIfMatching(instance string) bool {
 		return false
 	}
 	if tracker.Owner == instance {
+		tracker.Owner = ""
+		return true
+	}
+	return false
+}
+
+func (tracker *LeaderTracker) ClearOwnerIfMatchingAndSharesLastPathParent(instance string, path string) bool {
+	if tracker == nil || !strings.Contains(path, ".") || !strings.Contains(tracker.Path, ".") {
+		return false
+	}
+	pathArr := strings.Split(path, ".")
+	trackerPathArr := strings.Split(tracker.Path, ".")
+
+	if tracker.Owner == instance && strings.Join(pathArr[:len(pathArr)-1], ".") == strings.Join(trackerPathArr[:len(trackerPathArr)-1], ".") {
 		tracker.Owner = ""
 		return true
 	}
@@ -255,6 +273,7 @@ func CreateUnstructuredResourceFromSignature(leaderTrackerType string, assetsFol
 	apiVersion, apiVersionFound := resourceSignatureYAML["apiVersion"]
 	kind, kindFound := resourceSignatureYAML["kind"]
 	name, nameFound := resourceSignatureYAML["name"]
+	// rootName, rootNameFound := resourceSignatureYAML["rootName"]
 	if !apiVersionFound || !kindFound || !nameFound {
 		return nil, "", fmt.Errorf("the operator bundled the shared resource '" + leaderTrackerType + "' with an invalid signature")
 	}
@@ -268,20 +287,31 @@ func CreateUnstructuredResourceFromSignature(leaderTrackerType string, assetsFol
 	return sharedResource, sharedResourceName, nil
 }
 
-func CreateUnstructuredResourceListFromSignature(leaderTrackerType string, assetsFolder *string, args ...string) (*unstructured.UnstructuredList, error) {
+func CreateUnstructuredResourceListFromSignature(leaderTrackerType string, assetsFolder *string, args ...string) (*unstructured.UnstructuredList, string, error) {
 	resourceSignatureYAML, err := getUnstructuredResourceSignature(leaderTrackerType, assetsFolder)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	apiVersion, apiVersionFound := resourceSignatureYAML["apiVersion"]
 	kind, kindFound := resourceSignatureYAML["kind"]
+	rootName := resourceSignatureYAML["rootName"]
 	if !apiVersionFound || !kindFound {
-		return nil, fmt.Errorf("the operator bundled the shared resource '" + leaderTrackerType + "' with an invalid signature")
+		return nil, "", fmt.Errorf("the operator bundled the shared resource '" + leaderTrackerType + "' with an invalid signature")
 	}
 	sharedResourceList := &unstructured.UnstructuredList{}
 	sharedResourceList.SetKind(kind.(string))
 	sharedResourceList.SetAPIVersion(apiVersion.(string))
-	return sharedResourceList, nil
+
+	rootName, rootNameFound := resourceSignatureYAML["rootName"]
+	sharedResourceRootName := ""
+	if rootNameFound {
+		unstructuredResourceRootName, err := parseUnstructuredResourceName(leaderTrackerType, rootName.(string), args[0])
+		if err != nil {
+			return nil, "", err
+		}
+		sharedResourceRootName = unstructuredResourceRootName
+	}
+	return sharedResourceList, sharedResourceRootName, nil
 }
 
 // Returns the name of the unstructured resource from the leaderTrackerType signature by parsing and replacing string arguments in the args list

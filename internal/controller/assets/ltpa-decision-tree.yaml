@@ -21,14 +21,15 @@
 # This data structure is used in ltpa_keys_sharing.go with reconcileLTPAMetadata() which builds a decision path based on the app instance.
 # 
 tree:
-  v1_3_3: default
+  v1_3_3: default # 1.4.0 operator will assign LTPA keys (1.3.3 or below) with this label. The pointer will be updated through the v1_4_0, v1_4_x, .., and above replace command(s)
   v1_4_0:
-    managePasswordEncryption:
-      - true
-      - false    
+    key: true # this leader will generate the LTPA Job to create the LTPA keys Secret and LTPA password Secret
+    config:
+      - passwordencryption    # this leader will generate a Job to encode the LTPA password and config to mount Liberty XML (with a password encryption key)
+      - default               # this leader will generate a Job to encode the LTPA password and config to mount Liberty XML (without a password encryption key)
 replace:
   v1_4_0:
-    "v1_3_3.default": "v1_4_0.managePasswordEncryption.false"
+    "v1_3_3.default": "v1_4_0.key.true"
 ## An example of how .replace.* is used:
 ## In 1.3.2, the singleton LTPA Secret did not have password encryption, so the key represented by path "v1_3_2.true" is the same key as represented by path "v1_4_0.managePasswordEncryption.false"
 ## The 1.3.2 operator will create an LTPA Secret and label it "v1_3_2.0" which indicates the path at index 0 for .tree.v1_3_2.
