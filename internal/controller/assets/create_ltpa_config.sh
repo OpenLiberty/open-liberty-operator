@@ -60,7 +60,7 @@ rm -f $NOT_FOUND_LOG_FILE;
 curl --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${PASSWORD_KEY_SECRET_NAME} &> $NOT_FOUND_LOG_FILE;
 NOT_FOUND_COUNT=$(cat $NOT_FOUND_LOG_FILE | grep -c "NotFound");
 LAST_ROTATION=$(curl --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${LTPA_SECRET_NAME} | grep -o '"lastRotation": "[^"]*' | grep -o '[^"]*$' | base64 -d);
-PASSWORD=$(curl --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${LTPA_SECRET_NAME} | grep -o '"password": "[^"]*' | grep -o '[^"]*$' | base64 -d);
+PASSWORD=$(curl --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${LTPA_SECRET_NAME} | grep -o '"rawPassword": "[^"]*' | grep -o '[^"]*$' | base64 -d);
 
 if [ "$ENCRYPTION_KEY_SHARING_ENABLED" == "true" ] && [ $NOT_FOUND_COUNT -eq 0 ]; then
     ENCRYPTION_KEY_LAST_ROTATION=$(curl --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${PASSWORD_KEY_SECRET_NAME} | grep -o '"lastRotation": "[^"]*' | grep -o '[^"]*$' | base64 -d);
