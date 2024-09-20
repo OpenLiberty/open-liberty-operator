@@ -65,11 +65,11 @@ if [ "$ENCRYPTION_KEY_SHARING_ENABLED" == "true" ] && [ $NOT_FOUND_COUNT -eq 0 ]
     PASSWORD_KEY=$(curl --cacert ${CACERT} --header "Content-Type: application/json" --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/${NAMESPACE}/secrets/${PASSWORD_KEY_SECRET_NAME} | grep -o '"passwordEncryptionKey": "[^"]*' | grep -o '[^"]*$' | base64 -d);
     securityUtility createLTPAKeys --file=${KEY_FILE} --password=${PASSWORD} --passwordEncoding=${ENCODING_TYPE} --passwordKey=${PASSWORD_KEY} &>/dev/null;
     cat ${KEY_FILE} | base64 > ${ENCODED_KEY_FILE};
-    BEFORE_LTPA_KEYS="{\"apiVersion\": \"v1\", \"stringData\": {\"encryptionSecretLastRotation\": \"${LAST_ROTATION}\", \"lastRotation\": \"$TIME_SINCE_EPOCH_SECONDS\", \"password\": \"$PASSWORD\"}, \"data\": {\"${LTPA_FILE_NAME}\": \"";
+    BEFORE_LTPA_KEYS="{\"apiVersion\": \"v1\", \"stringData\": {\"encryptionSecretLastRotation\": \"${LAST_ROTATION}\", \"lastRotation\": \"$TIME_SINCE_EPOCH_SECONDS\", \"rawPassword\": \"$PASSWORD\"}, \"data\": {\"${LTPA_FILE_NAME}\": \"";
 else
     securityUtility createLTPAKeys --file=${KEY_FILE} --password=${PASSWORD} --passwordEncoding=${ENCODING_TYPE} &>/dev/null;
     cat ${KEY_FILE} | base64 > ${ENCODED_KEY_FILE};
-    BEFORE_LTPA_KEYS="{\"apiVersion\": \"v1\", \"stringData\": {\"lastRotation\": \"$TIME_SINCE_EPOCH_SECONDS\", \"password\": \"$PASSWORD\"}, \"data\": {\"${LTPA_FILE_NAME}\": \"";
+    BEFORE_LTPA_KEYS="{\"apiVersion\": \"v1\", \"stringData\": {\"lastRotation\": \"$TIME_SINCE_EPOCH_SECONDS\", \"rawPassword\": \"$PASSWORD\"}, \"data\": {\"${LTPA_FILE_NAME}\": \"";
 fi
 
 AFTER_LTPA_KEYS="\"},\"kind\": \"Secret\",\"metadata\": {\"name\": \"$LTPA_SECRET_NAME\",\"namespace\": \"$NAMESPACE\",\"labels\": {\"app.kubernetes.io/name\": \"$LTPA_SECRET_BASE_NAME\", \"app.kubernetes.io/instance\": \"$LTPA_SECRET_NAME\", \"$LTPA_LABEL_KEY\": \"$LTPA_LABEL_VALUE\"}},\"type\": \"Opaque\"}";
