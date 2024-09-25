@@ -54,99 +54,126 @@ type OpenLibertyApplicationSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=8,type=spec,displayName="Expose",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
 	Expose *bool `json:"expose,omitempty"`
 
+	// Enable management of password encryption key sharing amongst Liberty containers. Defaults to false.
+	// +operator-sdk:csv:customresourcedefinitions:order=9,type=spec,displayName="Manage Password Encryption",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	ManagePasswordEncryption *bool `json:"managePasswordEncryption,omitempty"`
+
 	// Enable management of LTPA key sharing amongst Liberty containers. Defaults to false.
-	// +operator-sdk:csv:customresourcedefinitions:order=9,type=spec,displayName="Manage LTPA",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	// +operator-sdk:csv:customresourcedefinitions:order=10,type=spec,displayName="Manage LTPA",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
 	ManageLTPA *bool `json:"manageLTPA,omitempty"`
 
 	// Enable management of TLS certificates. Defaults to true.
-	// +operator-sdk:csv:customresourcedefinitions:order=10,type=spec,displayName="Manage TLS",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	// +operator-sdk:csv:customresourcedefinitions:order=11,type=spec,displayName="Manage TLS",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
 	ManageTLS *bool `json:"manageTLS,omitempty"`
 
 	// Number of pods to create. Defaults to 1. Not applicable when .spec.autoscaling or .spec.createKnativeService is specified.
-	// +operator-sdk:csv:customresourcedefinitions:order=11,type=spec,displayName="Replicas",xDescriptors="urn:alm:descriptor:com.tectonic.ui:podCount"
+	// +operator-sdk:csv:customresourcedefinitions:order=12,type=spec,displayName="Replicas",xDescriptors="urn:alm:descriptor:com.tectonic.ui:podCount"
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	// +operator-sdk:csv:customresourcedefinitions:order=12,type=spec,displayName="Auto Scaling"
+	// +operator-sdk:csv:customresourcedefinitions:order=13,type=spec,displayName="Auto Scaling"
 	Autoscaling *OpenLibertyApplicationAutoScaling `json:"autoscaling,omitempty"`
 
 	// Resource requests and limits for the application container.
-	// +operator-sdk:csv:customresourcedefinitions:order=13,type=spec,displayName="Resource Requirements",xDescriptors="urn:alm:descriptor:com.tectonic.ui:resourceRequirements"
+	// +operator-sdk:csv:customresourcedefinitions:order=14,type=spec,displayName="Resource Requirements",xDescriptors="urn:alm:descriptor:com.tectonic.ui:resourceRequirements"
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 
-	// +operator-sdk:csv:customresourcedefinitions:order=14,type=spec,displayName="Probes"
+	// +operator-sdk:csv:customresourcedefinitions:order=15,type=spec,displayName="Probes"
 	Probes *OpenLibertyApplicationProbes `json:"probes,omitempty"`
 
-	// +operator-sdk:csv:customresourcedefinitions:order=15,type=spec,displayName="Deployment"
+	// +operator-sdk:csv:customresourcedefinitions:order=16,type=spec,displayName="Deployment"
 	Deployment *OpenLibertyApplicationDeployment `json:"deployment,omitempty"`
 
-	// +operator-sdk:csv:customresourcedefinitions:order=16,type=spec,displayName="StatefulSet"
+	// +operator-sdk:csv:customresourcedefinitions:order=17,type=spec,displayName="StatefulSet"
 	StatefulSet *OpenLibertyApplicationStatefulSet `json:"statefulSet,omitempty"`
 
-	// +operator-sdk:csv:customresourcedefinitions:order=17,type=spec,displayName="Service"
+	// +operator-sdk:csv:customresourcedefinitions:order=18,type=spec,displayName="Service"
 	Service *OpenLibertyApplicationService `json:"service,omitempty"`
 
-	// +operator-sdk:csv:customresourcedefinitions:order=18,type=spec,displayName="Route"
+	// +operator-sdk:csv:customresourcedefinitions:order=19,type=spec,displayName="Route"
 	Route *OpenLibertyApplicationRoute `json:"route,omitempty"`
 
 	// Configures the Semeru Cloud Compiler to handle Just-In-Time (JIT) compilation requests from the application.
-	// +operator-sdk:csv:customresourcedefinitions:order=19,type=spec,displayName="Semeru Cloud Compiler"
+	// +operator-sdk:csv:customresourcedefinitions:order=20,type=spec,displayName="Semeru Cloud Compiler"
 	SemeruCloudCompiler *OpenLibertyApplicationSemeruCloudCompiler `json:"semeruCloudCompiler,omitempty"`
 
-	// +operator-sdk:csv:customresourcedefinitions:order=20,type=spec,displayName="Network Policy"
+	// +operator-sdk:csv:customresourcedefinitions:order=21,type=spec,displayName="Network Policy"
 	NetworkPolicy *OpenLibertyApplicationNetworkPolicy `json:"networkPolicy,omitempty"`
 
-	// +operator-sdk:csv:customresourcedefinitions:order=21,type=spec,displayName="Serviceability"
+	// +operator-sdk:csv:customresourcedefinitions:order=22,type=spec,displayName="Serviceability"
 	Serviceability *OpenLibertyApplicationServiceability `json:"serviceability,omitempty"`
 
-	// +operator-sdk:csv:customresourcedefinitions:order=22,type=spec,displayName="Single Sign-On"
+	// +operator-sdk:csv:customresourcedefinitions:order=23,type=spec,displayName="Single Sign-On"
 	SSO *OpenLibertyApplicationSSO `json:"sso,omitempty"`
 
-	// +operator-sdk:csv:customresourcedefinitions:order=23,type=spec,displayName="Monitoring"
+	// +operator-sdk:csv:customresourcedefinitions:order=24,type=spec,displayName="Monitoring"
 	Monitoring *OpenLibertyApplicationMonitoring `json:"monitoring,omitempty"`
 
 	// An array of environment variables for the application container.
 	// +listType=map
 	// +listMapKey=name
-	// +operator-sdk:csv:customresourcedefinitions:order=24,type=spec,displayName="Environment Variables"
+	// +operator-sdk:csv:customresourcedefinitions:order=25,type=spec,displayName="Environment Variables"
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
 	// List of sources to populate environment variables in the application container.
 	// +listType=atomic
-	// +operator-sdk:csv:customresourcedefinitions:order=25,type=spec,displayName="Environment Variables from Sources"
+	// +operator-sdk:csv:customresourcedefinitions:order=26,type=spec,displayName="Environment Variables from Sources"
 	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
 
 	// Represents a volume with data that is accessible to the application container.
 	// +listType=map
 	// +listMapKey=name
-	// +operator-sdk:csv:customresourcedefinitions:order=26,type=spec,displayName="Volumes"
+	// +operator-sdk:csv:customresourcedefinitions:order=27,type=spec,displayName="Volumes"
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
 
 	// Represents where to mount the volumes into the application container.
 	// +listType=atomic
-	// +operator-sdk:csv:customresourcedefinitions:order=27,type=spec,displayName="Volume Mounts"
+	// +operator-sdk:csv:customresourcedefinitions:order=28,type=spec,displayName="Volume Mounts"
 	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 
 	// List of containers to run before other containers in a pod.
 	// +listType=map
 	// +listMapKey=name
-	// +operator-sdk:csv:customresourcedefinitions:order=28,type=spec,displayName="Init Containers"
+	// +operator-sdk:csv:customresourcedefinitions:order=29,type=spec,displayName="Init Containers"
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 
 	// List of sidecar containers. These are additional containers to be added to the pods.
 	// +listType=map
 	// +listMapKey=name
-	// +operator-sdk:csv:customresourcedefinitions:order=29,type=spec,displayName="Sidecar Containers"
+	// +operator-sdk:csv:customresourcedefinitions:order=30,type=spec,displayName="Sidecar Containers"
 	SidecarContainers []corev1.Container `json:"sidecarContainers,omitempty"`
 
-	// +operator-sdk:csv:customresourcedefinitions:order=30,type=spec,displayName="Affinity"
+	// +operator-sdk:csv:customresourcedefinitions:order=31,type=spec,displayName="Affinity"
 	Affinity *OpenLibertyApplicationAffinity `json:"affinity,omitempty"`
 
 	// Security context for the application container.
-	// +operator-sdk:csv:customresourcedefinitions:order=31,type=spec,displayName="Security Context"
+	// +operator-sdk:csv:customresourcedefinitions:order=32,type=spec,displayName="Security Context"
 	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
 
-	// +operator-sdk:csv:customresourcedefinitions:order=32,type=spec,displayName="Topology Spread Constraints"
+	// +operator-sdk:csv:customresourcedefinitions:order=33,type=spec,displayName="Topology Spread Constraints"
 	TopologySpreadConstraints *OpenLibertyApplicationTopologySpreadConstraints `json:"topologySpreadConstraints,omitempty"`
+
+	// Disable information about services being injected into the application pod's environment variables. Default to false.
+	// +operator-sdk:csv:customresourcedefinitions:order=34,type=spec,displayName="Disable Service Links",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	DisableServiceLinks *bool `json:"disableServiceLinks,omitempty"`
+
+	// Tolerations to be added to application pods. Tolerations allow the scheduler to schedule pods on nodes with matching taints.
+	// +operator-sdk:csv:customresourcedefinitions:order=34,type=spec,displayName="Tolerations"
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+
+	// DNS settings for the application pod.
+	// +operator-sdk:csv:customresourcedefinitions:order=35,type=spec,displayName="DNS"
+	DNS *OpenLibertyApplicationDNS `json:"dns,omitempty"`
+}
+
+// Defines the DNS
+type OpenLibertyApplicationDNS struct {
+	// The DNS Policy for the application pod. Defaults to ClusterFirst.
+	// +operator-sdk:csv:customresourcedefinitions:order=1,type=spec,displayName="DNS Policy"
+	DNSPolicy *corev1.DNSPolicy `json:"policy,omitempty"`
+
+	// The DNS Config for the application pod.
+	// +operator-sdk:csv:customresourcedefinitions:order=2,type=spec,displayName="DNS Config"
+	PodDNSConfig *corev1.PodDNSConfig `json:"config,omitempty"`
 }
 
 // Defines the topology spread constraints
@@ -156,7 +183,7 @@ type OpenLibertyApplicationTopologySpreadConstraints struct {
 	Constraints *[]corev1.TopologySpreadConstraint `json:"constraints,omitempty"`
 
 	// Whether the operator should disable its default set of TopologySpreadConstraints. Defaults to false.
-	// +operator-sdk:csv:customresourcedefinitions:order=1,type=spec,displayName="Disable Operator Defaults",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	// +operator-sdk:csv:customresourcedefinitions:order=2,type=spec,displayName="Disable Operator Defaults",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
 	DisableOperatorDefaults *bool `json:"disableOperatorDefaults,omitempty"`
 }
 
@@ -746,6 +773,11 @@ func (cr *OpenLibertyApplication) GetExpose() *bool {
 	return cr.Spec.Expose
 }
 
+// GetManagePasswordEncryption returns the Password Encryption key sharing status
+func (cr *OpenLibertyApplication) GetManagePasswordEncryption() *bool {
+	return cr.Spec.ManagePasswordEncryption
+}
+
 // GetManageLTPA returns the LTPA key sharing status
 func (cr *OpenLibertyApplication) GetManageLTPA() *bool {
 	return cr.Spec.ManageLTPA
@@ -1172,6 +1204,31 @@ func (cr *OpenLibertyApplicationTopologySpreadConstraints) GetConstraints() *[]c
 
 func (cr *OpenLibertyApplicationTopologySpreadConstraints) GetDisableOperatorDefaults() *bool {
 	return cr.DisableOperatorDefaults
+}
+
+// GetDisableServiceLinks returns whether service links should be disabled in the pod spec
+func (cr *OpenLibertyApplication) GetDisableServiceLinks() *bool {
+	return cr.Spec.DisableServiceLinks
+}
+
+// GetToleration returns pod tolerations slice
+func (cr *OpenLibertyApplication) GetTolerations() []corev1.Toleration {
+	return cr.Spec.Tolerations
+}
+
+func (cr *OpenLibertyApplication) GetDNS() common.BaseComponentDNS {
+	if cr.Spec.DNS == nil {
+		return nil
+	}
+	return cr.Spec.DNS
+}
+
+func (d *OpenLibertyApplicationDNS) GetPolicy() *corev1.DNSPolicy {
+	return d.DNSPolicy
+}
+
+func (d *OpenLibertyApplicationDNS) GetConfig() *corev1.PodDNSConfig {
+	return d.PodDNSConfig
 }
 
 // Initialize sets default values

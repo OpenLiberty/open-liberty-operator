@@ -57,6 +57,7 @@ rules:
   - statefulsets
   verbs:
   - get
+  - list
   - create
   - patch
 - apiGroups:
