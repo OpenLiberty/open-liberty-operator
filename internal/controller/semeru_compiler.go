@@ -441,7 +441,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCMCertificate(ola *openlibertyv1.O
 	svcCert.Name = getSemeruCompilerNameWithGeneration(ola)
 	svcCert.Namespace = ola.GetNamespace()
 	customIssuer := &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
-		Name:      "olo-" + "-custom-issuer",
+		Name:      OperatorShortName + "-custom-issuer",
 		Namespace: svcCert.Namespace,
 	}}
 
