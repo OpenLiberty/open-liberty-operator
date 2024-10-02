@@ -1503,28 +1503,32 @@ NOTE: If your application CR sets `.spec.manageTLS` to `false`, then the operato
 
 NOTE: Only available for operator version v1.4.0+
 
-DNS can be configured in WebSphereLibertyApplication CR by using the .spec.dns.policy field or the .spec.dns.config field. The .spec.dns.policy field is the DNS policy for the application pod and defaults to the ClusterFirst policy. The .spec.dns.config field is the DNS config for the application pod.
-Kubernetes supports the following pod-specific DNS policies. The following policies can be specified by using the .spec.dns.policy field:
+DNS can be configured in WebSphereLibertyApplication CR by using the `.spec.dns.policy` field or the `.spec.dns.config` field. The `.spec.dns.policy` field is the DNS policy for the application pod and defaults to the `ClusterFirs`t policy. The `.spec.dns.config` field is the DNS config for the application pod.
+Kubernetes supports the following pod-specific DNS policies. The following policies can be specified by using the `.spec.dns.policy` field:
 
-    Default: The pod inherits the name resolution configuration from the node that the pods run on.
-    ClusterFirst: Any DNS query that does not match the configured cluster domain suffix, such as www.kubernetes.io, is forwarded to an upstream name server by the DNS server. Cluster administrators can have extra stub-domain and upstream DNS servers configured.
-    ClusterFirstWithHostNet: Set the DNS policy to ClusterFirstWithHostNet if the pod runs with hostNetwork. Pods running with hostNetwork and set to the ClusterFirst policy behaves like the Default policy.
+* `Default`: The pod inherits the name resolution configuration from the node that the pods run on.
+* `ClusterFirst`: Any DNS query that does not match the configured cluster domain suffix, such as www.kubernetes.io, is forwarded to an upstream name server by the DNS server. Cluster administrators can have extra stub-domain and upstream DNS servers configured.
+* `ClusterFirstWithHostNet`: Set the DNS policy to `ClusterFirstWithHostNet` if the pod runs with `hostNetwork`. Pods running with `hostNetwork` and set to the `ClusterFirst` policy behaves like the `Default` policy.
 
-    Note: ClusterFirstWithHostNet is not supported on Windows. For more information, see DNS Resolution on Windows.
-    None: A pod can ignore DNS settings from the Kubernetes environment. All DNS settings are provided by using the .spec.dns.config field of WebSphereLibertyApplication CR.
+NOTE: `ClusterFirstWithHostNet` is not supported on Windows. For more information, see DNS Resolution on Windows.
+
+* `None`: A pod can ignore DNS settings from the Kubernetes environment. All DNS settings are provided by using the `.spec.dns.config` field of WebSphereLibertyApplication CR.
 
 For more information, see Customizing DNS Service.
-Note: Default is not the default DNS policy. If .spec.dns.policy is not explicitly specified, then ClusterFirst is used.
+
+NOTE: `Default` is not the default DNS policy. If `.spec.dns.policy` is not explicitly specified, then `ClusterFirst` is used.
 
 DNS Config allows users more control over the DNS settings for an application Pod.
 
-The .spec.dns.config field is optional and it can work with any .spec.dns.policy settings. However, when a .spec.dns.policy is set to None, the .spec.dns.config field must be specified.
-The following properties are specified within the .spec.dns.config field:
+The `.spec.dns.config` field is optional and it can work with any `.spec.dns.policy` settings. However, when a `.spec.dns.policy` is set to `None`, the `.spec.dns.config` field must be specified.
 
-    .spec.dns.config.nameservers: a list of IP addresses that are used as DNS servers for the Pod. Up to 3 IP addresses are specified. When .spec.dns.policy is set to None, the list must contain at least one IP address, otherwise this property is optional. The servers that are listed are combined to the base name servers generated from the specified DNS policy with duplicate addresses removed.
-    .spec.dns.config.searches: a list of DNS search domains for hostname lookup in the Pod. This property is optional. When specified, the provided list is merged into the base search domain names that are generated from the chosen DNS policy. Duplicate domain names are removed. Kubernetes allows up to 32 search domains.
-    .spec.dns.config.options: an optional list of objects where each object must have a name property and can have a value property. The contents in this property are merged to the options generated from the specified DNS policy. Duplicate entries are removed.
+The following properties are specified within the `.spec.dns.config` field:
 
+* `.spec.dns.config.nameservers`: a list of IP addresses that are used as DNS servers for the Pod. Up to 3 IP addresses are specified. When `.spec.dns.policy` is set to `None`, the list must contain at least one IP address, otherwise this property is optional. The servers that are listed are combined to the base name servers generated from the specified DNS policy with duplicate addresses removed.
+* `.spec.dns.config.searches`: a list of DNS search domains for hostname lookup in the Pod. This property is optional. When specified, the provided list is merged into the base search domain names that are generated from the chosen DNS policy. Duplicate domain names are removed. Kubernetes allows up to 32 search domains.
+* `.spec.dns.config.options`: an optional list of objects where each object must have a name property and can have a value property. The contents in this property are merged to the options generated from the specified DNS policy. Duplicate entries are removed.
+[source,yaml]
+----
 spec:
   dns:
     policy: "None"
@@ -1538,6 +1542,7 @@ spec:
         - name: ndots
           value: "2"
         - name: edns0
+----
 
 For more information on DNS, see the Kubernetes DNS documentation.
 
