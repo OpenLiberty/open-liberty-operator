@@ -160,6 +160,7 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `expose`   | A boolean that toggles the external exposure of this deployment via a Route or a Knative Route resource.
 | `initContainers` | The list of link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#container-v1-core++[Init Container] definitions.
 | `manageLTPA`  | A Boolean that enables management of Lightweight Third-Party Authentication (LTPA) key sharing among Liberty containers. The default is `false`. For more information, see link:#configuring-ltpa[Configuring Lightweight Third-Party Authentication (LTPA)].
+| `managePasswordEncryption` | Enable management of password encryption key sharing amongst Liberty containers. Defaults to false. For more information, see link:#manage-password-encryption[Managing Password Encryption].
 | `manageTLS`   | [[crd-spec-managetls]] A boolean to toggle automatic certificate generation and mounting TLS secret into the pod. The default value for this field is `true`.
 | `monitoring` | Specifies parameters for `Service Monitor`. For examples, see link:#monitor-resources[Monitor resources] and link:#specify-multiple-service-ports[Specify multiple service ports].
 | `monitoring.endpoints` | A YAML snippet representing an array of link:++https://github.com/coreos/prometheus-operator/blob/main/Documentation/api.md#endpoint++[Endpoint] component from ServiceMonitor.
@@ -748,6 +749,39 @@ The Liberty server must allow configuration drop-ins. The following configuratio
 ----
 
 Enable the link:++https://openliberty.io/docs/latest/reference/feature/appSecurity-5.0.html++[Application Security] feature in the Liberty server configuration for the application.
+
+[[manage-password-encryption]]
+=== Managing Password Encryption
+
+The managePasswordEncryption function allows management of password encryption key sharing among Liberty containers. Encrypting a password makes it difficult for someone to recover a password without the password encryption key.
+The Liberty Operator can manage password encryption key sharing among Liberty containers. To enable password encryption support, create a Secret named wlp-password-encryption-key in the same namespace as the WebSphereLibertyApplication CR instance. Within the secret, the encryption key must be specified by using passwordEncryptionKey. All CR instances that enable password encryption shares the encryption key in the namespace.
+
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: wlp-password-encryption-key
+type: Opaque
+stringData:
+  passwordEncryptionKey: randomkey
+----
+
+Set .spec.managePasswordEncryption to true in the CR.
+
+[source,yaml]
+----
+spec:
+  managePasswordEncryption: true
+----
+
+The Liberty Operator handles mounting the password encryption key into the application pod and enables the necessary Liberty server configuration to use it.
+
+When .spec.manageLTPA is enabled with .spec.managePasswordEncryption, the Liberty Operator encrypts the password of the LTPA key with the password encryption key you specified.
+Note:
+
+Encrypt all other passwords that are in a Liberty server configuration and uses AES encryption by using the password encryption key that you specify in the Secret named wlp-password-encryption-key. Liberty servers cannot decrypt the passwords if the passwords are not encrypted. For more information about how to obfuscate passwords for Liberty, see the securityUtility encode command.
+
 
 [[create-a-service-account]]
 === Configure a service account (`.spec.serviceAccount`)
