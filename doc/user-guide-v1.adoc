@@ -938,6 +938,8 @@ spec:
         runAsNonRoot: true
         readOnlyRootFilesystem: false
         allowPrivilegeEscalation: false
+        seccompProfile:
+          type: RuntimeDefault
 ----
 To override the default values or set more parameters, change the `.spec.securityContext` parameters, for example:
 
