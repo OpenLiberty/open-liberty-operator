@@ -264,6 +264,7 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `statefulSet.storage.volumeClaimTemplate` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#components++[volumeClaimTemplate] component of a `StatefulSet`.
 | `statefulSet.updateStrategy`   | A field to specify the update strategy of the StatefulSet. For examples, see link:++https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies++[updateStrategy]
 | `statefulSet.updateStrategy.type`   | The type of update strategy of the StatefulSet. The type can be set to `RollingUpdate` or `OnDelete`, where `RollingUpdate` is the default update strategy.
+| `tolerations` | Tolerations to be added to application pods. Tolerations allow the scheduler to schedule pods on nodes with matching taints. For more information, see link:#configure-tolerations[Configure tolerations].
 | `topologySpreadConstraints` | Configures topology spread constraints for the application instance and if applicable, the Semeru Cloud Compiler instance. For examples, see link:#constrain-how-pods-are-spread-between-nodes-and-zones-spectopologyspreadconstraints[Constrain how pods are spread between nodes and zones].
 | `topologySpreadConstraints.constraints` | A YAML array that represents a list of link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#topologyspreadconstraint-v1-core++[TopologySpreadConstraints].
 | `topologySpreadConstraints.disableOperatorDefaults` | Disables the default TopologySpreadConstraints set by the operator. Defaults to `false`. By default, pods of the application instance are (preferably) spread across zones and nodes with a `maxSkew` of 1. If applicable, pods of the Semeru Cloud Compiler instance are also (preferably) spread across zones and nodes with a `maxSkew` of 1.
@@ -1545,6 +1546,29 @@ spec:
 ----
 
 For more information on DNS, see link:https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/[the Kubernetes DNS documentation].
+
+[[configure-tolerations]]
+=== Configure tolerations (.spec.tolerations)
+
+Node affinity is a property that attracts pods to a set of nodes either as a preference or a hard requirement. However, taints allow a node to repel a set of pods.
+
+Tolerations are applied to pods and allow a scheduler to schedule pods with matching taints. The scheduler also evaluates other parameters as part of its function.
+
+Taints and tolerations work together to help ensure that application pods are not scheduled onto inappropriate nodes. If one or more taints are applied to a node, the node cannot accept any pods that do not tolerate the taints.
+
+Tolerations can be configured in WebSphereLibertyApplication CR by using the .spec.tolerations field.
+
+[source,yaml]
+----
+spec:
+  tolerations:
+  - key: "key1"
+    operator: "Equal"
+    value: "value1"
+----
+
+For more information on taints and toleration, see the Kubernetes taints and toleration documentation.
+
 
 [[generating-certificates-with-certificate-manager]]
 === Generating certificates with certificate manager 
