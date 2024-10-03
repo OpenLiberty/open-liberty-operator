@@ -1503,7 +1503,7 @@ NOTE: If your application CR sets `.spec.manageTLS` to `false`, then the operato
 
 NOTE: Only available for operator version v1.4.0+
 
-DNS can be configured in OpenLibertyApplication CR by using the `.spec.dns.policy` field or the `.spec.dns.config` field. The `.spec.dns.policy` field is the DNS policy for the application pod and defaults to the `ClusterFirs`t policy. The `.spec.dns.config` field is the DNS config for the application pod.
+DNS can be configured in OpenLibertyApplication CR by using the `.spec.dns.policy` field or the `.spec.dns.config` field. The `.spec.dns.policy` field is the DNS policy for the application pod and defaults to the `ClusterFirst` policy. The `.spec.dns.config` field is the DNS config for the application pod.
 Kubernetes supports the following pod-specific DNS policies. The following policies can be specified by using the `.spec.dns.policy` field:
 
 * `Default`: The pod inherits the name resolution configuration from the node that the pods run on.
