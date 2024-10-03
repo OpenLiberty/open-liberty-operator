@@ -723,16 +723,15 @@ NOTE: This feature is only available if you are running on Red Hat OpenShift. Th
 
 
 [[configuring-ltpa]]
-=== Configuring Lightweight Third-Party Authentication (LTPA) (`.spec.manageLTPA`) image:images/docs_openliberty_logo.png[OL,30]
+=== Configuring Lightweight Third-Party Authentication (LTPA) (`.spec.manageLTPA`)
 
 Lightweight Third-Party Authentication (LTPA) provides SSO configuration to authenticate users to access applications. With LTPA, cryptographic keys enable and disable user details that pass between servers for authentication. To complete authentication, an LTPA token is generated. The LTPA token is signed with cryptographic keys, stores the user details, and has an expiration time. When authentication is complete, the LTPA token passes to other servers through cookies for web sources when SSO is enabled.
 
 Open Liberty operator can generate and manage an LTPA key for applications. By default, this functionality is disabled. Set the `.spec.manageLTPA` parameter to `true` in each OpenLibertyApplication custom resource to enable this functionality.
 
-A single LTPA key is used per each namespace and is shared with microservices and applications in a namespace. A password is generated and encrypted to secure the LTPA key. The LTPA key and the password are stored in the secret named `olo-managed-ltpa`.
+A single LTPA key is used per each namespace and is shared with microservices and applications in a namespace. A password is generated and encrypted to secure the LTPA key. The LTPA key and the password are stored in a Kubernetes Secret resource with the `app.kubernetes.io/name=olo-managed-ltpa label`.
 
-To revoke the LTPA key, delete the secret named `olo-managed-ltpa` in the namespace. A new LTPA key and password is then generated and used with applications in the namespace. For more information on LTPA, see
-link:++https://openliberty.io/docs/latest/single-sign-on.html?_ga=2.112348932.1887571414.1701787911-2108330677.1701464364&_gl=1*1yeml40*_ga*MjEwODMzMDY3Ny4xNzAxNDY0MzY0*_ga_FYECCCS21D*MTcwMTc4NzkxMC4yLjEuMTcwMTc4ODQ2OC4wLjAuMA..#_ltpa++[Single Sign On (SSO)].
+To revoke the LTPA key, delete the Kubernetes Secret resource with the `app.kubernetes.io/name=olo-managed-ltpa` label in the namespace. A new LTPA key and password is then generated and used with applications in the namespace. When `.spec.manageLTPA` is enabled with `.spec.managePasswordEncryption`, the Liberty Operator encrypts the password of the LTPA key with the specified password encryption key. For more information on LTPA, see link:https://openliberty.io/docs/latest/single-sign-on.html#_ltpa[Single sign-on (SSO)].
 
 ==== LTPA prerequisites
 
