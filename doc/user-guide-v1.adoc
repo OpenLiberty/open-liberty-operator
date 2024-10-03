@@ -1552,11 +1552,11 @@ For more information on DNS, see link:https://kubernetes.io/docs/concepts/servic
 
 Node affinity is a property that attracts pods to a set of nodes either as a preference or a hard requirement. However, taints allow a node to repel a set of pods.
 
-Tolerations are applied to pods and allow a scheduler to schedule pods with matching taints. The scheduler also evaluates other parameters as part of its function.
+Tolerations are applied to pods and allow a scheduler to schedule pods with matching taints. The scheduler also link:https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/[evaluates other parameters] as part of its function.
 
 Taints and tolerations work together to help ensure that application pods are not scheduled onto inappropriate nodes. If one or more taints are applied to a node, the node cannot accept any pods that do not tolerate the taints.
 
-Tolerations can be configured in WebSphereLibertyApplication CR by using the .spec.tolerations field.
+Tolerations can be configured in WebSphereLibertyApplication CR by using the `.spec.tolerations` field.
 
 [source,yaml]
 ----
@@ -1567,7 +1567,7 @@ spec:
     value: "value1"
 ----
 
-For more information on taints and toleration, see the Kubernetes taints and toleration documentation.
+For more information on taints and toleration, see the link:https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/[Kubernetes taints and toleration documentation].
 
 
 [[generating-certificates-with-certificate-manager]]
