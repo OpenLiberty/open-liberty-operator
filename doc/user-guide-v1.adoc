@@ -738,6 +738,10 @@ A single LTPA key is used per each namespace and is shared with microservices an
 
 To revoke the LTPA key, delete the Kubernetes Secret resource with the `app.kubernetes.io/name=olo-managed-ltpa` label in the namespace. A new LTPA key and password is then generated and used with applications in the namespace. When `.spec.manageLTPA` is enabled with `.spec.managePasswordEncryption`, the Liberty Operator encrypts the password of the LTPA key with the specified password encryption key. For more information on LTPA, see link:https://openliberty.io/docs/latest/single-sign-on.html#_ltpa[Single sign-on (SSO)].
 
+NOTE: LTPA support from Liberty Operator version 1.3 continues to work as before. The LTPA key that is generated with Liberty Operator version 1.3 remains used. +
+ +
+When any WebSphereLibertyApplication CR enables the `.spec.managePasswordEncryption` parameter in the namespace, the LTPA key is regenerated. The new LTPA key is shared between WebSphereLibertyApplication CR instances with and without `.spec.managePasswordEncryption`.
+
 ==== LTPA prerequisites
 
 The Liberty server must allow configuration drop-ins. The following configuration must not be set on the server. Otherwise, the manageLTPA functionality does not work.
