@@ -1503,18 +1503,18 @@ NOTE: If your application CR sets `.spec.manageTLS` to `false`, then the operato
 
 NOTE: Only available for operator version v1.4.0+
 
-DNS can be configured in WebSphereLibertyApplication CR by using the `.spec.dns.policy` field or the `.spec.dns.config` field. The `.spec.dns.policy` field is the DNS policy for the application pod and defaults to the `ClusterFirs`t policy. The `.spec.dns.config` field is the DNS config for the application pod.
+DNS can be configured in OpenLibertyApplication CR by using the `.spec.dns.policy` field or the `.spec.dns.config` field. The `.spec.dns.policy` field is the DNS policy for the application pod and defaults to the `ClusterFirs`t policy. The `.spec.dns.config` field is the DNS config for the application pod.
 Kubernetes supports the following pod-specific DNS policies. The following policies can be specified by using the `.spec.dns.policy` field:
 
 * `Default`: The pod inherits the name resolution configuration from the node that the pods run on.
 * `ClusterFirst`: Any DNS query that does not match the configured cluster domain suffix, such as www.kubernetes.io, is forwarded to an upstream name server by the DNS server. Cluster administrators can have extra stub-domain and upstream DNS servers configured.
 * `ClusterFirstWithHostNet`: Set the DNS policy to `ClusterFirstWithHostNet` if the pod runs with `hostNetwork`. Pods running with `hostNetwork` and set to the `ClusterFirst` policy behaves like the `Default` policy.
 
-NOTE: `ClusterFirstWithHostNet` is not supported on Windows. For more information, see DNS Resolution on Windows.
+NOTE: `ClusterFirstWithHostNet` is not supported on Windows. For more information, see link:https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#dns-windows[DNS Resolution on Windows].
 
 * `None`: A pod can ignore DNS settings from the Kubernetes environment. All DNS settings are provided by using the `.spec.dns.config` field of WebSphereLibertyApplication CR.
 
-For more information, see Customizing DNS Service.
+For more information, see link:https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/[Customizing DNS Service].
 
 NOTE: `Default` is not the default DNS policy. If `.spec.dns.policy` is not explicitly specified, then `ClusterFirst` is used.
 
@@ -1544,7 +1544,7 @@ spec:
         - name: edns0
 ----
 
-For more information on DNS, see the Kubernetes DNS documentation.
+For more information on DNS, see link:https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/[the Kubernetes DNS documentation].
 
 [[generating-certificates-with-certificate-manager]]
 === Generating certificates with certificate manager 
