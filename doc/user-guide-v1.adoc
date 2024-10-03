@@ -780,6 +780,14 @@ When `.spec.manageLTPA` is enabled with `.spec.managePasswordEncryption`, the Li
 
 NOTE: Encrypt all other passwords that are in a Liberty server configuration and uses AES encryption by using the password encryption key that you specify in the Secret named `wlp-password-encryption-key`. Liberty servers cannot decrypt the passwords if the passwords are not encrypted. For more information about how to obfuscate passwords for Liberty, see the link:https://openliberty.io/docs/latest/reference/command/securityUtility-encode.html[`securityUtility` encode command].
 
+[[managing-password-encryption-prereqs]]
+=== Managing Password Encryption prerequisites
+The Liberty server must allow configuration drop-ins. The following configuration must not be set on the server. Otherwise, the `managePasswordEncryption` function does not work.
+[source,xml]
+----
+<config updateTrigger="disabled"/>
+----
+
 [[create-a-service-account]]
 === Configure a service account (`.spec.serviceAccount`)
 
