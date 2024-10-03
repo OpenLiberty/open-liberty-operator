@@ -753,6 +753,8 @@ Enable the link:++https://openliberty.io/docs/latest/reference/feature/appSecuri
 [[manage-password-encryption]]
 === Managing Password Encryption
 
+NOTE: Only available for operator version v1.4.0+
+
 The `managePasswordEncryption` function allows management of password encryption key sharing among Liberty containers. Encrypting a password makes it difficult for someone to recover a password without the password encryption key.
 
 The Liberty Operator can manage password encryption key sharing among Liberty containers. To enable password encryption support, create a Secret named `wlp-password-encryption-key` in the same namespace as the OpenLibertyApplication CR instance. Within the secret, the encryption key must be specified by using `passwordEncryptionKey`. All CR instances that enable password encryption share the encryption key in the namespace.
