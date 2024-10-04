@@ -741,7 +741,7 @@ To revoke the LTPA key, delete the Kubernetes Secret resource with the `app.kube
 
 NOTE: LTPA support from Liberty Operator version 1.3 continues to work as before. The LTPA key that is generated with Liberty Operator version 1.3 remains used. +
  +
-When any WebSphereLibertyApplication CR enables the `.spec.managePasswordEncryption` parameter in the namespace, the LTPA key is regenerated. The new LTPA key is shared between WebSphereLibertyApplication CR instances with and without `.spec.managePasswordEncryption`.
+When any OpenLibertyApplication CR enables the `.spec.managePasswordEncryption` parameter in the namespace, the LTPA key is regenerated. The new LTPA key is shared between OpenLibertyApplication CR instances with and without `.spec.managePasswordEncryption`.
 
 ==== LTPA prerequisites
 
@@ -1560,7 +1560,7 @@ Kubernetes supports the following pod-specific DNS policies. The following polic
 
 NOTE: `ClusterFirstWithHostNet` is not supported on Windows. For more information, see link:https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#dns-windows[DNS Resolution on Windows].
 
-* `None`: A pod can ignore DNS settings from the Kubernetes environment. All DNS settings are provided by using the `.spec.dns.config` field of WebSphereLibertyApplication CR.
+* `None`: A pod can ignore DNS settings from the Kubernetes environment. All DNS settings are provided by using the `.spec.dns.config` field of OpenLibertyApplication CR.
 
 For more information, see link:https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/[Customizing DNS Service].
 
@@ -1605,7 +1605,7 @@ Tolerations are applied to pods and allow a scheduler to schedule pods with matc
 
 Taints and tolerations work together to help ensure that application pods are not scheduled onto inappropriate nodes. If one or more taints are applied to a node, the node cannot accept any pods that do not tolerate the taints.
 
-Tolerations can be configured in WebSphereLibertyApplication CR by using the `.spec.tolerations` field.
+Tolerations can be configured in OpenLibertyApplication CR by using the `.spec.tolerations` field.
 
 [source,yaml]
 ----
