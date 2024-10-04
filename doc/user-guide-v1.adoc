@@ -399,6 +399,7 @@ Open Liberty Operator builds upon link:#common-component-documentation[component
 * link:#configuring-single-sign-on-sso[Configuring single sign-on (SSO)] (`.spec.sso`) image:images/docs_openliberty_logo.png[OL,20] 
 * link:#storage-for-serviceability[Storage for serviceability] (`.spec.serviceability`) image:images/docs_openliberty_logo.png[OL,20]
 * link:#configuring-ltpa[Configuring Lightweight Third-Party Authentication (LTPA)] (`.spec.manageLTPA`) image:images/docs_openliberty_logo.png[OL,20]
+* link:#manage-password-encryption[Managing password encryption](`.spec.managePasswordEncryption`) image:images/docs_openliberty_logo.png[OL,20]
 
 
 ==== Common Components [[common-component-documentation]]
@@ -754,7 +755,7 @@ The Liberty server must allow configuration drop-ins. The following configuratio
 Enable the link:++https://openliberty.io/docs/latest/reference/feature/appSecurity-5.0.html++[Application Security] feature in the Liberty server configuration for the application.
 
 [[manage-password-encryption]]
-=== Managing Password Encryption
+=== Managing Password Encryption (`.spec.managePasswordEncryption`) image:images/docs_openliberty_logo.png[OL,30]
 
 NOTE: Only available for operator version v1.4.0+
 
