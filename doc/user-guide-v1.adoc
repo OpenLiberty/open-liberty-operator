@@ -399,7 +399,7 @@ Open Liberty Operator builds upon link:#common-component-documentation[component
 * link:#configuring-single-sign-on-sso[Configuring single sign-on (SSO)] (`.spec.sso`) image:images/docs_openliberty_logo.png[OL,20] 
 * link:#storage-for-serviceability[Storage for serviceability] (`.spec.serviceability`) image:images/docs_openliberty_logo.png[OL,20]
 * link:#configuring-ltpa[Configuring Lightweight Third-Party Authentication (LTPA)] (`.spec.manageLTPA`) image:images/docs_openliberty_logo.png[OL,20]
-* link:#manage-password-encryption[Managing password encryption](`.spec.managePasswordEncryption`) image:images/docs_openliberty_logo.png[OL,20]
+* link:#manage-password-encryption[Managing password encryption] (`.spec.managePasswordEncryption`) image:images/docs_openliberty_logo.png[OL,20]
 
 
 ==== Common Components [[common-component-documentation]]
