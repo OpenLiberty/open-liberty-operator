@@ -727,8 +727,8 @@ The Operator tries to find an image stream name first with the `<project name>/<
 NOTE: This feature is only available if you are running on Red Hat OpenShift. The operator requires `ClusterRole` permissions if the image stream resource is in another namespace.
 
 
-[[configuring-]]
-=== Configuring Lightweight Third-Party Authentication (LTPA) (`.spec.manageLTPA`) image:images/docs_openliberty_logo.png[OL,20]
+[[configuring-ltpa]]
+=== Configuring Lightweight Third-Party Authentication (LTPA) (`.spec.manageLTPA`) image:images/docs_openliberty_logo.png[OL,30]
 
 Lightweight Third-Party Authentication (LTPA) provides SSO configuration to authenticate users to access applications. With LTPA, cryptographic keys enable and disable user details that pass between servers for authentication. To complete authentication, an LTPA token is generated. The LTPA token is signed with cryptographic keys, stores the user details, and has an expiration time. When authentication is complete, the LTPA token passes to other servers through cookies for web sources when SSO is enabled.
 
