@@ -153,7 +153,7 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `deployment.updateStrategy.type`   | The type of update strategy of the deployment. The type can be set to `RollingUpdate` or `Recreate`, where `RollingUpdate` is the default update strategy.
 | `dns` | DNS settings for the application pods. For more information, see link:#configure-dns-specdnspolicy-and-specdnsconfig[]
 | `dns.config` | The DNS Config for the application pods.
-| `dns.spec` | The DNS Policy for the application pod. Defaults to ClusterFirst.
+| `dns.policy` | The DNS Policy for the application pod. Defaults to ClusterFirst.
 | `disableServiceLinks`   | Disable information about services being injected into the application pod as environment variables. The default value for this field is `false`.
 | `env`   | [[crd-spec-env]] An array of environment variables following the format of `{name, value}`, where value is a simple string. It may also follow the format of `{name, valueFrom}`, where valueFrom refers to a value in a `ConfigMap` or `Secret` resource. For examples, see link:#set-environment-variables-for-an-application-container[Set environment variables for an application container] and link:#override-console-logging-environment-variable-default-values[Override console logging environment variable default values].
 | `envFrom`   | An array of references to `ConfigMap` or `Secret` resources containing environment variables. Keys from `ConfigMap` or `Secret` resources become environment variable names in your container. For examples, see link:#set-environment-variables-for-an-application-container[Set environment variables for an application container].
@@ -427,6 +427,8 @@ Open Liberty Operator builds upon link:#common-component-documentation[component
   - link:#generating-certificates-with-certificate-manager[Generating certificates with certificate manager]
   - link:#generating-certificates-with-red-hat-openshift-service-ca[Generating certificates with Red Hat OpenShift service CA] (`.spec.service.annotations`)
   - link:#specifying-certificates-for-a-secret-route-and-service[Specifying certificates for a secret Route and Service] (`.spec.service.certificateSecretRef` and `.spec.route.certificateSecretRef`) 
+* link:#configure-tolerations-spectolerations[Configure tolerations (`.spec.tolerations`)]
+* link:#configure-dns-specdnspolicy-and-specdnsconfig[Configure DNS (`.spec.dns.policy` and `.spec.dns.config`)]
 
 === Override console logging environment variable default values (`.spec.env`) image:images/docs_openliberty_logo.png[OL,30] [[override-console-logging-environment-variable-default-values]]
 
