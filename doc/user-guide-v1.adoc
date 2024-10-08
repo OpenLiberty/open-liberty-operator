@@ -151,12 +151,16 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `deployment.annotations`   | Annotations to be added only to the deployment and resources owned by the deployment.
 | `deployment.updateStrategy`   | A field to specify the update strategy of the deployment. For examples, see link:++https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy++[updateStrategy]
 | `deployment.updateStrategy.type`   | The type of update strategy of the deployment. The type can be set to `RollingUpdate` or `Recreate`, where `RollingUpdate` is the default update strategy.
+| `dns` | DNS settings for the application pods. For more information, see link:#configure-dns-specdnspolicy-and-specdnsconfig[]
+| `dns.config` | The DNS Config for the application pods.
+| `dns.policy` | The DNS Policy for the application pod. Defaults to ClusterFirst.
 | `disableServiceLinks`   | Disable information about services being injected into the application pod as environment variables. The default value for this field is `false`.
 | `env`   | [[crd-spec-env]] An array of environment variables following the format of `{name, value}`, where value is a simple string. It may also follow the format of `{name, valueFrom}`, where valueFrom refers to a value in a `ConfigMap` or `Secret` resource. For examples, see link:#set-environment-variables-for-an-application-container[Set environment variables for an application container] and link:#override-console-logging-environment-variable-default-values[Override console logging environment variable default values].
 | `envFrom`   | An array of references to `ConfigMap` or `Secret` resources containing environment variables. Keys from `ConfigMap` or `Secret` resources become environment variable names in your container. For examples, see link:#set-environment-variables-for-an-application-container[Set environment variables for an application container].
 | `expose`   | A boolean that toggles the external exposure of this deployment via a Route or a Knative Route resource.
 | `initContainers` | The list of link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#container-v1-core++[Init Container] definitions.
 | `manageLTPA`  | A Boolean that enables management of Lightweight Third-Party Authentication (LTPA) key sharing among Liberty containers. The default is `false`. For more information, see link:#configuring-ltpa[Configuring Lightweight Third-Party Authentication (LTPA)].
+| `managePasswordEncryption` | Enable management of password encryption key sharing amongst Liberty containers. Defaults to false. For more information, see link:#manage-password-encryption[Managing Password Encryption].
 | `manageTLS`   | [[crd-spec-managetls]] A boolean to toggle automatic certificate generation and mounting TLS secret into the pod. The default value for this field is `true`.
 | `monitoring` | Specifies parameters for `Service Monitor`. For examples, see link:#monitor-resources[Monitor resources] and link:#specify-multiple-service-ports[Specify multiple service ports].
 | `monitoring.endpoints` | A YAML snippet representing an array of link:++https://github.com/coreos/prometheus-operator/blob/main/Documentation/api.md#endpoint++[Endpoint] component from ServiceMonitor.
@@ -261,6 +265,7 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `statefulSet.storage.volumeClaimTemplate` | A YAML object representing a link:++https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#components++[volumeClaimTemplate] component of a `StatefulSet`.
 | `statefulSet.updateStrategy`   | A field to specify the update strategy of the StatefulSet. For examples, see link:++https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies++[updateStrategy]
 | `statefulSet.updateStrategy.type`   | The type of update strategy of the StatefulSet. The type can be set to `RollingUpdate` or `OnDelete`, where `RollingUpdate` is the default update strategy.
+| `tolerations` | Tolerations to be added to application pods. Tolerations allow the scheduler to schedule pods on nodes with matching taints. For more information, see link:#configure-tolerations[Configure tolerations].
 | `topologySpreadConstraints` | Configures topology spread constraints for the application instance and if applicable, the Semeru Cloud Compiler instance. For examples, see link:#constrain-how-pods-are-spread-between-nodes-and-zones-spectopologyspreadconstraints[Constrain how pods are spread between nodes and zones].
 | `topologySpreadConstraints.constraints` | A YAML array that represents a list of link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#topologyspreadconstraint-v1-core++[TopologySpreadConstraints].
 | `topologySpreadConstraints.disableOperatorDefaults` | Disables the default TopologySpreadConstraints set by the operator. Defaults to `false`. By default, pods of the application instance are (preferably) spread across zones and nodes with a `maxSkew` of 1. If applicable, pods of the Semeru Cloud Compiler instance are also (preferably) spread across zones and nodes with a `maxSkew` of 1.
@@ -394,6 +399,7 @@ Open Liberty Operator builds upon link:#common-component-documentation[component
 * link:#configuring-single-sign-on-sso[Configuring single sign-on (SSO)] (`.spec.sso`) image:images/docs_openliberty_logo.png[OL,20] 
 * link:#storage-for-serviceability[Storage for serviceability] (`.spec.serviceability`) image:images/docs_openliberty_logo.png[OL,20]
 * link:#configuring-ltpa[Configuring Lightweight Third-Party Authentication (LTPA)] (`.spec.manageLTPA`) image:images/docs_openliberty_logo.png[OL,20]
+* link:#manage-password-encryption[Managing password encryption] (`.spec.managePasswordEncryption`) image:images/docs_openliberty_logo.png[OL,20]
 
 
 ==== Common Components [[common-component-documentation]]
@@ -421,6 +427,8 @@ Open Liberty Operator builds upon link:#common-component-documentation[component
   - link:#generating-certificates-with-certificate-manager[Generating certificates with certificate manager]
   - link:#generating-certificates-with-red-hat-openshift-service-ca[Generating certificates with Red Hat OpenShift service CA] (`.spec.service.annotations`)
   - link:#specifying-certificates-for-a-secret-route-and-service[Specifying certificates for a secret Route and Service] (`.spec.service.certificateSecretRef` and `.spec.route.certificateSecretRef`) 
+* link:#configure-tolerations-spectolerations[Configure tolerations (`.spec.tolerations`)]
+* link:#configure-dns-specdnspolicy-and-specdnsconfig[Configure DNS (`.spec.dns.policy` and `.spec.dns.config`)]
 
 === Override console logging environment variable default values (`.spec.env`) image:images/docs_openliberty_logo.png[OL,30] [[override-console-logging-environment-variable-default-values]]
 
@@ -729,10 +737,13 @@ Lightweight Third-Party Authentication (LTPA) provides SSO configuration to auth
 
 Open Liberty operator can generate and manage an LTPA key for applications. By default, this functionality is disabled. Set the `.spec.manageLTPA` parameter to `true` in each OpenLibertyApplication custom resource to enable this functionality.
 
-A single LTPA key is used per each namespace and is shared with microservices and applications in a namespace. A password is generated and encrypted to secure the LTPA key. The LTPA key and the password are stored in the secret named `olo-managed-ltpa`.
+A single LTPA key is used per each namespace and is shared with microservices and applications in a namespace. A password is generated and encrypted to secure the LTPA key. The LTPA key and the password are stored in a Kubernetes Secret resource with the `app.kubernetes.io/name=olo-managed-ltpa label`.
 
-To revoke the LTPA key, delete the secret named `olo-managed-ltpa` in the namespace. A new LTPA key and password is then generated and used with applications in the namespace. For more information on LTPA, see
-link:++https://openliberty.io/docs/latest/single-sign-on.html?_ga=2.112348932.1887571414.1701787911-2108330677.1701464364&_gl=1*1yeml40*_ga*MjEwODMzMDY3Ny4xNzAxNDY0MzY0*_ga_FYECCCS21D*MTcwMTc4NzkxMC4yLjEuMTcwMTc4ODQ2OC4wLjAuMA..#_ltpa++[Single Sign On (SSO)].
+To revoke the LTPA key, delete the Kubernetes Secret resource with the `app.kubernetes.io/name=olo-managed-ltpa` label in the namespace. A new LTPA key and password is then generated and used with applications in the namespace. When `.spec.manageLTPA` is enabled with `.spec.managePasswordEncryption`, the Liberty Operator encrypts the password of the LTPA key with the specified password encryption key. For more information on LTPA, see link:https://openliberty.io/docs/latest/single-sign-on.html#_ltpa[Single sign-on (SSO)].
+
+NOTE: LTPA support from Liberty Operator version 1.3 continues to work as before. The LTPA key that is generated with Liberty Operator version 1.3 remains used. +
+ +
+When any OpenLibertyApplication CR enables the `.spec.managePasswordEncryption` parameter in the namespace, the LTPA key is regenerated. The new LTPA key is shared between OpenLibertyApplication CR instances with and without `.spec.managePasswordEncryption`.
 
 ==== LTPA prerequisites
 
@@ -744,6 +755,46 @@ The Liberty server must allow configuration drop-ins. The following configuratio
 ----
 
 Enable the link:++https://openliberty.io/docs/latest/reference/feature/appSecurity-5.0.html++[Application Security] feature in the Liberty server configuration for the application.
+
+[[manage-password-encryption]]
+=== Managing Password Encryption (`.spec.managePasswordEncryption`) image:images/docs_openliberty_logo.png[OL,30]
+
+NOTE: Only available for operator version v1.4.0+
+
+The `managePasswordEncryption` function allows management of password encryption key sharing among Liberty containers. Encrypting a password makes it difficult for someone to recover a password without the password encryption key.
+
+The Liberty Operator can manage password encryption key sharing among Liberty containers. To enable password encryption support, create a Secret named `wlp-password-encryption-key` in the same namespace as the OpenLibertyApplication CR instance. Within the secret, the encryption key must be specified by using `passwordEncryptionKey`. All CR instances that enable password encryption share the encryption key in the namespace.
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: wlp-password-encryption-key
+type: Opaque
+stringData:
+  passwordEncryptionKey: randomkey
+----
+
+Set `.spec.managePasswordEncryption` to true in the CR.
+[source,yaml]
+----
+spec:
+  managePasswordEncryption: true
+----
+
+The Liberty Operator handles mounting the password encryption key into the application pod and enables the necessary Liberty server configuration to use it.
+
+When `.spec.manageLTPA` is enabled with `.spec.managePasswordEncryption`, the Liberty Operator encrypts the password of the LTPA key with the password encryption key you specified.
+
+NOTE: Encrypt all other passwords that are in a Liberty server configuration and uses AES encryption by using the password encryption key that you specify in the Secret named `wlp-password-encryption-key`. Liberty servers cannot decrypt the passwords if the passwords are not encrypted. For more information about how to obfuscate passwords for Liberty, see the link:https://openliberty.io/docs/latest/reference/command/securityUtility-encode.html[`securityUtility` encode command].
+
+[[managing-password-encryption-prereqs]]
+=== Managing Password Encryption prerequisites
+The Liberty server must allow configuration drop-ins. The following configuration must not be set on the server. Otherwise, the `managePasswordEncryption` function does not work.
+[source,xml]
+----
+<config updateTrigger="disabled"/>
+----
 
 [[create-a-service-account]]
 === Configure a service account (`.spec.serviceAccount`)
@@ -890,6 +941,8 @@ spec:
         runAsNonRoot: true
         readOnlyRootFilesystem: false
         allowPrivilegeEscalation: false
+        seccompProfile:
+          type: RuntimeDefault
 ----
 To override the default values or set more parameters, change the `.spec.securityContext` parameters, for example:
 
@@ -1493,6 +1546,80 @@ To change this default configuration, see the following sections.
 * link:#specifying-certificates-for-a-secret-route-and-service[Specifying certificates for a secret Route and Service (`.spec.service.certificateSecretRef` and `.spec.route.certificateSecretRef`)] 
 
 NOTE: If your application CR sets `.spec.manageTLS` to `false`, then the operator does not manage the certificate. You must provide your own TLS certificates and configure probes, monitoring, routes, and other parameters.
+
+
+[[configure-dns-specdnspolicy-and-specdnsconfig]]
+=== Configure DNS (`.spec.dns.policy` and `.spec.dns.config`)
+
+NOTE: Only available for operator version v1.4.0+
+
+DNS can be configured in OpenLibertyApplication CR by using the `.spec.dns.policy` field or the `.spec.dns.config` field. The `.spec.dns.policy` field is the DNS policy for the application pod and defaults to the `ClusterFirst` policy. The `.spec.dns.config` field is the DNS config for the application pod.
+Kubernetes supports the following pod-specific DNS policies. The following policies can be specified by using the `.spec.dns.policy` field:
+
+* `Default`: The pod inherits the name resolution configuration from the node that the pods run on.
+* `ClusterFirst`: Any DNS query that does not match the configured cluster domain suffix, such as www.kubernetes.io, is forwarded to an upstream name server by the DNS server. Cluster administrators can have extra stub-domain and upstream DNS servers configured.
+* `ClusterFirstWithHostNet`: Set the DNS policy to `ClusterFirstWithHostNet` if the pod runs with `hostNetwork`. Pods running with `hostNetwork` and set to the `ClusterFirst` policy behaves like the `Default` policy.
+
+NOTE: `ClusterFirstWithHostNet` is not supported on Windows. For more information, see link:https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#dns-windows[DNS Resolution on Windows].
+
+* `None`: A pod can ignore DNS settings from the Kubernetes environment. All DNS settings are provided by using the `.spec.dns.config` field of OpenLibertyApplication CR.
+
+For more information, see link:https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/[Customizing DNS Service].
+
+NOTE: `Default` is not the default DNS policy. If `.spec.dns.policy` is not explicitly specified, then `ClusterFirst` is used.
+
+DNS Config allows users more control over the DNS settings for an application Pod.
+
+The `.spec.dns.config` field is optional and it can work with any `.spec.dns.policy` settings. However, when a `.spec.dns.policy` is set to `None`, the `.spec.dns.config` field must be specified.
+
+The following properties are specified within the `.spec.dns.config` field:
+
+* `.spec.dns.config.nameservers`: a list of IP addresses that are used as DNS servers for the Pod. Up to 3 IP addresses are specified. When `.spec.dns.policy` is set to `None`, the list must contain at least one IP address, otherwise this property is optional. The servers that are listed are combined to the base name servers generated from the specified DNS policy with duplicate addresses removed.
+* `.spec.dns.config.searches`: a list of DNS search domains for hostname lookup in the Pod. This property is optional. When specified, the provided list is merged into the base search domain names that are generated from the chosen DNS policy. Duplicate domain names are removed. Kubernetes allows up to 32 search domains.
+* `.spec.dns.config.options`: an optional list of objects where each object must have a name property and can have a value property. The contents in this property are merged to the options generated from the specified DNS policy. Duplicate entries are removed.
+[source,yaml]
+----
+spec:
+  dns:
+    policy: "None"
+    config:
+      nameservers:
+        - 192.0.2.1 # this is an example
+      searches:
+        - ns1.svc.cluster-domain.example
+        - my.dns.search.suffix
+      options:
+        - name: ndots
+          value: "2"
+        - name: edns0
+----
+
+For more information on DNS, see link:https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/[the Kubernetes DNS documentation].
+
+[[configure-tolerations]]
+=== Configure tolerations (`.spec.tolerations`)
+
+NOTE: Only available for operator version v1.4.0+
+
+Node affinity is a property that attracts pods to a set of nodes either as a preference or a hard requirement. However, taints allow a node to repel a set of pods.
+
+Tolerations are applied to pods and allow a scheduler to schedule pods with matching taints. The scheduler also link:https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/[evaluates other parameters] as part of its function.
+
+Taints and tolerations work together to help ensure that application pods are not scheduled onto inappropriate nodes. If one or more taints are applied to a node, the node cannot accept any pods that do not tolerate the taints.
+
+Tolerations can be configured in OpenLibertyApplication CR by using the `.spec.tolerations` field.
+
+[source,yaml]
+----
+spec:
+  tolerations:
+  - key: "key1"
+    operator: "Equal"
+    value: "value1"
+----
+
+For more information on taints and toleration, see the link:https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/[Kubernetes taints and toleration documentation].
+
 
 [[generating-certificates-with-certificate-manager]]
 === Generating certificates with certificate manager 
