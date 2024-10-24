@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
@@ -15,6 +16,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+var LeaderTrackerMutexes *sync.Map
+
+func init() {
+	LeaderTrackerMutexes = &sync.Map{}
+}
 
 // Leader tracking constants
 const ResourcesKey = "names"
@@ -191,6 +198,13 @@ func CustomizeLeaderTracker(leaderTracker *corev1.Secret, trackerList *[]LeaderT
 }
 
 func GetLeaderTracker(instance *olv1.OpenLibertyApplication, operatorShortName string, leaderTrackerType string, client client.Client) (*corev1.Secret, *[]LeaderTracker, error) {
+	leaderMutex, mutexFound := LeaderTrackerMutexes.Load(leaderTrackerType)
+	if !mutexFound {
+		return nil, nil, fmt.Errorf("Could not retrieve %s leader tracker's mutex when attempting to get. Exiting.", leaderTrackerType)
+	}
+	leaderMutex.(*sync.Mutex).Lock()
+	defer leaderMutex.(*sync.Mutex).Unlock()
+
 	leaderTracker := &corev1.Secret{}
 	leaderTracker.Name = operatorShortName + "-managed-leader-tracking-" + leaderTrackerType
 	leaderTracker.Namespace = instance.GetNamespace()
