@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
@@ -32,6 +33,10 @@ const (
 	LTPAKey LTPAResource = iota
 	LTPAConfig
 )
+
+func init() {
+	lutils.LeaderTrackerMutexes.Store(LTPA_RESOURCE_SHARING_FILE_NAME, &sync.Mutex{})
+}
 
 func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, latestOperandVersion string, assetsFolder *string) (lutils.LeaderTrackerMetadataList, error) {
 	metadataList := &lutils.LTPAMetadataList{}
@@ -923,6 +928,13 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 
 func (r *ReconcileOpenLiberty) isLTPAKeySharingEnabled(instance *olv1.OpenLibertyApplication) bool {
 	if instance.GetManageLTPA() != nil && *instance.GetManageLTPA() {
+		return true
+	}
+	return false
+}
+
+func (r *ReconcileOpenLiberty) isCachingEnabling(instance *olv1.OpenLibertyApplication) bool {
+	if instance.GetManageCache() != nil && *instance.GetManageCache() {
 		return true
 	}
 	return false
