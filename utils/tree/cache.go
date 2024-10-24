@@ -1,34 +1,35 @@
 package tree
 
-var TreeCache DecisionTreeCache
+import "sync"
 
-type DecisionTreeCache struct {
-	decisionTrees   map[string]DecisionTree
-	operatorVersion string
+var TreeCache *DecisionTreeCache
+
+func init() {
+	TreeCache = &DecisionTreeCache{
+		decisionTrees: map[string]*decisionTree{},
+		mutex:         &sync.Mutex{},
+	}
 }
 
-type DecisionTree struct {
+type DecisionTreeCache struct {
+	decisionTrees map[string]*decisionTree
+	mutex         *sync.Mutex
+}
+
+type decisionTree struct {
 	treeMap    map[string]interface{}
 	replaceMap map[string]map[string]string
 }
 
-func (dtc *DecisionTree) SetTreeMap(treeMap map[string]interface{}) {
+func (dtc *decisionTree) setTreeMap(treeMap map[string]interface{}) {
 	dtc.treeMap = treeMap
 }
 
-func (dtc *DecisionTree) SetReplaceMap(replaceMap map[string]map[string]string) {
+func (dtc *decisionTree) setReplaceMap(replaceMap map[string]map[string]string) {
 	dtc.replaceMap = replaceMap
 }
 
-func (dtc *DecisionTree) TreeMap() map[string]interface{} {
-	return dtc.treeMap
-}
-
-func (dtc *DecisionTree) ReplaceMap() map[string]map[string]string {
-	return dtc.replaceMap
-}
-
-func (dtc *DecisionTree) Clear() {
+func (dtc *decisionTree) clear() {
 	if dtc.treeMap != nil {
 		for k, _ := range dtc.treeMap {
 			delete(dtc.treeMap, k)
@@ -41,34 +42,31 @@ func (dtc *DecisionTree) Clear() {
 	}
 }
 
-func (dtc *DecisionTreeCache) TreeMap(key string) map[string]interface{} {
-	if decisionTree, found := dtc.decisionTrees[key]; found {
-		return decisionTree.TreeMap()
-	}
-	return nil
-}
+func (dtc *DecisionTreeCache) Maps(key string) (map[string]interface{}, map[string]map[string]string) {
+	dtc.mutex.Lock()
+	defer dtc.mutex.Unlock()
 
-func (dtc *DecisionTreeCache) ReplaceMap(key string) map[string]map[string]string {
 	if decisionTree, found := dtc.decisionTrees[key]; found {
-		return decisionTree.ReplaceMap()
+		return decisionTree.treeMap, decisionTree.replaceMap
 	}
-	return nil
+	return nil, nil
 }
 
 func (dtc *DecisionTreeCache) Clear() {
+	dtc.mutex.Lock()
+	defer dtc.mutex.Unlock()
+
 	if dtc.decisionTrees == nil {
 		return
 	}
-	for k, decisionTree := range dtc.decisionTrees {
-		decisionTree.Clear()
-		delete(dtc.decisionTrees, k)
+	for key, decisionTree := range dtc.decisionTrees {
+		decisionTree.clear()
+		delete(dtc.decisionTrees, key)
 	}
 }
 
-func (dtc *DecisionTreeCache) SetOperatorVersion(operatorVersion string) {
-	// clear the cache if the operatorVersion has changed
-	if dtc.operatorVersion != operatorVersion {
-		dtc.Clear()
-	}
-	dtc.operatorVersion = operatorVersion
+func (dtc *DecisionTreeCache) SetDecisionTree(decisionTreeName string, treeMap map[string]interface{}, replaceMap map[string]map[string]string) {
+	dtc.mutex.Lock()
+	defer dtc.mutex.Unlock()
+	dtc.decisionTrees[decisionTreeName] = &decisionTree{treeMap, replaceMap}
 }
