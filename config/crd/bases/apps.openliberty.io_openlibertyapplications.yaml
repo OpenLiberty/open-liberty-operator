@@ -1031,6 +1031,8 @@ spec:
                       to ClusterFirst.
                     type: string
                 type: object
+              enableCaching:
+                type: boolean
               env:
                 description: An array of environment variables for the application
                   container.

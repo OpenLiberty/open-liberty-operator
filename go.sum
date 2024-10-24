@@ -4,6 +4,10 @@ contrib.go.opencensus.io/exporter/prometheus v0.4.2 h1:sqfsYl5GIY/L570iT+l93ehxa
 contrib.go.opencensus.io/exporter/prometheus v0.4.2/go.mod h1:dvEHbiKmgvbr5pjaF9fpw1KeYcjrnC1J8B+JKjsZyRQ=
 github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20240920184731-58836ec570f6 h1:ltEk49dxle0XgNgVSGWspfBqcx2nkd1SBMLoWOD1ETA=
 github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20240920184731-58836ec570f6/go.mod h1:Q//a3yubxjR3+COorasymYRuuiDPs0Usgl9YuADkD6U=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20241023211710-e7e9ab1cd634 h1:w4SV1J0KRVnrDPmp5Xz++U61jSSQL/ao5RlVhlyzLM4=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20241023211710-e7e9ab1cd634/go.mod h1:Q//a3yubxjR3+COorasymYRuuiDPs0Usgl9YuADkD6U=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20241024152417-442bb576f90a h1:9kPg02fOV56zvjpSuzwSJh1hrH9/wwigTnS7XbD+e2Q=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20241024152417-442bb576f90a/go.mod h1:Q//a3yubxjR3+COorasymYRuuiDPs0Usgl9YuADkD6U=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=

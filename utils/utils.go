@@ -790,7 +790,7 @@ func CustomizeLibertyFileMountXML(mountingPasswordKeySecret *corev1.Secret, moun
 
 // Returns true if the OpenLibertyApplication leader's state has changed, causing existing LTPA Jobs to need a configuration update, otherwise return false
 func IsLTPAJobConfigurationOutdated(job *v1.Job, appLeaderInstance *olv1.OpenLibertyApplication, client client.Client) bool {
-	// The Job contains the leader's pull secret
+	// Outdated if the Job doesn't contain the leader's pull secret
 	if appLeaderInstance.GetPullSecret() != nil && *appLeaderInstance.GetPullSecret() != "" {
 		ltpaJobHasLeaderPullSecret := false
 		for _, objectReference := range job.Spec.Template.Spec.ImagePullSecrets {
@@ -802,7 +802,7 @@ func IsLTPAJobConfigurationOutdated(job *v1.Job, appLeaderInstance *olv1.OpenLib
 			return true
 		}
 	}
-	// The Job contains the leader's custom ServiceAccount's pull secrets
+	// Outdated if the Job doesn't contain the leader's custom ServiceAccount's pull secrets
 	if leaderSAName := rcoutils.GetServiceAccountName(appLeaderInstance); len(leaderSAName) > 0 {
 		customServiceAccount := &corev1.ServiceAccount{}
 		if err := client.Get(context.TODO(), types.NamespacedName{Name: leaderSAName, Namespace: appLeaderInstance.GetNamespace()}, customServiceAccount); err == nil {
@@ -817,12 +817,16 @@ func IsLTPAJobConfigurationOutdated(job *v1.Job, appLeaderInstance *olv1.OpenLib
 	if len(job.Spec.Template.Spec.Containers) != 1 {
 		return true
 	}
-	// The Job matches the leader's pull policy
+	// Outdated if Job doesn't match the leader's pull policy
 	if job.Spec.Template.Spec.Containers[0].ImagePullPolicy != *appLeaderInstance.GetPullPolicy() {
 		return true
 	}
-	// The Job matches the leader's security context
+	// Outdated if Job doesn't match the leader's security context
 	if !reflect.DeepEqual(*job.Spec.Template.Spec.Containers[0].SecurityContext, *rcoutils.GetSecurityContext(appLeaderInstance)) {
+		return true
+	}
+	// Outdated if Job doesn't match the leader's application image reference
+	if job.Spec.Template.Spec.Containers[0].Image != appLeaderInstance.GetStatus().GetImageReference() {
 		return true
 	}
 	return false

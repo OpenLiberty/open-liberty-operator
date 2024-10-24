@@ -163,6 +163,8 @@ type OpenLibertyApplicationSpec struct {
 	// DNS settings for the application pod.
 	// +operator-sdk:csv:customresourcedefinitions:order=35,type=spec,displayName="DNS"
 	DNS *OpenLibertyApplicationDNS `json:"dns,omitempty"`
+
+	ManageCache *bool `json:"enableCaching,omitempty"`
 }
 
 // Defines the DNS
@@ -1588,4 +1590,9 @@ func convertFromCommonStatusEndpointScope(c common.StatusEndpointScope) StatusEn
 	default:
 		panic(c)
 	}
+}
+
+// GetManageLTPA returns the LTPA key sharing status
+func (cr *OpenLibertyApplication) GetManageCache() *bool {
+	return cr.Spec.ManageCache
 }
