@@ -485,7 +485,15 @@ func GetLabelFromDecisionPath(operandVersionString string, pathOptions []string,
 	return label, nil
 }
 
-func ParseDecisionTree(leaderTrackerType string, fileName *string) (map[string]interface{}, map[string]map[string]string, error) {
+func ParseDecisionTree(leaderTrackerType string, fileName *string, withCache bool) (map[string]interface{}, map[string]map[string]string, error) {
+	if withCache {
+		// First check the in-memory cache to see if a cached decision tree already exists
+		cachedTreeMap, cachedReplaceMap := TreeCache.Maps(leaderTrackerType)
+		if cachedTreeMap != nil && cachedReplaceMap != nil {
+			return cachedTreeMap, cachedReplaceMap, nil
+		}
+	}
+
 	var tree []byte
 	var err error
 	// Allow specifying custom file for testing
@@ -518,6 +526,10 @@ func ParseDecisionTree(leaderTrackerType string, fileName *string) (map[string]i
 
 	if err := ValidateMaps(treeMap, replaceMap); err != nil {
 		return nil, nil, err
+	}
+
+	if withCache {
+		TreeCache.SetDecisionTree(leaderTrackerType, treeMap, replaceMap)
 	}
 
 	return treeMap, replaceMap, nil
