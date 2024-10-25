@@ -153,9 +153,59 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeySharingEnabled(inst
 	}
 }
 
+func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerInit(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, semeruReconcileResultChan chan<- ReconcileResult, semeruMarkedForDeletionChan chan<- bool) {
+	instanceMutex.Lock()
+	defer instanceMutex.Unlock()
+
+	// Check if SemeruCloudCompiler is enabled before reconciling the Semeru Compiler deployment and service.
+	// Otherwise, delete the Semeru Compiler deployment and service.
+	message := "Start Semeru Compiler reconcile"
+	err, message, areCompletedSemeruInstancesMarkedToBeDeleted := r.reconcileSemeruCompiler(instance)
+	semeruMarkedForDeletionChan <- areCompletedSemeruInstancesMarkedToBeDeleted
+	if err != nil {
+		semeruReconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: message}
+		return
+	}
+	semeruReconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
+}
+
+func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerReady(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, semeruReconcileResultChan <-chan ReconcileResult, reconcileResultChan chan<- ReconcileResult) {
+	reconcileResult := <-semeruReconcileResultChan // blocking for reconcileSemeruCloudCompilerInit to return
+	if reconcileResult.err != nil {
+		reconcileResultChan <- ReconcileResult{err: reconcileResult.err, condition: reconcileResult.condition, message: reconcileResult.message}
+		return
+	}
+	instanceMutex.Lock()
+	defer instanceMutex.Unlock()
+
+	// If semeru compiler is enabled, make sure its ready
+	if r.isSemeruEnabled(instance) {
+		message := "Check Semeru Compiler resources ready"
+		err := r.areSemeruCompilerResourcesReady(instance)
+		if err != nil {
+			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeResourcesReady, message: message}
+			return
+		}
+	}
+
+	reconcileResultChan <- ReconcileResult{err: nil, condition: reconcileResult.condition}
+}
+
 // func (r *ReconcileOpenLiberty) reconcile(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
 // 	instanceMutex.Lock()
 // 	defer instanceMutex.Unlock()
+// }
+
+// func (r *ReconcileOpenLiberty) reconcile(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
+
+// }
+
+// func (r *ReconcileOpenLiberty) reconcile(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
+
+// }
+
+// func (r *ReconcileOpenLiberty) reconcile(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
+
 // }
 
 // func (r *ReconcileOpenLiberty) reconcile(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
@@ -186,6 +236,14 @@ func (r *ReconcileOpenLiberty) reconcileServiceAccount(defaultMeta metav1.Object
 			}
 		}
 	}
+
+	// Check if the ServiceAccount has a valid pull secret before creating the deployment/statefulset
+	// or setting up knative. Otherwise the pods can go into an ImagePullBackOff loop
+	saErr := oputils.ServiceAccountPullSecretExists(instance, r.GetClient())
+	if saErr != nil {
+		reconcileResultChan <- ReconcileResult{err: saErr, condition: common.StatusConditionTypeReconciled}
+		return
+	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 }
 
@@ -198,10 +256,10 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 	imageReferenceOld := instance.Status.ImageReference
 	instance.Status.ImageReference = instance.Spec.ApplicationImage
 
-	reconcileResultChan := make(chan ReconcileResult, 3)
+	reconcileResultChan := make(chan ReconcileResult, 4)
 	instanceMutex := &sync.Mutex{}
 
-	go r.reconcileImageStream(instance, instanceMutex, reconcileResultChan) // // STATE: {reconcileResultChan: 1}
+	go r.reconcileImageStream(instance, instanceMutex, reconcileResultChan) // STATE: {reconcileResultChan: 1}
 
 	// obtain ltpa keys and config metadata
 	ltpaMetadataChan := make(chan *lutils.LTPAMetadata, 2)
@@ -249,42 +307,20 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 
 	go r.reconcileServiceAccount(defaultMeta, instance, instanceMutex, reconcileResultChan) // STATE: {reconcileResultChan: 3, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1}
 
+	semeruReconcileResultChan := make(chan ReconcileResult, 1)
+	semeruMarkedForDeletionChan := make(chan bool, 1)
+	go r.reconcileSemeruCloudCompilerInit(instance, instanceMutex, semeruReconcileResultChan, semeruMarkedForDeletionChan) // STATE: {reconcileResultChan: 3, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, semeruReconcilResultChan: 1}
+	go r.reconcileSemeruCloudCompilerReady(instance, instanceMutex, semeruReconcileResultChan, reconcileResultChan)        // STATE: {reconcileResultChan: 4, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1}
+
 	ltpaKeysMetadata := <-ltpaMetadataChan
 	ltpaConfigMetadata := <-ltpaMetadataChan
 	passwordEncryptionMetadata := <-passwordEncryptionMetadataChan
 
-	reconcileResults := 3
+	reconcileResults := 4
 	for i := 0; i < reconcileResults; i++ {
 		reconcileResult := <-reconcileResultChan
 		if reconcileResult.err != nil {
 			return r.ManageError(reconcileResult.err, reconcileResult.condition, instance)
-		}
-	}
-
-	// Check if the ServiceAccount has a valid pull secret before creating the deployment/statefulset
-	// or setting up knative. Otherwise the pods can go into an ImagePullBackOff loop
-	saErr := oputils.ServiceAccountPullSecretExists(instance, r.GetClient())
-	if saErr != nil {
-		return r.ManageError(saErr, common.StatusConditionTypeReconciled, instance)
-	}
-
-	// Check if SemeruCloudCompiler is enabled before reconciling the Semeru Compiler deployment and service.
-	// Otherwise, delete the Semeru Compiler deployment and service.
-	message := "Start Semeru Compiler reconcile"
-	reqLogger.Info(message)
-	err, message, areCompletedSemeruInstancesMarkedToBeDeleted := r.reconcileSemeruCompiler(instance)
-	if err != nil {
-		reqLogger.Error(err, message)
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-	}
-	// If semeru compiler is enabled, make sure its ready
-	if r.isSemeruEnabled(instance) {
-		message = "Check Semeru Compiler resources ready"
-		reqLogger.Info(message)
-		err = r.areSemeruCompilerResourcesReady(instance)
-		if err != nil {
-			reqLogger.Error(err, message)
-			return r.ManageError(err, common.StatusConditionTypeResourcesReady, instance)
 		}
 	}
 
@@ -298,7 +334,7 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 			&autoscalingv1.HorizontalPodAutoscaler{ObjectMeta: defaultMeta},
 			&networkingv1.NetworkPolicy{ObjectMeta: defaultMeta},
 		}
-		err = r.DeleteResources(resources)
+		err := r.DeleteResources(resources)
 		if err != nil {
 			reqLogger.Error(err, "Failed to clean up non-Knative resources")
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -338,7 +374,7 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 
 	if isKnativeSupported {
 		ksvc := &servingv1.Service{ObjectMeta: defaultMeta}
-		err = r.DeleteResource(ksvc)
+		err := r.DeleteResource(ksvc)
 		if err != nil {
 			reqLogger.Error(err, "Failed to delete Knative Service")
 			r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -767,6 +803,7 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 	}
 
 	// Delete completed Semeru instances because all pods now point to the newest Semeru service
+	areCompletedSemeruInstancesMarkedToBeDeleted := <-semeruMarkedForDeletionChan
 	if areCompletedSemeruInstancesMarkedToBeDeleted && r.isOpenLibertyApplicationReady(instance) {
 		if err := r.deleteCompletedSemeruInstances(instance); err != nil {
 			reqLogger.Error(err, "Failed to delete completed Semeru instance")
