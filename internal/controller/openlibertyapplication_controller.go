@@ -6,8 +6,6 @@ import (
 	"os"
 	"strings"
 
-	networkingv1 "k8s.io/api/networking/v1"
-
 	"github.com/application-stacks/runtime-component-operator/common"
 	"github.com/go-logr/logr"
 
@@ -24,6 +22,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -250,7 +249,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 	var ltpaMetadataList *lutils.LTPAMetadataList
 	var ltpaKeysMetadata, ltpaConfigMetadata *lutils.LTPAMetadata
 	if r.isLTPAKeySharingEnabled(instance) {
-		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, LTPA_RESOURCE_SHARING_FILE_NAME, r.isCachingEnabled(instance))
+		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, LTPA_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
@@ -264,7 +263,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 	var passwordEncryptionMetadataList *lutils.PasswordEncryptionMetadataList
 	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{}
 	if r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata) {
-		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, r.isCachingEnabled(instance))
+		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
@@ -275,7 +274,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 	} else if r.isPasswordEncryptionKeySharingEnabled(instance) {
 		// error if the password encryption key sharing is enabled but the Secret is not found
 		passwordEncryptionSecretName := lutils.PasswordEncryptionKeyRootName + passwordEncryptionMetadata.Name
-		err := errors.Wrapf(fmt.Errorf("Secret %q not found", passwordEncryptionSecretName), "Secret for Password Encryption was not found. Create a secret named %q in namespace %q with the encryption key specified in data field %q.", passwordEncryptionSecretName, instance.GetNamespace(), "passwordEncryptionKey")
+		err := errors.Wrapf(fmt.Errorf("secret %q not found", passwordEncryptionSecretName), "Secret for Password Encryption was not found. Create a secret named %q in namespace %q with the encryption key specified in data field %q.", passwordEncryptionSecretName, instance.GetNamespace(), "passwordEncryptionKey")
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
@@ -283,20 +282,18 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 		// Trigger a new Semeru Cloud Compiler generation
 		createNewSemeruGeneration(instance)
 
-		// If the shared LTPA keys was not generated from the last application image, restart the key generation process
-		if r.isLTPAKeySharingEnabled(instance) {
-			if err := r.restartLTPAKeysGeneration(instance, ltpaKeysMetadata); err != nil {
-				reqLogger.Error(err, "Error restarting the LTPA keys generation process")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
-		}
-
 		reqLogger.Info("Updating status.imageReference", "status.imageReference", instance.Status.ImageReference)
 		err := r.UpdateStatus(instance)
 		if err != nil {
 			reqLogger.Error(err, "Error updating Open Liberty application status")
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
+	}
+
+	message, err := r.reconcileLibertyProxy("openshift-operators", instance)
+	if err != nil {
+		reqLogger.Error(err, "Failed to reconcile Liberty proxy")
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
 	serviceAccountName := oputils.GetServiceAccountName(instance)
@@ -329,7 +326,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 
 	// Check if SemeruCloudCompiler is enabled before reconciling the Semeru Compiler deployment and service.
 	// Otherwise, delete the Semeru Compiler deployment and service.
-	message := "Start Semeru Compiler reconcile"
+	message = "Start Semeru Compiler reconcile"
 	reqDebugLogger.Info(message)
 	err, message, areCompletedSemeruInstancesMarkedToBeDeleted := r.reconcileSemeruCompiler(instance)
 	if err != nil {
@@ -433,11 +430,11 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
-	if (ba.GetManageTLS() == nil || *ba.GetManageTLS()) &&
-		ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName] == "" {
-		return r.ManageError(errors.New("Failed to generate TLS certificate. Ensure cert-manager is installed and running"),
-			common.StatusConditionTypeReconciled, instance)
-	}
+	// if (ba.GetManageTLS() == nil || *ba.GetManageTLS()) &&
+	// 	ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName] == "" {
+	// 	return r.ManageError(errors.New("Failed to generate TLS certificate. Ensure cert-manager is installed and running"),
+	// 		common.StatusConditionTypeReconciled, instance)
+	// }
 
 	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: defaultMeta}
 	if np := instance.Spec.NetworkPolicy; np == nil || np != nil && !np.IsDisabled() {
@@ -504,7 +501,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 	}
 
 	// Using the LTPA keys and config metadata, create and manage the shared LTPA Liberty server XML if the feature is enabled
-	message, ltpaXMLSecretName, err := r.reconcileLTPAConfig(instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
+	message, ltpaXMLSecretName, err := r.reconcileLTPAConfig(operatorNamespace, instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -833,6 +830,12 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 		}
 	}
 
+	if (ba.GetManageTLS() == nil || *ba.GetManageTLS()) &&
+		ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName] == "" {
+		return r.ManageError(errors.New("Failed to generate TLS certificate. Ensure cert-manager is installed and running"),
+			common.StatusConditionTypeReconciled, instance)
+	}
+
 	instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 	instance.Status.Versions.Reconciled = lutils.OperandVersion
 	reqLogger.Info("Reconcile OpenLibertyApplication - completed")
@@ -923,19 +926,7 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 		},
 	}
 
-<<<<<<< HEAD
 	b := ctrl.NewControllerManagedBy(mgr).For(&openlibertyv1.OpenLibertyApplication{}, builder.WithPredicates(pred))
-=======
-	b := ctrl.NewControllerManagedBy(mgr).For(&openlibertyv1.OpenLibertyApplication{}, builder.WithPredicates(pred)).
-		Owns(&corev1.Service{}, builder.WithPredicates(predSubResource)).
-		Owns(&corev1.Secret{}, builder.WithPredicates(predSubResource)).
-		Owns(&appsv1.Deployment{}, builder.WithPredicates(predSubResWithGenCheck)).
-		Owns(&appsv1.StatefulSet{}, builder.WithPredicates(predSubResWithGenCheck)).
-		Owns(&autoscalingv1.HorizontalPodAutoscaler{}, builder.WithPredicates(predSubResource)).
-		WithOptions(controller.Options{
-			MaxConcurrentReconciles: 1,
-		})
->>>>>>> 2d5cc540 (Pull RCO max concurrent reconcile changes)
 
 	if !oputils.GetOperatorDisableWatches() {
 		b = b.Owns(&corev1.Service{}, builder.WithPredicates(predSubResource)).

@@ -152,6 +152,26 @@ func (r *ReconcileOpenLiberty) isUsingPasswordEncryptionKeySharing(instance *olv
 	return false
 }
 
+func (r *ReconcileOpenLiberty) getInternalPasswordEncryptionKeyState(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (string, string, bool, error) {
+	if !r.isPasswordEncryptionKeySharingEnabled(instance) {
+		return "", "", false, nil
+	}
+	secret, err := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata)
+	if err != nil {
+		return "", "", true, err
+	}
+	passwordEncryptionKey := ""
+	encryptionSecretLastRotation := ""
+	if key, found := secret.Data["passwordEncryptionKey"]; found {
+		passwordEncryptionKey = string(key)
+	}
+	if lastRotation, found := secret.Data["lastRotation"]; found {
+		encryptionSecretLastRotation = string(lastRotation)
+	}
+	// TODO: cover when secret does not contain data key-value pairs
+	return passwordEncryptionKey, encryptionSecretLastRotation, true, nil
+}
+
 // Returns the Secret that contains the password encryption key used internally by the operator
 func (r *ReconcileOpenLiberty) hasInternalEncryptionKeySecret(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (*corev1.Secret, error) {
 	return r.getSecret(instance, lutils.LocalPasswordEncryptionKeyRootName+passwordEncryptionMetadata.Name+"-internal")
