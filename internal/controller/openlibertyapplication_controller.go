@@ -95,8 +95,14 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 	configMap, err := r.GetOpConfigMap(OperatorName, ns)
 	if err != nil {
-		reqLogger.Info("Failed to get open-liberty-operator config map, error: " + err.Error())
-		oputils.CreateConfigMap(OperatorName)
+		if kerrors.IsNotFound(err) {
+			reqLogger.Info("Failed to get open-liberty-operator config map, error: " + err.Error())
+			oputils.CreateConfigMap(OperatorName)
+		} else {
+			// Error reading the object - requeue the request.
+			reqLogger.Info("Failed to get open-liberty-operator config map, error: " + err.Error())
+			return reconcile.Result{}, err
+		}
 	} else {
 		common.LoadFromConfigMap(common.Config, configMap)
 	}
@@ -235,7 +241,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	var ltpaMetadataList *lutils.LTPAMetadataList
 	var ltpaKeysMetadata, ltpaConfigMetadata *lutils.LTPAMetadata
 	if r.isLTPAKeySharingEnabled(instance) {
-		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, LTPA_RESOURCE_SHARING_FILE_NAME, r.isCachingEnabling(instance))
+		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, LTPA_RESOURCE_SHARING_FILE_NAME, r.isCachingEnabled(instance))
 		if err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
@@ -249,7 +255,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	var passwordEncryptionMetadataList *lutils.PasswordEncryptionMetadataList
 	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{}
 	if r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata) {
-		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, r.isCachingEnabling(instance))
+		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, r.isCachingEnabled(instance))
 		if err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
