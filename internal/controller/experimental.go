@@ -397,15 +397,303 @@ func (r *ReconcileOpenLiberty) reconcileBindings(instance *olv1.OpenLibertyAppli
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 }
 
-// func (r *ReconcileOpenLiberty) reconcile(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
-// 	instanceMutex.Lock()
-// 	defer instanceMutex.Unlock()
-// }
+func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeyConcurrent(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, sharedResourceReconcileResultChan chan<- ReconcileResult, lastRotationChan chan<- string, encryptionSecretNameChan chan<- string) {
+	instanceMutex.Lock()
+	defer instanceMutex.Unlock()
 
-// func (r *ReconcileOpenLiberty) reconcile(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
-// 	instanceMutex.Lock()
-// 	defer instanceMutex.Unlock()
-// }
+	// Manage the shared password encryption key Secret if it exists
+	message, encryptionSecretName, passwordEncryptionKeyLastRotation, err := r.reconcilePasswordEncryptionKey(instance, passwordEncryptionMetadata)
+	lastRotationChan <- passwordEncryptionKeyLastRotation
+	encryptionSecretNameChan <- encryptionSecretName
+	if err != nil {
+		sharedResourceReconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: message}
+		return
+	}
+	sharedResourceReconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled, message: message}
+}
+
+func (r *ReconcileOpenLiberty) reconcileLTPAKeysConcurrent(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, reconcileResultChan chan<- ReconcileResult, lastRotationChan chan<- string, ltpaSecretNameChan chan<- string, ltpaKeysLastRotationChan chan<- string) {
+	instanceMutex.Lock()
+	defer instanceMutex.Unlock()
+
+	// Create and manage the shared LTPA keys Secret if the feature is enabled
+	message, ltpaSecretName, ltpaKeysLastRotation, err := r.reconcileLTPAKeys(instance, ltpaKeysMetadata, ltpaConfigMetadata)
+	ltpaSecretNameChan <- ltpaSecretName
+	lastRotationChan <- ltpaKeysLastRotation
+	ltpaKeysLastRotationChan <- ltpaKeysLastRotation
+	if err != nil {
+		reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: message}
+		return
+	}
+	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled, message: message}
+}
+
+func (r *ReconcileOpenLiberty) reconcileLTPAConfigConcurrent(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, reconcileResultChan chan<- ReconcileResult, sharedResourceReconcileResultChan <-chan ReconcileResult, lastRotationChan <-chan string, ltpaKeysLastRotationChan <-chan string, ltpaXMLSecretNameChan chan<- string) {
+	// there are two shared resources this function depends on: LTPA and PasswordEncryption
+	for i := 0; i < 2; i++ {
+		sharedResourceReconcileResult := <-sharedResourceReconcileResultChan
+		if sharedResourceReconcileResult.err != nil {
+			<-lastRotationChan
+			<-lastRotationChan
+			<-ltpaKeysLastRotationChan
+			ltpaXMLSecretNameChan <- "" // flush with dummy data
+			reconcileResultChan <- sharedResourceReconcileResult
+			return
+		}
+	}
+
+	// Block for the shared resources's lastRotation times
+	lastRotationVal1 := <-lastRotationChan
+	lastRotationVal2 := <-lastRotationChan
+	ltpaKeysLastRotation := <-ltpaKeysLastRotationChan
+
+	// Acquire the lock
+	instanceMutex.Lock()
+	defer instanceMutex.Unlock()
+
+	// get the last key-related rotation time as a string to be used by reconcileLTPAConfig for non-leaders to yield (blocking) to the LTPA config leader
+	lastKeyRelatedRotation, err := lutils.GetMaxTime(lastRotationVal1, lastRotationVal2)
+	if err != nil {
+		ltpaXMLSecretNameChan <- "" // flush with dummy data
+		reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled}
+		return
+	}
+
+	// Using the LTPA keys and config metadata, create and manage the shared LTPA Liberty server XML if the feature is enabled
+	message, ltpaXMLSecretName, err := r.reconcileLTPAConfig(instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
+	ltpaXMLSecretNameChan <- ltpaXMLSecretName
+	if err != nil {
+		reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled, message: message}
+		return
+	}
+	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
+}
+
+func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, reconcileResultChan chan<- ReconcileResult, sharedResourceHandoffReconcileResultChan <-chan ReconcileResult, encryptionSecretNameChan <-chan string, ltpaSecretNameChan <-chan string, ltpaXMLSecretNameChan <-chan string) {
+	sharedResourceHandoffResult := <-sharedResourceHandoffReconcileResultChan
+	encryptionSecretName := <-encryptionSecretNameChan
+	ltpaSecretName := <-ltpaSecretNameChan
+	ltpaXMLSecretName := <-ltpaXMLSecretNameChan
+	if sharedResourceHandoffResult.err != nil {
+		reconcileResultChan <- sharedResourceHandoffResult
+		return
+	}
+
+	instanceMutex.Lock()
+	defer instanceMutex.Unlock()
+
+	if instance.Spec.StatefulSet != nil {
+		// Delete Deployment if exists
+		deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
+		err := r.DeleteResource(deploy)
+
+		if err != nil {
+			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete Deployment"}
+			return
+		}
+		svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: instance.Name + "-headless", Namespace: instance.Namespace}}
+		err = r.CreateOrUpdate(svc, instance, func() error {
+			oputils.CustomizeService(svc, instance)
+			svc.Spec.ClusterIP = corev1.ClusterIPNone
+			svc.Spec.Type = corev1.ServiceTypeClusterIP
+			return nil
+		})
+		if err != nil {
+			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile headless Service"}
+			return
+		}
+
+		statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
+		capturedSubError := false
+		err = r.CreateOrUpdate(statefulSet, instance, func() error {
+			oputils.CustomizeStatefulSet(statefulSet, instance)
+			oputils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
+			oputils.CustomizePersistence(statefulSet, instance)
+			if err := lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance, r.GetClient()); err != nil {
+				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile StatefulSet; Failed to reconcile Liberty env, error: " + err.Error()}
+				capturedSubError = true
+				return err
+			}
+
+			statefulSet.Spec.Template.Spec.Containers[0].Args = r.getSemeruJavaOptions(instance)
+
+			if err := oputils.CustomizePodWithSVCCertificate(&statefulSet.Spec.Template, instance, r.GetClient()); err != nil {
+				return err
+			}
+
+			lutils.CustomizeLibertyAnnotations(&statefulSet.Spec.Template, instance)
+			if instance.Spec.SSO != nil {
+				err = lutils.CustomizeEnvSSO(&statefulSet.Spec.Template, instance, r.GetClient(), r.IsOpenShift())
+				if err != nil {
+					reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile StatefulSet; Failed to reconcile Single sign-on configuration"}
+					capturedSubError = true
+					return err
+				}
+			}
+			lutils.ConfigureServiceability(&statefulSet.Spec.Template, instance)
+			semeruCertVolume := getSemeruCertVolume(instance)
+			if r.isSemeruEnabled(instance) && semeruCertVolume != nil {
+				statefulSet.Spec.Template.Spec.Volumes = append(statefulSet.Spec.Template.Spec.Volumes, *semeruCertVolume)
+				statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts,
+					getSemeruCertVolumeMount(instance))
+				semeruTLSSecretName := instance.Status.SemeruCompiler.TLSSecretName
+				err := lutils.AddSecretResourceVersionAsEnvVar(&statefulSet.Spec.Template, instance, r.GetClient(),
+					semeruTLSSecretName, "SEMERU_TLS")
+				if err != nil {
+					return err
+				}
+			}
+
+			if r.isPasswordEncryptionKeySharingEnabled(instance) && len(encryptionSecretName) > 0 {
+				lutils.ConfigurePasswordEncryption(&statefulSet.Spec.Template, instance, OperatorShortName, passwordEncryptionMetadata)
+				lastRotationAnnotation, err := lutils.GetSecretLastRotationAsLabelMap(instance, r.GetClient(), encryptionSecretName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
+				if err != nil {
+					return err
+				}
+				lutils.AddPodTemplateSpecAnnotation(&statefulSet.Spec.Template, lastRotationAnnotation)
+				if instance.Status.GetReferences()[lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)] != encryptionSecretName {
+					instance.Status.SetReference(lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME), encryptionSecretName)
+				}
+			} else {
+				lutils.RemovePodTemplateSpecAnnotationByKey(&statefulSet.Spec.Template, lutils.GetLastRotationLabelKey(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME))
+				lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME))
+			}
+
+			if r.isLTPAKeySharingEnabled(instance) && len(ltpaSecretName) > 0 {
+				lutils.ConfigureLTPAConfig(&statefulSet.Spec.Template, instance, OperatorShortName, ltpaSecretName, ltpaConfigMetadata.Name)
+				// add LTPA key last rotation annotation
+				lastRotationAnnotation, err := lutils.GetSecretLastRotationAsLabelMap(instance, r.GetClient(), ltpaSecretName, LTPA_RESOURCE_SHARING_FILE_NAME)
+				if err != nil {
+					return err
+				}
+				lutils.AddPodTemplateSpecAnnotation(&statefulSet.Spec.Template, lastRotationAnnotation)
+				// add LTPA config last rotation annotation
+				configLastRotationAnnotation, err := lutils.GetSecretLastRotationLabel(instance, r.GetClient(), ltpaXMLSecretName, LTPA_CONFIG_RESOURCE_SHARING_FILE_NAME)
+				if err != nil {
+					return err
+				}
+				lutils.AddPodTemplateSpecAnnotation(&statefulSet.Spec.Template, configLastRotationAnnotation)
+				if instance.Status.GetReferences()[lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME)] != ltpaSecretName {
+					instance.Status.SetReference(lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME), ltpaSecretName)
+				}
+			} else {
+				lutils.RemovePodTemplateSpecAnnotationByKey(&statefulSet.Spec.Template, lutils.GetLastRotationLabelKey(LTPA_RESOURCE_SHARING_FILE_NAME))
+				lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME))
+			}
+			return nil
+		})
+		if err != nil {
+			if !capturedSubError {
+				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile StatefulSet"}
+			}
+			// otherwise return since the error is already captured in inside r.CreateOrUpdate()
+			return
+		}
+
+	} else {
+		// Delete StatefulSet if exists
+		statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
+		err := r.DeleteResource(statefulSet)
+		if err != nil {
+			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete StatefulSet"}
+			return
+		}
+
+		// Delete StatefulSet if exists
+		headlesssvc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: instance.Name + "-headless", Namespace: instance.Namespace}}
+		err = r.DeleteResource(headlesssvc)
+
+		if err != nil {
+			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete headless Service"}
+			return
+		}
+		capturedSubError := false
+		deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
+		err = r.CreateOrUpdate(deploy, instance, func() error {
+			oputils.CustomizeDeployment(deploy, instance)
+			oputils.CustomizePodSpec(&deploy.Spec.Template, instance)
+			if err := lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance, r.GetClient()); err != nil {
+				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile Deployment; Failed to reconcile Liberty env, error: " + err.Error()}
+				capturedSubError = true
+				return err
+			}
+			deploy.Spec.Template.Spec.Containers[0].Args = r.getSemeruJavaOptions(instance)
+
+			if err := oputils.CustomizePodWithSVCCertificate(&deploy.Spec.Template, instance, r.GetClient()); err != nil {
+				return err
+			}
+			lutils.CustomizeLibertyAnnotations(&deploy.Spec.Template, instance)
+			if instance.Spec.SSO != nil {
+				err = lutils.CustomizeEnvSSO(&deploy.Spec.Template, instance, r.GetClient(), r.IsOpenShift())
+				if err != nil {
+					reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile Deployment; Failed to reconcile Single sign-on configuration"}
+					capturedSubError = true
+					return err
+				}
+			}
+
+			lutils.ConfigureServiceability(&deploy.Spec.Template, instance)
+			semeruCertVolume := getSemeruCertVolume(instance)
+			if r.isSemeruEnabled(instance) && semeruCertVolume != nil {
+				deploy.Spec.Template.Spec.Volumes = append(deploy.Spec.Template.Spec.Volumes, *semeruCertVolume)
+				deploy.Spec.Template.Spec.Containers[0].VolumeMounts = append(deploy.Spec.Template.Spec.Containers[0].VolumeMounts,
+					getSemeruCertVolumeMount(instance))
+				semeruTLSSecretName := instance.Status.SemeruCompiler.TLSSecretName
+				err := lutils.AddSecretResourceVersionAsEnvVar(&deploy.Spec.Template, instance, r.GetClient(),
+					semeruTLSSecretName, "SEMERU_TLS")
+				if err != nil {
+					return err
+				}
+			}
+
+			if r.isPasswordEncryptionKeySharingEnabled(instance) && len(encryptionSecretName) > 0 {
+				lutils.ConfigurePasswordEncryption(&deploy.Spec.Template, instance, OperatorShortName, passwordEncryptionMetadata)
+				lastRotationAnnotation, err := lutils.GetSecretLastRotationAsLabelMap(instance, r.GetClient(), encryptionSecretName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
+				if err != nil {
+					return err
+				}
+				lutils.AddPodTemplateSpecAnnotation(&deploy.Spec.Template, lastRotationAnnotation)
+				if instance.Status.GetReferences()[lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)] != encryptionSecretName {
+					instance.Status.SetReference(lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME), encryptionSecretName)
+				}
+			} else {
+				lutils.RemovePodTemplateSpecAnnotationByKey(&deploy.Spec.Template, lutils.GetLastRotationLabelKey(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME))
+				lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME))
+			}
+
+			if r.isLTPAKeySharingEnabled(instance) && len(ltpaSecretName) > 0 {
+				lutils.ConfigureLTPAConfig(&deploy.Spec.Template, instance, OperatorShortName, ltpaSecretName, ltpaConfigMetadata.Name)
+				// add LTPA key last rotation annotation
+				lastRotationAnnotation, err := lutils.GetSecretLastRotationAsLabelMap(instance, r.GetClient(), ltpaSecretName, LTPA_RESOURCE_SHARING_FILE_NAME)
+				if err != nil {
+					return err
+				}
+				lutils.AddPodTemplateSpecAnnotation(&deploy.Spec.Template, lastRotationAnnotation)
+				// add LTPA config last rotation annotation
+				configLastRotationAnnotation, err := lutils.GetSecretLastRotationLabel(instance, r.GetClient(), ltpaXMLSecretName, LTPA_CONFIG_RESOURCE_SHARING_FILE_NAME)
+				if err != nil {
+					return err
+				}
+				lutils.AddPodTemplateSpecAnnotation(&deploy.Spec.Template, configLastRotationAnnotation)
+				if instance.Status.GetReferences()[lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME)] != ltpaSecretName {
+					instance.Status.SetReference(lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME), ltpaSecretName)
+				}
+			} else {
+				lutils.RemovePodTemplateSpecAnnotationByKey(&deploy.Spec.Template, lutils.GetLastRotationLabelKey(LTPA_RESOURCE_SHARING_FILE_NAME))
+				lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME))
+			}
+			return nil
+		})
+		if err != nil {
+			if !capturedSubError {
+				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile Deployment"}
+			}
+			// otherwise return since the error is already captured in inside r.CreateOrUpdate()
+			return
+		}
+
+	}
+}
 
 // func (r *ReconcileOpenLiberty) reconcile(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
 // 	instanceMutex.Lock()
@@ -426,7 +714,7 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 	imageReferenceOld := instance.Status.ImageReference
 	instance.Status.ImageReference = instance.Spec.ApplicationImage
 
-	reconcileResultChan := make(chan ReconcileResult, 8)
+	reconcileResultChan := make(chan ReconcileResult, 9)
 	instanceMutex := &sync.Mutex{}
 
 	go r.reconcileImageStream(instance, instanceMutex, reconcileResultChan) // STATE: {reconcileResultChan: 1}
@@ -508,244 +796,34 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 	go r.reconcileServiceability(instance, instanceMutex, reqLogger, reconcileResultChan)                                                           // STATE: {reconcileResultChan: 7, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1}
 	go r.reconcileBindings(instance, instanceMutex, reconcileResultChan)                                                                            // STATE: {reconcileResultChan: 8, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1}
 
+	ltpaKeysLastRotationChan := make(chan string, 1)
+	lastRotationChan := make(chan string, 2) // order doesn't matter, just need the latest rotation time
+
+	encryptionSecretNameChan := make(chan string, 1)
+	ltpaSecretNameChan := make(chan string, 1)
+	ltpaXMLSecretNameChan := make(chan string, 1)
+
 	ltpaKeysMetadata := <-ltpaMetadataChan
 	ltpaConfigMetadata := <-ltpaMetadataChan
 	passwordEncryptionMetadata := <-passwordEncryptionMetadataChan
 
-	reconcileResults := 8
+	sharedResourceReconcileResultChan := make(chan ReconcileResult,
+		2) // reconcilePasswordEncryptionKeyConcurrent() + reconcileLTPAKeysConcurrent() write to this chan
+	sharedResourceHandoffReconcileResultChan := make(chan ReconcileResult,
+		1) // reconcileLTPAConfigConcurrent() reads from sharedResourceReconcileResultChan and writes to this chan
+
+	go r.reconcilePasswordEncryptionKeyConcurrent(instance, instanceMutex, passwordEncryptionMetadata, sharedResourceReconcileResultChan, lastRotationChan, encryptionSecretNameChan)                  // STATE: {reconcileResultChan: 8, sharedResourceReconcileResultChan: 1, lastRotationChan: 1, encryptionSecretNameChan: 1}
+	go r.reconcileLTPAKeysConcurrent(instance, instanceMutex, ltpaKeysMetadata, ltpaConfigMetadata, sharedResourceReconcileResultChan, lastRotationChan, ltpaSecretNameChan, ltpaKeysLastRotationChan) // STATE: {reconcileResultChan: 8, sharedResourceReconcileResultChan: 2, lastRotationChan: 2, ltpaKeysLastRotationChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1}
+	go r.reconcileLTPAConfigConcurrent(instance, instanceMutex, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, sharedResourceHandoffReconcileResultChan, sharedResourceReconcileResultChan,
+		lastRotationChan, ltpaKeysLastRotationChan, ltpaXMLSecretNameChan) // STATE: {reconcileResultChan: 8, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	go r.reconcileStatefulSetDeployment(defaultMeta, instance, instanceMutex, ltpaConfigMetadata, passwordEncryptionMetadata, reconcileResultChan, sharedResourceHandoffReconcileResultChan, encryptionSecretNameChan, ltpaSecretNameChan, ltpaXMLSecretNameChan) // STATE: {reconcileResultChan: 9}
+
+	reconcileResults := 9
 	for i := 0; i < reconcileResults; i++ {
 		reconcileResult := <-reconcileResultChan
 		if reconcileResult.err != nil {
 			return r.ManageError(reconcileResult.err, reconcileResult.condition, instance)
 		}
-	}
-
-	// Manage the shared password encryption key Secret if it exists
-	message, encryptionSecretName, passwordEncryptionKeyLastRotation, err := r.reconcilePasswordEncryptionKey(instance, passwordEncryptionMetadata)
-	if err != nil {
-		reqLogger.Error(err, message)
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-	}
-
-	// Create and manage the shared LTPA keys Secret if the feature is enabled
-	message, ltpaSecretName, ltpaKeysLastRotation, err := r.reconcileLTPAKeys(instance, ltpaKeysMetadata, ltpaConfigMetadata)
-	if err != nil {
-		reqLogger.Error(err, message)
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-	}
-
-	// get the last key-related rotation time as a string to be used by reconcileLTPAConfig for non-leaders to yield (blocking) to the LTPA config leader
-	lastKeyRelatedRotation, err := lutils.GetMaxTime(passwordEncryptionKeyLastRotation, ltpaKeysLastRotation)
-	if err != nil {
-		reqLogger.Error(err, message)
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-	}
-
-	// Using the LTPA keys and config metadata, create and manage the shared LTPA Liberty server XML if the feature is enabled
-	message, ltpaXMLSecretName, err := r.reconcileLTPAConfig(instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
-	if err != nil {
-		reqLogger.Error(err, message)
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-	}
-
-	if instance.Spec.StatefulSet != nil {
-		// Delete Deployment if exists
-		deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
-		err = r.DeleteResource(deploy)
-
-		if err != nil {
-			reqLogger.Error(err, "Failed to delete Deployment")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-		svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: instance.Name + "-headless", Namespace: instance.Namespace}}
-		err = r.CreateOrUpdate(svc, instance, func() error {
-			oputils.CustomizeService(svc, instance)
-			svc.Spec.ClusterIP = corev1.ClusterIPNone
-			svc.Spec.Type = corev1.ServiceTypeClusterIP
-			return nil
-		})
-		if err != nil {
-			reqLogger.Error(err, "Failed to reconcile headless Service")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-
-		statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
-		err = r.CreateOrUpdate(statefulSet, instance, func() error {
-			oputils.CustomizeStatefulSet(statefulSet, instance)
-			oputils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
-			oputils.CustomizePersistence(statefulSet, instance)
-			if err := lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance, r.GetClient()); err != nil {
-				reqLogger.Error(err, "Failed to reconcile Liberty env, error: "+err.Error())
-				return err
-			}
-
-			statefulSet.Spec.Template.Spec.Containers[0].Args = r.getSemeruJavaOptions(instance)
-
-			if err := oputils.CustomizePodWithSVCCertificate(&statefulSet.Spec.Template, instance, r.GetClient()); err != nil {
-				return err
-			}
-
-			lutils.CustomizeLibertyAnnotations(&statefulSet.Spec.Template, instance)
-			if instance.Spec.SSO != nil {
-				err = lutils.CustomizeEnvSSO(&statefulSet.Spec.Template, instance, r.GetClient(), r.IsOpenShift())
-				if err != nil {
-					reqLogger.Error(err, "Failed to reconcile Single sign-on configuration")
-					return err
-				}
-			}
-			lutils.ConfigureServiceability(&statefulSet.Spec.Template, instance)
-			semeruCertVolume := getSemeruCertVolume(instance)
-			if r.isSemeruEnabled(instance) && semeruCertVolume != nil {
-				statefulSet.Spec.Template.Spec.Volumes = append(statefulSet.Spec.Template.Spec.Volumes, *semeruCertVolume)
-				statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts,
-					getSemeruCertVolumeMount(instance))
-				semeruTLSSecretName := instance.Status.SemeruCompiler.TLSSecretName
-				err := lutils.AddSecretResourceVersionAsEnvVar(&statefulSet.Spec.Template, instance, r.GetClient(),
-					semeruTLSSecretName, "SEMERU_TLS")
-				if err != nil {
-					return err
-				}
-			}
-
-			if r.isPasswordEncryptionKeySharingEnabled(instance) && len(encryptionSecretName) > 0 {
-				lutils.ConfigurePasswordEncryption(&statefulSet.Spec.Template, instance, OperatorShortName, passwordEncryptionMetadata)
-				lastRotationAnnotation, err := lutils.GetSecretLastRotationAsLabelMap(instance, r.GetClient(), encryptionSecretName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
-				if err != nil {
-					return err
-				}
-				lutils.AddPodTemplateSpecAnnotation(&statefulSet.Spec.Template, lastRotationAnnotation)
-				if instance.Status.GetReferences()[lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)] != encryptionSecretName {
-					instance.Status.SetReference(lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME), encryptionSecretName)
-				}
-			} else {
-				lutils.RemovePodTemplateSpecAnnotationByKey(&statefulSet.Spec.Template, lutils.GetLastRotationLabelKey(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME))
-				lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME))
-			}
-
-			if r.isLTPAKeySharingEnabled(instance) && len(ltpaSecretName) > 0 {
-				lutils.ConfigureLTPAConfig(&statefulSet.Spec.Template, instance, OperatorShortName, ltpaSecretName, ltpaConfigMetadata.Name)
-				// add LTPA key last rotation annotation
-				lastRotationAnnotation, err := lutils.GetSecretLastRotationAsLabelMap(instance, r.GetClient(), ltpaSecretName, LTPA_RESOURCE_SHARING_FILE_NAME)
-				if err != nil {
-					return err
-				}
-				lutils.AddPodTemplateSpecAnnotation(&statefulSet.Spec.Template, lastRotationAnnotation)
-				// add LTPA config last rotation annotation
-				configLastRotationAnnotation, err := lutils.GetSecretLastRotationLabel(instance, r.GetClient(), ltpaXMLSecretName, LTPA_CONFIG_RESOURCE_SHARING_FILE_NAME)
-				if err != nil {
-					return err
-				}
-				lutils.AddPodTemplateSpecAnnotation(&statefulSet.Spec.Template, configLastRotationAnnotation)
-				if instance.Status.GetReferences()[lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME)] != ltpaSecretName {
-					instance.Status.SetReference(lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME), ltpaSecretName)
-				}
-			} else {
-				lutils.RemovePodTemplateSpecAnnotationByKey(&statefulSet.Spec.Template, lutils.GetLastRotationLabelKey(LTPA_RESOURCE_SHARING_FILE_NAME))
-				lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME))
-			}
-			return nil
-		})
-		if err != nil {
-			reqLogger.Error(err, "Failed to reconcile StatefulSet")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-
-	} else {
-		// Delete StatefulSet if exists
-		statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
-		err = r.DeleteResource(statefulSet)
-		if err != nil {
-			reqLogger.Error(err, "Failed to delete Statefulset")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-
-		// Delete StatefulSet if exists
-		headlesssvc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: instance.Name + "-headless", Namespace: instance.Namespace}}
-		err = r.DeleteResource(headlesssvc)
-
-		if err != nil {
-			reqLogger.Error(err, "Failed to delete headless Service")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-		deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
-		err = r.CreateOrUpdate(deploy, instance, func() error {
-			oputils.CustomizeDeployment(deploy, instance)
-			oputils.CustomizePodSpec(&deploy.Spec.Template, instance)
-			if err := lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance, r.GetClient()); err != nil {
-				reqLogger.Error(err, "Failed to reconcile Liberty env, error: "+err.Error())
-				return err
-			}
-			deploy.Spec.Template.Spec.Containers[0].Args = r.getSemeruJavaOptions(instance)
-
-			if err := oputils.CustomizePodWithSVCCertificate(&deploy.Spec.Template, instance, r.GetClient()); err != nil {
-				return err
-			}
-			lutils.CustomizeLibertyAnnotations(&deploy.Spec.Template, instance)
-			if instance.Spec.SSO != nil {
-				err = lutils.CustomizeEnvSSO(&deploy.Spec.Template, instance, r.GetClient(), r.IsOpenShift())
-				if err != nil {
-					reqLogger.Error(err, "Failed to reconcile Single sign-on configuration")
-					return err
-				}
-			}
-
-			lutils.ConfigureServiceability(&deploy.Spec.Template, instance)
-			semeruCertVolume := getSemeruCertVolume(instance)
-			if r.isSemeruEnabled(instance) && semeruCertVolume != nil {
-				deploy.Spec.Template.Spec.Volumes = append(deploy.Spec.Template.Spec.Volumes, *semeruCertVolume)
-				deploy.Spec.Template.Spec.Containers[0].VolumeMounts = append(deploy.Spec.Template.Spec.Containers[0].VolumeMounts,
-					getSemeruCertVolumeMount(instance))
-				semeruTLSSecretName := instance.Status.SemeruCompiler.TLSSecretName
-				err := lutils.AddSecretResourceVersionAsEnvVar(&deploy.Spec.Template, instance, r.GetClient(),
-					semeruTLSSecretName, "SEMERU_TLS")
-				if err != nil {
-					return err
-				}
-			}
-
-			if r.isPasswordEncryptionKeySharingEnabled(instance) && len(encryptionSecretName) > 0 {
-				lutils.ConfigurePasswordEncryption(&deploy.Spec.Template, instance, OperatorShortName, passwordEncryptionMetadata)
-				lastRotationAnnotation, err := lutils.GetSecretLastRotationAsLabelMap(instance, r.GetClient(), encryptionSecretName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
-				if err != nil {
-					return err
-				}
-				lutils.AddPodTemplateSpecAnnotation(&deploy.Spec.Template, lastRotationAnnotation)
-				if instance.Status.GetReferences()[lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)] != encryptionSecretName {
-					instance.Status.SetReference(lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME), encryptionSecretName)
-				}
-			} else {
-				lutils.RemovePodTemplateSpecAnnotationByKey(&deploy.Spec.Template, lutils.GetLastRotationLabelKey(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME))
-				lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME))
-			}
-
-			if r.isLTPAKeySharingEnabled(instance) && len(ltpaSecretName) > 0 {
-				lutils.ConfigureLTPAConfig(&deploy.Spec.Template, instance, OperatorShortName, ltpaSecretName, ltpaConfigMetadata.Name)
-				// add LTPA key last rotation annotation
-				lastRotationAnnotation, err := lutils.GetSecretLastRotationAsLabelMap(instance, r.GetClient(), ltpaSecretName, LTPA_RESOURCE_SHARING_FILE_NAME)
-				if err != nil {
-					return err
-				}
-				lutils.AddPodTemplateSpecAnnotation(&deploy.Spec.Template, lastRotationAnnotation)
-				// add LTPA config last rotation annotation
-				configLastRotationAnnotation, err := lutils.GetSecretLastRotationLabel(instance, r.GetClient(), ltpaXMLSecretName, LTPA_CONFIG_RESOURCE_SHARING_FILE_NAME)
-				if err != nil {
-					return err
-				}
-				lutils.AddPodTemplateSpecAnnotation(&deploy.Spec.Template, configLastRotationAnnotation)
-				if instance.Status.GetReferences()[lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME)] != ltpaSecretName {
-					instance.Status.SetReference(lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME), ltpaSecretName)
-				}
-			} else {
-				lutils.RemovePodTemplateSpecAnnotationByKey(&deploy.Spec.Template, lutils.GetLastRotationLabelKey(LTPA_RESOURCE_SHARING_FILE_NAME))
-				lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME))
-			}
-			return nil
-		})
-		if err != nil {
-			reqLogger.Error(err, "Failed to reconcile Deployment")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-
 	}
 
 	if instance.Spec.Autoscaling != nil {
