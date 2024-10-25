@@ -162,6 +162,11 @@ spec:
       - description: The DNS Policy for the application pod. Defaults to ClusterFirst.
         displayName: DNS Policy
         path: dns.policy
+      - description: If set to true, it will enable experimental mode (concurrency)
+          when reconciling the application instance, otherwise does nothing. Defaults
+          to false.
+        displayName: Manage Concurrency
+        path: experimental.manageConcurrency
       - description: Whether the Service Account token should be mounted into the
           application pods. Defaults to true.
         displayName: Mount Service Account Token
@@ -191,6 +196,11 @@ spec:
       - description: The DNS Config for the application pod.
         displayName: DNS Config
         path: dns.config
+      - description: The maximum number of go-routines to be spawned that will create
+          ephemeral Pods (i.e. Jobs) in the cluster at a single time. Defaults to
+          3.
+        displayName: Ephemeral Pod Worker Pool Size
+        path: experimental.ephemeralPodWorkerPoolSize
       - description: Name of the service account to use for deploying the application.
           A service account is automatically created if it's not specified.
         displayName: Service Account Name
@@ -220,6 +230,10 @@ spec:
         path: autoscaling.targetCPUUtilizationPercentage
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:number
+      - description: If set to true, it will enable caching when reading the Decision
+          Tree data structure, otherwise does nothing. Defaults to false.
+        displayName: Manage Cache
+        path: experimental.manageCache
       - displayName: GitHub
         path: sso.github
       - description: Specifies the name of the claim. Use its value as the user group
