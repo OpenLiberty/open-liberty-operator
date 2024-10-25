@@ -205,6 +205,15 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// 	return reconcile.Result{}, nil
 	// }
 
+	// From here, the Open Liberty Application instance is stored in shared memory and can begin concurrent actions.
+	if !r.isConcurrencyEnabled(instance) {
+		return r.concurrentReconcile(ba, instance, reqLogger, isKnativeSupported, ctx, request)
+	} else {
+		return r.sequentialReconcile(ba, instance, reqLogger, isKnativeSupported, ctx, request)
+	}
+}
+
+func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, reqLogger logr.Logger, isKnativeSupported bool, ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	defaultMeta := metav1.ObjectMeta{
 		Name:      instance.Name,
 		Namespace: instance.Namespace,
@@ -283,7 +292,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 
 		reqLogger.Info("Updating status.imageReference", "status.imageReference", instance.Status.ImageReference)
-		err = r.UpdateStatus(instance)
+		err := r.UpdateStatus(instance)
 		if err != nil {
 			reqLogger.Error(err, "Error updating Open Liberty application status")
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -294,7 +303,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	if serviceAccountName != defaultMeta.Name {
 		if serviceAccountName == "" {
 			serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
-			err = r.CreateOrUpdate(serviceAccount, instance, func() error {
+			err := r.CreateOrUpdate(serviceAccount, instance, func() error {
 				return oputils.CustomizeServiceAccount(serviceAccount, instance, r.GetClient())
 			})
 			if err != nil {
@@ -303,7 +312,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			}
 		} else {
 			serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
-			err = r.DeleteResource(serviceAccount)
+			err := r.DeleteResource(serviceAccount)
 			if err != nil {
 				reqLogger.Error(err, "Failed to delete ServiceAccount")
 				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -924,7 +933,7 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.StatefulSet{}, builder.WithPredicates(predSubResWithGenCheck)).
 		Owns(&autoscalingv1.HorizontalPodAutoscaler{}, builder.WithPredicates(predSubResource)).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: 10,
+			MaxConcurrentReconciles: 1,
 		})
 >>>>>>> 2d5cc540 (Pull RCO max concurrent reconcile changes)
 
