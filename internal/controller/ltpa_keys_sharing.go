@@ -933,13 +933,6 @@ func (r *ReconcileOpenLiberty) isLTPAKeySharingEnabled(instance *olv1.OpenLibert
 	return false
 }
 
-func (r *ReconcileOpenLiberty) isCachingEnabling(instance *olv1.OpenLibertyApplication) bool {
-	if instance.GetManageCache() != nil && *instance.GetManageCache() {
-		return true
-	}
-	return false
-}
-
 // Search the cluster namespace for existing LTPA keys
 func (r *ReconcileOpenLiberty) GetLTPAKeyResources(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, assetsFolder *string) (*unstructured.UnstructuredList, string, error) {
 	ltpaResourceList, ltpaResourceRootName, err := lutils.CreateUnstructuredResourceListFromSignature(LTPA_KEY_RESOURCE_SHARING_FILE_NAME, assetsFolder, OperatorShortName)

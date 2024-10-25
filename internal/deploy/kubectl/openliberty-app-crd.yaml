@@ -1193,6 +1193,25 @@ spec:
                   type: object
                 type: array
                 x-kubernetes-list-type: atomic
+              experimental:
+                description: Defines the Experimental concurrency feature
+                properties:
+                  ephemeralPodWorkerPoolSize:
+                    description: The maximum number of go-routines to be spawned that
+                      will create ephemeral Pods (i.e. Jobs) in the cluster at a single
+                      time. Defaults to 3.
+                    type: integer
+                  manageCache:
+                    description: If set to true, it will enable caching when reading
+                      the Decision Tree data structure, otherwise does nothing. Defaults
+                      to false.
+                    type: boolean
+                  manageConcurrency:
+                    description: If set to true, it will enable experimental mode
+                      (concurrency) when reconciling the application instance, otherwise
+                      does nothing. Defaults to false.
+                    type: boolean
+                type: object
               expose:
                 description: Expose the application externally via a Route, a Knative
                   Route or an Ingress resource.
