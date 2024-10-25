@@ -6,10 +6,11 @@ import (
 	"os"
 	"strings"
 
-	networkingv1 "k8s.io/api/networking/v1"
-
 	"github.com/application-stacks/runtime-component-operator/common"
 	"github.com/go-logr/logr"
+	"golang.org/x/time/rate"
+	networkingv1 "k8s.io/api/networking/v1"
+	"k8s.io/client-go/util/workqueue"
 
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
 	oputils "github.com/application-stacks/runtime-component-operator/utils"
@@ -205,15 +206,25 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// 	return reconcile.Result{}, nil
 	// }
 
+	// message, err := r.reconcileManageErroringInstances(instance)
+	// if err != nil {
+	// 	if err == skippingForPendingInstanceErr {
+	// 		return r.ManageError(fmt.Errorf("Temporarily skipping this instance because it depends on another OpenLibertyApplication to recover; %s", message), common.StatusConditionTypeReconciled, instance) // Manage error while erroring instances are being worked on
+	// 	}
+	// 	// Manage success while erroring instances are being worked on
+	// 	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
+	// }
+	// defer r.CleanupInstance(instance)
+
 	// From here, the Open Liberty Application instance is stored in shared memory and can begin concurrent actions.
-	if !r.isConcurrencyEnabled(instance) {
-		return r.concurrentReconcile(ba, instance, reqLogger, isKnativeSupported, ctx, request)
+	if r.isConcurrencyEnabled(instance) {
+		return r.concurrentReconcile(ba, instance, reqLogger, reqDebugLogger, isKnativeSupported, ctx, request)
 	} else {
-		return r.sequentialReconcile(ba, instance, reqLogger, isKnativeSupported, ctx, request)
+		return r.sequentialReconcile(ba, instance, reqLogger, reqDebugLogger, isKnativeSupported, ctx, request)
 	}
 }
 
-func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, reqLogger logr.Logger, isKnativeSupported bool, ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, reqLogger logr.Logger, reqDebugLogger logr.Logger, isKnativeSupported bool, ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	defaultMeta := metav1.ObjectMeta{
 		Name:      instance.Name,
 		Namespace: instance.Namespace,
@@ -275,7 +286,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 	} else if r.isPasswordEncryptionKeySharingEnabled(instance) {
 		// error if the password encryption key sharing is enabled but the Secret is not found
 		passwordEncryptionSecretName := lutils.PasswordEncryptionKeyRootName + passwordEncryptionMetadata.Name
-		err := errors.Wrapf(fmt.Errorf("Secret %q not found", passwordEncryptionSecretName), "Secret for Password Encryption was not found. Create a secret named %q in namespace %q with the encryption key specified in data field %q.", passwordEncryptionSecretName, instance.GetNamespace(), "passwordEncryptionKey")
+		err := errors.Wrapf(fmt.Errorf("secret %q not found", passwordEncryptionSecretName), "Secret for Password Encryption was not found. Create a secret named %q in namespace %q with the encryption key specified in data field %q.", passwordEncryptionSecretName, instance.GetNamespace(), "passwordEncryptionKey")
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
@@ -433,11 +444,11 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
-	if (ba.GetManageTLS() == nil || *ba.GetManageTLS()) &&
-		ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName] == "" {
-		return r.ManageError(errors.New("Failed to generate TLS certificate. Ensure cert-manager is installed and running"),
-			common.StatusConditionTypeReconciled, instance)
-	}
+	// if (ba.GetManageTLS() == nil || *ba.GetManageTLS()) &&
+	// 	ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName] == "" {
+	// 	return r.ManageError(errors.New("Failed to generate TLS certificate. Ensure cert-manager is installed and running"),
+	// 		common.StatusConditionTypeReconciled, instance)
+	// }
 
 	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: defaultMeta}
 	if np := instance.Spec.NetworkPolicy; np == nil || np != nil && !np.IsDisabled() {
@@ -490,10 +501,13 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 	}
 
 	// Create and manage the shared LTPA keys Secret if the feature is enabled
-	message, ltpaSecretName, ltpaKeysLastRotation, err := r.reconcileLTPAKeys(instance, ltpaKeysMetadata, ltpaConfigMetadata)
+	message, ltpaSecretName, ltpaKeysLastRotation, err := r.reconcileLTPAKeys(instance, ltpaKeysMetadata, reqDebugLogger)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	} else {
+		reqLogger.Info("Reconcile LTPA: " + message + " " + ltpaSecretName + " " + ltpaKeysLastRotation)
+		reqLogger.Info(fmt.Sprintf("LTPA: %s,%s,%s", message, ltpaSecretName, ltpaKeysLastRotation))
 	}
 
 	// get the last key-related rotation time as a string to be used by reconcileLTPAConfig for non-leaders to yield (blocking) to the LTPA config leader
@@ -833,6 +847,12 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 		}
 	}
 
+	if (ba.GetManageTLS() == nil || *ba.GetManageTLS()) &&
+		ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName] == "" {
+		return r.ManageError(errors.New("Failed to generate TLS certificate. Ensure cert-manager is installed and running"),
+			common.StatusConditionTypeReconciled, instance)
+	}
+
 	instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 	instance.Status.Versions.Reconciled = lutils.OperandVersion
 	reqLogger.Info("Reconcile OpenLibertyApplication - completed")
@@ -846,6 +866,13 @@ func (r *ReconcileOpenLiberty) isOpenLibertyApplicationReady(ba common.BaseCompo
 		return statusCondition != nil && statusCondition.GetMessage() == common.StatusConditionTypeReadyMessage
 	}
 	return false
+}
+
+func DefaultOpenLibertyApplicationControllerRateLimiter() workqueue.RateLimiter {
+	return workqueue.NewMaxOfRateLimiter(
+		// workqueue.NewItemExponentialFailureRateLimiter(5*time.Millisecond, 1000*time.Second),
+		&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Inf, 1000)},
+	)
 }
 
 func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
@@ -928,10 +955,7 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Secret{}, builder.WithPredicates(predSubResource)).
 		Owns(&appsv1.Deployment{}, builder.WithPredicates(predSubResWithGenCheck)).
 		Owns(&appsv1.StatefulSet{}, builder.WithPredicates(predSubResWithGenCheck)).
-		Owns(&autoscalingv1.HorizontalPodAutoscaler{}, builder.WithPredicates(predSubResource)).
-		WithOptions(controller.Options{
-			MaxConcurrentReconciles: 1,
-		})
+		Owns(&autoscalingv1.HorizontalPodAutoscaler{}, builder.WithPredicates(predSubResource))
 
 	ok, _ := r.IsGroupVersionSupported(routev1.SchemeGroupVersion.String(), "Route")
 	if ok {
@@ -963,6 +987,7 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 
 	return b.WithOptions(controller.Options{
 		MaxConcurrentReconciles: maxConcurrentReconciles,
+		RateLimiter:             DefaultOpenLibertyApplicationControllerRateLimiter(),
 	}).Complete(r)
 }
 
