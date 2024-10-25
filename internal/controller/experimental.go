@@ -207,7 +207,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerInit(instance *olv1.O
 func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerReady(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, semeruReconcileResultChan <-chan ReconcileResult, reconcileResultChan chan<- ReconcileResult) {
 	reconcileResult := <-semeruReconcileResultChan // blocking for reconcileSemeruCloudCompilerInit to return
 	if reconcileResult.err != nil {
-		reconcileResultChan <- ReconcileResult{err: reconcileResult.err, condition: reconcileResult.condition, message: reconcileResult.message}
+		reconcileResultChan <- reconcileResult
 		return
 	}
 	instanceMutex.Lock()
@@ -302,7 +302,7 @@ func (r *ReconcileOpenLiberty) reconcileServiceCertificate(ba common.BaseCompone
 	serviceCertificateReconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 }
 
-func (r *ReconcileOpenLiberty) reconcileService(defaultMeta metav1.ObjectMeta, ba common.BaseComponent, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, serviceCertificateReconcileResultChan <-chan ReconcileResult, reconcileResultChan chan<- ReconcileResult, useCertManagerChan <-chan bool) {
+func (r *ReconcileOpenLiberty) reconcileService(defaultMeta metav1.ObjectMeta, ba common.BaseComponent, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult, serviceCertificateReconcileResultChan <-chan ReconcileResult, useCertManagerChan <-chan bool) {
 	instanceMutex.Lock()
 	defer instanceMutex.Unlock()
 
@@ -586,7 +586,6 @@ func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(defaultMeta metav1
 			if !capturedSubError {
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile StatefulSet"}
 			}
-			// otherwise return since the error is already captured in inside r.CreateOrUpdate()
 			return
 		}
 
@@ -693,17 +692,160 @@ func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(defaultMeta metav1
 		}
 
 	}
+	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 }
 
-// func (r *ReconcileOpenLiberty) reconcile(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
-// 	instanceMutex.Lock()
-// 	defer instanceMutex.Unlock()
-// }
+func (r *ReconcileOpenLiberty) reconcileAutoscaling(defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
+	instanceMutex.Lock()
+	defer instanceMutex.Unlock()
 
-// func (r *ReconcileOpenLiberty) reconcile(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
-// 	instanceMutex.Lock()
-// 	defer instanceMutex.Unlock()
-// }
+	if instance.Spec.Autoscaling != nil {
+		hpa := &autoscalingv1.HorizontalPodAutoscaler{ObjectMeta: defaultMeta}
+		err := r.CreateOrUpdate(hpa, instance, func() error {
+			oputils.CustomizeHPA(hpa, instance)
+			return nil
+		})
+
+		if err != nil {
+			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile HorizontalPodAutoscaler"}
+			return
+		}
+	} else {
+		hpa := &autoscalingv1.HorizontalPodAutoscaler{ObjectMeta: defaultMeta}
+		err := r.DeleteResource(hpa)
+		if err != nil {
+			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete HorizontalPodAutoscaler"}
+			return
+		}
+	}
+	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
+}
+
+func (r *ReconcileOpenLiberty) reconcileRouteIngress(defaultMeta metav1.ObjectMeta, ba common.BaseComponent, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reqLogger logr.Logger, reconcileResultChan chan<- ReconcileResult) {
+	instanceMutex.Lock()
+	defer instanceMutex.Unlock()
+
+	if ok, err := r.IsGroupVersionSupported(routev1.SchemeGroupVersion.String(), "Route"); err != nil {
+		reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", routev1.SchemeGroupVersion.String()))
+		// r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	} else if ok {
+		if instance.Spec.Expose != nil && *instance.Spec.Expose {
+			if oputils.ShouldDeleteRoute(ba) {
+				// reqLogger.Info("Custom hostname has been removed from route, deleting and recreating the route")
+				route := &routev1.Route{ObjectMeta: defaultMeta}
+				err = r.DeleteResource(route)
+				if err != nil {
+					reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete Route when the Custom hostname has been removed"}
+					return
+				}
+			}
+			route := &routev1.Route{ObjectMeta: defaultMeta}
+			err = r.CreateOrUpdate(route, instance, func() error {
+				key, cert, caCert, destCACert, err := r.GetRouteTLSValues(ba)
+				if err != nil {
+					return err
+				}
+				oputils.CustomizeRoute(route, instance, key, cert, caCert, destCACert)
+
+				return nil
+			})
+			if err != nil {
+				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile Route"}
+				return
+			}
+
+		} else {
+			route := &routev1.Route{ObjectMeta: defaultMeta}
+			err = r.DeleteResource(route)
+			if err != nil {
+				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete Route"}
+				return
+			}
+		}
+	} else {
+
+		if ok, err := r.IsGroupVersionSupported(networkingv1.SchemeGroupVersion.String(), "Ingress"); err != nil {
+			reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", networkingv1.SchemeGroupVersion.String()))
+			// r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		} else if ok {
+			if instance.Spec.Expose != nil && *instance.Spec.Expose {
+				ing := &networkingv1.Ingress{ObjectMeta: defaultMeta}
+				err = r.CreateOrUpdate(ing, instance, func() error {
+					oputils.CustomizeIngress(ing, instance)
+					return nil
+				})
+				if err != nil {
+					reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile Ingress"}
+					return
+				}
+			} else {
+				ing := &networkingv1.Ingress{ObjectMeta: defaultMeta}
+				err = r.DeleteResource(ing)
+				if err != nil {
+					reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete Ingress"}
+					return
+				}
+			}
+		}
+	}
+	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
+}
+
+func (r *ReconcileOpenLiberty) reconcileServiceMonitor(defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reqLogger logr.Logger, reconcileResultChan chan<- ReconcileResult) {
+	instanceMutex.Lock()
+	defer instanceMutex.Unlock()
+
+	if ok, err := r.IsGroupVersionSupported(prometheusv1.SchemeGroupVersion.String(), "ServiceMonitor"); err != nil {
+		reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", prometheusv1.SchemeGroupVersion.String()))
+		// r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	} else if ok {
+		if instance.Spec.Monitoring != nil && (instance.Spec.CreateKnativeService == nil || !*instance.Spec.CreateKnativeService) {
+			// Validate the monitoring endpoints' configuration before creating/updating the ServiceMonitor
+			if err := oputils.ValidatePrometheusMonitoringEndpoints(instance, r.GetClient(), instance.GetNamespace()); err != nil {
+				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled}
+				return
+			}
+			sm := &prometheusv1.ServiceMonitor{ObjectMeta: defaultMeta}
+			err = r.CreateOrUpdate(sm, instance, func() error {
+				oputils.CustomizeServiceMonitor(sm, instance)
+				return nil
+			})
+			if err != nil {
+				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile ServiceMonitor"}
+				return
+			}
+		} else {
+			sm := &prometheusv1.ServiceMonitor{ObjectMeta: defaultMeta}
+			err = r.DeleteResource(sm)
+			if err != nil {
+				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete ServiceMonitor"}
+				return
+			}
+		}
+	} else {
+		reqLogger.V(1).Info(fmt.Sprintf("%s is not supported", prometheusv1.SchemeGroupVersion.String()))
+	}
+	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
+}
+
+func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerCleanup(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult, semeruMarkedForDeletionChan <-chan bool) {
+	// Delete completed Semeru instances because all pods now point to the newest Semeru service
+	areCompletedSemeruInstancesMarkedToBeDeleted := <-semeruMarkedForDeletionChan
+
+	if areCompletedSemeruInstancesMarkedToBeDeleted {
+		instanceMutex.Lock()
+		defer instanceMutex.Unlock()
+
+		if r.isOpenLibertyApplicationReady(instance) {
+			if err := r.deleteCompletedSemeruInstances(instance); err != nil {
+				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete completed Semeru instance"}
+				return
+			}
+		}
+	}
+	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
+	return
+}
 
 func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, instance *olv1.OpenLibertyApplication, reqLogger logr.Logger, isKnativeSupported bool, ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	defaultMeta := metav1.ObjectMeta{
@@ -767,34 +909,42 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 
 	semeruReconcileResultChan := make(chan ReconcileResult, 1)
 	semeruMarkedForDeletionChan := make(chan bool, 1)
-	go r.reconcileSemeruCloudCompilerInit(instance, instanceMutex, semeruReconcileResultChan, semeruMarkedForDeletionChan) // STATE: {reconcileResultChan: 3, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, semeruReconcilResultChan: 1}
-	go r.reconcileSemeruCloudCompilerReady(instance, instanceMutex, semeruReconcileResultChan, reconcileResultChan)        // STATE: {reconcileResultChan: 4, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1}
+	go r.reconcileSemeruCloudCompilerInit(instance, instanceMutex, semeruReconcileResultChan, semeruMarkedForDeletionChan) // STATE: {reconcileResultChan: 3, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, semeruReconcileResultChan: 1, semeruMarkedForDeletionChan: 1}
+	go r.reconcileSemeruCloudCompilerReady(instance, instanceMutex, semeruReconcileResultChan, reconcileResultChan)        // STATE: {reconcileResultChan: 4, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
 
-	// FIRST FRONTIER: knative service should exit reconcile loop, so it is done sequentially
+	// FRONTIER: knative service should have option to exit the reconcile loop
 	res, err := r.reconcileKnativeServiceSequential(defaultMeta, instance, reqLogger, isKnativeSupported)
-	if err != nil { // STATE: {reconcileResultChan: 4, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1}
+	if err != nil {
 		// block to pull from all go routines before exiting reconcile
-		<-ltpaMetadataChan
-		<-ltpaMetadataChan
-		<-passwordEncryptionMetadataChan
+		<-ltpaMetadataChan               // STATE: {reconcileResultChan: 4, ltpaMetadataChan: 1, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
+		<-ltpaMetadataChan               // STATE: {reconcileResultChan: 4,  passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
+		<-passwordEncryptionMetadataChan // STATE: {reconcileResultChan: 4, semeruMarkedForDeletionChan: 1}
+		<-semeruMarkedForDeletionChan    // STATE: {reconcileResultChan: 4}
 
 		reconcileResults := 4
+		foundFirstError := false
+		var firstErroringReconcileResult ReconcileResult
 		for i := 0; i < reconcileResults; i++ {
 			reconcileResult := <-reconcileResultChan
-			if reconcileResult.err != nil {
-				return r.ManageError(reconcileResult.err, reconcileResult.condition, instance)
+			if !foundFirstError && reconcileResult.err != nil {
+				foundFirstError = true
+				firstErroringReconcileResult = reconcileResult
 			}
+		}
+		// STATE: {}
+		if foundFirstError {
+			return r.ManageError(firstErroringReconcileResult.err, firstErroringReconcileResult.condition, instance)
 		}
 		return res, err
 	}
 
 	useCertManagerChan := make(chan bool, 1)
 	serviceCertificateReconcileResultChan := make(chan ReconcileResult, 1)
-	go r.reconcileServiceCertificate(ba, instance, instanceMutex, serviceCertificateReconcileResultChan, useCertManagerChan)                        // STATE: {reconcileResultChan: 4, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, useCertManagerChan: 1, serviceCertificateReconcileResultChan: 1}
-	go r.reconcileService(defaultMeta, ba, instance, instanceMutex, serviceCertificateReconcileResultChan, reconcileResultChan, useCertManagerChan) // STATE: {reconcileResultChan: 5, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1}
-	go r.reconcileNetworkPolicy(defaultMeta, instance, instanceMutex, reconcileResultChan)                                                          // STATE: {reconcileResultChan: 6, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1}
-	go r.reconcileServiceability(instance, instanceMutex, reqLogger, reconcileResultChan)                                                           // STATE: {reconcileResultChan: 7, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1}
-	go r.reconcileBindings(instance, instanceMutex, reconcileResultChan)                                                                            // STATE: {reconcileResultChan: 8, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1}
+	go r.reconcileServiceCertificate(ba, instance, instanceMutex, serviceCertificateReconcileResultChan, useCertManagerChan)                        // STATE: {reconcileResultChan: 4, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1, serviceCertificateReconcileResultChan: 1}
+	go r.reconcileService(defaultMeta, ba, instance, instanceMutex, reconcileResultChan, serviceCertificateReconcileResultChan, useCertManagerChan) // STATE: {reconcileResultChan: 5, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
+	go r.reconcileNetworkPolicy(defaultMeta, instance, instanceMutex, reconcileResultChan)                                                          // STATE: {reconcileResultChan: 6, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
+	go r.reconcileServiceability(instance, instanceMutex, reqLogger, reconcileResultChan)                                                           // STATE: {reconcileResultChan: 7, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
+	go r.reconcileBindings(instance, instanceMutex, reconcileResultChan)                                                                            // STATE: {reconcileResultChan: 8, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
 
 	ltpaKeysLastRotationChan := make(chan string, 1)
 	lastRotationChan := make(chan string, 2) // order doesn't matter, just need the latest rotation time
@@ -812,142 +962,50 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 	sharedResourceHandoffReconcileResultChan := make(chan ReconcileResult,
 		1) // reconcileLTPAConfigConcurrent() reads from sharedResourceReconcileResultChan and writes to this chan
 
-	go r.reconcilePasswordEncryptionKeyConcurrent(instance, instanceMutex, passwordEncryptionMetadata, sharedResourceReconcileResultChan, lastRotationChan, encryptionSecretNameChan)                  // STATE: {reconcileResultChan: 8, sharedResourceReconcileResultChan: 1, lastRotationChan: 1, encryptionSecretNameChan: 1}
-	go r.reconcileLTPAKeysConcurrent(instance, instanceMutex, ltpaKeysMetadata, ltpaConfigMetadata, sharedResourceReconcileResultChan, lastRotationChan, ltpaSecretNameChan, ltpaKeysLastRotationChan) // STATE: {reconcileResultChan: 8, sharedResourceReconcileResultChan: 2, lastRotationChan: 2, ltpaKeysLastRotationChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1}
+	go r.reconcilePasswordEncryptionKeyConcurrent(instance, instanceMutex, passwordEncryptionMetadata, sharedResourceReconcileResultChan, lastRotationChan, encryptionSecretNameChan)                  // STATE: {reconcileResultChan: 8, semeruMarkedForDeletionChan: 1, sharedResourceReconcileResultChan: 1, lastRotationChan: 1, encryptionSecretNameChan: 1}
+	go r.reconcileLTPAKeysConcurrent(instance, instanceMutex, ltpaKeysMetadata, ltpaConfigMetadata, sharedResourceReconcileResultChan, lastRotationChan, ltpaSecretNameChan, ltpaKeysLastRotationChan) // STATE: {reconcileResultChan: 8, semeruMarkedForDeletionChan: 1, sharedResourceReconcileResultChan: 2, lastRotationChan: 2, ltpaKeysLastRotationChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1}
 	go r.reconcileLTPAConfigConcurrent(instance, instanceMutex, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, sharedResourceHandoffReconcileResultChan, sharedResourceReconcileResultChan,
-		lastRotationChan, ltpaKeysLastRotationChan, ltpaXMLSecretNameChan) // STATE: {reconcileResultChan: 8, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
-	go r.reconcileStatefulSetDeployment(defaultMeta, instance, instanceMutex, ltpaConfigMetadata, passwordEncryptionMetadata, reconcileResultChan, sharedResourceHandoffReconcileResultChan, encryptionSecretNameChan, ltpaSecretNameChan, ltpaXMLSecretNameChan) // STATE: {reconcileResultChan: 9}
+		lastRotationChan, ltpaKeysLastRotationChan, ltpaXMLSecretNameChan) // STATE: {reconcileResultChan: 8, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	go r.reconcileStatefulSetDeployment(defaultMeta, instance, instanceMutex, ltpaConfigMetadata, passwordEncryptionMetadata, reconcileResultChan, sharedResourceHandoffReconcileResultChan, encryptionSecretNameChan, ltpaSecretNameChan, ltpaXMLSecretNameChan) // STATE: {reconcileResultChan: 9, semeruMarkedForDeletionChan: 1}
 
+	// FRONTIER: past this point, it doesn't make sense to manage the route when the statefulset/deployment might possibly not exist, so block until completion
+	// STATE: {semeruMarkedForDeletionChan: 1, reconcileResultChan: 9}
 	reconcileResults := 9
+	foundFirstError := false
+	var firstErroringReconcileResult ReconcileResult
 	for i := 0; i < reconcileResults; i++ {
 		reconcileResult := <-reconcileResultChan
-		if reconcileResult.err != nil {
-			return r.ManageError(reconcileResult.err, reconcileResult.condition, instance)
+		// fmt.Printf("reconcile result %d\n", i)
+		if !foundFirstError && reconcileResult.err != nil {
+			foundFirstError = true
+			firstErroringReconcileResult = reconcileResult
+		}
+	}
+	// STATE: {semeruMarkedForDeletionChan: 1}
+	if foundFirstError {
+		<-semeruMarkedForDeletionChan // STATE: {}
+		return r.ManageError(firstErroringReconcileResult.err, firstErroringReconcileResult.condition, instance)
+	}
+	// STATE: {semeruMarkedForDeletionChan: 1}
+	go r.reconcileAutoscaling(defaultMeta, instance, instanceMutex, reconcileResultChan)                                // STATE: {semeruMarkedForDeletionChan: 1, reconcileResultChan: 1}
+	go r.reconcileRouteIngress(defaultMeta, ba, instance, instanceMutex, reqLogger, reconcileResultChan)                // STATE: {semeruMarkedForDeletionChan: 1, reconcileResultChan: 2}
+	go r.reconcileServiceMonitor(defaultMeta, instance, instanceMutex, reqLogger, reconcileResultChan)                  // STATE: {semeruMarkedForDeletionChan: 1, reconcileResultChan: 3}
+	go r.reconcileSemeruCloudCompilerCleanup(instance, instanceMutex, reconcileResultChan, semeruMarkedForDeletionChan) // STATE: {reconcileResultChan: 4}
+
+	// FRONTIER: pull from all remaining channels to manage success
+	reconcileResults = 4
+	foundFirstError = false
+	for i := 0; i < reconcileResults; i++ {
+		reconcileResult := <-reconcileResultChan
+		if !foundFirstError && reconcileResult.err != nil {
+			foundFirstError = true
+			firstErroringReconcileResult = reconcileResult
 		}
 	}
 
-	if instance.Spec.Autoscaling != nil {
-		hpa := &autoscalingv1.HorizontalPodAutoscaler{ObjectMeta: defaultMeta}
-		err = r.CreateOrUpdate(hpa, instance, func() error {
-			oputils.CustomizeHPA(hpa, instance)
-			return nil
-		})
-
-		if err != nil {
-			reqLogger.Error(err, "Failed to reconcile HorizontalPodAutoscaler")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-	} else {
-		hpa := &autoscalingv1.HorizontalPodAutoscaler{ObjectMeta: defaultMeta}
-		err = r.DeleteResource(hpa)
-		if err != nil {
-			reqLogger.Error(err, "Failed to delete HorizontalPodAutoscaler")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-	}
-
-	if ok, err := r.IsGroupVersionSupported(routev1.SchemeGroupVersion.String(), "Route"); err != nil {
-		reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", routev1.SchemeGroupVersion.String()))
-		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-	} else if ok {
-		if instance.Spec.Expose != nil && *instance.Spec.Expose {
-			if oputils.ShouldDeleteRoute(ba) {
-				reqLogger.Info("Custom hostname has been removed from route, deleting and recreating the route")
-				route := &routev1.Route{ObjectMeta: defaultMeta}
-				err = r.DeleteResource(route)
-				if err != nil {
-					reqLogger.Error(err, "Failed to delete Route")
-					return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-				}
-			}
-			route := &routev1.Route{ObjectMeta: defaultMeta}
-			err = r.CreateOrUpdate(route, instance, func() error {
-				key, cert, caCert, destCACert, err := r.GetRouteTLSValues(ba)
-				if err != nil {
-					return err
-				}
-				oputils.CustomizeRoute(route, instance, key, cert, caCert, destCACert)
-
-				return nil
-			})
-			if err != nil {
-				reqLogger.Error(err, "Failed to reconcile Route")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
-
-		} else {
-			route := &routev1.Route{ObjectMeta: defaultMeta}
-			err = r.DeleteResource(route)
-			if err != nil {
-				reqLogger.Error(err, "Failed to delete Route")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
-		}
-	} else {
-
-		if ok, err := r.IsGroupVersionSupported(networkingv1.SchemeGroupVersion.String(), "Ingress"); err != nil {
-			reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", networkingv1.SchemeGroupVersion.String()))
-			r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		} else if ok {
-			if instance.Spec.Expose != nil && *instance.Spec.Expose {
-				ing := &networkingv1.Ingress{ObjectMeta: defaultMeta}
-				err = r.CreateOrUpdate(ing, instance, func() error {
-					oputils.CustomizeIngress(ing, instance)
-					return nil
-				})
-				if err != nil {
-					reqLogger.Error(err, "Failed to reconcile Ingress")
-					return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-				}
-			} else {
-				ing := &networkingv1.Ingress{ObjectMeta: defaultMeta}
-				err = r.DeleteResource(ing)
-				if err != nil {
-					reqLogger.Error(err, "Failed to delete Ingress")
-					return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-				}
-			}
-		}
-	}
-
-	if ok, err := r.IsGroupVersionSupported(prometheusv1.SchemeGroupVersion.String(), "ServiceMonitor"); err != nil {
-		reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", prometheusv1.SchemeGroupVersion.String()))
-		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-	} else if ok {
-		if instance.Spec.Monitoring != nil && (instance.Spec.CreateKnativeService == nil || !*instance.Spec.CreateKnativeService) {
-			// Validate the monitoring endpoints' configuration before creating/updating the ServiceMonitor
-			if err := oputils.ValidatePrometheusMonitoringEndpoints(instance, r.GetClient(), instance.GetNamespace()); err != nil {
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
-			sm := &prometheusv1.ServiceMonitor{ObjectMeta: defaultMeta}
-			err = r.CreateOrUpdate(sm, instance, func() error {
-				oputils.CustomizeServiceMonitor(sm, instance)
-				return nil
-			})
-			if err != nil {
-				reqLogger.Error(err, "Failed to reconcile ServiceMonitor")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
-		} else {
-			sm := &prometheusv1.ServiceMonitor{ObjectMeta: defaultMeta}
-			err = r.DeleteResource(sm)
-			if err != nil {
-				reqLogger.Error(err, "Failed to delete ServiceMonitor")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
-		}
-
-	} else {
-		reqLogger.V(1).Info(fmt.Sprintf("%s is not supported", prometheusv1.SchemeGroupVersion.String()))
-	}
-
-	// Delete completed Semeru instances because all pods now point to the newest Semeru service
-	areCompletedSemeruInstancesMarkedToBeDeleted := <-semeruMarkedForDeletionChan
-	if areCompletedSemeruInstancesMarkedToBeDeleted && r.isOpenLibertyApplicationReady(instance) {
-		if err := r.deleteCompletedSemeruInstances(instance); err != nil {
-			reqLogger.Error(err, "Failed to delete completed Semeru instance")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
+	// STATE: {}
+	if foundFirstError {
+		return r.ManageError(firstErroringReconcileResult.err, firstErroringReconcileResult.condition, instance)
 	}
 
 	instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
