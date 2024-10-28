@@ -206,7 +206,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// }
 
 	// From here, the Open Liberty Application instance is stored in shared memory and can begin concurrent actions.
-	if !r.isConcurrencyEnabled(instance) {
+	if r.isConcurrencyEnabled(instance) {
 		return r.concurrentReconcile(ba, instance, reqLogger, isKnativeSupported, ctx, request)
 	} else {
 		return r.sequentialReconcile(ba, instance, reqLogger, isKnativeSupported, ctx, request)
@@ -930,7 +930,7 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.StatefulSet{}, builder.WithPredicates(predSubResWithGenCheck)).
 		Owns(&autoscalingv1.HorizontalPodAutoscaler{}, builder.WithPredicates(predSubResource)).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: 1,
+			MaxConcurrentReconciles: 8,
 		})
 
 	ok, _ := r.IsGroupVersionSupported(routev1.SchemeGroupVersion.String(), "Route")
