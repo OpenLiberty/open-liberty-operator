@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
@@ -56,17 +57,18 @@ func (r *ReconcileOpenLiberty) isCachingEnabled(instance *olv1.OpenLibertyApplic
 }
 
 func (r *ReconcileOpenLiberty) reconcileImageStream(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
-	instanceMutex.Lock()
-	defer instanceMutex.Unlock()
-
 	if r.IsOpenShift() {
+		instanceMutex.Lock()
 		image, err := imageutil.ParseDockerImageReference(instance.Spec.ApplicationImage)
+		instanceMutex.Unlock()
 		if err == nil {
 			isTag := &imagev1.ImageStreamTag{}
 			isTagName := imageutil.JoinImageStreamTag(image.Name, image.Tag)
 			isTagNamespace := image.Namespace
 			if isTagNamespace == "" {
+				instanceMutex.Lock()
 				isTagNamespace = instance.Namespace
+				instanceMutex.Unlock()
 			}
 			key := types.NamespacedName{Name: isTagName, Namespace: isTagNamespace}
 			err = r.GetAPIReader().Get(context.Background(), key, isTag)
@@ -76,7 +78,9 @@ func (r *ReconcileOpenLiberty) reconcileImageStream(instance *olv1.OpenLibertyAp
 			if err == nil {
 				image := isTag.Image
 				if image.DockerImageReference != "" {
+					instanceMutex.Lock()
 					instance.Status.ImageReference = image.DockerImageReference
+					instanceMutex.Unlock()
 				}
 			} else if err != nil && !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) && !strings.Contains(isTagName, "/") {
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled}
@@ -88,14 +92,13 @@ func (r *ReconcileOpenLiberty) reconcileImageStream(instance *olv1.OpenLibertyAp
 }
 
 func (r *ReconcileOpenLiberty) reconcileLTPAKeySharingEnabled(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult, ltpaMetadataChan chan<- *lutils.LTPAMetadata) {
-	instanceMutex.Lock()
-	defer instanceMutex.Unlock()
-
 	// Reconciles the shared LTPA state for the instance namespace
 	var ltpaMetadataList *lutils.LTPAMetadataList
 	expectedMetadataLength := 2
+	instanceMutex.Lock()
 	if r.isLTPAKeySharingEnabled(instance) {
 		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, LTPA_RESOURCE_SHARING_FILE_NAME, r.isCachingEnabled(instance))
+		instanceMutex.Unlock()
 		if err != nil {
 			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled}
 			// send dummy data back to the channel
@@ -110,20 +113,21 @@ func (r *ReconcileOpenLiberty) reconcileLTPAKeySharingEnabled(instance *olv1.Ope
 				ltpaMetadataChan <- ltpaMetadataList.Items[i].(*lutils.LTPAMetadata)
 			}
 		}
+	} else {
+		instanceMutex.Unlock()
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 }
 
 func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeySharingEnabled(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult, passwordEncryptionMetadataChan chan<- *lutils.PasswordEncryptionMetadata) {
-	instanceMutex.Lock()
-	defer instanceMutex.Unlock()
-
 	// Reconciles the shared password encryption key state for the instance namespace only if the shared key already exists
 	var passwordEncryptionMetadataList *lutils.PasswordEncryptionMetadataList
 	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{}
 	expectedMetadataLength := 1
+	instanceMutex.Lock()
 	if r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata) {
 		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, r.isCachingEnabled(instance))
+		instanceMutex.Unlock()
 		if err != nil {
 			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled}
 			for i := 0; i < expectedMetadataLength; i++ {
@@ -138,6 +142,7 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeySharingEnabled(inst
 			}
 		}
 	} else if r.isPasswordEncryptionKeySharingEnabled(instance) {
+		instanceMutex.Unlock()
 		// error if the password encryption key sharing is enabled but the Secret is not found
 		passwordEncryptionSecretName := lutils.PasswordEncryptionKeyRootName + passwordEncryptionMetadata.Name
 		err := errors.Wrapf(fmt.Errorf("Secret %q not found", passwordEncryptionSecretName), "Secret for Password Encryption was not found. Create a secret named %q in namespace %q with the encryption key specified in data field %q.", passwordEncryptionSecretName, instance.GetNamespace(), "passwordEncryptionKey")
@@ -146,6 +151,8 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeySharingEnabled(inst
 			passwordEncryptionMetadataChan <- nil
 		}
 		return
+	} else {
+		instanceMutex.Unlock()
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 	for i := 0; i < expectedMetadataLength; i++ {
@@ -155,15 +162,16 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeySharingEnabled(inst
 
 func (r *ReconcileOpenLiberty) reconcileServiceAccount(defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
 	instanceMutex.Lock()
-	defer instanceMutex.Unlock()
-
 	serviceAccountName := oputils.GetServiceAccountName(instance)
+	instanceMutex.Unlock()
 	if serviceAccountName != defaultMeta.Name {
 		if serviceAccountName == "" {
 			serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
+			instanceMutex.Lock()
 			err := r.CreateOrUpdate(serviceAccount, instance, func() error {
 				return oputils.CustomizeServiceAccount(serviceAccount, instance, r.GetClient())
 			})
+			instanceMutex.Unlock()
 			if err != nil {
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile ServiceAccount"}
 				return
@@ -180,7 +188,9 @@ func (r *ReconcileOpenLiberty) reconcileServiceAccount(defaultMeta metav1.Object
 
 	// Check if the ServiceAccount has a valid pull secret before creating the deployment/statefulset
 	// or setting up knative. Otherwise the pods can go into an ImagePullBackOff loop
+	instanceMutex.Lock()
 	saErr := oputils.ServiceAccountPullSecretExists(instance, r.GetClient())
+	instanceMutex.Unlock()
 	if saErr != nil {
 		reconcileResultChan <- ReconcileResult{err: saErr, condition: common.StatusConditionTypeReconciled}
 		return
@@ -189,13 +199,12 @@ func (r *ReconcileOpenLiberty) reconcileServiceAccount(defaultMeta metav1.Object
 }
 
 func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerInit(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, semeruReconcileResultChan chan<- ReconcileResult, semeruMarkedForDeletionChan chan<- bool) {
-	instanceMutex.Lock()
-	defer instanceMutex.Unlock()
-
 	// Check if SemeruCloudCompiler is enabled before reconciling the Semeru Compiler deployment and service.
 	// Otherwise, delete the Semeru Compiler deployment and service.
 	message := "Start Semeru Compiler reconcile"
+	instanceMutex.Lock()
 	err, message, areCompletedSemeruInstancesMarkedToBeDeleted := r.reconcileSemeruCompiler(instance)
+	instanceMutex.Unlock()
 	semeruMarkedForDeletionChan <- areCompletedSemeruInstancesMarkedToBeDeleted
 	if err != nil {
 		semeruReconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: message}
@@ -210,17 +219,19 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerReady(instance *olv1.
 		reconcileResultChan <- reconcileResult
 		return
 	}
-	instanceMutex.Lock()
-	defer instanceMutex.Unlock()
 
 	// If semeru compiler is enabled, make sure its ready
+	instanceMutex.Lock()
 	if r.isSemeruEnabled(instance) {
-		message := "Check Semeru Compiler resources ready"
 		err := r.areSemeruCompilerResourcesReady(instance)
+		message := "Check Semeru Compiler resources ready"
+		instanceMutex.Unlock()
 		if err != nil {
 			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeResourcesReady, message: message}
 			return
 		}
+	} else {
+		instanceMutex.Unlock()
 	}
 
 	reconcileResultChan <- ReconcileResult{err: nil, condition: reconcileResult.condition}
@@ -287,37 +298,43 @@ func (r *ReconcileOpenLiberty) reconcileKnativeServiceSequential(defaultMeta met
 }
 
 func (r *ReconcileOpenLiberty) reconcileServiceCertificate(ba common.BaseComponent, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, serviceCertificateReconcileResultChan chan<- ReconcileResult, useCertManagerChan chan<- bool) {
+	instanceMutex.Lock()
 	useCertmanager, err := r.GenerateSvcCertSecret(ba, OperatorShortName, "Open Liberty Operator", OperatorName)
+	instanceMutex.Unlock()
 	useCertManagerChan <- useCertmanager
 	if err != nil {
 		serviceCertificateReconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile CertManager Certificate"}
 		return
 	}
-	instanceMutex.Lock()
-	defer instanceMutex.Unlock()
 
+	instanceMutex.Lock()
 	if ba.GetService().GetCertificateSecretRef() != nil {
 		ba.GetStatus().SetReference(common.StatusReferenceCertSecretName, *ba.GetService().GetCertificateSecretRef())
 	}
+	instanceMutex.Unlock()
 	serviceCertificateReconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 }
 
 func (r *ReconcileOpenLiberty) reconcileService(defaultMeta metav1.ObjectMeta, ba common.BaseComponent, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult, serviceCertificateReconcileResultChan <-chan ReconcileResult, useCertManagerChan <-chan bool) {
-	instanceMutex.Lock()
-	defer instanceMutex.Unlock()
-
 	svc := &corev1.Service{ObjectMeta: defaultMeta}
+	instanceMutex.Lock()
 	err := r.CreateOrUpdate(svc, instance, func() error {
 		oputils.CustomizeService(svc, ba)
 		svc.Annotations = oputils.MergeMaps(svc.Annotations, instance.Spec.Service.Annotations)
+		instanceMutex.Unlock()
 		useCertmanager := <-useCertManagerChan
 		if !useCertmanager && r.IsOpenShift() {
+			instanceMutex.Lock()
 			oputils.AddOCPCertAnnotation(ba, svc)
+			instanceMutex.Unlock()
 		}
+		instanceMutex.Lock()
 		monitoringEnabledLabelName := getMonitoringEnabledLabelName(ba)
 		if instance.Spec.Monitoring != nil {
+			instanceMutex.Unlock()
 			svc.Labels[monitoringEnabledLabelName] = "true"
 		} else {
+			instanceMutex.Unlock()
 			delete(svc.Labels, monitoringEnabledLabelName)
 		}
 		return nil
@@ -327,29 +344,33 @@ func (r *ReconcileOpenLiberty) reconcileService(defaultMeta metav1.ObjectMeta, b
 		return
 	}
 
+	instanceMutex.Lock()
 	if (ba.GetManageTLS() == nil || *ba.GetManageTLS()) &&
 		ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName] == "" {
+		instanceMutex.Unlock()
 		reconcileResultChan <- ReconcileResult{err: errors.New("Failed to generate TLS certificate. Ensure cert-manager is installed and running"), condition: common.StatusConditionTypeReconciled}
 		return
+	} else {
+		instanceMutex.Unlock()
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 }
 
 func (r *ReconcileOpenLiberty) reconcileNetworkPolicy(defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
-	instanceMutex.Lock()
-	defer instanceMutex.Unlock()
-
 	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: defaultMeta}
+	instanceMutex.Lock()
 	if np := instance.Spec.NetworkPolicy; np == nil || np != nil && !np.IsDisabled() {
 		err := r.CreateOrUpdate(networkPolicy, instance, func() error {
 			oputils.CustomizeNetworkPolicy(networkPolicy, r.IsOpenShift(), instance)
 			return nil
 		})
+		instanceMutex.Unlock()
 		if err != nil {
 			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile network policy"}
 			return
 		}
 	} else {
+		instanceMutex.Unlock()
 		if err := r.DeleteResource(networkPolicy); err != nil {
 			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete network policy"}
 			return
@@ -360,12 +381,11 @@ func (r *ReconcileOpenLiberty) reconcileNetworkPolicy(defaultMeta metav1.ObjectM
 
 func (r *ReconcileOpenLiberty) reconcileServiceability(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reqLogger logr.Logger, reconcileResultChan chan<- ReconcileResult) {
 	instanceMutex.Lock()
-	defer instanceMutex.Unlock()
-
 	if instance.Spec.Serviceability != nil {
 		if instance.Spec.Serviceability.VolumeClaimName != "" {
 			pvcName := instance.Spec.Serviceability.VolumeClaimName
 			err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: pvcName, Namespace: instance.Namespace}, &corev1.PersistentVolumeClaim{})
+			instanceMutex.Unlock()
 			if err != nil && kerrors.IsNotFound(err) {
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to find PersistentVolumeClaim " + pvcName + " in namespace " + instance.Namespace}
 				return
@@ -374,6 +394,7 @@ func (r *ReconcileOpenLiberty) reconcileServiceability(instance *olv1.OpenLibert
 			err := r.CreateOrUpdate(lutils.CreateServiceabilityPVC(instance), nil, func() error {
 				return nil
 			})
+			instanceMutex.Unlock()
 			if err != nil {
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to create PersistentVolumeClaim for Serviceability"}
 				return
@@ -381,15 +402,15 @@ func (r *ReconcileOpenLiberty) reconcileServiceability(instance *olv1.OpenLibert
 		}
 	} else {
 		r.deletePVC(reqLogger, instance.Name+"-serviceability", instance.Namespace)
+		instanceMutex.Unlock()
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 }
 
 func (r *ReconcileOpenLiberty) reconcileBindings(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
 	instanceMutex.Lock()
-	defer instanceMutex.Unlock()
-
 	err := r.ReconcileBindings(instance)
+	instanceMutex.Unlock()
 	if err != nil {
 		reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled}
 		return
@@ -398,11 +419,10 @@ func (r *ReconcileOpenLiberty) reconcileBindings(instance *olv1.OpenLibertyAppli
 }
 
 func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeyConcurrent(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, sharedResourceReconcileResultChan chan<- ReconcileResult, lastRotationChan chan<- string, encryptionSecretNameChan chan<- string) {
-	instanceMutex.Lock()
-	defer instanceMutex.Unlock()
-
 	// Manage the shared password encryption key Secret if it exists
+	instanceMutex.Lock()
 	message, encryptionSecretName, passwordEncryptionKeyLastRotation, err := r.reconcilePasswordEncryptionKey(instance, passwordEncryptionMetadata)
+	instanceMutex.Unlock()
 	lastRotationChan <- passwordEncryptionKeyLastRotation
 	encryptionSecretNameChan <- encryptionSecretName
 	if err != nil {
@@ -413,11 +433,10 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeyConcurrent(instance
 }
 
 func (r *ReconcileOpenLiberty) reconcileLTPAKeysConcurrent(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, reconcileResultChan chan<- ReconcileResult, lastRotationChan chan<- string, ltpaSecretNameChan chan<- string, ltpaKeysLastRotationChan chan<- string) {
-	instanceMutex.Lock()
-	defer instanceMutex.Unlock()
-
 	// Create and manage the shared LTPA keys Secret if the feature is enabled
+	instanceMutex.Lock()
 	message, ltpaSecretName, ltpaKeysLastRotation, err := r.reconcileLTPAKeys(instance, ltpaKeysMetadata, ltpaConfigMetadata)
+	instanceMutex.Unlock()
 	ltpaSecretNameChan <- ltpaSecretName
 	lastRotationChan <- ltpaKeysLastRotation
 	ltpaKeysLastRotationChan <- ltpaKeysLastRotation
@@ -447,10 +466,6 @@ func (r *ReconcileOpenLiberty) reconcileLTPAConfigConcurrent(instance *olv1.Open
 	lastRotationVal2 := <-lastRotationChan
 	ltpaKeysLastRotation := <-ltpaKeysLastRotationChan
 
-	// Acquire the lock
-	instanceMutex.Lock()
-	defer instanceMutex.Unlock()
-
 	// get the last key-related rotation time as a string to be used by reconcileLTPAConfig for non-leaders to yield (blocking) to the LTPA config leader
 	lastKeyRelatedRotation, err := lutils.GetMaxTime(lastRotationVal1, lastRotationVal2)
 	if err != nil {
@@ -460,7 +475,9 @@ func (r *ReconcileOpenLiberty) reconcileLTPAConfigConcurrent(instance *olv1.Open
 	}
 
 	// Using the LTPA keys and config metadata, create and manage the shared LTPA Liberty server XML if the feature is enabled
+	instanceMutex.Lock()
 	message, ltpaXMLSecretName, err := r.reconcileLTPAConfig(instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
+	instanceMutex.Unlock()
 	ltpaXMLSecretNameChan <- ltpaXMLSecretName
 	if err != nil {
 		reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled, message: message}
@@ -480,9 +497,8 @@ func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(defaultMeta metav1
 	}
 
 	instanceMutex.Lock()
-	defer instanceMutex.Unlock()
-
 	if instance.Spec.StatefulSet != nil {
+		instanceMutex.Unlock()
 		// Delete Deployment if exists
 		deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
 		err := r.DeleteResource(deploy)
@@ -491,6 +507,7 @@ func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(defaultMeta metav1
 			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete Deployment"}
 			return
 		}
+		instanceMutex.Lock()
 		svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: instance.Name + "-headless", Namespace: instance.Namespace}}
 		err = r.CreateOrUpdate(svc, instance, func() error {
 			oputils.CustomizeService(svc, instance)
@@ -498,6 +515,7 @@ func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(defaultMeta metav1
 			svc.Spec.Type = corev1.ServiceTypeClusterIP
 			return nil
 		})
+		instanceMutex.Unlock()
 		if err != nil {
 			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile headless Service"}
 			return
@@ -505,6 +523,7 @@ func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(defaultMeta metav1
 
 		statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
 		capturedSubError := false
+		instanceMutex.Lock()
 		err = r.CreateOrUpdate(statefulSet, instance, func() error {
 			oputils.CustomizeStatefulSet(statefulSet, instance)
 			oputils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
@@ -582,6 +601,7 @@ func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(defaultMeta metav1
 			}
 			return nil
 		})
+		instanceMutex.Unlock()
 		if err != nil {
 			if !capturedSubError {
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile StatefulSet"}
@@ -590,6 +610,7 @@ func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(defaultMeta metav1
 		}
 
 	} else {
+		instanceMutex.Unlock()
 		// Delete StatefulSet if exists
 		statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
 		err := r.DeleteResource(statefulSet)
@@ -599,7 +620,7 @@ func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(defaultMeta metav1
 		}
 
 		// Delete StatefulSet if exists
-		headlesssvc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: instance.Name + "-headless", Namespace: instance.Namespace}}
+		headlesssvc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: defaultMeta.Name + "-headless", Namespace: defaultMeta.Namespace}}
 		err = r.DeleteResource(headlesssvc)
 
 		if err != nil {
@@ -608,6 +629,7 @@ func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(defaultMeta metav1
 		}
 		capturedSubError := false
 		deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
+		instanceMutex.Lock()
 		err = r.CreateOrUpdate(deploy, instance, func() error {
 			oputils.CustomizeDeployment(deploy, instance)
 			oputils.CustomizePodSpec(&deploy.Spec.Template, instance)
@@ -683,6 +705,7 @@ func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(defaultMeta metav1
 			}
 			return nil
 		})
+		instanceMutex.Unlock()
 		if err != nil {
 			if !capturedSubError {
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile Deployment"}
@@ -697,20 +720,22 @@ func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(defaultMeta metav1
 
 func (r *ReconcileOpenLiberty) reconcileAutoscaling(defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
 	instanceMutex.Lock()
-	defer instanceMutex.Unlock()
-
 	if instance.Spec.Autoscaling != nil {
+		instanceMutex.Unlock()
 		hpa := &autoscalingv1.HorizontalPodAutoscaler{ObjectMeta: defaultMeta}
+		instanceMutex.Lock()
 		err := r.CreateOrUpdate(hpa, instance, func() error {
 			oputils.CustomizeHPA(hpa, instance)
 			return nil
 		})
+		instanceMutex.Unlock()
 
 		if err != nil {
 			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile HorizontalPodAutoscaler"}
 			return
 		}
 	} else {
+		instanceMutex.Unlock()
 		hpa := &autoscalingv1.HorizontalPodAutoscaler{ObjectMeta: defaultMeta}
 		err := r.DeleteResource(hpa)
 		if err != nil {
@@ -722,15 +747,14 @@ func (r *ReconcileOpenLiberty) reconcileAutoscaling(defaultMeta metav1.ObjectMet
 }
 
 func (r *ReconcileOpenLiberty) reconcileRouteIngress(defaultMeta metav1.ObjectMeta, ba common.BaseComponent, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reqLogger logr.Logger, reconcileResultChan chan<- ReconcileResult) {
-	instanceMutex.Lock()
-	defer instanceMutex.Unlock()
-
 	if ok, err := r.IsGroupVersionSupported(routev1.SchemeGroupVersion.String(), "Route"); err != nil {
 		reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", routev1.SchemeGroupVersion.String()))
 		// r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	} else if ok {
+		instanceMutex.Lock()
 		if instance.Spec.Expose != nil && *instance.Spec.Expose {
 			if oputils.ShouldDeleteRoute(ba) {
+				instanceMutex.Unlock()
 				// reqLogger.Info("Custom hostname has been removed from route, deleting and recreating the route")
 				route := &routev1.Route{ObjectMeta: defaultMeta}
 				err = r.DeleteResource(route)
@@ -738,8 +762,11 @@ func (r *ReconcileOpenLiberty) reconcileRouteIngress(defaultMeta metav1.ObjectMe
 					reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete Route when the Custom hostname has been removed"}
 					return
 				}
+			} else {
+				instanceMutex.Unlock()
 			}
 			route := &routev1.Route{ObjectMeta: defaultMeta}
+			instanceMutex.Lock()
 			err = r.CreateOrUpdate(route, instance, func() error {
 				key, cert, caCert, destCACert, err := r.GetRouteTLSValues(ba)
 				if err != nil {
@@ -749,12 +776,14 @@ func (r *ReconcileOpenLiberty) reconcileRouteIngress(defaultMeta metav1.ObjectMe
 
 				return nil
 			})
+			instanceMutex.Unlock()
 			if err != nil {
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile Route"}
 				return
 			}
 
 		} else {
+			instanceMutex.Unlock()
 			route := &routev1.Route{ObjectMeta: defaultMeta}
 			err = r.DeleteResource(route)
 			if err != nil {
@@ -763,22 +792,24 @@ func (r *ReconcileOpenLiberty) reconcileRouteIngress(defaultMeta metav1.ObjectMe
 			}
 		}
 	} else {
-
 		if ok, err := r.IsGroupVersionSupported(networkingv1.SchemeGroupVersion.String(), "Ingress"); err != nil {
 			reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", networkingv1.SchemeGroupVersion.String()))
 			// r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		} else if ok {
+			instanceMutex.Lock()
 			if instance.Spec.Expose != nil && *instance.Spec.Expose {
 				ing := &networkingv1.Ingress{ObjectMeta: defaultMeta}
 				err = r.CreateOrUpdate(ing, instance, func() error {
 					oputils.CustomizeIngress(ing, instance)
 					return nil
 				})
+				instanceMutex.Unlock()
 				if err != nil {
 					reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile Ingress"}
 					return
 				}
 			} else {
+				instanceMutex.Unlock()
 				ing := &networkingv1.Ingress{ObjectMeta: defaultMeta}
 				err = r.DeleteResource(ing)
 				if err != nil {
@@ -792,29 +823,33 @@ func (r *ReconcileOpenLiberty) reconcileRouteIngress(defaultMeta metav1.ObjectMe
 }
 
 func (r *ReconcileOpenLiberty) reconcileServiceMonitor(defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reqLogger logr.Logger, reconcileResultChan chan<- ReconcileResult) {
-	instanceMutex.Lock()
-	defer instanceMutex.Unlock()
-
 	if ok, err := r.IsGroupVersionSupported(prometheusv1.SchemeGroupVersion.String(), "ServiceMonitor"); err != nil {
 		reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", prometheusv1.SchemeGroupVersion.String()))
 		// r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	} else if ok {
+		instanceMutex.Lock()
 		if instance.Spec.Monitoring != nil && (instance.Spec.CreateKnativeService == nil || !*instance.Spec.CreateKnativeService) {
 			// Validate the monitoring endpoints' configuration before creating/updating the ServiceMonitor
 			if err := oputils.ValidatePrometheusMonitoringEndpoints(instance, r.GetClient(), instance.GetNamespace()); err != nil {
+				instanceMutex.Unlock()
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled}
 				return
+			} else {
+				instanceMutex.Unlock()
 			}
 			sm := &prometheusv1.ServiceMonitor{ObjectMeta: defaultMeta}
+			instanceMutex.Lock()
 			err = r.CreateOrUpdate(sm, instance, func() error {
 				oputils.CustomizeServiceMonitor(sm, instance)
 				return nil
 			})
+			instanceMutex.Unlock()
 			if err != nil {
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile ServiceMonitor"}
 				return
 			}
 		} else {
+			instanceMutex.Unlock()
 			sm := &prometheusv1.ServiceMonitor{ObjectMeta: defaultMeta}
 			err = r.DeleteResource(sm)
 			if err != nil {
@@ -834,13 +869,16 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerCleanup(instance *olv
 
 	if areCompletedSemeruInstancesMarkedToBeDeleted {
 		instanceMutex.Lock()
-		defer instanceMutex.Unlock()
-
 		if r.isOpenLibertyApplicationReady(instance) {
 			if err := r.deleteCompletedSemeruInstances(instance); err != nil {
+				instanceMutex.Unlock()
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete completed Semeru instance"}
 				return
+			} else {
+				instanceMutex.Unlock()
 			}
+		} else {
+			instanceMutex.Unlock()
 		}
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
@@ -872,8 +910,8 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 	}
 
 	// Everything done from here on out will be with an invalid image so this should terminate the parent reconcile and pull all channel data
+	ltpaKeysMetadata := <-ltpaMetadataChan
 	if imageReferenceOld != instance.Status.ImageReference {
-		ltpaKeysMetadata := <-ltpaMetadataChan // at the very least, block for the first ltpaKeys metadata
 		// STATE: {reconcileResultChan: 1, ltpaMetadataChan: 1}
 
 		// Trigger a new Semeru Cloud Compiler generation
@@ -882,30 +920,29 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 		// If the shared LTPA keys was not generated from the last application image, restart the key generation process
 		if r.isLTPAKeySharingEnabled(instance) {
 			if err := r.restartLTPAKeysGeneration(instance, ltpaKeysMetadata); err != nil {
+				reqLogger.Error(err, "Error restarting the LTPA keys generation process")
 				// block to clear channels before exiting
 				<-reconcileResultChan
 				<-ltpaMetadataChan
-				reqLogger.Error(err, "Error restarting the LTPA keys generation process")
 				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 			}
 		}
-
-		// block to clear the channels before updating CR status
-		<-reconcileResultChan
-		<-ltpaMetadataChan
 
 		reqLogger.Info("Updating status.imageReference", "status.imageReference", instance.Status.ImageReference)
 		err := r.UpdateStatus(instance)
 		if err != nil {
 			reqLogger.Error(err, "Error updating Open Liberty application status")
+			// block to clear channels before exiting
+			<-reconcileResultChan
+			<-ltpaMetadataChan
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
 	}
+
 	// obtain password encryption metadata
 	passwordEncryptionMetadataChan := make(chan *lutils.PasswordEncryptionMetadata, 1)
 	go r.reconcilePasswordEncryptionKeySharingEnabled(instance, instanceMutex, reconcileResultChan, passwordEncryptionMetadataChan) // STATE: {reconcileResultChan: 2, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1}
-
-	go r.reconcileServiceAccount(defaultMeta, instance, instanceMutex, reconcileResultChan) // STATE: {reconcileResultChan: 3, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1}
+	go r.reconcileServiceAccount(defaultMeta, instance, instanceMutex, reconcileResultChan)                                         // STATE: {reconcileResultChan: 3, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1}
 
 	semeruReconcileResultChan := make(chan ReconcileResult, 1)
 	semeruMarkedForDeletionChan := make(chan bool, 1)
@@ -916,8 +953,7 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 	res, err := r.reconcileKnativeServiceSequential(defaultMeta, instance, reqLogger, isKnativeSupported)
 	if err != nil {
 		// block to pull from all go routines before exiting reconcile
-		<-ltpaMetadataChan               // STATE: {reconcileResultChan: 4, ltpaMetadataChan: 1, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
-		<-ltpaMetadataChan               // STATE: {reconcileResultChan: 4,  passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
+		<-ltpaMetadataChan               // STATE: {reconcileResultChan: 4, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
 		<-passwordEncryptionMetadataChan // STATE: {reconcileResultChan: 4, semeruMarkedForDeletionChan: 1}
 		<-semeruMarkedForDeletionChan    // STATE: {reconcileResultChan: 4}
 
@@ -953,7 +989,6 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 	ltpaSecretNameChan := make(chan string, 1)
 	ltpaXMLSecretNameChan := make(chan string, 1)
 
-	ltpaKeysMetadata := <-ltpaMetadataChan
 	ltpaConfigMetadata := <-ltpaMetadataChan
 	passwordEncryptionMetadata := <-passwordEncryptionMetadataChan
 
@@ -981,6 +1016,7 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 			firstErroringReconcileResult = reconcileResult
 		}
 	}
+
 	// STATE: {semeruMarkedForDeletionChan: 1}
 	if foundFirstError {
 		<-semeruMarkedForDeletionChan // STATE: {}
@@ -991,7 +1027,6 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 	go r.reconcileRouteIngress(defaultMeta, ba, instance, instanceMutex, reqLogger, reconcileResultChan)                // STATE: {semeruMarkedForDeletionChan: 1, reconcileResultChan: 2}
 	go r.reconcileServiceMonitor(defaultMeta, instance, instanceMutex, reqLogger, reconcileResultChan)                  // STATE: {semeruMarkedForDeletionChan: 1, reconcileResultChan: 3}
 	go r.reconcileSemeruCloudCompilerCleanup(instance, instanceMutex, reconcileResultChan, semeruMarkedForDeletionChan) // STATE: {reconcileResultChan: 4}
-
 	// FRONTIER: pull from all remaining channels to manage success
 	reconcileResults = 4
 	foundFirstError = false
@@ -1012,4 +1047,26 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 	instance.Status.Versions.Reconciled = lutils.OperandVersion
 	reqLogger.Info("Reconcile OpenLibertyApplication - completed")
 	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
+}
+
+func (r ReconcileOpenLiberty) customLog(instance *olv1.OpenLibertyApplication, msg string) {
+	// if instance.Name == "hello-world-1" {
+	// 	fmt.Println("HELLO: " + msg)
+	// }
+}
+
+func (r ReconcileOpenLiberty) customTimerStart(instance *olv1.OpenLibertyApplication, msg string) time.Time {
+	if instance.Name == "hello-world-1" {
+		fmt.Println("START TIMER: " + msg)
+	}
+	return time.Now()
+}
+
+func (r ReconcileOpenLiberty) customTimerStop(instance *olv1.OpenLibertyApplication, startTime time.Time, msg string) {
+	if instance.Name == "hello-world-1" {
+		t := time.Now()
+		elapsed := t.Sub(startTime)
+
+		fmt.Printf("STOP TIMER: elapsed time is %fs: %s \n", elapsed.Seconds(), msg)
+	}
 }
