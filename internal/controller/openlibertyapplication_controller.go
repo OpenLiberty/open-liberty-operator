@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 
 	networkingv1 "k8s.io/api/networking/v1"
 
@@ -50,12 +49,6 @@ type ReconcileOpenLiberty struct {
 	oputils.ReconcilerBase
 	Log             logr.Logger
 	watchNamespaces []string
-}
-
-var namespaceLockMap *sync.Map
-
-func init() {
-	namespaceLockMap = &sync.Map{}
 }
 
 const applicationFinalizer = "finalizer.openlibertyapplications.apps.openliberty.io"
@@ -214,12 +207,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 	// From here, the Open Liberty Application instance is stored in shared memory and can begin concurrent actions.
 	if r.isConcurrencyEnabled(instance) {
-		ns := instance.GetNamespace()
-		// initialize a mutex for the namespace
-		if _, found := namespaceLockMap.Load(ns); !found {
-			namespaceLockMap.Store(ns, []*sync.Mutex{&sync.Mutex{}, &sync.Mutex{}, &sync.Mutex{}})
-		}
-
 		return r.concurrentReconcile(ba, instance, reqLogger, isKnativeSupported, ctx, request)
 	} else {
 		return r.sequentialReconcile(ba, instance, reqLogger, isKnativeSupported, ctx, request)
