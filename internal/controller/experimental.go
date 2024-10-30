@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
@@ -122,7 +121,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAKeySharingEnabled(instance *olv1.Ope
 func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeySharingEnabled(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult, passwordEncryptionMetadataChan chan<- *lutils.PasswordEncryptionMetadata) {
 	// Reconciles the shared password encryption key state for the instance namespace only if the shared key already exists
 	var passwordEncryptionMetadataList *lutils.PasswordEncryptionMetadataList
-	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{}
+	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{Name: ""}
 	expectedMetadataLength := 1
 	instanceMutex.Lock()
 	if r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata) {
@@ -131,7 +130,7 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeySharingEnabled(inst
 		if err != nil {
 			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled}
 			for i := 0; i < expectedMetadataLength; i++ {
-				passwordEncryptionMetadataChan <- &lutils.PasswordEncryptionMetadata{}
+				passwordEncryptionMetadataChan <- passwordEncryptionMetadata
 			}
 			return
 		}
@@ -1047,26 +1046,4 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 	instance.Status.Versions.Reconciled = lutils.OperandVersion
 	reqLogger.Info("Reconcile OpenLibertyApplication - completed")
 	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
-}
-
-func (r ReconcileOpenLiberty) customLog(instance *olv1.OpenLibertyApplication, msg string) {
-	// if instance.Name == "hello-world-1" {
-	// 	fmt.Println("HELLO: " + msg)
-	// }
-}
-
-func (r ReconcileOpenLiberty) customTimerStart(instance *olv1.OpenLibertyApplication, msg string) time.Time {
-	if instance.Name == "hello-world-1" {
-		fmt.Println("START TIMER: " + msg)
-	}
-	return time.Now()
-}
-
-func (r ReconcileOpenLiberty) customTimerStop(instance *olv1.OpenLibertyApplication, startTime time.Time, msg string) {
-	if instance.Name == "hello-world-1" {
-		t := time.Now()
-		elapsed := t.Sub(startTime)
-
-		fmt.Printf("STOP TIMER: elapsed time is %fs: %s \n", elapsed.Seconds(), msg)
-	}
 }
