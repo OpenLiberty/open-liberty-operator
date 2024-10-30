@@ -772,6 +772,9 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 					err = r.GetClient().Get(context.TODO(), types.NamespacedName{Name: generateLTPAConfigJob.Name, Namespace: generateLTPAConfigJob.Namespace}, generateLTPAConfigJob)
 					if err != nil && kerrors.IsNotFound(err) {
 						err = r.CreateOrUpdate(generateLTPAConfigJob, nil, func() error {
+							fmt.Println("debug:")
+							fmt.Println("debug2: " + passwordEncryptionMetadata.Name)
+
 							ltpaConfig := &lutils.LTPAConfig{
 								Metadata:                    ltpaConfigMetadata,
 								SecretName:                  ltpaSecretRootName,
