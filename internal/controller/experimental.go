@@ -147,7 +147,7 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeySharingEnabled(inst
 		err := errors.Wrapf(fmt.Errorf("Secret %q not found", passwordEncryptionSecretName), "Secret for Password Encryption was not found. Create a secret named %q in namespace %q with the encryption key specified in data field %q.", passwordEncryptionSecretName, instance.GetNamespace(), "passwordEncryptionKey")
 		reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled}
 		for i := 0; i < expectedMetadataLength; i++ {
-			passwordEncryptionMetadataChan <- nil
+			passwordEncryptionMetadataChan <- passwordEncryptionMetadata
 		}
 		return
 	} else {
@@ -155,7 +155,7 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeySharingEnabled(inst
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 	for i := 0; i < expectedMetadataLength; i++ {
-		passwordEncryptionMetadataChan <- nil
+		passwordEncryptionMetadataChan <- passwordEncryptionMetadata
 	}
 }
 
