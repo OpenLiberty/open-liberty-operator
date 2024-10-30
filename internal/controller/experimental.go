@@ -197,7 +197,7 @@ func (r *ReconcileOpenLiberty) reconcileServiceAccount(defaultMeta metav1.Object
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 }
 
-func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerInit(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, semeruReconcileResultChan chan<- ReconcileResult, semeruMarkedForDeletionChan chan<- bool) {
+func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerInit(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult, semeruMarkedForDeletionChan chan<- bool) {
 	// Check if SemeruCloudCompiler is enabled before reconciling the Semeru Compiler deployment and service.
 	// Otherwise, delete the Semeru Compiler deployment and service.
 	message := "Start Semeru Compiler reconcile"
@@ -206,19 +206,13 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerInit(instance *olv1.O
 	instanceMutex.Unlock()
 	semeruMarkedForDeletionChan <- areCompletedSemeruInstancesMarkedToBeDeleted
 	if err != nil {
-		semeruReconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: message}
+		reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: message}
 		return
 	}
-	semeruReconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
+	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 }
 
-func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerReady(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, semeruReconcileResultChan <-chan ReconcileResult, reconcileResultChan chan<- ReconcileResult) {
-	reconcileResult := <-semeruReconcileResultChan // blocking for reconcileSemeruCloudCompilerInit to return
-	if reconcileResult.err != nil {
-		reconcileResultChan <- reconcileResult
-		return
-	}
-
+func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerReady(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
 	// If semeru compiler is enabled, make sure its ready
 	instanceMutex.Lock()
 	if r.isSemeruEnabled(instance) {
@@ -232,8 +226,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerReady(instance *olv1.
 	} else {
 		instanceMutex.Unlock()
 	}
-
-	reconcileResultChan <- ReconcileResult{err: nil, condition: reconcileResult.condition}
+	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeResourcesReady}
 }
 
 func (r *ReconcileOpenLiberty) reconcileKnativeServiceSequential(defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reqLogger logr.Logger, isKnativeSupported bool) (ctrl.Result, error) {
@@ -949,10 +942,8 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 	go r.reconcilePasswordEncryptionKeySharingEnabled(instance, instanceMutex, reconcileResultChan, passwordEncryptionMetadataChan) // STATE: {reconcileResultChan: 2, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1}
 	go r.reconcileServiceAccount(defaultMeta, instance, instanceMutex, reconcileResultChan)                                         // STATE: {reconcileResultChan: 3, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1}
 
-	semeruReconcileResultChan := make(chan ReconcileResult, 1)
 	semeruMarkedForDeletionChan := make(chan bool, 1)
-	go r.reconcileSemeruCloudCompilerInit(instance, instanceMutex, semeruReconcileResultChan, semeruMarkedForDeletionChan) // STATE: {reconcileResultChan: 3, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, semeruReconcileResultChan: 1, semeruMarkedForDeletionChan: 1}
-	go r.reconcileSemeruCloudCompilerReady(instance, instanceMutex, semeruReconcileResultChan, reconcileResultChan)        // STATE: {reconcileResultChan: 4, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
+	go r.reconcileSemeruCloudCompilerInit(instance, instanceMutex, reconcileResultChan, semeruMarkedForDeletionChan) // STATE: {reconcileResultChan: 4, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
 
 	// FRONTIER: knative service should have option to exit the reconcile loop
 	res, err := r.reconcileKnativeServiceSequential(defaultMeta, instance, instanceMutex, reqLogger, isKnativeSupported)
@@ -979,14 +970,6 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 		return res, err
 	}
 
-	useCertManagerChan := make(chan bool, 1)
-	serviceCertificateReconcileResultChan := make(chan ReconcileResult, 1)
-	go r.reconcileServiceCertificate(ba, instance, instanceMutex, serviceCertificateReconcileResultChan, useCertManagerChan)                        // STATE: {reconcileResultChan: 4, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1, serviceCertificateReconcileResultChan: 1}
-	go r.reconcileService(defaultMeta, ba, instance, instanceMutex, reconcileResultChan, serviceCertificateReconcileResultChan, useCertManagerChan) // STATE: {reconcileResultChan: 5, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
-	go r.reconcileNetworkPolicy(defaultMeta, instance, instanceMutex, reconcileResultChan)                                                          // STATE: {reconcileResultChan: 6, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
-	go r.reconcileServiceability(instance, instanceMutex, reqLogger, reconcileResultChan)                                                           // STATE: {reconcileResultChan: 7, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
-	go r.reconcileBindings(instance, instanceMutex, reconcileResultChan)                                                                            // STATE: {reconcileResultChan: 8, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
-
 	ltpaKeysLastRotationChan := make(chan string, 1)
 	lastRotationChan := make(chan string, 2) // order doesn't matter, just need the latest rotation time
 
@@ -1002,20 +985,49 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 	sharedResourceHandoffReconcileResultChan := make(chan ReconcileResult,
 		1) // reconcileLTPAConfigConcurrent() reads from sharedResourceReconcileResultChan and writes to this chan
 
-	go r.reconcilePasswordEncryptionKeyConcurrent(instance, instanceMutex, passwordEncryptionMetadata, sharedResourceReconcileResultChan, lastRotationChan, encryptionSecretNameChan)                  // STATE: {reconcileResultChan: 8, semeruMarkedForDeletionChan: 1, sharedResourceReconcileResultChan: 1, lastRotationChan: 1, encryptionSecretNameChan: 1}
-	go r.reconcileLTPAKeysConcurrent(instance, instanceMutex, ltpaKeysMetadata, ltpaConfigMetadata, sharedResourceReconcileResultChan, lastRotationChan, ltpaSecretNameChan, ltpaKeysLastRotationChan) // STATE: {reconcileResultChan: 8, semeruMarkedForDeletionChan: 1, sharedResourceReconcileResultChan: 2, lastRotationChan: 2, ltpaKeysLastRotationChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1}
+	go r.reconcilePasswordEncryptionKeyConcurrent(instance, instanceMutex, passwordEncryptionMetadata, sharedResourceReconcileResultChan, lastRotationChan, encryptionSecretNameChan)                  // STATE: {reconcileResultChan: 4, semeruMarkedForDeletionChan: 1, sharedResourceReconcileResultChan: 1, lastRotationChan: 1, encryptionSecretNameChan: 1}
+	go r.reconcileLTPAKeysConcurrent(instance, instanceMutex, ltpaKeysMetadata, ltpaConfigMetadata, sharedResourceReconcileResultChan, lastRotationChan, ltpaSecretNameChan, ltpaKeysLastRotationChan) // STATE: {reconcileResultChan: 4, semeruMarkedForDeletionChan: 1, sharedResourceReconcileResultChan: 2, lastRotationChan: 2, ltpaKeysLastRotationChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1}
 	go r.reconcileLTPAConfigConcurrent(instance, instanceMutex, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, sharedResourceHandoffReconcileResultChan, sharedResourceReconcileResultChan,
-		lastRotationChan, ltpaKeysLastRotationChan, ltpaXMLSecretNameChan) // STATE: {reconcileResultChan: 8, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
-	go r.reconcileStatefulSetDeployment(defaultMeta, instance, instanceMutex, ltpaConfigMetadata, passwordEncryptionMetadata, reconcileResultChan, sharedResourceHandoffReconcileResultChan, encryptionSecretNameChan, ltpaSecretNameChan, ltpaXMLSecretNameChan) // STATE: {reconcileResultChan: 9, semeruMarkedForDeletionChan: 1}
+		lastRotationChan, ltpaKeysLastRotationChan, ltpaXMLSecretNameChan) // STATE: {reconcileResultChan: 4, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
 
-	// FRONTIER: past this point, it doesn't make sense to manage the route when the statefulset/deployment might possibly not exist, so block until completion
-	// STATE: {semeruMarkedForDeletionChan: 1, reconcileResultChan: 9}
-	reconcileResults := 9
+	// FRONTIER: instances shouldn't proceed past if they are waiting for LTPA creation
+	reconcileResults := 4
 	foundFirstError := false
 	var firstErroringReconcileResult ReconcileResult
 	for i := 0; i < reconcileResults; i++ {
 		reconcileResult := <-reconcileResultChan
 		// fmt.Printf("reconcile result %d\n", i)
+		if !foundFirstError && reconcileResult.err != nil {
+			foundFirstError = true
+			firstErroringReconcileResult = reconcileResult
+		}
+	}
+	// STATE: {semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	if foundFirstError {
+		<-semeruMarkedForDeletionChan              // STATE:  {sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+		<-sharedResourceHandoffReconcileResultChan // STATE:  {encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+		<-encryptionSecretNameChan                 // STATE:  {ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+		<-ltpaSecretNameChan                       // STATE:  {ltpaXMLSecretNameChan: 1}
+		<-ltpaXMLSecretNameChan                    // STATE: {}
+		return r.ManageError(firstErroringReconcileResult.err, firstErroringReconcileResult.condition, instance)
+	}
+
+	go r.reconcileSemeruCloudCompilerReady(instance, instanceMutex, reconcileResultChan) // STATE: {reconcileResultChan: 1, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	useCertManagerChan := make(chan bool, 1)
+	serviceCertificateReconcileResultChan := make(chan ReconcileResult, 1)
+	go r.reconcileServiceCertificate(ba, instance, instanceMutex, serviceCertificateReconcileResultChan, useCertManagerChan)                                                                                                                                      // STATE: {reconcileResultChan: 1, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1, useCertManagerChan: 1, serviceCertificateReconcileResultChan: 1}
+	go r.reconcileService(defaultMeta, ba, instance, instanceMutex, reconcileResultChan, serviceCertificateReconcileResultChan, useCertManagerChan)                                                                                                               // STATE: {reconcileResultChan: 2, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	go r.reconcileNetworkPolicy(defaultMeta, instance, instanceMutex, reconcileResultChan)                                                                                                                                                                        // STATE: {reconcileResultChan: 3, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	go r.reconcileServiceability(instance, instanceMutex, reqLogger, reconcileResultChan)                                                                                                                                                                         // STATE: {reconcileResultChan: 4, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	go r.reconcileBindings(instance, instanceMutex, reconcileResultChan)                                                                                                                                                                                          // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	go r.reconcileStatefulSetDeployment(defaultMeta, instance, instanceMutex, ltpaConfigMetadata, passwordEncryptionMetadata, reconcileResultChan, sharedResourceHandoffReconcileResultChan, encryptionSecretNameChan, ltpaSecretNameChan, ltpaXMLSecretNameChan) // STATE: {reconcileResultChan: 6, semeruMarkedForDeletionChan: 1}
+
+	// FRONTIER: past this point, it doesn't make sense to manage the route when the statefulset/deployment might possibly not exist, so block until completion
+	// STATE: {reconcileResultChan: 6, semeruMarkedForDeletionChan: 1}
+	reconcileResults = 6
+	foundFirstError = false
+	for i := 0; i < reconcileResults; i++ {
+		reconcileResult := <-reconcileResultChan
 		if !foundFirstError && reconcileResult.err != nil {
 			foundFirstError = true
 			firstErroringReconcileResult = reconcileResult
