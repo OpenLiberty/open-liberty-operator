@@ -420,7 +420,10 @@ func (r *ReconcileOpenLiberty) reconcileBindings(instance *olv1.OpenLibertyAppli
 func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeyConcurrent(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, sharedResourceReconcileResultChan chan<- ReconcileResult, lastRotationChan chan<- string, encryptionSecretNameChan chan<- string) {
 	// Manage the shared password encryption key Secret if it exists
 	instanceMutex.Lock()
+	namespaceLocks, _ := namespaceLockMap.Load(instance.GetNamespace())
+	namespaceLocks.([]*sync.Mutex)[2].Lock()
 	message, encryptionSecretName, passwordEncryptionKeyLastRotation, err := r.reconcilePasswordEncryptionKey(instance, passwordEncryptionMetadata)
+	namespaceLocks.([]*sync.Mutex)[2].Lock()
 	instanceMutex.Unlock()
 	lastRotationChan <- passwordEncryptionKeyLastRotation
 	encryptionSecretNameChan <- encryptionSecretName
@@ -434,7 +437,10 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeyConcurrent(instance
 func (r *ReconcileOpenLiberty) reconcileLTPAKeysConcurrent(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, reconcileResultChan chan<- ReconcileResult, lastRotationChan chan<- string, ltpaSecretNameChan chan<- string, ltpaKeysLastRotationChan chan<- string) {
 	// Create and manage the shared LTPA keys Secret if the feature is enabled
 	instanceMutex.Lock()
+	namespaceLocks, _ := namespaceLockMap.Load(instance.GetNamespace())
+	namespaceLocks.([]*sync.Mutex)[0].Lock()
 	message, ltpaSecretName, ltpaKeysLastRotation, err := r.reconcileLTPAKeys(instance, ltpaKeysMetadata, ltpaConfigMetadata)
+	namespaceLocks.([]*sync.Mutex)[0].Unlock()
 	instanceMutex.Unlock()
 	ltpaSecretNameChan <- ltpaSecretName
 	lastRotationChan <- ltpaKeysLastRotation
@@ -475,7 +481,10 @@ func (r *ReconcileOpenLiberty) reconcileLTPAConfigConcurrent(instance *olv1.Open
 
 	// Using the LTPA keys and config metadata, create and manage the shared LTPA Liberty server XML if the feature is enabled
 	instanceMutex.Lock()
+	namespaceLocks, _ := namespaceLockMap.Load(instance.GetNamespace())
+	namespaceLocks.([]*sync.Mutex)[1].Lock()
 	message, ltpaXMLSecretName, err := r.reconcileLTPAConfig(instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
+	namespaceLocks.([]*sync.Mutex)[1].Unlock()
 	instanceMutex.Unlock()
 	ltpaXMLSecretNameChan <- ltpaXMLSecretName
 	if err != nil {
