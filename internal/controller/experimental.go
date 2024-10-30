@@ -236,7 +236,9 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerReady(instance *olv1.
 	reconcileResultChan <- ReconcileResult{err: nil, condition: reconcileResult.condition}
 }
 
-func (r *ReconcileOpenLiberty) reconcileKnativeServiceSequential(defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, reqLogger logr.Logger, isKnativeSupported bool) (ctrl.Result, error) {
+func (r *ReconcileOpenLiberty) reconcileKnativeServiceSequential(defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reqLogger logr.Logger, isKnativeSupported bool) (ctrl.Result, error) {
+	instanceMutex.Lock()
+	defer instanceMutex.Unlock()
 	if instance.Spec.CreateKnativeService != nil && *instance.Spec.CreateKnativeService {
 		// Clean up non-Knative resources
 		resources := []client.Object{
@@ -423,7 +425,7 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeyConcurrent(instance
 	namespaceLocks, _ := namespaceLockMap.Load(instance.GetNamespace())
 	namespaceLocks.([]*sync.Mutex)[2].Lock()
 	message, encryptionSecretName, passwordEncryptionKeyLastRotation, err := r.reconcilePasswordEncryptionKey(instance, passwordEncryptionMetadata)
-	namespaceLocks.([]*sync.Mutex)[2].Lock()
+	namespaceLocks.([]*sync.Mutex)[2].Unlock()
 	instanceMutex.Unlock()
 	lastRotationChan <- passwordEncryptionKeyLastRotation
 	encryptionSecretNameChan <- encryptionSecretName
@@ -919,6 +921,7 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 
 	// Everything done from here on out will be with an invalid image so this should terminate the parent reconcile and pull all channel data
 	ltpaKeysMetadata := <-ltpaMetadataChan
+	instanceMutex.Lock()
 	if imageReferenceOld != instance.Status.ImageReference {
 		// STATE: {reconcileResultChan: 1, ltpaMetadataChan: 1}
 
@@ -932,6 +935,7 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 				// block to clear channels before exiting
 				<-reconcileResultChan
 				<-ltpaMetadataChan
+				instanceMutex.Unlock()
 				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 			}
 		}
@@ -943,9 +947,11 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 			// block to clear channels before exiting
 			<-reconcileResultChan
 			<-ltpaMetadataChan
+			instanceMutex.Unlock()
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
 	}
+	instanceMutex.Unlock()
 
 	// obtain password encryption metadata
 	passwordEncryptionMetadataChan := make(chan *lutils.PasswordEncryptionMetadata, 1)
@@ -958,7 +964,7 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 	go r.reconcileSemeruCloudCompilerReady(instance, instanceMutex, semeruReconcileResultChan, reconcileResultChan)        // STATE: {reconcileResultChan: 4, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
 
 	// FRONTIER: knative service should have option to exit the reconcile loop
-	res, err := r.reconcileKnativeServiceSequential(defaultMeta, instance, reqLogger, isKnativeSupported)
+	res, err := r.reconcileKnativeServiceSequential(defaultMeta, instance, instanceMutex, reqLogger, isKnativeSupported)
 	if err != nil {
 		// block to pull from all go routines before exiting reconcile
 		<-ltpaMetadataChan               // STATE: {reconcileResultChan: 4, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
