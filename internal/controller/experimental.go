@@ -131,7 +131,7 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeySharingEnabled(inst
 		if err != nil {
 			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled}
 			for i := 0; i < expectedMetadataLength; i++ {
-				passwordEncryptionMetadataChan <- nil
+				passwordEncryptionMetadataChan <- &lutils.PasswordEncryptionMetadata{}
 			}
 			return
 		}
