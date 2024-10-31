@@ -420,7 +420,7 @@ func (r *ReconcileOpenLiberty) reconcileServiceCertificate(ba common.BaseCompone
 	serviceCertificateReconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 }
 
-func (r *ReconcileOpenLiberty) reconcileService(defaultMeta metav1.ObjectMeta, ba common.BaseComponent, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult, serviceCertificateReconcileResultChan <-chan ReconcileResult, useCertManagerChan <-chan bool) {
+func (r *ReconcileOpenLiberty) reconcileService(defaultMeta metav1.ObjectMeta, ba common.BaseComponent, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult, useCertManagerChan <-chan bool) {
 	svc := &corev1.Service{ObjectMeta: defaultMeta}
 	instanceMutex.Lock()
 	err := r.CreateOrUpdate(svc, instance, func() error {
@@ -1096,13 +1096,15 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 	sharedResourceHandoffReconcileResultChan := make(chan ReconcileResult,
 		1) // reconcileLTPAConfigConcurrent() reads from sharedResourceReconcileResultChan and writes to this chan
 
-	go r.reconcilePasswordEncryptionKeyConcurrent(instance, instanceMutex, passwordEncryptionMetadata, sharedResourceReconcileResultChan, lastRotationChan, encryptionSecretNameChan)                  // STATE: {reconcileResultChan: 4, semeruMarkedForDeletionChan: 1, sharedResourceReconcileResultChan: 1, lastRotationChan: 1, encryptionSecretNameChan: 1}
-	go r.reconcileLTPAKeysConcurrent(instance, instanceMutex, ltpaKeysMetadata, ltpaConfigMetadata, sharedResourceReconcileResultChan, lastRotationChan, ltpaSecretNameChan, ltpaKeysLastRotationChan) // STATE: {reconcileResultChan: 4, semeruMarkedForDeletionChan: 1, sharedResourceReconcileResultChan: 2, lastRotationChan: 2, ltpaKeysLastRotationChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1}
+	useCertManagerChan := make(chan bool, 1)
+	go r.reconcileServiceCertificate(ba, instance, instanceMutex, reconcileResultChan, useCertManagerChan)                                                                                             // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1}
+	go r.reconcilePasswordEncryptionKeyConcurrent(instance, instanceMutex, passwordEncryptionMetadata, sharedResourceReconcileResultChan, lastRotationChan, encryptionSecretNameChan)                  // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1, sharedResourceReconcileResultChan: 1, lastRotationChan: 1, encryptionSecretNameChan: 1}
+	go r.reconcileLTPAKeysConcurrent(instance, instanceMutex, ltpaKeysMetadata, ltpaConfigMetadata, sharedResourceReconcileResultChan, lastRotationChan, ltpaSecretNameChan, ltpaKeysLastRotationChan) // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1, sharedResourceReconcileResultChan: 2, lastRotationChan: 2, ltpaKeysLastRotationChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1}
 	go r.reconcileLTPAConfigConcurrent(instance, instanceMutex, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, sharedResourceHandoffReconcileResultChan, sharedResourceReconcileResultChan,
-		lastRotationChan, ltpaKeysLastRotationChan, ltpaXMLSecretNameChan) // STATE: {reconcileResultChan: 4, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+		lastRotationChan, ltpaKeysLastRotationChan, ltpaXMLSecretNameChan) // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
 
 	// FRONTIER: instances shouldn't proceed past if they are waiting for LTPA creation
-	reconcileResults := 4
+	reconcileResults := 5
 	foundFirstError := false
 	var firstErroringReconcileResult ReconcileResult
 	for i := 0; i < reconcileResults; i++ {
@@ -1113,8 +1115,9 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 			firstErroringReconcileResult = reconcileResult
 		}
 	}
-	// STATE: {semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	// STATE: {useCertManagerChan: 1, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
 	if foundFirstError {
+		<-useCertManagerChan                       // STATE:  {semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
 		<-semeruMarkedForDeletionChan              // STATE:  {sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
 		<-sharedResourceHandoffReconcileResultChan // STATE:  {encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
 		<-encryptionSecretNameChan                 // STATE:  {ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
@@ -1123,11 +1126,8 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 		return r.ManageError(firstErroringReconcileResult.err, firstErroringReconcileResult.condition, instance)
 	}
 
-	go r.reconcileSemeruCloudCompilerReady(instance, instanceMutex, reconcileResultChan) // STATE: {reconcileResultChan: 1, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
-	useCertManagerChan := make(chan bool, 1)
-	serviceCertificateReconcileResultChan := make(chan ReconcileResult, 1)
-	go r.reconcileServiceCertificate(ba, instance, instanceMutex, serviceCertificateReconcileResultChan, useCertManagerChan)                                                                                                                                      // STATE: {reconcileResultChan: 1, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1, useCertManagerChan: 1, serviceCertificateReconcileResultChan: 1}
-	go r.reconcileService(defaultMeta, ba, instance, instanceMutex, reconcileResultChan, serviceCertificateReconcileResultChan, useCertManagerChan)                                                                                                               // STATE: {reconcileResultChan: 2, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	go r.reconcileSemeruCloudCompilerReady(instance, instanceMutex, reconcileResultChan)                                                                                                                                                                          // STATE: {reconcileResultChan: 1, useCertManagerChan: 1, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	go r.reconcileService(defaultMeta, ba, instance, instanceMutex, reconcileResultChan, useCertManagerChan)                                                                                                                                                      // STATE: {reconcileResultChan: 2, useCertManagerChan: 1,semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
 	go r.reconcileNetworkPolicy(defaultMeta, instance, instanceMutex, reconcileResultChan)                                                                                                                                                                        // STATE: {reconcileResultChan: 3, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
 	go r.reconcileServiceability(instance, instanceMutex, reqLogger, reconcileResultChan)                                                                                                                                                                         // STATE: {reconcileResultChan: 4, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
 	go r.reconcileBindings(instance, instanceMutex, reconcileResultChan)                                                                                                                                                                                          // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
