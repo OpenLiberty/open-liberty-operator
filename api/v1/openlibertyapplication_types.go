@@ -175,9 +175,9 @@ type OpenLibertyApplicationExperimental struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=1,type=spec,displayName="Manage Concurrency"
 	ManageConcurrency *bool `json:"manageConcurrency,omitempty"`
 
-	// The maximum number of go-routines to be spawned that will create ephemeral Pods (i.e. Jobs) in the cluster at a single time. Defaults to 3.
-	// +operator-sdk:csv:customresourcedefinitions:order=2,type=spec,displayName="Ephemeral Pod Worker Pool Size"
-	EphemeralPodWorkerPoolSize *int `json:"ephemeralPodWorkerPoolSize,omitempty"`
+	// If set to true, it will enable reconciling erroring instances first up until a max retry of 10 reconciles.
+	// +operator-sdk:csv:customresourcedefinitions:order=2,type=spec,displayName="Manage Erroring Instances"
+	ManageErroringInstances *bool `json:"manageErroringInstances,omitempty"`
 
 	// If set to true, it will enable caching when reading the Decision Tree data structure, otherwise does nothing. Defaults to false.
 	// +operator-sdk:csv:customresourcedefinitions:order=3,type=spec,displayName="Manage Cache"
@@ -1650,11 +1650,11 @@ func (cr *OpenLibertyApplication) GetExperimental() *OpenLibertyApplicationExper
 	return cr.Spec.Experimental
 }
 
-func (exp *OpenLibertyApplicationExperimental) GetEphemeralPodWorkerPoolSize() *int {
-	if exp.EphemeralPodWorkerPoolSize == nil {
+func (exp *OpenLibertyApplicationExperimental) GetManageErroringInstances() *bool {
+	if exp.ManageErroringInstances == nil {
 		return nil
 	}
-	return exp.EphemeralPodWorkerPoolSize
+	return exp.ManageErroringInstances
 }
 
 func (exp *OpenLibertyApplicationExperimental) GetManageCache() *bool {
