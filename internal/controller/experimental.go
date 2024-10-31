@@ -48,10 +48,11 @@ func init() {
 	successInstances = &sync.Map{}
 }
 
-func getInstanceStatusCondition(instance *olv1.OpenLibertyApplication) (bool, bool, bool) {
+func getInstanceStatusCondition(instance *olv1.OpenLibertyApplication) (string, bool, bool, bool) {
 	isErrorInstance := false
 	isPendingInstance := false
 	isSuccessInstance := false
+	message := ""
 	trueCount := 0
 	for _, cond := range instance.Status.GetConditions() {
 		if cond.GetStatus() == corev1.ConditionFalse {
@@ -62,6 +63,7 @@ func getInstanceStatusCondition(instance *olv1.OpenLibertyApplication) (bool, bo
 		}
 		if cond.GetType() == common.StatusConditionTypeReconciled && strings.HasPrefix(cond.GetMessage(), "Waiting for OpenLibertyApplication instance") {
 			isPendingInstance = true
+			message = cond.GetMessage()
 		}
 	}
 	if trueCount == 3 {
@@ -69,7 +71,7 @@ func getInstanceStatusCondition(instance *olv1.OpenLibertyApplication) (bool, bo
 	} else {
 		isErrorInstance = true
 	}
-	return isSuccessInstance, isPendingInstance, isErrorInstance
+	return message, isSuccessInstance, isPendingInstance, isErrorInstance
 }
 
 func getInstanceUniqueKey(instance *olv1.OpenLibertyApplication) string {
@@ -88,28 +90,43 @@ func isBlockingForErroringInstances() bool {
 	return isBlockingForErroringInstances
 }
 
-func (r *ReconcileOpenLiberty) reconcileManageErroringInstances(instance *olv1.OpenLibertyApplication) error {
+func cleanupErroringInstance(instance *olv1.OpenLibertyApplication) {
+	trueCount := 0
+	conditions := instance.Status.GetConditions()
+	n := len(conditions)
+	for _, cond := range conditions {
+		if cond.GetStatus() != corev1.ConditionFalse {
+			trueCount += 1
+		}
+	}
+	if n > 0 && trueCount == n {
+		uniqueKey := getInstanceUniqueKey(instance)
+		errorInstances.Delete(uniqueKey)
+	}
+}
+
+func (r *ReconcileOpenLiberty) reconcileManageErroringInstances(instance *olv1.OpenLibertyApplication) (bool, string, error) {
 	if r.isManagingErroringInstances(instance) {
-		isSuccessInstance, isPendingInstance, isErrorInstance := getInstanceStatusCondition(instance)
+		message, isSuccessInstance, isPendingInstance, isErrorInstance := getInstanceStatusCondition(instance)
 
 		uniqueKey := getInstanceUniqueKey(instance)
 		if isSuccessInstance {
 			if _, found := successInstances.Load(uniqueKey); !found {
 				successInstances.Store(uniqueKey, 0)
-				return nil
+				return false, message, nil
 			} else {
 				if isBlockingForErroringInstances() {
 					fmt.Println("success: blocking for erroring instance...")
-					return isSuccessInstanceErr // indicate to return manage success
+					return false, message, isSuccessInstanceErr // indicate to return manage success
 				}
 			}
-			return nil
+			return false, message, nil
 		}
 
 		if isPendingInstance {
 			if isBlockingForErroringInstances() {
 				fmt.Println("pending: blocking for erroring instance...")
-				return isPendingInstanceErr // indicate to return manage error
+				return false, message, isPendingInstanceErr // indicate to return manage error
 			}
 		} else {
 			if isErrorInstance {
@@ -121,10 +138,11 @@ func (r *ReconcileOpenLiberty) reconcileManageErroringInstances(instance *olv1.O
 						errorInstances.Store(uniqueKey, currentValue.(int)+1)
 					}
 				}
+				return true, message, nil
 			}
 		}
 	}
-	return nil
+	return false, "", nil
 }
 
 func (r *ReconcileOpenLiberty) isConcurrencyEnabled(instance *olv1.OpenLibertyApplication) bool {
