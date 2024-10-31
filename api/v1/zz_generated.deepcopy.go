@@ -285,9 +285,9 @@ func (in *OpenLibertyApplicationExperimental) DeepCopyInto(out *OpenLibertyAppli
 		*out = new(bool)
 		**out = **in
 	}
-	if in.EphemeralPodWorkerPoolSize != nil {
-		in, out := &in.EphemeralPodWorkerPoolSize, &out.EphemeralPodWorkerPoolSize
-		*out = new(int)
+	if in.ManageErroringInstances != nil {
+		in, out := &in.ManageErroringInstances, &out.ManageErroringInstances
+		*out = new(bool)
 		**out = **in
 	}
 	if in.ManageCache != nil {
