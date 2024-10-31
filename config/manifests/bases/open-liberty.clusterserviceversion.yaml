@@ -108,11 +108,10 @@ spec:
       - description: The DNS Config for the application pod.
         displayName: DNS Config
         path: dns.config
-      - description: The maximum number of go-routines to be spawned that will create
-          ephemeral Pods (i.e. Jobs) in the cluster at a single time. Defaults to
-          3.
-        displayName: Ephemeral Pod Worker Pool Size
-        path: experimental.ephemeralPodWorkerPoolSize
+      - description: If set to true, it will enable reconciling erroring instances
+          first up until a max retry of 10 reconciles.
+        displayName: Manage Erroring Instances
+        path: experimental.manageErroringInstances
       - description: Name of the service account to use for deploying the application.
           A service account is automatically created if it's not specified.
         displayName: Service Account Name

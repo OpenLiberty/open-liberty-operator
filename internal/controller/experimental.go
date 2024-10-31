@@ -34,6 +34,99 @@ type ReconcileResult struct {
 	message   string
 }
 
+var errorInstances *sync.Map
+
+// var pendingInstances *sync.Map // no matter what, these instances will fail until errorInstances is cleared
+var successInstances *sync.Map
+var isPendingInstanceErr, isSuccessInstanceErr error
+
+func init() {
+	isSuccessInstanceErr = fmt.Errorf("is success instance")
+	isPendingInstanceErr = fmt.Errorf("is pending instance")
+	errorInstances = &sync.Map{}
+	// pendingInstances = &sync.Map{}
+	successInstances = &sync.Map{}
+}
+
+func getInstanceStatusCondition(instance *olv1.OpenLibertyApplication) (bool, bool, bool) {
+	isErrorInstance := false
+	isPendingInstance := false
+	isSuccessInstance := false
+	trueCount := 0
+	for _, cond := range instance.Status.GetConditions() {
+		if cond.GetStatus() == corev1.ConditionFalse {
+			// this is an erroring instance
+			isErrorInstance = true
+		} else {
+			trueCount += 1
+		}
+		if cond.GetType() == common.StatusConditionTypeReconciled && strings.HasPrefix(cond.GetMessage(), "Waiting for OpenLibertyApplication instance") {
+			isPendingInstance = true
+		}
+	}
+	if trueCount == 3 {
+		isSuccessInstance = true
+	} else {
+		isErrorInstance = true
+	}
+	return isSuccessInstance, isPendingInstance, isErrorInstance
+}
+
+func getInstanceUniqueKey(instance *olv1.OpenLibertyApplication) string {
+	return fmt.Sprintf("%s|%s", instance.GetNamespace(), instance.GetName())
+}
+
+func isBlockingForErroringInstances() bool {
+	isBlockingForErroringInstances := false
+	errorInstances.Range(func(key, value any) bool {
+		if value.(int) < 10 {
+			isBlockingForErroringInstances = true
+			return false
+		}
+		return true
+	})
+	return isBlockingForErroringInstances
+}
+
+func (r *ReconcileOpenLiberty) reconcileManageErroringInstances(instance *olv1.OpenLibertyApplication) error {
+	if r.isManagingErroringInstances(instance) {
+		isSuccessInstance, isPendingInstance, isErrorInstance := getInstanceStatusCondition(instance)
+
+		uniqueKey := getInstanceUniqueKey(instance)
+		if isSuccessInstance {
+			if _, found := successInstances.Load(uniqueKey); !found {
+				successInstances.Store(uniqueKey, 0)
+				return nil
+			} else {
+				if isBlockingForErroringInstances() {
+					fmt.Println("success: blocking for erroring instance...")
+					return isSuccessInstanceErr // indicate to return manage success
+				}
+			}
+			return nil
+		}
+
+		if isPendingInstance {
+			if isBlockingForErroringInstances() {
+				fmt.Println("pending: blocking for erroring instance...")
+				return isPendingInstanceErr // indicate to return manage error
+			}
+		} else {
+			if isErrorInstance {
+				currentValue, found := errorInstances.Load(uniqueKey)
+				if !found {
+					errorInstances.Store(uniqueKey, 0)
+				} else {
+					if currentValue.(int) < 10 {
+						errorInstances.Store(uniqueKey, currentValue.(int)+1)
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func (r *ReconcileOpenLiberty) isConcurrencyEnabled(instance *olv1.OpenLibertyApplication) bool {
 	if instance.GetExperimental() != nil && instance.GetExperimental().GetManageConcurrency() != nil && *instance.GetExperimental().GetManageConcurrency() {
 		return true
@@ -41,11 +134,11 @@ func (r *ReconcileOpenLiberty) isConcurrencyEnabled(instance *olv1.OpenLibertyAp
 	return false
 }
 
-func (r *ReconcileOpenLiberty) getEphemeralPodWorkerPoolSize(instance *olv1.OpenLibertyApplication) int {
-	if instance.GetExperimental() != nil && instance.GetExperimental().GetEphemeralPodWorkerPoolSize() != nil {
-		return *instance.GetExperimental().GetEphemeralPodWorkerPoolSize()
+func (r *ReconcileOpenLiberty) isManagingErroringInstances(instance *olv1.OpenLibertyApplication) bool {
+	if instance.GetExperimental() != nil && instance.GetExperimental().GetManageErroringInstances() != nil {
+		return *instance.GetExperimental().GetManageErroringInstances()
 	}
-	return 3
+	return false
 }
 
 func (r *ReconcileOpenLiberty) isCachingEnabled(instance *olv1.OpenLibertyApplication) bool {
