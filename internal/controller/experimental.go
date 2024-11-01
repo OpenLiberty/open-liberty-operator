@@ -109,6 +109,7 @@ func isBlockingForErroringInstances() bool {
 
 func (r *ReconcileOpenLiberty) CleanupInstance(instance *olv1.OpenLibertyApplication) {
 	if r.isManagingErroringInstances(instance) {
+		fmt.Printf("Finalizing cleanup for instance %s in namespace %s.\n", instance.GetName(), instance.GetNamespace())
 		_, instanceState := getCurrentInstanceState(instance)
 		uniqueKey := getInstanceUniqueKey(instance)
 		currentInstanceObj, found := instances.Load(uniqueKey)
