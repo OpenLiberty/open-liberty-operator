@@ -189,7 +189,8 @@ func (r *ReconcileOpenLiberty) reconcileLTPAKeys(instance *olv1.OpenLibertyAppli
 	ltpaSecretName := ""
 	ltpaKeysLastRotation := ""
 	if r.isLTPAKeySharingEnabled(instance) {
-		ltpaSecretName, ltpaKeysLastRotation, leaderName, err := r.generateLTPAKeys(instance, ltpaKeysMetadata, ltpaConfigMetadata)
+		ltpaSecretName, ltpaKeysLastRotationTemp, leaderName, err := r.generateLTPAKeys(instance, ltpaKeysMetadata, ltpaConfigMetadata)
+		ltpaKeysLastRotation = ltpaKeysLastRotationTemp
 		if err != nil {
 			if r.isManagingErroringInstances(instance) {
 				SetPendingLTPAInstance(instance, leaderName, err)
