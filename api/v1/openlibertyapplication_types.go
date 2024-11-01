@@ -462,6 +462,9 @@ type OpenLibertyApplicationStatus struct {
 
 	// The generation identifier of this OpenLibertyApplication instance completely reconciled by the Operator.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// The reconciliation interval in seconds.
+	ReconcileInterval *int32 `json:"reconcileInterval,omitempty"`
 }
 
 // Defines possible status conditions.
@@ -471,6 +474,9 @@ type StatusCondition struct {
 	Message            string                 `json:"message,omitempty"`
 	Status             corev1.ConditionStatus `json:"status,omitempty"`
 	Type               StatusConditionType    `json:"type,omitempty"`
+
+	// The count of how many times the condition status type has not been changed.
+	UnchangedConditionCount *int32 `json:"unchangedConditionCount,omitempty"`
 }
 
 // Defines the type of status condition.
@@ -963,6 +969,14 @@ func (s *OpenLibertyApplicationStatus) SetReference(name string, value string) {
 	s.References[name] = value
 }
 
+func (s *OpenLibertyApplicationStatus) GetReconcileInterval() *int32 {
+	return s.ReconcileInterval
+}
+
+func (s *OpenLibertyApplicationStatus) SetReconcileInterval(interval *int32) {
+	s.ReconcileInterval = interval
+}
+
 // GetMinReplicas returns minimum replicas
 func (a *OpenLibertyApplicationAutoScaling) GetMinReplicas() *int32 {
 	return a.MinReplicas
@@ -1420,6 +1434,7 @@ func (s *OpenLibertyApplicationStatus) SetCondition(c common.StatusCondition) {
 	condition.SetMessage(c.GetMessage())
 	condition.SetStatus(c.GetStatus())
 	condition.SetType(c.GetType())
+	condition.SetUnchangedConditionCount(c.GetUnchangedConditionCount())
 	if !found {
 		s.Conditions = append(s.Conditions, *condition)
 	}
@@ -1437,6 +1452,24 @@ func (s *OpenLibertyApplicationStatus) UnsetCondition(c common.StatusCondition) 
 				s.Conditions = append(s.Conditions[:i], s.Conditions[i+1])
 			}
 			return
+		}
+	}
+}
+
+func (sc *StatusCondition) GetUnchangedConditionCount() *int32 {
+	return sc.UnchangedConditionCount
+}
+
+func (sc *StatusCondition) SetUnchangedConditionCount(count *int32) {
+	sc.UnchangedConditionCount = count
+}
+
+func (s *OpenLibertyApplicationStatus) UnsetUnchangedConditionCount(conditionType common.StatusConditionType) {
+	// Reset unchanged count for other status conditions
+	var emptyCount *int32
+	for i := range s.Conditions {
+		if s.Conditions[i].GetType() != conditionType && s.Conditions[i].GetUnchangedConditionCount() != nil {
+			s.Conditions[i].SetUnchangedConditionCount(emptyCount)
 		}
 	}
 }

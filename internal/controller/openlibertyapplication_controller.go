@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	networkingv1 "k8s.io/api/networking/v1"
@@ -112,6 +113,17 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
+	}
+
+	// Check if the interval and interval increase are set properly in the ConfigMap
+	if _, err = strconv.Atoi(common.Config[common.OpConfigReconcileIntervalSeconds]); err != nil {
+		common.Config.SetConfigMapDefaultValue(common.OpConfigReconcileIntervalSeconds)
+		r.ManageError(errors.New("reconcileIntervalSeconds in open-liberty-operator config map has an invalid syntax, error: "+err.Error()), common.StatusConditionTypeReconciled, instance)
+	}
+
+	if _, err = strconv.Atoi(common.Config[common.OpConfigReconcileIntervalPercentage]); err != nil {
+		common.Config.SetConfigMapDefaultValue(common.OpConfigReconcileIntervalPercentage)
+		r.ManageError(errors.New("reconcileIntervalIncreasePercentage in open-liberty-operator config map has an invalid syntax, error: "+err.Error()), common.StatusConditionTypeReconciled, instance)
 	}
 
 	isKnativeSupported, err := r.IsGroupVersionSupported(servingv1.SchemeGroupVersion.String(), "Service")
@@ -815,7 +827,8 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 }
 
 func (r *ReconcileOpenLiberty) isOpenLibertyApplicationReady(ba common.BaseComponent) bool {
-	if r.CheckApplicationStatus(ba) == corev1.ConditionTrue {
+	_, condition := r.CheckApplicationStatus(ba)
+	if condition.GetStatus() == corev1.ConditionTrue {
 		statusCondition := ba.GetStatus().GetCondition(common.StatusConditionTypeReady)
 		return statusCondition != nil && statusCondition.GetMessage() == common.StatusConditionTypeReadyMessage
 	}
