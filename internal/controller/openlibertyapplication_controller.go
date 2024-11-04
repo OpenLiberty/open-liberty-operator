@@ -205,25 +205,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// 	return reconcile.Result{}, nil
 	// }
 
-	message, err := r.reconcileManageErroringInstances(instance)
-	if err != nil {
-		if err == skippingForPendingInstanceErr {
-			return r.ManageError(fmt.Errorf("Temporarily skipping this instance because it depends on another OpenLibertyApplication to recover; %s", message), common.StatusConditionTypeReconciled, instance) // Manage error while erroring instances are being worked on
-		}
-		// Manage success while erroring instances are being worked on
-		return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
-	}
-	defer r.CleanupInstance(instance)
-
-	// From here, the Open Liberty Application instance is stored in shared memory and can begin concurrent actions.
-	if r.isConcurrencyEnabled(instance) {
-		return r.concurrentReconcile(ba, instance, reqLogger, isKnativeSupported, ctx, request)
-	} else {
-		return r.sequentialReconcile(ba, instance, reqLogger, isKnativeSupported, ctx, request)
-	}
-}
-
-func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, reqLogger logr.Logger, isKnativeSupported bool, ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	defaultMeta := metav1.ObjectMeta{
 		Name:      instance.Name,
 		Namespace: instance.Namespace,
@@ -260,7 +241,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 	var ltpaMetadataList *lutils.LTPAMetadataList
 	var ltpaKeysMetadata, ltpaConfigMetadata *lutils.LTPAMetadata
 	if r.isLTPAKeySharingEnabled(instance) {
-		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, LTPA_RESOURCE_SHARING_FILE_NAME, r.isCachingEnabled(instance))
+		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, LTPA_RESOURCE_SHARING_FILE_NAME, r.isResourceCachingEnabled(instance))
 		if err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
@@ -274,7 +255,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 	var passwordEncryptionMetadataList *lutils.PasswordEncryptionMetadataList
 	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{}
 	if r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata) {
-		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, r.isCachingEnabled(instance))
+		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, r.isResourceCachingEnabled(instance))
 		if err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}

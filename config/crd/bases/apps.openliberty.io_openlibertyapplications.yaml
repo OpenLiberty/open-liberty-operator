@@ -1031,8 +1031,6 @@ spec:
                       to ClusterFirst.
                     type: string
                 type: object
-              enableCaching:
-                type: boolean
               env:
                 description: An array of environment variables for the application
                   container.
@@ -1190,24 +1188,6 @@ spec:
                   type: object
                 type: array
                 x-kubernetes-list-type: atomic
-              experimental:
-                description: Defines the Experimental concurrency feature
-                properties:
-                  manageCache:
-                    description: If set to true, it will enable caching when reading
-                      the Decision Tree data structure, otherwise does nothing. Defaults
-                      to false.
-                    type: boolean
-                  manageConcurrency:
-                    description: If set to true, it will enable experimental mode
-                      (concurrency) when reconciling the application instance, otherwise
-                      does nothing. Defaults to false.
-                    type: boolean
-                  manageErroringInstances:
-                    description: If set to true, it will enable reconciling erroring
-                      instances first up until a max retry of 10 reconciles.
-                    type: boolean
-                type: object
               expose:
                 description: Expose the application externally via a Route, a Knative
                   Route or an Ingress resource.
@@ -2534,6 +2514,10 @@ spec:
               managePasswordEncryption:
                 description: Enable management of password encryption key sharing
                   amongst Liberty containers. Defaults to false.
+                type: boolean
+              manageResourceCaching:
+                description: Enable management of shared resources using the operator's
+                  in-memory cache. Defaults to true.
                 type: boolean
               manageTLS:
                 description: Enable management of TLS certificates. Defaults to true.

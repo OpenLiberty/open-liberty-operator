@@ -189,12 +189,9 @@ func (r *ReconcileOpenLiberty) reconcileLTPAKeys(instance *olv1.OpenLibertyAppli
 	ltpaSecretName := ""
 	ltpaKeysLastRotation := ""
 	if r.isLTPAKeySharingEnabled(instance) {
-		ltpaSecretName, ltpaKeysLastRotationTemp, leaderName, err := r.generateLTPAKeys(instance, ltpaKeysMetadata, ltpaConfigMetadata)
+		ltpaSecretName, ltpaKeysLastRotationTemp, _, err := r.generateLTPAKeys(instance, ltpaKeysMetadata, ltpaConfigMetadata)
 		ltpaKeysLastRotation = ltpaKeysLastRotationTemp
 		if err != nil {
-			if r.isManagingErroringInstances(instance) {
-				SetPendingLTPAInstance(instance, leaderName, err)
-			}
 			return "Failed to generate the shared LTPA keys Secret", ltpaSecretName, ltpaKeysLastRotation, err
 		}
 	} else {

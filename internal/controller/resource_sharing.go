@@ -333,6 +333,13 @@ func (r *ReconcileOpenLiberty) RemoveLeaderTrackerReference(instance *olv1.OpenL
 	return r.RemoveLeader(instance, leaderTracker, leaderTrackers, leaderTrackerType)
 }
 
+func (r *ReconcileOpenLiberty) isResourceCachingEnabled(instance *olv1.OpenLibertyApplication) bool {
+	if instance.GetManageResourceCaching() == nil || *instance.GetManageResourceCaching() {
+		return true
+	}
+	return false
+}
+
 func hasResourceSuffixesEnv(instance *olv1.OpenLibertyApplication, envName string) (string, bool) {
 	for _, env := range instance.GetEnv() {
 		if env.Name == envName {
