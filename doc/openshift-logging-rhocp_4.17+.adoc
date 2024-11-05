@@ -74,11 +74,32 @@ collector-z75z5                                1/1     Running   0          3h16
 
 ## Visualizing your logs using the Cluster Observability Operator's Logging UI Plugin
 
+. Add the label `logFormat: liberty` to your OpenLibertyApplication Custom Resource. We will use this label to filter for your application pod logs in Observe > Logs.
++
+[source,yaml]
+----
+kind: OpenLibertyApplication
+apiVersion: v1
+metadata:
+  name: <your-liberty-app>
+  labels:
+    logFormat: liberty
+....
+----
+
 . In your OCP web console, go to Observe > Logs to see your application logs.
 +
 image::images/app-logging-ocp-ui-plugin-4.17.png[See logs in OCP UI plugin]
 
-. Expand an individual log entry to see the `structured.*` formatted individual fields, parsed and copied out of the nested JSON log entry.
+. Use the following LogQL query to filter for and format your application pod logs.
++
+[source, text]
+----
+{ log_type="application" } | json | kubernetes_labels_logFormat="liberty" | line_format "[{{.structured_loglevel}}] {{.structured_message}}"
+----
+image::images/app-logging-ocp-LogQL-4.17.png[Query logs using LogQL]
+
+. To see additional `structured.*` formatted individual fields from your application pod log, expand a log entry.
 +
 image::images/app-logging-ocp-ui-plugin-expand-4.17.png[Expand log entry]
 
