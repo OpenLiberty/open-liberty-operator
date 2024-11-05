@@ -1,14 +1,14 @@
 = Observability with Open Liberty
 
-The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in a Kubernetes environment. This document has been tested and is supported with Red Hat OpenShift Container Platform (RHOCP) versions 4.12, 4.14, 4.15, and 4.16.
+The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in a Kubernetes environment. This document has been tested and is supported with Red Hat OpenShift Container Platform (RHOCP) versions 4.12, 4.14, 4.15, 4.16, and 4.17.
 
 == How to analyze Open Liberty logs
 
 Open Liberty logs inside a Kubernetes environment can be managed by deploying log aggregation tools onto a Kubernetes cluster. Log aggregation tools help you persist, search, and visualize the log data that is gathered from the pods across the cluster. 
 
-One choice for application logging with log aggregation is the open source Elasticsearch, Fluentd, and Kibana (EFK) stack. If you use the EFK stack, you can customize and deploy Kibana dashboards to monitor Open Liberty logging events.
+=== Application logging with Elasticsearch, Fluentd, and Kibana
 
-=== Deploying Kibana dashboards to monitor Open Liberty logging events
+One choice for application logging with log aggregation is the open source Elasticsearch, Fluentd, and Kibana (EFK) stack. If you use the EFK stack, you can customize and deploy Kibana dashboards to monitor Open Liberty logging events.
 
 Kibana dashboards are provided for visualizing events from the Open Liberty runtime.
 
@@ -18,7 +18,13 @@ Retrieve available Kibana dashboards tuned for Open Liberty logging events link:
 
 For information regarding how to import Kibana dashboards see the official documentation link:++https://www.elastic.co/guide/en/kibana/5.6/loading-a-saved-dashboard.html++[here].
 
-For effective management of logs emitted from applications, deploy your own Elasticsearch, Fluentd and Kibana (EFK) stack. If you are deploying the EFK stack on Openshift, see the following link:openshift-logging.adoc[guide].
+For effective management of logs emitted from applications, deploy your own Elasticsearch, Fluentd and Kibana (EFK) stack. If you are deploying the EFK stack on OpenShift, see the following link:openshift-logging-rhocp_4.7-4.16.adoc[guide]. Note: The EFK stack can only be deployed on OpenShift versions 4.16 and below.
+
+=== Application logging with Loki and Vector
+
+Another choice for application logging with log aggregation is by using Loki and Vector. If you are deploying Loki and Vector on OpenShift, see the following link:openshift-logging-rhocp_4.17+.adoc[guide].
+
+=== Parsing JSON logs for readability
 
 Command-line JSON parsers, like JSON Query tool (jq), can be used to create human-readable views of JSON-formatted logs. You can create an alias for your jq command in the format you like. In the following example, the logs are piped through grep to ensure that the message field is there before jq parses the line:
 
@@ -43,7 +49,7 @@ The following steps outline how to manually create and modify a server.xml to ad
 <?xml version="1.0" encoding="UTF-8"?>
 <server>
    <featureManager>
-       <feature>mpMetrics-4.0</feature>
+       <feature>mpMetrics-5.1</feature>
        <!-- include the monitor-1.0 feature below if you are using an mpMetrics version below 2.3
        <feature>monitor-1.0</feature> 
        --> 
@@ -115,7 +121,7 @@ spec:
 === Visualizing your data with Grafana
 
 
-There are IBM provided Grafana dashboards that leverage metrics from the JVM as well as from the Open Liberty runtime.  If you are deploying Grafana on Openshift, see the following link:openshift-monitoring.adoc[guide].
+There are IBM provided Grafana dashboards that leverage metrics from the JVM as well as from the Open Liberty runtime.  If you are deploying Grafana on OpenShift, see the following link:openshift-monitoring.adoc[guide].
 
 Sample Open Liberty Grafana dashboards are available for servers using either mpMetrics-1.x or mpMetrics-2.x link:++https://github.com/OpenLiberty/open-liberty-operator/tree/main/deploy/dashboards/metrics++[here]. Look in the featureManager section of the server.xml for either the mpMetrics feature or the umbrella microProfile feature to determine which dashboard to use.
 
