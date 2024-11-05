@@ -10,7 +10,7 @@ With the release of Logging 6.0 in RHOCP 4.17, the EFK stack is no longer suppor
 
 You must have existing object storage in order to configure LokiStack. Loki Operator supports AWS S3, Azure, GCS, Minio, OpenShift Data Foundation, and Swift as options for LokiStack object storage.
 
-Create a secret inside the `openshift-logging` namespace that contains the required fields needed for LokiStack to access your object storage. As an example, the command below creates a secret that allows access to an OpenShift Data Foundation managed S3 bucket running inside the cluster.
+Create a secret `logging-loki-s3` inside the `openshift-logging` namespace that contains the required fields needed for LokiStack to access your object storage. As an example, the command below creates a secret that allows access to an OpenShift Data Foundation managed S3 bucket running inside the cluster.
 
 [source,sh]
 ----
@@ -22,36 +22,31 @@ Create a secret inside the `openshift-logging` namespace that contains the requi
     --namespace openshift-logging
 ----
 
-## Setup LokiStack
+## Setup LokiStack and Cluster Log Forwarding 
 
-. Install the RedHat OpenShift Logging Operator and the Loki Operator from OperatorHub with their respective default installation settings.
+. Follow this link:++https://docs.openshift.com/container-platform/4.17/observability/logging/logging-6.0/log6x-about.html#quick-start[guide] to set up LokiStack and a ClusterLogForwarder in the `openshift-logging` namespace. When you create your LokiStack Custom Resource (CR) in step 2, replace the `storageClassName` definition with your desired storage class.
 
-. Create the LokiStack `logging-loki` in the `openshift-logging` namespace, using the secret you created in this guide's prerequisites as LokiStack's storage secret:
+
+. By default, if container logs are being output in JSON format, they will be nested inside the Vector JSON document's message field. To solve this problem, add the following YAML to the ClusterLogForwarder CR you created earlier:
 +
 [source,yaml]
 ----
-apiVersion: loki.grafana.com/v1
-kind: LokiStack
-metadata:
-  name: logging-loki
-  namespace: openshift-logging
-spec:
-  managementState: Managed
-  size: 1x.extra-small
-  storage:
-    schemas:
-    - effectiveDate: '2022-06-01'
-      version: v13
-    secret:
-      name: <YOUR_OBJECT_STORAGE_SECRET>
-      type: s3
-  storageClassName: <YOUR_STORAGE_CLASS>
-  tenants:
-    mode: openshift-logging
+ kind: ClusterLogForwarder
+ spec:
+   ...
+   filterRefs:
+   - parse-json
+   ...
+   pipelines:
+   - name: default-logstore
+     ...
+     filters:
+     - name: parse-json
+       type: parse
 ----
-The size of your LokiStack is configurable to your needs. See more information on LokiStack sizing link:++https://docs.openshift.com/container-platform/4.10/logging/cluster-logging-loki.html[here].
+The addition of the JSON filter above will copy the nested JSON container log into a separate `structured` field inside the Vector JSON document, where the individual fields from the JSON container log can be accessed as `structured. <field_name>`.
 
-. After the LokiStack deployment is complete, you should see the following pods running in the openshift-logging namespace.
+. After the LokiStack and ClusterLogForwarder deployments are completed, you should see the following pods running in the openshift-logging namespace.
 +
 [source,sh]
 ----
@@ -68,105 +63,6 @@ logging-loki-querier-57c8bd8c75-vcc4t          1/1     Running   0          3h45
 logging-loki-querier-57c8bd8c75-wwlrd          1/1     Running   0          3h45m
 logging-loki-query-frontend-6bbb599859-rmsmk   1/1     Running   0          3h45m
 logging-loki-query-frontend-6bbb599859-zhcfj   1/1     Running   0          3h45m
-----
-
-## Setup the ClusterLogForwarder
-
-After LokiStack is set up with your object storage provider, a logging collector that references your LokiStack needs to be configured to view the logs. Starting from RHOCP 4.17, Vector is the only supported collector implementation, and is used in the collector pods deployed by the ClusterLogForwarder CR.
-
-. Create a service account for your collector implementation inside the `openshift-logging` namespace:
-+
-[source,sh]
-----
-oc create sa collector -n openshift-logging
-----
-
-. Create a ClusterRole `logging-collector-logs-writer` for the collector:
-+
-[source,yaml]
-----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: logging-collector-logs-writer
-rules:
-- apiGroups:
-  - loki.grafana.com
-  resourceNames:
-  - logs
-  resources:
-  - application
-  - audit
-  - infrastructure
-  verbs:
-  - create
-----
-
-. Bind the `logging-collector-logs-writer` ClusterRole to your collector service account:
-+
-[source,sh]
-----
-oc project openshift-logging
-
-oc adm policy add-cluster-role-to-user logging-collector-logs-writer -z collector
-----
-
-. The Red Hat OpenShift Logging Operator provides the ClusterRoles `collect-audit-logs`, `collect-application-logs`, and `collect-infrastructure-logs`. Add these additional roles to your service account to collect application, infrastructure, and audit logs:
-+
-[source,sh]
-----
-oc adm policy add-cluster-role-to-user collect-application-logs -z collector
-
-oc adm policy add-cluster-role-to-user collect-audit-logs -z collector
-
-oc adm policy add-cluster-role-to-user collect-infrastructure-logs -z collector
-----
-
-. Create a ClusterLogForwarder CR that references your LokiStack `logging-loki` and service account `collector` to configure log forwarding:
-+
-[source,yaml]
-----
-apiVersion: observability.openshift.io/v1
-kind: ClusterLogForwarder
-metadata:
-  name: collector
-  namespace: openshift-logging
-spec:
-  serviceAccount:
-    name: collector
-  filterRefs:
-  - parse-json
-  outputs:
-  - name: default-lokistack
-    type: lokiStack
-    lokiStack:
-      target:
-        name: logging-loki
-        namespace: openshift-logging
-      authentication:
-        token:
-          from: serviceAccount
-    tls:
-      ca:
-        key: service-ca.crt
-        configMapName: openshift-service-ca.crt
-  pipelines:
-  - name: default-logstore
-    inputRefs:
-    - application
-    - infrastructure
-    outputRefs:
-    - default-lokistack
-    filters:
-    - name: parse-json
-      type: parse
-----
-By default, if container logs are being output in JSON format, they will be nested inside the Vector JSON document's message field. To solve this problem, a filter for parsing json logs is included in the ClusterLogForwarder CR above. It will copy the nested JSON container log into a separate `structured` field inside the Vector JSON document, where the individual fields from the JSON container log can be accessed as `structured.<field_name>`.
-
-. After the ClusterLogForwarder deployment is complete, you should see the following collector pods running in the openshift-logging namespace.
-+
-[source,sh]
-----
 cluster-logging-operator-7b6bc9c48-2mjx2       1/1     Running   0          4h22m
 collector-59dxs                                1/1     Running   0          3h16m
 collector-7p6h7                                1/1     Running   0          3h16m
@@ -177,23 +73,6 @@ collector-z75z5                                1/1     Running   0          3h16
 ----
 
 ## Visualizing your logs using the Cluster Observability Operator's Logging UI Plugin
-
-. Install the Cluster Observability Operator from OperatorHub with its default installation settings.
-
-. Create a `UIPlugin` that references your LokiStack `logging-loki`. After a successful deployment, the `UIPlugin` will enable a new `Log` section in the `Observe` tab of the OCP web console.
-+
-[source,yaml]
-----
-apiVersion: observability.openshift.io/v1alpha1
-kind: UIPlugin
-metadata:
-  name: logging
-spec:
-  type: Logging
-  logging:
-    lokiStack:
-      name: logging-loki
-----
 
 . In your OCP web console, go to Observe > Logs to see your application logs.
 +
