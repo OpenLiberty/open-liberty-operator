@@ -18,7 +18,7 @@ Create a secret `logging-loki-s3` inside the `openshift-logging` namespace that 
     --from-literal=access_key_id=key \
     --from-literal=access_key_secret=secret \
     --from-literal=bucketnames=bucket-name \
-    --from-literal=endpoint=endpoint:29 \
+    --from-literal=endpoint=endpoint \
     --namespace openshift-logging
 ----
 
