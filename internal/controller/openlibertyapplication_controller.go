@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	networkingv1 "k8s.io/api/networking/v1"
@@ -115,14 +114,12 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		return reconcile.Result{}, err
 	}
 
-	if _, err = strconv.Atoi(common.Config[common.OpConfigReconcileIntervalSeconds]); err != nil {
-		common.Config.SetConfigMapDefaultValue(common.OpConfigReconcileIntervalSeconds)
-		return r.ManageError(errors.New("reconcileIntervalSeconds in open-liberty-operator config map has an invalid syntax, error: "+err.Error()), common.StatusConditionTypeReconciled, instance)
+	if err = common.Config.CheckValidValue(common.OpConfigReconcileIntervalSeconds, OperatorName); err != nil {
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
-	if _, err = strconv.Atoi(common.Config[common.OpConfigReconcileIntervalPercentage]); err != nil {
-		common.Config.SetConfigMapDefaultValue(common.OpConfigReconcileIntervalPercentage)
-		return r.ManageError(errors.New("reconcileIntervalIncreasePercentage in open-liberty-operator config map has an invalid syntax, error: "+err.Error()), common.StatusConditionTypeReconciled, instance)
+	if err = common.Config.CheckValidValue(common.OpConfigReconcileIntervalPercentage, OperatorName); err != nil {
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
 	isKnativeSupported, err := r.IsGroupVersionSupported(servingv1.SchemeGroupVersion.String(), "Service")
