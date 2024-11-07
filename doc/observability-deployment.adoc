@@ -14,11 +14,11 @@ Kibana dashboards are provided for visualizing events from the Open Liberty runt
 
 To leverage these dashboards the logging events must be emitted in JSON format to standard-out. For Open Liberty Operator, JSON logging is enabled by default. For information regarding how to configure an Open Liberty image with JSON logging please see link:++https://github.com/OpenLiberty/ci.docker#logging++[here].
 
-Retrieve available Kibana dashboards tuned for Open Liberty logging events link:++https://github.com/OpenLiberty/open-liberty-operator/tree/main/deploy/dashboards/logging++[here].
+Retrieve available Kibana dashboards for displaying Open Liberty logging events link:++https://github.com/OpenLiberty/open-liberty-operator/tree/main/deploy/dashboards/logging++[here].
 
-For information regarding how to import Kibana dashboards see the official documentation link:++https://www.elastic.co/guide/en/kibana/5.6/loading-a-saved-dashboard.html++[here].
+For information regarding how to import Kibana dashboards see the official documentation link:++https://www.elastic.co/guide/en/kibana/current/dashboard.html++[here].
 
-For effective management of logs emitted from applications, deploy your own Elasticsearch, Fluentd and Kibana (EFK) stack. If you are deploying the EFK stack on OpenShift, see the following link:openshift-logging-rhocp_4.7-4.16.adoc[guide]. Note: The EFK stack can only be deployed on OpenShift versions 4.16 and below.
+For effective management of logs emitted from applications, deploy your own Elasticsearch, Fluentd and Kibana (EFK) stack. If you are deploying the EFK stack on OpenShift, see the following link:openshift-logging-rhocp_4.7-4.16.adoc[guide]. Note: The instructions in the guide for deploying the EFK stack on OpenShift are only valid up to RHOCP version 4.16.
 
 === Application logging with Loki and Vector
 
@@ -129,15 +129,17 @@ Sample Open Liberty Grafana dashboards are available for servers using either mp
 |===
 |Umbrella Feature |  mpMetrics Feature | Dashboard
 |microProfile-1.2 - microProfile 2.2 |mpMetrics-1.x|ibm-websphere-liberty-grafana-dashboard.json
-|microProfile-3.0 |mpMetrics-2.x|       ibm-websphere-liberty-grafana-dashboard-metrics-2.0.json
+|microProfile-3.0 - microProfile-6.1 |mpMetrics-2.x - mpMetrics-5.1|       ibm-websphere-liberty-grafana-dashboard-metrics-2.0.json
 |===
 
 == How to use health info with service orchestrator
 
 
-MicroProfile Health allows services to report their readiness and liveness statuses (i.e UP if it is ready or alive and DOWN if its not ready/alive) through two endpoints. The Health data will be available on the `/health/live` and `/health/ready` endpoints for the liveness checks and for the readiness checks, respectively.
+MicroProfile Health allows services to report their readiness, liveness, and startup health statuses (i.e UP if it is ready/alive and DOWN if its not ready/alive) through three endpoints. The Health data will be available on the `/health/live`, `/health/ready`, and `health/started` endpoints for the liveness, readiness, and startup health checks respectively.
 Readiness check allows third party services to know if the service is ready to process requests or not. e.g., dependency checks, such as database connections, application initialization, etc.
-Liveness check allows third party services to determine if the service is running. This means that if this procedure fails the service can be discarded (terminated, shutdown). It reports an individual service's status at the endpoints and indicates the overall status as UP if all the services are UP. A service orchestrator can then use these health check statuses to make decisions.
+Liveness check allows third party services to determine if the service is running. This means that if this procedure fails the service can be discarded (terminated, shutdown). 
+Startup health check allows applications to define startup probes that are used for initial verification of the application before the liveness probe takes over.
+MicroProfile Health reports an individual service's status at the endpoints, and indicates the overall status as UP if all the services are UP. A service orchestrator can then use these health check statuses to make decisions.
 
 
 === MicroProfile Health
