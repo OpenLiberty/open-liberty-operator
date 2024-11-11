@@ -484,9 +484,15 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCMCertificate(ola *openlibertyv1.O
 		svcCert.Spec.DNSNames[0] = svcCert.Name + "." + ola.Namespace + ".svc"
 		svcCert.Spec.DNSNames[1] = svcCert.Name + "." + ola.Namespace + ".svc.cluster.local"
 		svcCert.Spec.CommonName = svcCert.Name
-		duration, err := time.ParseDuration(common.Config[common.OpConfigCMCertDuration])
-		if err != nil {
-			return err
+		var duration time.Duration
+		var err error
+		if cmCertDuration, found := common.Config.Load(common.OpConfigCMCertDuration); found {
+			duration, err = time.ParseDuration(cmCertDuration.(string))
+			if err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("Could not load the OpConfigCMCertDuration flag")
 		}
 		svcCert.Spec.Duration = &metav1.Duration{Duration: duration}
 		return nil
