@@ -475,7 +475,7 @@ type StatusCondition struct {
 	Status             corev1.ConditionStatus `json:"status,omitempty"`
 	Type               StatusConditionType    `json:"type,omitempty"`
 
-	// The count of how many times the condition status type has not been changed.
+	// The count of the number of reconciles the condition status type has not changed.
 	UnchangedConditionCount *int32 `json:"unchangedConditionCount,omitempty"`
 }
 
