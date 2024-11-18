@@ -8059,8 +8059,8 @@ spec:
                       description: Defines the type of status condition.
                       type: string
                     unchangedConditionCount:
-                      description: The count of how many times the condition status
-                        type has not been changed.
+                      description: The count of the number of reconciles the condition
+                        status type has not changed.
                       format: int32
                       type: integer
                   type: object
