@@ -71,6 +71,7 @@ const applicationFinalizer = "finalizer.openlibertyapplications.apps.openliberty
 // move the current state of the cluster closer to the desired state.
 func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqDebugLogger := reqLogger.V(common.LogLevelDebug)
 	reqLogger.Info("Reconcile OpenLibertyApplication - starting")
 	ns, err := oputils.GetOperatorNamespace()
 	if err != nil {
@@ -313,7 +314,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// Check if SemeruCloudCompiler is enabled before reconciling the Semeru Compiler deployment and service.
 	// Otherwise, delete the Semeru Compiler deployment and service.
 	message := "Start Semeru Compiler reconcile"
-	reqLogger.Info(message)
+	reqDebugLogger.Info(message)
 	err, message, areCompletedSemeruInstancesMarkedToBeDeleted := r.reconcileSemeruCompiler(instance)
 	if err != nil {
 		reqLogger.Error(err, message)
