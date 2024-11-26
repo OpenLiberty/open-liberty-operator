@@ -217,13 +217,13 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 	// From here, the Open Liberty Application instance is stored in shared memory and can begin concurrent actions.
 	if r.isConcurrencyEnabled(instance) {
-		return r.concurrentReconcile(ba, instance, reqLogger, isKnativeSupported, ctx, request)
+		return r.concurrentReconcile(ba, instance, reqLogger, reqDebugLogger, isKnativeSupported, ctx, request)
 	} else {
-		return r.sequentialReconcile(ba, instance, reqLogger, isKnativeSupported, ctx, request)
+		return r.sequentialReconcile(ba, instance, reqLogger, reqDebugLogger, isKnativeSupported, ctx, request)
 	}
 }
 
-func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, reqLogger logr.Logger, isKnativeSupported bool, ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, reqLogger logr.Logger, reqDebugLogger logr.Logger, isKnativeSupported bool, ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	defaultMeta := metav1.ObjectMeta{
 		Name:      instance.Name,
 		Namespace: instance.Namespace,
@@ -938,10 +938,7 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Secret{}, builder.WithPredicates(predSubResource)).
 		Owns(&appsv1.Deployment{}, builder.WithPredicates(predSubResWithGenCheck)).
 		Owns(&appsv1.StatefulSet{}, builder.WithPredicates(predSubResWithGenCheck)).
-		Owns(&autoscalingv1.HorizontalPodAutoscaler{}, builder.WithPredicates(predSubResource)).
-		WithOptions(controller.Options{
-			MaxConcurrentReconciles: 8,
-		})
+		Owns(&autoscalingv1.HorizontalPodAutoscaler{}, builder.WithPredicates(predSubResource))
 
 	ok, _ := r.IsGroupVersionSupported(routev1.SchemeGroupVersion.String(), "Route")
 	if ok {
