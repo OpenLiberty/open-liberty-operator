@@ -6,10 +6,11 @@ import (
 	"os"
 	"strings"
 
-	networkingv1 "k8s.io/api/networking/v1"
-
 	"github.com/application-stacks/runtime-component-operator/common"
 	"github.com/go-logr/logr"
+	"golang.org/x/time/rate"
+	networkingv1 "k8s.io/api/networking/v1"
+	"k8s.io/client-go/util/workqueue"
 
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
 	oputils "github.com/application-stacks/runtime-component-operator/utils"
@@ -858,6 +859,13 @@ func (r *ReconcileOpenLiberty) isOpenLibertyApplicationReady(ba common.BaseCompo
 	return false
 }
 
+func DefaultOpenLibertyApplicationControllerRateLimiter() workqueue.RateLimiter {
+	return workqueue.NewMaxOfRateLimiter(
+		// workqueue.NewItemExponentialFailureRateLimiter(5*time.Millisecond, 1000*time.Second),
+		&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Inf, 1000)},
+	)
+}
+
 func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 
 	mgr.GetFieldIndexer().IndexField(context.Background(), &openlibertyv1.OpenLibertyApplication{}, indexFieldImageStreamName, func(obj client.Object) []string {
@@ -970,6 +978,7 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 
 	return b.WithOptions(controller.Options{
 		MaxConcurrentReconciles: maxConcurrentReconciles,
+		RateLimiter:             DefaultOpenLibertyApplicationControllerRateLimiter(),
 	}).Complete(r)
 }
 
