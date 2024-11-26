@@ -21,12 +21,14 @@ import (
 	imageutil "github.com/openshift/library-go/pkg/image/imageutil"
 	"github.com/pkg/errors"
 	prometheusv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"golang.org/x/time/rate"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/workqueue"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -839,6 +841,12 @@ func (r *ReconcileOpenLiberty) isOpenLibertyApplicationReady(ba common.BaseCompo
 	return false
 }
 
+func DefaultOpenLibertyApplicationControllerRateLimiter() workqueue.RateLimiter {
+	return workqueue.NewMaxOfRateLimiter(
+		&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Inf, 1000)},
+	)
+}
+
 func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 
 	mgr.GetFieldIndexer().IndexField(context.Background(), &openlibertyv1.OpenLibertyApplication{}, indexFieldImageStreamName, func(obj client.Object) []string {
@@ -951,6 +959,7 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 
 	return b.WithOptions(controller.Options{
 		MaxConcurrentReconciles: maxConcurrentReconciles,
+		RateLimiter:             DefaultOpenLibertyApplicationControllerRateLimiter(),
 	}).Complete(r)
 }
 
