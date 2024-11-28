@@ -510,7 +510,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 			proxyServiceNamespace := instance.GetNamespace()
 			password := "test123"          // TODO: replace
 			passwordEncryptionKey := "key" // TODO: replace
-			url := fmt.Sprintf("%s.%s.svc.cluster.local:9443/proxy/SecurityUtilityCreateLTPAKeys?password=%s&encoding=aes&key=%s", proxyServiceName, proxyServiceNamespace, password, passwordEncryptionKey)
+			url := fmt.Sprintf("https://%s.%s.svc.cluster.local:9443/proxy/SecurityUtilityCreateLTPAKeys?password=%s&encoding=aes&key=%s", proxyServiceName, proxyServiceNamespace, password, passwordEncryptionKey)
 			res, err := client.Get(url)
 			if err != nil {
 				fmt.Print(err.Error())
