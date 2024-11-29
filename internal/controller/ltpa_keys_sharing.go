@@ -213,12 +213,12 @@ func (r *ReconcileOpenLiberty) reconcileLTPAConfig(instance *olv1.OpenLibertyApp
 	if r.isLTPAKeySharingEnabled(instance) {
 		ltpaXMLSecretName, err = r.generateLTPAConfig(instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
 		if err != nil {
-			return "Failed to generate the shared LTPA keys Secret", ltpaXMLSecretName, err
+			return "Failed to generate the shared LTPA config Secret", ltpaXMLSecretName, err
 		}
 	} else {
 		err := r.RemoveLeaderTrackerReference(instance, LTPA_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
-			return "Failed to remove leader tracking reference to the LTPA keys", "", err
+			return "Failed to remove leader tracking reference to the LTPA config", "", err
 		}
 	}
 	return "", ltpaXMLSecretName, nil
@@ -471,7 +471,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 			}
 
 		} else { // otherwise, create the LTPA Config
-			password := string(ltpaSecret.Data["password"])
+			password := string(ltpaSecret.Data["rawPassword"])
 
 			// Get client to Liberty proxy
 			client, err := r.getLibertyProxyClient(instance)
@@ -502,7 +502,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 			if err := json.NewDecoder(proxyRes.Body).Decode(&ltpaConfigResponse); err != nil {
 				return "", fmt.Errorf("could not parse response from the operator liberty proxy")
 			}
-			fmt.Printf("LTPA config response: %+v", ltpaConfigResponse)
+			fmt.Printf("LTPA config response: %+v\n", ltpaConfigResponse)
 
 			// Create LTPA config Secret
 			if !ltpaConfigResponse.OK {

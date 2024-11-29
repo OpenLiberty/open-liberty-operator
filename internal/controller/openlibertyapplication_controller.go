@@ -286,7 +286,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 	} else if r.isPasswordEncryptionKeySharingEnabled(instance) {
 		// error if the password encryption key sharing is enabled but the Secret is not found
 		passwordEncryptionSecretName := lutils.PasswordEncryptionKeyRootName + passwordEncryptionMetadata.Name
-		err := errors.Wrapf(fmt.Errorf("Secret %q not found", passwordEncryptionSecretName), "Secret for Password Encryption was not found. Create a secret named %q in namespace %q with the encryption key specified in data field %q.", passwordEncryptionSecretName, instance.GetNamespace(), "passwordEncryptionKey")
+		err := errors.Wrapf(fmt.Errorf("secret %q not found", passwordEncryptionSecretName), "Secret for Password Encryption was not found. Create a secret named %q in namespace %q with the encryption key specified in data field %q.", passwordEncryptionSecretName, instance.GetNamespace(), "passwordEncryptionKey")
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
