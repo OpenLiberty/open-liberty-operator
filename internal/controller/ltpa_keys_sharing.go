@@ -317,17 +317,17 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 
 		var ltpaResponse SecurityUtilityCreateLTPAKeysResponse
 		if err := json.NewDecoder(proxyRes.Body).Decode(&ltpaResponse); err != nil {
-			return "", "", "", fmt.Errorf("could not parse response from the operator proxy")
+			return "", "", "", fmt.Errorf("could not parse response from the liberty proxy")
 		}
 		fmt.Printf("LTPA response: %+v", ltpaResponse)
 
 		// Create LTPA Secret
 		if !ltpaResponse.OK {
-			return "", "", "", fmt.Errorf("could not get ok response from the operator proxy")
+			return "", "", "", fmt.Errorf("received an invalid response from the liberty proxy")
 		}
 		ltpaKeysStringData, err := base64.StdEncoding.DecodeString(ltpaResponse.LTPAKeys)
 		if err != nil {
-			return "", "", "", fmt.Errorf("could not base64 decode ltpa keys from the operator proxy")
+			return "", "", "", fmt.Errorf("could not base64 decode LTPA keys from the liberty proxy")
 		}
 		ltpaSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaMetadata.PathIndex
 		ltpaSecret.Data = make(map[string][]byte)
@@ -498,11 +498,16 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 			}
 			defer proxyRes.Body.Close()
 
-			var ltpaResponse SecurityUtilityEncodeResponse
-			if err := json.NewDecoder(proxyRes.Body).Decode(&ltpaResponse); err != nil {
-				return "", fmt.Errorf("could not parse response from the operator proxy")
+			var ltpaConfigResponse SecurityUtilityEncodeResponse
+			if err := json.NewDecoder(proxyRes.Body).Decode(&ltpaConfigResponse); err != nil {
+				return "", fmt.Errorf("could not parse response from the operator liberty proxy")
 			}
-			fmt.Printf("LTPA config response: %+v", ltpaResponse)
+			fmt.Printf("LTPA config response: %+v", ltpaConfigResponse)
+
+			// Create LTPA config Secret
+			if !ltpaConfigResponse.OK {
+				return "", fmt.Errorf("received an invalid response from the operator liberty proxy")
+			}
 
 			ltpaConfigSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaConfigMetadata.PathIndex
 			ltpaConfigSecret.Data = make(map[string][]byte)
@@ -511,7 +516,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 			}
 			lastRotation := strconv.FormatInt(time.Now().Unix(), 10)
 			ltpaConfigSecret.Data["lastRotation"] = []byte(lastRotation)
-			ltpaConfigSecret.Data["password"] = []byte(ltpaResponse.Password)
+			ltpaConfigSecret.Data["password"] = []byte(ltpaConfigResponse.Password)
 
 			if err := r.CreateOrUpdate(ltpaConfigSecret, nil, func() error {
 				return nil
