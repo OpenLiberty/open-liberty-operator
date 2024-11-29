@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
@@ -14,8 +15,8 @@ import (
 )
 
 // Validates the resource decision tree YAML and generates the leader tracking state (Secret) for maintaining multiple shared resources
-func (r *ReconcileOpenLiberty) reconcileResourceTrackingState(instance *olv1.OpenLibertyApplication, leaderTrackerType string) (lutils.LeaderTrackerMetadataList, error) {
-	treeMap, replaceMap, err := tree.ParseDecisionTree(leaderTrackerType, nil)
+func (r *ReconcileOpenLiberty) reconcileResourceTrackingState(instance *olv1.OpenLibertyApplication, leaderTrackerType string, withCache bool) (lutils.LeaderTrackerMetadataList, error) {
+	treeMap, replaceMap, err := tree.ParseDecisionTree(leaderTrackerType, nil, withCache)
 	if err != nil {
 		return nil, err
 	}
@@ -56,10 +57,10 @@ func (r *ReconcileOpenLiberty) reconcileLeader(instance *olv1.OpenLibertyApplica
 	if err != nil {
 		return "", false, "", err
 	}
-	return r.reconcileLeaderWithState(instance, leaderTracker, leaderTrackers, leaderMetadata, shouldElectNewLeader)
+	return r.reconcileLeaderWithState(instance, leaderTracker, leaderTrackers, leaderMetadata, shouldElectNewLeader, leaderTrackerType)
 }
 
-func (r *ReconcileOpenLiberty) reconcileLeaderWithState(instance *olv1.OpenLibertyApplication, leaderTracker *corev1.Secret, leaderTrackers *[]lutils.LeaderTracker, leaderMetadata lutils.LeaderTrackerMetadata, shouldElectNewLeader bool) (string, bool, string, error) {
+func (r *ReconcileOpenLiberty) reconcileLeaderWithState(instance *olv1.OpenLibertyApplication, leaderTracker *corev1.Secret, leaderTrackers *[]lutils.LeaderTracker, leaderMetadata lutils.LeaderTrackerMetadata, shouldElectNewLeader bool, leaderTrackerType string) (string, bool, string, error) {
 	initialLeaderIndex := -1
 	for i, tracker := range *leaderTrackers {
 		if tracker.Name == leaderMetadata.GetName() {
@@ -86,7 +87,7 @@ func (r *ReconcileOpenLiberty) reconcileLeaderWithState(instance *olv1.OpenLiber
 		// append it to the list of leaders
 		*leaderTrackers = append(*leaderTrackers, newLeader)
 		// save the tracker state
-		if err := r.SaveLeaderTracker(leaderTracker, leaderTrackers); err != nil {
+		if err := r.SaveLeaderTracker(leaderTracker, leaderTrackers, leaderTrackerType); err != nil {
 			return "", false, "", err
 		}
 		return instance.Name, true, leaderMetadata.GetPathIndex(), nil
@@ -117,7 +118,7 @@ func (r *ReconcileOpenLiberty) reconcileLeaderWithState(instance *olv1.OpenLiber
 			(*leaderTrackers)[initialLeaderIndex].SetOwner(currentOwner)
 		}
 		// save this new owner list
-		if err := r.SaveLeaderTracker(leaderTracker, leaderTrackers); err != nil {
+		if err := r.SaveLeaderTracker(leaderTracker, leaderTrackers, leaderTrackerType); err != nil {
 			return "", false, "", err
 		}
 		return currentOwner, currentOwner == instance.Name, (*leaderTrackers)[initialLeaderIndex].PathIndex, nil
@@ -136,7 +137,7 @@ func (r *ReconcileOpenLiberty) reconcileLeaderWithState(instance *olv1.OpenLiber
 		}
 	}
 	// save this new owner list
-	if err := r.SaveLeaderTracker(leaderTracker, leaderTrackers); err != nil {
+	if err := r.SaveLeaderTracker(leaderTracker, leaderTrackers, leaderTrackerType); err != nil {
 		return "", false, "", err
 	}
 	return instance.Name, true, pathIndex, nil
@@ -197,28 +198,43 @@ func (r *ReconcileOpenLiberty) reconcileLeaderTracker(instance *olv1.OpenLiberty
 		if err != nil {
 			return err
 		}
-		return r.SaveLeaderTracker(leaderTracker, leaderTrackers)
+		return r.SaveLeaderTracker(leaderTracker, leaderTrackers, leaderTrackerType)
 	} else if err != nil {
 		return err
 	}
 	// If the Leader Tracker is outdated, delete it so that it gets recreated in another reconcile
 	if leaderTracker.Labels[lutils.LeaderVersionLabel] != latestOperandVersion {
-		if err := r.DeleteResource(leaderTracker); err != nil {
-			return err
-		}
+		r.DeleteLeaderTracker(leaderTracker, leaderTrackerType)
 	}
 	return nil
 }
 
-func (r *ReconcileOpenLiberty) SaveLeaderTracker(leaderTracker *corev1.Secret, trackerList *[]lutils.LeaderTracker) error {
+func (r *ReconcileOpenLiberty) SaveLeaderTracker(leaderTracker *corev1.Secret, trackerList *[]lutils.LeaderTracker, leaderTrackerType string) error {
+	leaderMutex, mutexFound := lutils.LeaderTrackerMutexes.Load(leaderTrackerType)
+	if !mutexFound {
+		return fmt.Errorf("Could not get %s leader tracker's mutex when attempting to save. Exiting.", leaderTrackerType)
+	}
+	leaderMutex.(*sync.Mutex).Lock()
+	defer leaderMutex.(*sync.Mutex).Unlock()
+
 	return r.CreateOrUpdate(leaderTracker, nil, func() error {
 		lutils.CustomizeLeaderTracker(leaderTracker, trackerList)
 		return nil
 	})
 }
 
+func (r *ReconcileOpenLiberty) DeleteLeaderTracker(leaderTracker *corev1.Secret, leaderTrackerType string) error {
+	leaderMutex, mutexFound := lutils.LeaderTrackerMutexes.Load(leaderTrackerType)
+	if !mutexFound {
+		return fmt.Errorf("Could not get %s leader tracker's mutex when attempting to delete. Exiting.", leaderTrackerType)
+	}
+	leaderMutex.(*sync.Mutex).Lock()
+	defer leaderMutex.(*sync.Mutex).Unlock()
+	return r.DeleteResource(leaderTracker)
+}
+
 // Removes the instance as leader if instance is the leader and if no leaders are being tracked then delete the leader tracking Secret
-func (r *ReconcileOpenLiberty) RemoveLeader(instance *olv1.OpenLibertyApplication, leaderTracker *corev1.Secret, leaderTrackers *[]lutils.LeaderTracker) error {
+func (r *ReconcileOpenLiberty) RemoveLeader(instance *olv1.OpenLibertyApplication, leaderTracker *corev1.Secret, leaderTrackers *[]lutils.LeaderTracker, leaderTrackerType string) error {
 	changeDetected := false
 	noOwners := true
 	// If the instance is being tracked, remove it
@@ -231,11 +247,11 @@ func (r *ReconcileOpenLiberty) RemoveLeader(instance *olv1.OpenLibertyApplicatio
 		}
 	}
 	if noOwners {
-		if err := r.DeleteResource(leaderTracker); err != nil {
+		if err := r.DeleteLeaderTracker(leaderTracker, leaderTrackerType); err != nil {
 			return err
 		}
 	} else if changeDetected {
-		if err := r.SaveLeaderTracker(leaderTracker, leaderTrackers); err != nil {
+		if err := r.SaveLeaderTracker(leaderTracker, leaderTrackers, leaderTrackerType); err != nil {
 			return err
 		}
 	}
@@ -306,15 +322,22 @@ func (r *ReconcileOpenLiberty) UpdateLeaderTrackersFromUnstructuredList(leaderTr
 	return nil
 }
 
-func (r *ReconcileOpenLiberty) RemoveLeaderTrackerReference(instance *olv1.OpenLibertyApplication, resourceSharingFileName string) error {
-	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(instance, OperatorShortName, resourceSharingFileName, r.GetClient())
+func (r *ReconcileOpenLiberty) RemoveLeaderTrackerReference(instance *olv1.OpenLibertyApplication, leaderTrackerType string) error {
+	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(instance, OperatorShortName, leaderTrackerType, r.GetClient())
 	if err != nil {
 		if kerrors.IsNotFound(err) {
 			return nil
 		}
 		return err
 	}
-	return r.RemoveLeader(instance, leaderTracker, leaderTrackers)
+	return r.RemoveLeader(instance, leaderTracker, leaderTrackers, leaderTrackerType)
+}
+
+func (r *ReconcileOpenLiberty) isResourceCachingEnabled(instance *olv1.OpenLibertyApplication) bool {
+	if instance.GetManageResourceCaching() == nil || *instance.GetManageResourceCaching() {
+		return true
+	}
+	return false
 }
 
 func hasResourceSuffixesEnv(instance *olv1.OpenLibertyApplication, envName string) (string, bool) {
