@@ -321,13 +321,18 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 
 			// Check the password encryption key
 			passwordEncryptionKey := ""
+			encryptionSecretLastRotation := ""
 			if r.isPasswordEncryptionKeySharingEnabled(instance) {
 				if secret, err := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata); err == nil {
 					if key, found := secret.Data["passwordEncryptionKey"]; found {
 						passwordEncryptionKey = string(key)
 					}
+					if lastRotation, found := secret.Data["lastRotation"]; found {
+						encryptionSecretLastRotation = string(lastRotation)
+					}
 				}
 			}
+			// TODO: error check passwordEncryptionKey and encryptionSecretLastRotation
 
 			// Make request for the LTPA key
 			proxyServiceName := "liberty-proxy-1" // TODO: replace
@@ -357,8 +362,8 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 			}
 			ltpaSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaConfigMetadata.PathIndex
 			ltpaSecret.Data = make(map[string][]byte)
-			ltpaSecret.Data["encryptionSecretLastRotation"] = []byte(string(time.Now().Unix()))
-			ltpaSecret.Data["lastRotation"] = []byte(string(time.Now().Unix()))
+			ltpaSecret.Data["encryptionSecretLastRotation"] = []byte(encryptionSecretLastRotation)
+			ltpaSecret.Data["lastRotation"] = []byte(strconv.FormatInt(time.Now().Unix(), 10))
 			ltpaSecret.Data["rawPassword"] = []byte(ltpaResponse.RawPassword)
 			ltpaSecret.Data[lutils.LTPAKeysFileName] = ltpaKeysStringData
 
