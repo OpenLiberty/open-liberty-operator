@@ -46,7 +46,7 @@ func (r *ReconcileOpenLiberty) getLibertyProxyClient(instance *olv1.OpenLibertyA
 
 func (r *ReconcileOpenLiberty) getLibertyProxy(instance *olv1.OpenLibertyApplication, client *http.Client, cmd string, args ...string) (*http.Response, error) {
 	proxyServiceName := "liberty-proxy-1" // TODO: replace
-	proxyServiceNamespace := instance.GetNamespace()
+	proxyServiceNamespace := "proxy-test" // TODO: change
 	cmdList := ""
 	if len(args) > 0 {
 		cmdList += "?"
