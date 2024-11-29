@@ -327,15 +327,11 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 				fmt.Println(err.Error())
 			}
 			defer res.Body.Close()
-			if res.StatusCode != http.StatusOK {
-				return "", "", "", fmt.Errorf("could not get response from the operator proxy")
-			}
-
 			var ltpaResponse SecurityUtilityCreateLTPAKeysResponse
 			if err := json.NewDecoder(res.Body).Decode(&ltpaResponse); err != nil {
 				return "", "", "", fmt.Errorf("could not parse response from the operator proxy")
 			}
-			fmt.Println("LTPA response: %+v", ltpaResponse)
+			fmt.Printf("LTPA response: %+v", ltpaResponse)
 		}
 
 	} else if err != nil {
