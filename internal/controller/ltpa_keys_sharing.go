@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
@@ -270,7 +272,7 @@ type SecurityUtilityCreateLTPAKeysResponse struct {
 // Generates the LTPA keys file and returns the name of the Secret storing its metadata
 func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata) (string, string, string, error) {
 	// Initialize LTPA resources
-	// passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{Name: ""}
+	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{Name: ""}
 
 	ltpaXMLSecret := &corev1.Secret{}
 	ltpaXMLSecretRootName := OperatorShortName + lutils.LTPAServerXMLSuffix
@@ -316,13 +318,25 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 					},
 				},
 			}
+
+			// Check the password encryption key
+			passwordEncryptionKey := ""
+			if r.isPasswordEncryptionKeySharingEnabled(instance) {
+				if secret, err := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata); err == nil {
+					if key, found := secret.Data["passwordEncryptionKey"]; found {
+						passwordEncryptionKey = string(key)
+					}
+				}
+			}
+
 			// Make request for the LTPA key
 			proxyServiceName := "liberty-proxy-1" // TODO: replace
 			proxyServiceNamespace := instance.GetNamespace()
-			password := "test123"          // TODO: replace
-			passwordEncryptionKey := "key" // TODO: replace
-			url := fmt.Sprintf("https://%s.%s.svc.cluster.local:9443/proxy/SecurityUtilityCreateLTPAKeys?password=%s&encoding=aes&key=%s", proxyServiceName, proxyServiceNamespace, password, passwordEncryptionKey)
-			res, err := client.Get(url)
+			requestURL := fmt.Sprintf("https://%s.%s.svc.cluster.local:9443/proxy/SecurityUtilityCreateLTPAKeys", proxyServiceName, proxyServiceNamespace)
+			if len(passwordEncryptionKey) > 0 {
+				requestURL += fmt.Sprintf("?key=%s", passwordEncryptionKey)
+			}
+			res, err := client.Get(requestURL)
 			if err != nil {
 				fmt.Println(err.Error())
 			}
@@ -332,6 +346,27 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 				return "", "", "", fmt.Errorf("could not parse response from the operator proxy")
 			}
 			fmt.Printf("LTPA response: %+v", ltpaResponse)
+
+			// Create LTPA Secret
+			if !ltpaResponse.OK {
+				return "", "", "", fmt.Errorf("could not get ok response from the operator proxy")
+			}
+			ltpaKeysStringData, err := base64.StdEncoding.DecodeString(ltpaResponse.LTPAKeys)
+			if err != nil {
+				return "", "", "", fmt.Errorf("could not base64 decode ltpa keys from the operator proxy")
+			}
+			ltpaSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaConfigMetadata.PathIndex
+			ltpaSecret.Data = make(map[string][]byte)
+			ltpaSecret.Data["encryptionSecretLastRotation"] = []byte(string(time.Now().Unix()))
+			ltpaSecret.Data["lastRotation"] = []byte(string(time.Now().Unix()))
+			ltpaSecret.Data["rawPassword"] = []byte(ltpaResponse.RawPassword)
+			ltpaSecret.Data[lutils.LTPAKeysFileName] = ltpaKeysStringData
+
+			if err := r.CreateOrUpdate(ltpaSecret, nil, func() error {
+				return nil
+			}); err != nil {
+				return "", "", "", err
+			}
 		}
 
 	} else if err != nil {
