@@ -451,7 +451,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 				// Because there is no rawPassword field, there is no way to generate an encrypted password from the LTPA Secret
 				// Historically, 1,3,3 operator created LTPA Secrets with an already encrypted password under field .data.password
 				// Whereas 1,4,0 and greater the LTPA Secrets are unencrypted in field .data.rawPassword
-				// LTPA Secret Job MUST continue to set the rawPassword field, otherwise a create/delete loop will occur here when password encryption is enabled
+				// generateLTPAKeys() MUST continue to set the rawPassword field, otherwise a create/delete loop will occur here when password encryption is enabled
 				if err := r.DeleteResource(ltpaSecret); err != nil {
 					return ltpaXMLSecret.Name, err
 				}
@@ -514,8 +514,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 			if passwordEncryptionKey != "" && encryptionSecretLastRotation != "" {
 				ltpaConfigSecret.Data["encryptionSecretLastRotation"] = []byte(encryptionSecretLastRotation)
 			}
-			lastRotation := strconv.FormatInt(time.Now().Unix(), 10)
-			ltpaConfigSecret.Data["lastRotation"] = []byte(lastRotation)
+			ltpaConfigSecret.Data["lastRotation"] = []byte(ltpaSecret.Data["lastRotation"])
 			ltpaConfigSecret.Data["password"] = []byte(ltpaConfigResponse.Password)
 
 			if err := r.CreateOrUpdate(ltpaConfigSecret, nil, func() error {
