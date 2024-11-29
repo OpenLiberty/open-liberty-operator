@@ -336,11 +336,11 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 				return "", "", "", fmt.Errorf("could not parse response from the operator proxy")
 			}
 			if ltpaResponse.OK {
-				r.GetController().GetLogger().Info("Log LTPA response received")
-				r.GetController().GetLogger().Info("Log LTPA: " + ltpaResponse.LTPAKeys)
-				r.GetController().GetLogger().Info("Log LTPA: " + ltpaResponse.RawPassword)
+				fmt.Println("LTPA response received")
+				fmt.Println("Log LTPA: " + ltpaResponse.LTPAKeys)
+				fmt.Println("Log LTPA: " + ltpaResponse.RawPassword)
 			} else {
-				r.GetController().GetLogger().Info("Log LTPA response failed")
+				fmt.Println("Log LTPA response failed")
 			}
 		}
 
