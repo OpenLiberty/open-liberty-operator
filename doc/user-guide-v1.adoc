@@ -383,11 +383,48 @@ status:
     svcCertSecretName: my-liberty-app-svc-tls-ocp
   versions:
     reconciled: 1.0.0
+  observedGeneration: 1
 ----
 
 If the `.status.conditions.type` Ready type does not have a status of `True`, see link:++troubleshooting.adoc++[Troubleshooting Open Liberty operators].
 
 The value of the `.status.versions.reconciled` parameter is the version of the operand that is deployed into the cluster after the reconcile loop completes.
+
+At the end of the reconcile loop, the operator will also update the `.status.observedGeneration` parameter to match the value of `.metadata.generation`. 
+
+[[operator-config-map]]
+=== Operator ConfigMap
+
+The `ConfigMap` named `open-liberty-operator` is used for configuring Liberty operator managed resources. It is created once when the operator starts and is located in the operator's installed namespace.
+
+NOTE: For OCP users, the `AllNamespaces` install mode designates `openshift-operators` as the operator's installed namespace.
+
+This is a sample operator `ConfigMap` that would get generated when the operator is installed and running in the `test-namespace` namespace.
+
+[source,yaml]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: open-liberty-operator
+  namespace: test-namespace
+data:
+  certManagerCACertDuration: 8766h
+  certManagerCertDuration: 2160h
+  defaultHostname: ''
+----
+
+And here is the set of descriptions corresponding to each configurable field.
+
+.Operator ConfigMap data fields
+|===
+| Field | Description
+| `certManagerCACertDuration` | The cert-manager issued CA certificate's duration before expiry in link:++https://pkg.go.dev/time#ParseDuration++[Go `time.Duration`] string format. The default value is `8766h` (1 year). To learn more about this field see link:#generating-certificates-with-certificate-manager[Generating certificates with certificate manager].
+| `certManagerCertDuration` |  The cert-manager issued service certificate's duration before expiry in link:++https://pkg.go.dev/time#ParseDuration++[Go `time.Duration`] string format. The default value is `2160h` (90 days). To learn more about this field see link:#generating-certificates-with-certificate-manager[Generating certificates with certificate manager].
+| `defaultHostname` | The default hostname for the `OpenLibertyApplication` Route or Ingress URL when `.spec.expose` is set to `true`. To learn more about this field see link:#expose-applications-externally[Expose applications externally].
+|===
+
+
 
 === Operator configuration examples [[operator-configuration-examples]]
 
@@ -1222,7 +1259,7 @@ To expose an application externally with Ingress in a non-Knative deployment, co
 
 1. To use the `Ingress` resource to expose your cluster, install an `Ingress` controller such a Nginx or Traefik.
 2. Ensure that a `Route` resource is not on the cluster. The Ingress resource is created only if the `Route` resource is not available on the cluster.
-3. To use the `Ingress` resource, set the `defaultHostName` variable in the `open-liberty-operator` `ConfigMap` object to a hostname such as `mycompany.com`.
+3. To use the `Ingress` resource, set the `defaultHostName` variable in the link:#operator-config-map[Operator ConfigMap] object to a hostname such as `mycompany.com`.
 4. Enable TLS. Generate a certificate and specify the secret that contains the certificate with the `.spec.route.certificateSecretRef` field.
 +
 [source,yaml]
@@ -1629,6 +1666,10 @@ NOTE:  When `.spec.manageTLS` is set to `true`, the default, certificate manager
 When certificate manager is installed on the cluster, the service certificate is generated with the `cert-manager.io/v1` `Certificate` kind. The cert-manager tool enables the operator to automatically provision TLS certificates for pods and routes. Certificates are mounted into containers from a Kubernetes secret so that the certificates are automatically refreshed when they update. For more information about the cert-manager tool, see https://cert-manager.io/.
 
 The operator creates a certificate authority (CA) `Issuer` instance to be shared by applications within a single namespace. The secret (or issuer) must be created in the same namespace as the `OpenLibertyApplication`. The issuer is used to generate a service certificate for each application that is mounted into the pod. The `tls.crt`, `tls.key`, and `ca.crt` files are mounted to the pod. The location is set by the `TLS_DIR` environment variable. The same secret (or issuer) is used for all instances of the application in the namespace.
+
+By default, the cert-manager certificates requested by Liberty Operator are valid for 90 days (duration), but the rotation happens well before that. The default renew-before period is 1/3 of the duration prior to expiry, so the rotation will happen at 60 days by default.
+
+The default 90 days duration can be changed by updating the value of `certManagerCertDuration` and `certManagerCACertDuration` in the link:#operator-config-map[Operator ConfigMap] (global configuration) and must be specified in link:++https://pkg.go.dev/time#ParseDuration++[Go `time.Duration`] string format. The `certManagerCertDuration` and `certManagerCACertDuration` fields are the durations before expiry for the cert-manager issued service certificate and CA, respectively. This global configuration applies to all applications managed by Liberty Operator.
 
 ==== Generating certificates with certificate manager (existing certificate scenario)
 
