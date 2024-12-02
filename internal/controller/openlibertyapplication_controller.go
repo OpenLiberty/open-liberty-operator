@@ -206,15 +206,15 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// 	return reconcile.Result{}, nil
 	// }
 
-	message, err := r.reconcileManageErroringInstances(instance)
-	if err != nil {
-		if err == skippingForPendingInstanceErr {
-			return r.ManageError(fmt.Errorf("Temporarily skipping this instance because it depends on another OpenLibertyApplication to recover; %s", message), common.StatusConditionTypeReconciled, instance) // Manage error while erroring instances are being worked on
-		}
-		// Manage success while erroring instances are being worked on
-		return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
-	}
-	defer r.CleanupInstance(instance)
+	// message, err := r.reconcileManageErroringInstances(instance)
+	// if err != nil {
+	// 	if err == skippingForPendingInstanceErr {
+	// 		return r.ManageError(fmt.Errorf("Temporarily skipping this instance because it depends on another OpenLibertyApplication to recover; %s", message), common.StatusConditionTypeReconciled, instance) // Manage error while erroring instances are being worked on
+	// 	}
+	// 	// Manage success while erroring instances are being worked on
+	// 	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
+	// }
+	// defer r.CleanupInstance(instance)
 
 	// From here, the Open Liberty Application instance is stored in shared memory and can begin concurrent actions.
 	if r.isConcurrencyEnabled(instance) {
