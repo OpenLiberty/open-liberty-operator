@@ -507,6 +507,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	} else {
 		reqLogger.Info("Reconcile LTPA: " + message + " " + ltpaSecretName + " " + ltpaKeysLastRotation)
+		reqLogger.Info(fmt.Sprintf("LTPA: %s,%s,%s", message, ltpaSecretName, ltpaKeysLastRotation))
 	}
 
 	// get the last key-related rotation time as a string to be used by reconcileLTPAConfig for non-leaders to yield (blocking) to the LTPA config leader
