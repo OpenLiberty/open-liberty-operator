@@ -37,7 +37,7 @@ var log = logf.Log.WithName("openliberty_utils")
 // Constant Values
 const serviceabilityMountPath = "/serviceability"
 const ssoEnvVarPrefix = "SEC_SSO_"
-const OperandVersion = "1.4.0"
+const OperandVersion = "1.4.1"
 
 // LTPA constants
 const managedLTPAMountPath = "/config/managedLTPA"
@@ -828,10 +828,11 @@ func IsLTPAJobConfigurationOutdated(job *v1.Job, appLeaderInstance *olv1.OpenLib
 	return false
 }
 
-func CustomizeLTPAKeysJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaConfig *LTPAConfig, client client.Client) {
+func CustomizeLTPAKeysJob(job *v1.Job, jobRootName string, la *olv1.OpenLibertyApplication, ltpaConfig *LTPAConfig, client client.Client) {
 	ltpaVolumeMountName := parseMountName(ltpaConfig.FileName)
 	encodingType := "aes" // the password encoding type for securityUtility (one of "xor", "aes", or "hash")
 	job.Spec.Template.ObjectMeta.Name = "liberty"
+	job.Spec.Template.ObjectMeta.Labels = GetRequiredLabels(jobRootName, job.Name)
 	job.Spec.Template.Spec.Containers = []corev1.Container{
 		{
 			Name:            job.Spec.Template.ObjectMeta.Name,
@@ -884,10 +885,11 @@ func CustomizeLTPAKeysJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaConf
 	})
 }
 
-func CustomizeLTPAConfigJob(job *v1.Job, la *olv1.OpenLibertyApplication, ltpaConfig *LTPAConfig, client client.Client) {
+func CustomizeLTPAConfigJob(job *v1.Job, jobRootName string, la *olv1.OpenLibertyApplication, ltpaConfig *LTPAConfig, client client.Client) {
 	ltpaVolumeMountName := parseMountName(ltpaConfig.FileName)
 	encodingType := "aes" // the password encoding type for securityUtility (one of "xor", "aes", or "hash")
 	job.Spec.Template.ObjectMeta.Name = "liberty"
+	job.Spec.Template.ObjectMeta.Labels = GetRequiredLabels(jobRootName, job.Name)
 	job.Spec.Template.Spec.Containers = []corev1.Container{
 		{
 			Name:            job.Spec.Template.ObjectMeta.Name,

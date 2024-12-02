@@ -31,6 +31,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -71,6 +72,7 @@ const applicationFinalizer = "finalizer.openlibertyapplications.apps.openliberty
 // move the current state of the cluster closer to the desired state.
 func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqDebugLogger := reqLogger.V(common.LogLevelDebug)
 	reqLogger.Info("Reconcile OpenLibertyApplication - starting")
 	ns, err := oputils.GetOperatorNamespace()
 	if err != nil {
@@ -96,7 +98,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		reqLogger.Info("Failed to get open-liberty-operator config map, error: " + err.Error())
 		oputils.CreateConfigMap(OperatorName)
 	} else {
-		common.Config.LoadFromConfigMap(configMap)
+		common.LoadFromConfigMap(common.Config, configMap)
 	}
 
 	// Fetch the OpenLiberty instance
@@ -112,6 +114,14 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
+	}
+
+	if err = common.CheckValidValue(common.Config, common.OpConfigReconcileIntervalSeconds, OperatorName); err != nil {
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	}
+
+	if err = common.CheckValidValue(common.Config, common.OpConfigReconcileIntervalPercentage, OperatorName); err != nil {
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
 	isKnativeSupported, err := r.IsGroupVersionSupported(servingv1.SchemeGroupVersion.String(), "Service")
@@ -305,7 +315,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// Check if SemeruCloudCompiler is enabled before reconciling the Semeru Compiler deployment and service.
 	// Otherwise, delete the Semeru Compiler deployment and service.
 	message := "Start Semeru Compiler reconcile"
-	reqLogger.Info(message)
+	reqDebugLogger.Info(message)
 	err, message, areCompletedSemeruInstancesMarkedToBeDeleted := r.reconcileSemeruCompiler(instance)
 	if err != nil {
 		reqLogger.Error(err, message)
@@ -314,7 +324,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// If semeru compiler is enabled, make sure its ready
 	if r.isSemeruEnabled(instance) {
 		message = "Check Semeru Compiler resources ready"
-		reqLogger.Info(message)
+		reqDebugLogger.Info(message)
 		err = r.areSemeruCompilerResourcesReady(instance)
 		if err != nil {
 			reqLogger.Error(err, message)
@@ -351,7 +361,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			}
 		}
 		if isKnativeSupported {
-			reqLogger.Info("Knative is supported and Knative Service is enabled")
+			reqDebugLogger.Info("Knative is supported and Knative Service is enabled")
 			ksvc := &servingv1.Service{ObjectMeta: defaultMeta}
 			err = r.CreateOrUpdate(ksvc, instance, func() error {
 				oputils.CustomizeKnativeService(ksvc, instance)
@@ -815,7 +825,8 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 }
 
 func (r *ReconcileOpenLiberty) isOpenLibertyApplicationReady(ba common.BaseComponent) bool {
-	if r.CheckApplicationStatus(ba) == corev1.ConditionTrue {
+	_, condition := r.CheckApplicationStatus(ba)
+	if condition.GetStatus() == corev1.ConditionTrue {
 		statusCondition := ba.GetStatus().GetCondition(common.StatusConditionTypeReady)
 		return statusCondition != nil && statusCondition.GetMessage() == common.StatusConditionTypeReadyMessage
 	}
@@ -929,7 +940,12 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 			},
 		})
 	}
-	return b.Complete(r)
+
+	maxConcurrentReconciles := oputils.GetMaxConcurrentReconciles()
+
+	return b.WithOptions(controller.Options{
+		MaxConcurrentReconciles: maxConcurrentReconciles,
+	}).Complete(r)
 }
 
 func getMonitoringEnabledLabelName(ba common.BaseComponent) string {

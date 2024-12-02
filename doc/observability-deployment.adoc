@@ -213,7 +213,7 @@ spec:
 === For mpHealth-3.1+
 
 
-Modify the startup probe's fields, if not configured, to point to the MicroProfile Health REST endpoints, in the OpenLibertyApplication Custom Resource (CR):
+Modify the readiness, liveness, and startup probes' fields, if not configured, to point to the MicroProfile Health REST endpoints, in the OpenLibertyApplication Custom Resource (CR):
 
 
 [source,yaml]
@@ -222,6 +222,24 @@ spec:
   applicationImage:
   ...
   probes:
+    liveness:
+      failureThreshold: 12
+      httpGet:
+        path: /health/ready
+        port: 9443
+        scheme: HTTPS
+      initialDelaySeconds: 30
+      periodSeconds: 2
+      timeoutSeconds: 10
+    readiness:
+      failureThreshold: 12
+      httpGet:
+        path: /health/live
+        port: 9443
+        scheme: HTTPS
+      initialDelaySeconds: 30
+      periodSeconds: 2
+      timeoutSeconds: 10
     startup:
       failureThreshold: 12
       httpGet:

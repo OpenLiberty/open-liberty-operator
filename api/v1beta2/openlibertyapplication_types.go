@@ -749,6 +749,26 @@ func (s *OpenLibertyApplicationStatus) SetReference(string, string) {
 	return
 }
 
+func (s *OpenLibertyApplicationStatus) GetReconcileInterval() *int32 {
+	return nil
+}
+
+func (s *OpenLibertyApplicationStatus) SetReconcileInterval(interval *int32) {
+	return
+}
+
+func (s *StatusCondition) GetUnchangedConditionCount() *int32 {
+	return nil
+}
+
+func (s *StatusCondition) SetUnchangedConditionCount(count *int32) {
+	return
+}
+
+func (s *OpenLibertyApplicationStatus) UnsetUnchangedConditionCount(conditionType common.StatusConditionType) {
+	return
+}
+
 // GetMinReplicas returns minimum replicas
 func (a *OpenLibertyApplicationAutoScaling) GetMinReplicas() *int32 {
 	return a.MinReplicas
