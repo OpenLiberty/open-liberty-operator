@@ -316,7 +316,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 			proxyRes, proxyErr = r.getLibertyProxy(instance, client, "SecurityUtilityCreateLTPAKeys")
 		}
 		if proxyErr != nil {
-			return "", "", "", err
+			return "", "", "", proxyErr
 		}
 		reqLogger.Info("4: sent proxy request")
 		defer proxyRes.Body.Close()
