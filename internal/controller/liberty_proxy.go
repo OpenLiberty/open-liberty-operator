@@ -27,7 +27,7 @@ type SecurityUtilityEncodeResponse struct {
 func (r *ReconcileOpenLiberty) getLibertyProxyClient(instance *olv1.OpenLibertyApplication) (*http.Client, error) {
 	caCertSecret := &corev1.Secret{}
 	caCertSecret.Name = OperatorShortName + "-ca-tls"
-	caCertSecret.Namespace = instance.GetNamespace()
+	caCertSecret.Namespace = "proxy-test"
 	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: caCertSecret.Name, Namespace: caCertSecret.Namespace}, caCertSecret)
 	if err != nil {
 		return nil, err
