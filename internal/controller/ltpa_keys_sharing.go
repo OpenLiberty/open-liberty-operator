@@ -293,20 +293,17 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 			return "", "", leaderName, fmt.Errorf("Waiting for OpenLibertyApplication instance '" + leaderName + "' to generate the shared LTPA keys file for the namespace '" + instance.Namespace + "'.")
 		}
 
-		reqLogger.Info("1: Instance is leader")
 		// Get client to Liberty proxy
-		client, err := r.getLibertyProxyClient(instance)
+		client, err := r.getLibertyProxyClient()
 		if err != nil {
 			return "", "", "", err
 		}
 
-		reqLogger.Info("2: got liberty proxy client")
 		// Check the password encryption key
 		passwordEncryptionKey, encryptionSecretLastRotation, encryptionKeySharingEnabled, err := r.getInternalPasswordEncryptionKeyState(instance, passwordEncryptionMetadata)
 		if encryptionKeySharingEnabled && err != nil {
 			return "", "", "", err
 		}
-		reqLogger.Info("3: got pass encryption key")
 
 		var proxyRes *http.Response
 		var proxyErr error
@@ -318,25 +315,21 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 		if proxyErr != nil {
 			return "", "", "", proxyErr
 		}
-		reqLogger.Info("4: sent proxy request")
 		defer proxyRes.Body.Close()
 
 		var ltpaResponse SecurityUtilityCreateLTPAKeysResponse
 		if err := json.NewDecoder(proxyRes.Body).Decode(&ltpaResponse); err != nil {
 			return "", "", "", fmt.Errorf("could not parse response from the liberty proxy")
 		}
-		reqLogger.Info("5: got proxy response")
 
 		// Create LTPA Secret
 		if !ltpaResponse.OK {
 			return "", "", "", fmt.Errorf("received an invalid response from the liberty proxy")
 		}
-		reqLogger.Info("6: proxy res ok")
 		ltpaKeysStringData, err := base64.StdEncoding.DecodeString(ltpaResponse.LTPAKeys)
 		if err != nil {
 			return "", "", "", fmt.Errorf("could not base64 decode LTPA keys from the liberty proxy")
 		}
-		reqLogger.Info("7. ltpa keys decoded")
 		ltpaSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaMetadata.PathIndex
 		ltpaSecret.Data = make(map[string][]byte)
 		if passwordEncryptionKey != "" && encryptionSecretLastRotation != "" {
@@ -352,7 +345,6 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 		}); err != nil {
 			return "", "", "", err
 		}
-		reqLogger.Info("8. created ltpa secret")
 		return ltpaSecret.Name, lastRotation, leaderName, nil
 	} else if err != nil {
 		return "", "", "", err
@@ -362,7 +354,6 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 		return "", "", leaderName, err
 	}
 	lastRotation := string(ltpaSecret.Data["lastRotation"])
-	reqLogger.Info("9: exit")
 	return ltpaSecret.Name, lastRotation, leaderName, nil
 }
 
@@ -484,7 +475,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 			password := string(ltpaSecret.Data["rawPassword"])
 
 			// Get client to Liberty proxy
-			client, err := r.getLibertyProxyClient(instance)
+			client, err := r.getLibertyProxyClient()
 			if err != nil {
 				return "", err
 			}

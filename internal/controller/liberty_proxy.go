@@ -24,7 +24,7 @@ type SecurityUtilityEncodeResponse struct {
 	OK       bool   `json:"ok"`
 }
 
-func (r *ReconcileOpenLiberty) getLibertyProxyClient(instance *olv1.OpenLibertyApplication) (*http.Client, error) {
+func (r *ReconcileOpenLiberty) getLibertyProxyClient() (*http.Client, error) {
 	caCertSecret := &corev1.Secret{}
 	caCertSecret.Name = OperatorShortName + "-ca-tls"
 	caCertSecret.Namespace = "proxy-test"
