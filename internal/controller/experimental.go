@@ -1008,49 +1008,30 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 
 	go r.reconcileImageStream(instance, instanceMutex, reconcileResultChan) // STATE: {reconcileResultChan: 1}
 
-	// obtain ltpa keys and config metadata
-	ltpaMetadataChan := make(chan *lutils.LTPAMetadata, 2)
-	go r.reconcileLTPAKeySharingEnabled(instance, instanceMutex, reconcileResultChan, ltpaMetadataChan) // STATE: {reconcileResultChan: 2, ltpaMetadataChan: 2}
-
 	// The if statement below depends on instance.Status.ImageReference being possibly set in reconcileImageStream, so it must block for the first reconcile result
-	reconcileResult := <-reconcileResultChan // STATE: {reconcileResultChan: 1, ltpaMetadataChan: 2}
+	reconcileResult := <-reconcileResultChan // STATE: {}
 	if reconcileResult.err != nil {
 		return r.ManageError(reconcileResult.err, reconcileResult.condition, instance)
 	}
 
-	// Everything done from here on out will be with an invalid image so this should terminate the parent reconcile and pull all channel data
-	ltpaKeysMetadata := <-ltpaMetadataChan
 	instanceMutex.Lock()
 	if imageReferenceOld != instance.Status.ImageReference {
-		// STATE: {reconcileResultChan: 1, ltpaMetadataChan: 1}
-
 		// Trigger a new Semeru Cloud Compiler generation
 		createNewSemeruGeneration(instance)
-
-		// If the shared LTPA keys was not generated from the last application image, restart the key generation process
-		if r.isLTPAKeySharingEnabled(instance) {
-			if err := r.restartLTPAKeysGeneration(instance, ltpaKeysMetadata); err != nil {
-				reqLogger.Error(err, "Error restarting the LTPA keys generation process")
-				// block to clear channels before exiting
-				<-reconcileResultChan
-				<-ltpaMetadataChan
-				instanceMutex.Unlock()
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
-		}
 
 		reqLogger.Info("Updating status.imageReference", "status.imageReference", instance.Status.ImageReference)
 		err := r.UpdateStatus(instance)
 		if err != nil {
 			reqLogger.Error(err, "Error updating Open Liberty application status")
-			// block to clear channels before exiting
-			<-reconcileResultChan
-			<-ltpaMetadataChan
 			instanceMutex.Unlock()
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
 	}
 	instanceMutex.Unlock()
+
+	// obtain ltpa keys and config metadata
+	ltpaMetadataChan := make(chan *lutils.LTPAMetadata, 2)
+	go r.reconcileLTPAKeySharingEnabled(instance, instanceMutex, reconcileResultChan, ltpaMetadataChan) // STATE: {reconcileResultChan: 1, ltpaMetadataChan: 2}
 
 	// obtain password encryption metadata
 	passwordEncryptionMetadataChan := make(chan *lutils.PasswordEncryptionMetadata, 1)
@@ -1092,6 +1073,7 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 	ltpaSecretNameChan := make(chan string, 1)
 	ltpaXMLSecretNameChan := make(chan string, 1)
 
+	ltpaKeysMetadata := <-ltpaMetadataChan
 	ltpaConfigMetadata := <-ltpaMetadataChan
 	passwordEncryptionMetadata := <-passwordEncryptionMetadataChan
 
@@ -1108,27 +1090,27 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 		lastRotationChan, ltpaKeysLastRotationChan, ltpaXMLSecretNameChan) // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
 
 	// FRONTIER: instances shouldn't proceed past if they are waiting for LTPA creation
-	reconcileResults := 5
-	foundFirstError := false
+	// reconcileResults := 5
+	// foundFirstError := false
 	var firstErroringReconcileResult ReconcileResult
-	for i := 0; i < reconcileResults; i++ {
-		reconcileResult := <-reconcileResultChan
-		// fmt.Printf("reconcile result %d\n", i)
-		if !foundFirstError && reconcileResult.err != nil {
-			foundFirstError = true
-			firstErroringReconcileResult = reconcileResult
-		}
-	}
-	// STATE: {useCertManagerChan: 1, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
-	if foundFirstError {
-		<-useCertManagerChan                       // STATE:  {semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
-		<-semeruMarkedForDeletionChan              // STATE:  {sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
-		<-sharedResourceHandoffReconcileResultChan // STATE:  {encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
-		<-encryptionSecretNameChan                 // STATE:  {ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
-		<-ltpaSecretNameChan                       // STATE:  {ltpaXMLSecretNameChan: 1}
-		<-ltpaXMLSecretNameChan                    // STATE: {}
-		return r.ManageError(firstErroringReconcileResult.err, firstErroringReconcileResult.condition, instance)
-	}
+	// for i := 0; i < reconcileResults; i++ {
+	// 	reconcileResult := <-reconcileResultChan
+	// 	// fmt.Printf("reconcile result %d\n", i)
+	// 	if !foundFirstError && reconcileResult.err != nil {
+	// 		foundFirstError = true
+	// 		firstErroringReconcileResult = reconcileResult
+	// 	}
+	// }
+	// // STATE: {useCertManagerChan: 1, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	// if foundFirstError {
+	// 	<-useCertManagerChan                       // STATE:  {semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	// 	<-semeruMarkedForDeletionChan              // STATE:  {sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	// 	<-sharedResourceHandoffReconcileResultChan // STATE:  {encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	// 	<-encryptionSecretNameChan                 // STATE:  {ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	// 	<-ltpaSecretNameChan                       // STATE:  {ltpaXMLSecretNameChan: 1}
+	// 	<-ltpaXMLSecretNameChan                    // STATE: {}
+	// 	return r.ManageError(firstErroringReconcileResult.err, firstErroringReconcileResult.condition, instance)
+	// }
 
 	go r.reconcileSemeruCloudCompilerReady(instance, instanceMutex, reconcileResultChan)                                                                                                                                                                          // STATE: {reconcileResultChan: 1, useCertManagerChan: 1, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
 	go r.reconcileService(defaultMeta, ba, instance, instanceMutex, reconcileResultChan, useCertManagerChan)                                                                                                                                                      // STATE: {reconcileResultChan: 2, useCertManagerChan: 1,semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
@@ -1139,8 +1121,8 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 
 	// FRONTIER: past this point, it doesn't make sense to manage the route when the statefulset/deployment might possibly not exist, so block until completion
 	// STATE: {reconcileResultChan: 6, semeruMarkedForDeletionChan: 1}
-	reconcileResults = 6
-	foundFirstError = false
+	reconcileResults := 11
+	foundFirstError := false
 	for i := 0; i < reconcileResults; i++ {
 		reconcileResult := <-reconcileResultChan
 		if !foundFirstError && reconcileResult.err != nil {
