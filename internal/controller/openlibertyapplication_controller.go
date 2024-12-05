@@ -444,11 +444,11 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
-	if (ba.GetManageTLS() == nil || *ba.GetManageTLS()) &&
-		ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName] == "" {
-		return r.ManageError(errors.New("Failed to generate TLS certificate. Ensure cert-manager is installed and running"),
-			common.StatusConditionTypeReconciled, instance)
-	}
+	// if (ba.GetManageTLS() == nil || *ba.GetManageTLS()) &&
+	// 	ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName] == "" {
+	// 	return r.ManageError(errors.New("Failed to generate TLS certificate. Ensure cert-manager is installed and running"),
+	// 		common.StatusConditionTypeReconciled, instance)
+	// }
 
 	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: defaultMeta}
 	if np := instance.Spec.NetworkPolicy; np == nil || np != nil && !np.IsDisabled() {
@@ -845,6 +845,12 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 			reqLogger.Error(err, "Failed to delete completed Semeru instance")
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
+	}
+
+	if (ba.GetManageTLS() == nil || *ba.GetManageTLS()) &&
+		ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName] == "" {
+		return r.ManageError(errors.New("Failed to generate TLS certificate. Ensure cert-manager is installed and running"),
+			common.StatusConditionTypeReconciled, instance)
 	}
 
 	instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
