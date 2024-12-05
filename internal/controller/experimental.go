@@ -1090,9 +1090,6 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 		lastRotationChan, ltpaKeysLastRotationChan, ltpaXMLSecretNameChan) // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
 
 	// FRONTIER: instances shouldn't proceed past if they are waiting for LTPA creation
-	// reconcileResults := 5
-	// foundFirstError := false
-	var firstErroringReconcileResult ReconcileResult
 	// for i := 0; i < reconcileResults; i++ {
 	// 	reconcileResult := <-reconcileResultChan
 	// 	// fmt.Printf("reconcile result %d\n", i)
@@ -1112,17 +1109,39 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 	// 	return r.ManageError(firstErroringReconcileResult.err, firstErroringReconcileResult.condition, instance)
 	// }
 
-	go r.reconcileSemeruCloudCompilerReady(instance, instanceMutex, reconcileResultChan)                                                                                                                                                                          // STATE: {reconcileResultChan: 1, useCertManagerChan: 1, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
-	go r.reconcileService(defaultMeta, ba, instance, instanceMutex, reconcileResultChan, useCertManagerChan)                                                                                                                                                      // STATE: {reconcileResultChan: 2, useCertManagerChan: 1,semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
-	go r.reconcileNetworkPolicy(defaultMeta, instance, instanceMutex, reconcileResultChan)                                                                                                                                                                        // STATE: {reconcileResultChan: 3, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
-	go r.reconcileServiceability(instance, instanceMutex, reqLogger, reconcileResultChan)                                                                                                                                                                         // STATE: {reconcileResultChan: 4, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
-	go r.reconcileBindings(instance, instanceMutex, reconcileResultChan)                                                                                                                                                                                          // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
-	go r.reconcileStatefulSetDeployment(defaultMeta, instance, instanceMutex, ltpaConfigMetadata, passwordEncryptionMetadata, reconcileResultChan, sharedResourceHandoffReconcileResultChan, encryptionSecretNameChan, ltpaSecretNameChan, ltpaXMLSecretNameChan) // STATE: {reconcileResultChan: 6, semeruMarkedForDeletionChan: 1}
+	go r.reconcileSemeruCloudCompilerReady(instance, instanceMutex, reconcileResultChan)                     // STATE: {reconcileResultChan: 6, useCertManagerChan: 1, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	go r.reconcileService(defaultMeta, ba, instance, instanceMutex, reconcileResultChan, useCertManagerChan) // STATE: {reconcileResultChan: 7, useCertManagerChan: 1,semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	go r.reconcileNetworkPolicy(defaultMeta, instance, instanceMutex, reconcileResultChan)                   // STATE: {reconcileResultChan: 8, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	go r.reconcileServiceability(instance, instanceMutex, reqLogger, reconcileResultChan)                    // STATE: {reconcileResultChan: 9, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	go r.reconcileBindings(instance, instanceMutex, reconcileResultChan)                                     // STATE: {reconcileResultChan: 10, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+
+	// FRONTIER: instances shouldn't proceed past if they are waiting for certificate creation
+	reconcileResults := 10
+	foundFirstError := false
+	var firstErroringReconcileResult ReconcileResult
+	for i := 0; i < reconcileResults; i++ {
+		reconcileResult := <-reconcileResultChan
+		if !foundFirstError && reconcileResult.err != nil {
+			foundFirstError = true
+			firstErroringReconcileResult = reconcileResult
+		}
+	}
+	if foundFirstError {
+		<-useCertManagerChan                       // STATE:  {semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+		<-semeruMarkedForDeletionChan              // STATE:  {sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+		<-sharedResourceHandoffReconcileResultChan // STATE:  {encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+		<-encryptionSecretNameChan                 // STATE:  {ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+		<-ltpaSecretNameChan                       // STATE:  {ltpaXMLSecretNameChan: 1}
+		<-ltpaXMLSecretNameChan                    // STATE: {}
+		return r.ManageError(firstErroringReconcileResult.err, firstErroringReconcileResult.condition, instance)
+	}
+
+	go r.reconcileStatefulSetDeployment(defaultMeta, instance, instanceMutex, ltpaConfigMetadata, passwordEncryptionMetadata, reconcileResultChan, sharedResourceHandoffReconcileResultChan, encryptionSecretNameChan, ltpaSecretNameChan, ltpaXMLSecretNameChan) // STATE: {reconcileResultChan: 1, semeruMarkedForDeletionChan: 1}
 
 	// FRONTIER: past this point, it doesn't make sense to manage the route when the statefulset/deployment might possibly not exist, so block until completion
-	// STATE: {reconcileResultChan: 6, semeruMarkedForDeletionChan: 1}
-	reconcileResults := 11
-	foundFirstError := false
+	// STATE: {reconcileResultChan: 1, semeruMarkedForDeletionChan: 1}
+	reconcileResults = 1
+	foundFirstError = false
 	for i := 0; i < reconcileResults; i++ {
 		reconcileResult := <-reconcileResultChan
 		if !foundFirstError && reconcileResult.err != nil {
