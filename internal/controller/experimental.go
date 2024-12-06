@@ -497,7 +497,7 @@ func (r *ReconcileOpenLiberty) reconcileService(reqDebugLogger logr.Logger, defa
 			instanceMutex.Unlock()
 			svc.Labels[monitoringEnabledLabelName] = "true"
 		} else {
-			fmt.Printf("-- reconcileService (3b) queued for lock at t=%s\n", time.Now())
+			fmt.Printf("-- reconcileService (3b) queued for unlock at t=%s\n", time.Now())
 			instanceMutex.Unlock()
 			delete(svc.Labels, monitoringEnabledLabelName)
 		}
@@ -1276,13 +1276,21 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 			firstErroringReconcileResult = reconcileResult
 		}
 	}
+	fmt.Println("--== cleared 10 reconcile results")
 	if foundFirstError {
-		<-useCertManagerChan                       // STATE:  {semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
-		<-semeruMarkedForDeletionChan              // STATE:  {sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+		fmt.Println("--== 1")
+		<-useCertManagerChan // STATE:  {semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+		fmt.Println("--== 2")
+		<-semeruMarkedForDeletionChan // STATE:  {sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+		fmt.Println("--== 3")
 		<-sharedResourceHandoffReconcileResultChan // STATE:  {encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
-		<-encryptionSecretNameChan                 // STATE:  {ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
-		<-ltpaSecretNameChan                       // STATE:  {ltpaXMLSecretNameChan: 1}
-		<-ltpaXMLSecretNameChan                    // STATE: {}
+		fmt.Println("--== 4")
+		<-encryptionSecretNameChan // STATE:  {ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+		fmt.Println("--== 5")
+		<-ltpaSecretNameChan // STATE:  {ltpaXMLSecretNameChan: 1}
+		fmt.Println("--== 6")
+		<-ltpaXMLSecretNameChan // STATE: {}
+		fmt.Println("--== end")
 		return r.ManageError(firstErroringReconcileResult.err, firstErroringReconcileResult.condition, instance)
 	}
 
