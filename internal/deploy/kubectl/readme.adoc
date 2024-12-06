@@ -26,13 +26,11 @@ NOTE: Ensure that you replace  `<SPECIFY_OPERATOR_NAMESPACE_HERE>` and `<SPECIFY
 +
   * To watch all namespaces in the cluster, set `WATCH_NAMESPACE='""'`
 +
-  * To optionally reconcile multiple `OpenLibertyApplication` instances concurrently, set `MAX_CONCURRENT_RECONCILES=<SPECIFY_MAX_CONCURRENT_RECONCILES_HERE>` (default is `1`)
-+
+
 [source,sh]
 ----
     OPERATOR_NAMESPACE=<SPECIFY_OPERATOR_NAMESPACE_HERE>
     WATCH_NAMESPACE=<SPECIFY_WATCH_NAMESPACE_HERE>
-    MAX_CONCURRENT_RECONCILES=<OPTIONALLY_SPECIFY_MAX_CONCURRENT_RECONCILES_HERE>
 ----
 
 .. _Optional_: Install roles and bindings to watch another namespace or all namespaces.  This step can be skipped if the operator is only watching own namespace.
@@ -62,7 +60,6 @@ curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main
 ----
 curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/internal/deploy/kubectl/openliberty-app-operator.yaml \
       | sed -e "s/OPEN_LIBERTY_WATCH_NAMESPACE/${WATCH_NAMESPACE}/" \
-      | sed -e "s/OPEN_LIBERTY_MAX_CONCURRENT_RECONCILES/'${MAX_CONCURRENT_RECONCILES}'/" \
       | kubectl apply -n ${OPERATOR_NAMESPACE} -f -
 ----
 
