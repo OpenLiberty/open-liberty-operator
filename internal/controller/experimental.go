@@ -1276,10 +1276,8 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 			firstErroringReconcileResult = reconcileResult
 		}
 	}
-	fmt.Println("--== cleared 10 reconcile results")
+	fmt.Println("--== cleared 10 reconcile results") // STATE: {semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
 	if foundFirstError {
-		fmt.Println("--== 1")
-		<-useCertManagerChan // STATE:  {semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
 		fmt.Println("--== 2")
 		<-semeruMarkedForDeletionChan // STATE:  {sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
 		fmt.Println("--== 3")
