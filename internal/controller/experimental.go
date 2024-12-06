@@ -171,7 +171,7 @@ func (r *ReconcileOpenLiberty) isCachingEnabled(instance *olv1.OpenLibertyApplic
 	return false
 }
 
-func (r *ReconcileOpenLiberty) reconcileImageStream(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
+func (r *ReconcileOpenLiberty) reconcileImageStream(reqDebugLogger logr.Logger, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
 	start := time.Now()
 	if r.IsOpenShift() {
 		instanceMutex.Lock()
@@ -201,17 +201,17 @@ func (r *ReconcileOpenLiberty) reconcileImageStream(instance *olv1.OpenLibertyAp
 			} else if err != nil && !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) && !strings.Contains(isTagName, "/") {
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled}
 				elapsed := time.Since(start)
-				r.Log.Info("-- reconcileImageStream failed with %s", elapsed)
+				reqDebugLogger.Info("-- reconcileImageStream failed with %s", elapsed)
 				return
 			}
 		}
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 	elapsed := time.Since(start)
-	r.Log.Info("-- reconcileImageStream took %s", elapsed)
+	reqDebugLogger.Info("-- reconcileImageStream took %s", elapsed)
 }
 
-func (r *ReconcileOpenLiberty) reconcileLTPAKeySharingEnabled(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult, ltpaMetadataChan chan<- *lutils.LTPAMetadata) {
+func (r *ReconcileOpenLiberty) reconcileLTPAKeySharingEnabled(reqDebugLogger logr.Logger, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult, ltpaMetadataChan chan<- *lutils.LTPAMetadata) {
 	start := time.Now()
 	// Reconciles the shared LTPA state for the instance namespace
 	var ltpaMetadataList *lutils.LTPAMetadataList
@@ -227,7 +227,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAKeySharingEnabled(instance *olv1.Ope
 				ltpaMetadataChan <- nil
 			}
 			elapsed := time.Since(start)
-			r.Log.Info("-- reconcileLTPAKeySharingEnabled failed with %s", elapsed)
+			reqDebugLogger.Info("-- reconcileLTPAKeySharingEnabled failed with %s", elapsed)
 			return
 		}
 		ltpaMetadataList = leaderMetadataList.(*lutils.LTPAMetadataList)
@@ -241,10 +241,10 @@ func (r *ReconcileOpenLiberty) reconcileLTPAKeySharingEnabled(instance *olv1.Ope
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 	elapsed := time.Since(start)
-	r.Log.Info("-- reconcileLTPAKeySharingEnabled took %s", elapsed)
+	reqDebugLogger.Info("-- reconcileLTPAKeySharingEnabled took %s", elapsed)
 }
 
-func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeySharingEnabled(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult, passwordEncryptionMetadataChan chan<- *lutils.PasswordEncryptionMetadata) {
+func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeySharingEnabled(reqDebugLogger logr.Logger, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult, passwordEncryptionMetadataChan chan<- *lutils.PasswordEncryptionMetadata) {
 	start := time.Now()
 	// Reconciles the shared password encryption key state for the instance namespace only if the shared key already exists
 	var passwordEncryptionMetadataList *lutils.PasswordEncryptionMetadataList
@@ -260,7 +260,7 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeySharingEnabled(inst
 				passwordEncryptionMetadataChan <- passwordEncryptionMetadata
 			}
 			elapsed := time.Since(start)
-			r.Log.Info("-- reconcilePasswordEncryptionKeySharingEnabled failed with %s", elapsed)
+			reqDebugLogger.Info("-- reconcilePasswordEncryptionKeySharingEnabled failed with %s", elapsed)
 			return
 		}
 		passwordEncryptionMetadataList = leaderMetadataList.(*lutils.PasswordEncryptionMetadataList)
@@ -279,7 +279,7 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeySharingEnabled(inst
 			passwordEncryptionMetadataChan <- passwordEncryptionMetadata
 		}
 		elapsed := time.Since(start)
-		r.Log.Info("-- reconcilePasswordEncryptionKeySharingEnabled failed with %s", elapsed)
+		reqDebugLogger.Info("-- reconcilePasswordEncryptionKeySharingEnabled failed with %s", elapsed)
 		return
 	} else {
 		instanceMutex.Unlock()
@@ -289,10 +289,10 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeySharingEnabled(inst
 		passwordEncryptionMetadataChan <- passwordEncryptionMetadata
 	}
 	elapsed := time.Since(start)
-	r.Log.Info("-- reconcilePasswordEncryptionKeySharingEnabled took %s", elapsed)
+	reqDebugLogger.Info("-- reconcilePasswordEncryptionKeySharingEnabled took %s", elapsed)
 }
 
-func (r *ReconcileOpenLiberty) reconcileServiceAccount(defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
+func (r *ReconcileOpenLiberty) reconcileServiceAccount(reqDebugLogger logr.Logger, defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
 	start := time.Now()
 	instanceMutex.Lock()
 	serviceAccountName := oputils.GetServiceAccountName(instance)
@@ -308,7 +308,7 @@ func (r *ReconcileOpenLiberty) reconcileServiceAccount(defaultMeta metav1.Object
 			if err != nil {
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile ServiceAccount"}
 				elapsed := time.Since(start)
-				r.Log.Info("-- reconcileServiceAccount failed with %s", elapsed)
+				reqDebugLogger.Info("-- reconcileServiceAccount failed with %s", elapsed)
 				return
 			}
 		} else {
@@ -317,7 +317,7 @@ func (r *ReconcileOpenLiberty) reconcileServiceAccount(defaultMeta metav1.Object
 			if err != nil {
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete ServiceAccount"}
 				elapsed := time.Since(start)
-				r.Log.Info("-- reconcileServiceAccount failed with %s", elapsed)
+				reqDebugLogger.Info("-- reconcileServiceAccount failed with %s", elapsed)
 				return
 			}
 		}
@@ -334,10 +334,10 @@ func (r *ReconcileOpenLiberty) reconcileServiceAccount(defaultMeta metav1.Object
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 	elapsed := time.Since(start)
-	r.Log.Info("-- reconcileServiceAccount took %s", elapsed)
+	reqDebugLogger.Info("-- reconcileServiceAccount took %s", elapsed)
 }
 
-func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerInit(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult, semeruMarkedForDeletionChan chan<- bool) {
+func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerInit(reqDebugLogger logr.Logger, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult, semeruMarkedForDeletionChan chan<- bool) {
 	start := time.Now()
 	// Check if SemeruCloudCompiler is enabled before reconciling the Semeru Compiler deployment and service.
 	// Otherwise, delete the Semeru Compiler deployment and service.
@@ -349,15 +349,15 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerInit(instance *olv1.O
 	if err != nil {
 		reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: message}
 		elapsed := time.Since(start)
-		r.Log.Info("-- reconcileSemeruCloudCompilerInit failed with %s", elapsed)
+		reqDebugLogger.Info("-- reconcileSemeruCloudCompilerInit failed with %s", elapsed)
 		return
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 	elapsed := time.Since(start)
-	r.Log.Info("-- reconcileSemeruCloudCompilerInit took %s", elapsed)
+	reqDebugLogger.Info("-- reconcileSemeruCloudCompilerInit took %s", elapsed)
 }
 
-func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerReady(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
+func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerReady(reqDebugLogger logr.Logger, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
 	start := time.Now()
 	// If semeru compiler is enabled, make sure its ready
 	instanceMutex.Lock()
@@ -368,7 +368,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerReady(instance *olv1.
 		if err != nil {
 			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeResourcesReady, message: message}
 			elapsed := time.Since(start)
-			r.Log.Info("-- reconcileSemeruCloudCompilerReady failed with %s", elapsed)
+			reqDebugLogger.Info("-- reconcileSemeruCloudCompilerReady failed with %s", elapsed)
 			return
 		}
 	} else {
@@ -376,10 +376,10 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerReady(instance *olv1.
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeResourcesReady}
 	elapsed := time.Since(start)
-	r.Log.Info("-- reconcileSemeruCloudCompilerReady took %s", elapsed)
+	reqDebugLogger.Info("-- reconcileSemeruCloudCompilerReady took %s", elapsed)
 }
 
-func (r *ReconcileOpenLiberty) reconcileKnativeServiceSequential(defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reqLogger logr.Logger, isKnativeSupported bool) (ctrl.Result, error) {
+func (r *ReconcileOpenLiberty) reconcileKnativeServiceSequential(reqDebugLogger logr.Logger, defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reqLogger logr.Logger, isKnativeSupported bool) (ctrl.Result, error) {
 	start := time.Now()
 	instanceMutex.Lock()
 	defer instanceMutex.Unlock()
@@ -440,11 +440,11 @@ func (r *ReconcileOpenLiberty) reconcileKnativeServiceSequential(defaultMeta met
 		}
 	}
 	elapsed := time.Since(start)
-	r.Log.Info("-- reconcileKnativeServiceSequential took %s", elapsed)
+	reqDebugLogger.Info("-- reconcileKnativeServiceSequential took %s", elapsed)
 	return ctrl.Result{}, nil
 }
 
-func (r *ReconcileOpenLiberty) reconcileServiceCertificate(ba common.BaseComponent, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, serviceCertificateReconcileResultChan chan<- ReconcileResult, useCertManagerChan chan<- bool) {
+func (r *ReconcileOpenLiberty) reconcileServiceCertificate(reqDebugLogger logr.Logger, ba common.BaseComponent, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, serviceCertificateReconcileResultChan chan<- ReconcileResult, useCertManagerChan chan<- bool) {
 	start := time.Now()
 	instanceMutex.Lock()
 	useCertmanager, err := r.GenerateSvcCertSecret(ba, OperatorShortName, "Open Liberty Operator", OperatorName)
@@ -453,7 +453,7 @@ func (r *ReconcileOpenLiberty) reconcileServiceCertificate(ba common.BaseCompone
 	if err != nil {
 		serviceCertificateReconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile CertManager Certificate"}
 		elapsed := time.Since(start)
-		r.Log.Info("-- reconcileServiceCertificate failed with %s", elapsed)
+		reqDebugLogger.Info("-- reconcileServiceCertificate failed with %s", elapsed)
 		return
 	}
 
@@ -464,10 +464,10 @@ func (r *ReconcileOpenLiberty) reconcileServiceCertificate(ba common.BaseCompone
 	instanceMutex.Unlock()
 	serviceCertificateReconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 	elapsed := time.Since(start)
-	r.Log.Info("-- reconcileServiceCertificate took %s", elapsed)
+	reqDebugLogger.Info("-- reconcileServiceCertificate took %s", elapsed)
 }
 
-func (r *ReconcileOpenLiberty) reconcileService(defaultMeta metav1.ObjectMeta, ba common.BaseComponent, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult, useCertManagerChan <-chan bool) {
+func (r *ReconcileOpenLiberty) reconcileService(reqDebugLogger logr.Logger, defaultMeta metav1.ObjectMeta, ba common.BaseComponent, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult, useCertManagerChan <-chan bool) {
 	start := time.Now()
 	svc := &corev1.Service{ObjectMeta: defaultMeta}
 	instanceMutex.Lock()
@@ -503,17 +503,17 @@ func (r *ReconcileOpenLiberty) reconcileService(defaultMeta metav1.ObjectMeta, b
 		instanceMutex.Unlock()
 		reconcileResultChan <- ReconcileResult{err: errors.New("Failed to generate TLS certificate. Ensure cert-manager is installed and running"), condition: common.StatusConditionTypeReconciled}
 		elapsed := time.Since(start)
-		r.Log.Info("-- reconcileService failed with %s", elapsed)
+		reqDebugLogger.Info("-- reconcileService failed with %s", elapsed)
 		return
 	} else {
 		instanceMutex.Unlock()
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 	elapsed := time.Since(start)
-	r.Log.Info("-- reconcileService took %s", elapsed)
+	reqDebugLogger.Info("-- reconcileService took %s", elapsed)
 }
 
-func (r *ReconcileOpenLiberty) reconcileNetworkPolicy(defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
+func (r *ReconcileOpenLiberty) reconcileNetworkPolicy(reqDebugLogger logr.Logger, defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
 	start := time.Now()
 	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: defaultMeta}
 	instanceMutex.Lock()
@@ -526,7 +526,7 @@ func (r *ReconcileOpenLiberty) reconcileNetworkPolicy(defaultMeta metav1.ObjectM
 		if err != nil {
 			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile network policy"}
 			elapsed := time.Since(start)
-			r.Log.Info("-- reconcileNetworkPolicy failed with %s", elapsed)
+			reqDebugLogger.Info("-- reconcileNetworkPolicy failed with %s", elapsed)
 			return
 		}
 	} else {
@@ -534,16 +534,16 @@ func (r *ReconcileOpenLiberty) reconcileNetworkPolicy(defaultMeta metav1.ObjectM
 		if err := r.DeleteResource(networkPolicy); err != nil {
 			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete network policy"}
 			elapsed := time.Since(start)
-			r.Log.Info("-- reconcileNetworkPolicy failed with %s", elapsed)
+			reqDebugLogger.Info("-- reconcileNetworkPolicy failed with %s", elapsed)
 			return
 		}
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 	elapsed := time.Since(start)
-	r.Log.Info("-- reconcileNetworkPolicy took %s", elapsed)
+	reqDebugLogger.Info("-- reconcileNetworkPolicy took %s", elapsed)
 }
 
-func (r *ReconcileOpenLiberty) reconcileServiceability(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reqLogger logr.Logger, reconcileResultChan chan<- ReconcileResult) {
+func (r *ReconcileOpenLiberty) reconcileServiceability(reqDebugLogger logr.Logger, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reqLogger logr.Logger, reconcileResultChan chan<- ReconcileResult) {
 	start := time.Now()
 	instanceMutex.Lock()
 	if instance.Spec.Serviceability != nil {
@@ -554,7 +554,7 @@ func (r *ReconcileOpenLiberty) reconcileServiceability(instance *olv1.OpenLibert
 			if err != nil && kerrors.IsNotFound(err) {
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to find PersistentVolumeClaim " + pvcName + " in namespace " + instance.Namespace}
 				elapsed := time.Since(start)
-				r.Log.Info("-- reconcileServiceability failed with %s", elapsed)
+				reqDebugLogger.Info("-- reconcileServiceability failed with %s", elapsed)
 				return
 			}
 		} else {
@@ -565,7 +565,7 @@ func (r *ReconcileOpenLiberty) reconcileServiceability(instance *olv1.OpenLibert
 			if err != nil {
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to create PersistentVolumeClaim for Serviceability"}
 				elapsed := time.Since(start)
-				r.Log.Info("-- reconcileServiceability failed with %s", elapsed)
+				reqDebugLogger.Info("-- reconcileServiceability failed with %s", elapsed)
 				return
 			}
 		}
@@ -575,10 +575,10 @@ func (r *ReconcileOpenLiberty) reconcileServiceability(instance *olv1.OpenLibert
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 	elapsed := time.Since(start)
-	r.Log.Info("-- reconcileServiceability took %s", elapsed)
+	reqDebugLogger.Info("-- reconcileServiceability took %s", elapsed)
 }
 
-func (r *ReconcileOpenLiberty) reconcileBindings(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
+func (r *ReconcileOpenLiberty) reconcileBindings(reqDebugLogger logr.Logger, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
 	start := time.Now()
 	instanceMutex.Lock()
 	err := r.ReconcileBindings(instance)
@@ -586,15 +586,15 @@ func (r *ReconcileOpenLiberty) reconcileBindings(instance *olv1.OpenLibertyAppli
 	if err != nil {
 		reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled}
 		elapsed := time.Since(start)
-		r.Log.Info("-- reconcileBindings failed with %s", elapsed)
+		reqDebugLogger.Info("-- reconcileBindings failed with %s", elapsed)
 		return
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 	elapsed := time.Since(start)
-	r.Log.Info("-- reconcileBindings took %s", elapsed)
+	reqDebugLogger.Info("-- reconcileBindings took %s", elapsed)
 }
 
-func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeyConcurrent(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, sharedResourceReconcileResultChan chan<- ReconcileResult, lastRotationChan chan<- string, encryptionSecretNameChan chan<- string) {
+func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeyConcurrent(reqDebugLogger logr.Logger, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, sharedResourceReconcileResultChan chan<- ReconcileResult, lastRotationChan chan<- string, encryptionSecretNameChan chan<- string) {
 	start := time.Now()
 	// Manage the shared password encryption key Secret if it exists
 	instanceMutex.Lock()
@@ -605,15 +605,15 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeyConcurrent(instance
 	if err != nil {
 		sharedResourceReconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: message}
 		elapsed := time.Since(start)
-		r.Log.Info("-- reconcilePasswordEncryptionKeyConcurrent failed with %s", elapsed)
+		reqDebugLogger.Info("-- reconcilePasswordEncryptionKeyConcurrent failed with %s", elapsed)
 		return
 	}
 	sharedResourceReconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled, message: message}
 	elapsed := time.Since(start)
-	r.Log.Info("-- reconcilePasswordEncryptionKeyConcurrent took %s", elapsed)
+	reqDebugLogger.Info("-- reconcilePasswordEncryptionKeyConcurrent took %s", elapsed)
 }
 
-func (r *ReconcileOpenLiberty) reconcileLTPAKeysConcurrent(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, reconcileResultChan chan<- ReconcileResult, lastRotationChan chan<- string, ltpaSecretNameChan chan<- string, ltpaKeysLastRotationChan chan<- string, reqLogger logr.Logger) {
+func (r *ReconcileOpenLiberty) reconcileLTPAKeysConcurrent(reqDebugLogger logr.Logger, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, reconcileResultChan chan<- ReconcileResult, lastRotationChan chan<- string, ltpaSecretNameChan chan<- string, ltpaKeysLastRotationChan chan<- string, reqLogger logr.Logger) {
 	start := time.Now()
 	// Create and manage the shared LTPA keys Secret if the feature is enabled
 	instanceMutex.Lock()
@@ -625,15 +625,15 @@ func (r *ReconcileOpenLiberty) reconcileLTPAKeysConcurrent(instance *olv1.OpenLi
 	if err != nil {
 		reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: message}
 		elapsed := time.Since(start)
-		r.Log.Info("-- reconcileLTPAKeysConcurrent failed with %s", elapsed)
+		reqDebugLogger.Info("-- reconcileLTPAKeysConcurrent failed with %s", elapsed)
 		return
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled, message: message}
 	elapsed := time.Since(start)
-	r.Log.Info("-- reconcileLTPAKeysConcurrent took %s", elapsed)
+	reqDebugLogger.Info("-- reconcileLTPAKeysConcurrent took %s", elapsed)
 }
 
-func (r *ReconcileOpenLiberty) reconcileLTPAConfigConcurrent(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, reconcileResultChan chan<- ReconcileResult, sharedResourceReconcileResultChan <-chan ReconcileResult, lastRotationChan <-chan string, ltpaKeysLastRotationChan <-chan string, ltpaXMLSecretNameChan chan<- string) {
+func (r *ReconcileOpenLiberty) reconcileLTPAConfigConcurrent(reqDebugLogger logr.Logger, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, reconcileResultChan chan<- ReconcileResult, sharedResourceReconcileResultChan <-chan ReconcileResult, lastRotationChan <-chan string, ltpaKeysLastRotationChan <-chan string, ltpaXMLSecretNameChan chan<- string) {
 	start := time.Now()
 	// there are two shared resources this function depends on: LTPA and PasswordEncryption
 	for i := 0; i < 2; i++ {
@@ -659,7 +659,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAConfigConcurrent(instance *olv1.Open
 		ltpaXMLSecretNameChan <- "" // flush with dummy data
 		reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled}
 		elapsed := time.Since(start)
-		r.Log.Info("-- reconcileLTPAConfigConcurrent failed with %s", elapsed)
+		reqDebugLogger.Info("-- reconcileLTPAConfigConcurrent failed with %s", elapsed)
 		return
 	}
 
@@ -671,15 +671,15 @@ func (r *ReconcileOpenLiberty) reconcileLTPAConfigConcurrent(instance *olv1.Open
 	if err != nil {
 		reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled, message: message}
 		elapsed := time.Since(start)
-		r.Log.Info("-- reconcileLTPAConfigConcurrent failed with %s", elapsed)
+		reqDebugLogger.Info("-- reconcileLTPAConfigConcurrent failed with %s", elapsed)
 		return
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 	elapsed := time.Since(start)
-	r.Log.Info("-- reconcileLTPAConfigConcurrent took %s", elapsed)
+	reqDebugLogger.Info("-- reconcileLTPAConfigConcurrent took %s", elapsed)
 }
 
-func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, reconcileResultChan chan<- ReconcileResult, sharedResourceHandoffReconcileResultChan <-chan ReconcileResult, encryptionSecretNameChan <-chan string, ltpaSecretNameChan <-chan string, ltpaXMLSecretNameChan <-chan string) {
+func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(reqDebugLogger logr.Logger, defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, reconcileResultChan chan<- ReconcileResult, sharedResourceHandoffReconcileResultChan <-chan ReconcileResult, encryptionSecretNameChan <-chan string, ltpaSecretNameChan <-chan string, ltpaXMLSecretNameChan <-chan string) {
 	start := time.Now()
 	sharedResourceHandoffResult := <-sharedResourceHandoffReconcileResultChan
 	encryptionSecretName := <-encryptionSecretNameChan
@@ -700,7 +700,7 @@ func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(defaultMeta metav1
 		if err != nil {
 			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete Deployment"}
 			elapsed := time.Since(start)
-			r.Log.Info("-- reconcileStatefulSetDeployment failed with %s", elapsed)
+			reqDebugLogger.Info("-- reconcileStatefulSetDeployment failed with %s", elapsed)
 			return
 		}
 		instanceMutex.Lock()
@@ -715,7 +715,7 @@ func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(defaultMeta metav1
 		if err != nil {
 			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile headless Service"}
 			elapsed := time.Since(start)
-			r.Log.Info("-- reconcileStatefulSetDeployment failed with %s", elapsed)
+			reqDebugLogger.Info("-- reconcileStatefulSetDeployment failed with %s", elapsed)
 			return
 		}
 
@@ -805,7 +805,7 @@ func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(defaultMeta metav1
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile StatefulSet"}
 			}
 			elapsed := time.Since(start)
-			r.Log.Info("-- reconcileStatefulSetDeployment failed with %s", elapsed)
+			reqDebugLogger.Info("-- reconcileStatefulSetDeployment failed with %s", elapsed)
 			return
 		}
 
@@ -817,7 +817,7 @@ func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(defaultMeta metav1
 		if err != nil {
 			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete StatefulSet"}
 			elapsed := time.Since(start)
-			r.Log.Info("-- reconcileStatefulSetDeployment failed with %s", elapsed)
+			reqDebugLogger.Info("-- reconcileStatefulSetDeployment failed with %s", elapsed)
 			return
 		}
 
@@ -828,7 +828,7 @@ func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(defaultMeta metav1
 		if err != nil {
 			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete headless Service"}
 			elapsed := time.Since(start)
-			r.Log.Info("-- reconcileStatefulSetDeployment failed with %s", elapsed)
+			reqDebugLogger.Info("-- reconcileStatefulSetDeployment failed with %s", elapsed)
 			return
 		}
 		capturedSubError := false
@@ -916,17 +916,17 @@ func (r *ReconcileOpenLiberty) reconcileStatefulSetDeployment(defaultMeta metav1
 			}
 			// otherwise return since the error is already captured in inside r.CreateOrUpdate()
 			elapsed := time.Since(start)
-			r.Log.Info("-- reconcileStatefulSetDeployment failed with %s", elapsed)
+			reqDebugLogger.Info("-- reconcileStatefulSetDeployment failed with %s", elapsed)
 			return
 		}
 
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 	elapsed := time.Since(start)
-	r.Log.Info("-- reconcileStatefulSetDeployment took %s", elapsed)
+	reqDebugLogger.Info("-- reconcileStatefulSetDeployment took %s", elapsed)
 }
 
-func (r *ReconcileOpenLiberty) reconcileAutoscaling(defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
+func (r *ReconcileOpenLiberty) reconcileAutoscaling(reqDebugLogger logr.Logger, defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
 	start := time.Now()
 	instanceMutex.Lock()
 	if instance.Spec.Autoscaling != nil {
@@ -942,7 +942,7 @@ func (r *ReconcileOpenLiberty) reconcileAutoscaling(defaultMeta metav1.ObjectMet
 		if err != nil {
 			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile HorizontalPodAutoscaler"}
 			elapsed := time.Since(start)
-			r.Log.Info("-- reconcileAutoscaling failed with %s", elapsed)
+			reqDebugLogger.Info("-- reconcileAutoscaling failed with %s", elapsed)
 			return
 		}
 	} else {
@@ -952,16 +952,16 @@ func (r *ReconcileOpenLiberty) reconcileAutoscaling(defaultMeta metav1.ObjectMet
 		if err != nil {
 			reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete HorizontalPodAutoscaler"}
 			elapsed := time.Since(start)
-			r.Log.Info("-- reconcileAutoscaling failed with %s", elapsed)
+			reqDebugLogger.Info("-- reconcileAutoscaling failed with %s", elapsed)
 			return
 		}
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 	elapsed := time.Since(start)
-	r.Log.Info("-- reconcileAutoscaling took %s", elapsed)
+	reqDebugLogger.Info("-- reconcileAutoscaling took %s", elapsed)
 }
 
-func (r *ReconcileOpenLiberty) reconcileRouteIngress(defaultMeta metav1.ObjectMeta, ba common.BaseComponent, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reqLogger logr.Logger, reconcileResultChan chan<- ReconcileResult) {
+func (r *ReconcileOpenLiberty) reconcileRouteIngress(reqDebugLogger logr.Logger, defaultMeta metav1.ObjectMeta, ba common.BaseComponent, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reqLogger logr.Logger, reconcileResultChan chan<- ReconcileResult) {
 	start := time.Now()
 	if ok, err := r.IsGroupVersionSupported(routev1.SchemeGroupVersion.String(), "Route"); err != nil {
 		reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", routev1.SchemeGroupVersion.String()))
@@ -977,7 +977,7 @@ func (r *ReconcileOpenLiberty) reconcileRouteIngress(defaultMeta metav1.ObjectMe
 				if err != nil {
 					reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete Route when the Custom hostname has been removed"}
 					elapsed := time.Since(start)
-					r.Log.Info("-- reconcileRouteIngress failed with %s", elapsed)
+					reqDebugLogger.Info("-- reconcileRouteIngress failed with %s", elapsed)
 					return
 				}
 			} else {
@@ -998,7 +998,7 @@ func (r *ReconcileOpenLiberty) reconcileRouteIngress(defaultMeta metav1.ObjectMe
 			if err != nil {
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile Route"}
 				elapsed := time.Since(start)
-				r.Log.Info("-- reconcileRouteIngress failed with %s", elapsed)
+				reqDebugLogger.Info("-- reconcileRouteIngress failed with %s", elapsed)
 				return
 			}
 
@@ -1009,7 +1009,7 @@ func (r *ReconcileOpenLiberty) reconcileRouteIngress(defaultMeta metav1.ObjectMe
 			if err != nil {
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete Route"}
 				elapsed := time.Since(start)
-				r.Log.Info("-- reconcileRouteIngress failed with %s", elapsed)
+				reqDebugLogger.Info("-- reconcileRouteIngress failed with %s", elapsed)
 				return
 			}
 		}
@@ -1029,7 +1029,7 @@ func (r *ReconcileOpenLiberty) reconcileRouteIngress(defaultMeta metav1.ObjectMe
 				if err != nil {
 					reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile Ingress"}
 					elapsed := time.Since(start)
-					r.Log.Info("-- reconcileRouteIngress failed with %s", elapsed)
+					reqDebugLogger.Info("-- reconcileRouteIngress failed with %s", elapsed)
 					return
 				}
 			} else {
@@ -1039,7 +1039,7 @@ func (r *ReconcileOpenLiberty) reconcileRouteIngress(defaultMeta metav1.ObjectMe
 				if err != nil {
 					reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete Ingress"}
 					elapsed := time.Since(start)
-					r.Log.Info("-- reconcileRouteIngress failed with %s", elapsed)
+					reqDebugLogger.Info("-- reconcileRouteIngress failed with %s", elapsed)
 					return
 				}
 			}
@@ -1047,10 +1047,10 @@ func (r *ReconcileOpenLiberty) reconcileRouteIngress(defaultMeta metav1.ObjectMe
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 	elapsed := time.Since(start)
-	r.Log.Info("-- reconcileRouteIngress took %s", elapsed)
+	reqDebugLogger.Info("-- reconcileRouteIngress took %s", elapsed)
 }
 
-func (r *ReconcileOpenLiberty) reconcileServiceMonitor(defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reqLogger logr.Logger, reconcileResultChan chan<- ReconcileResult) {
+func (r *ReconcileOpenLiberty) reconcileServiceMonitor(reqDebugLogger logr.Logger, defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reqLogger logr.Logger, reconcileResultChan chan<- ReconcileResult) {
 	start := time.Now()
 	if ok, err := r.IsGroupVersionSupported(prometheusv1.SchemeGroupVersion.String(), "ServiceMonitor"); err != nil {
 		reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", prometheusv1.SchemeGroupVersion.String()))
@@ -1076,7 +1076,7 @@ func (r *ReconcileOpenLiberty) reconcileServiceMonitor(defaultMeta metav1.Object
 			if err != nil {
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile ServiceMonitor"}
 				elapsed := time.Since(start)
-				r.Log.Info("-- reconcileServiceMonitor failed with %s", elapsed)
+				reqDebugLogger.Info("-- reconcileServiceMonitor failed with %s", elapsed)
 				return
 			}
 		} else {
@@ -1086,7 +1086,7 @@ func (r *ReconcileOpenLiberty) reconcileServiceMonitor(defaultMeta metav1.Object
 			if err != nil {
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete ServiceMonitor"}
 				elapsed := time.Since(start)
-				r.Log.Info("-- reconcileServiceMonitor failed with %s", elapsed)
+				reqDebugLogger.Info("-- reconcileServiceMonitor failed with %s", elapsed)
 				return
 			}
 		}
@@ -1095,10 +1095,10 @@ func (r *ReconcileOpenLiberty) reconcileServiceMonitor(defaultMeta metav1.Object
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 	elapsed := time.Since(start)
-	r.Log.Info("-- reconcileServiceMonitor took %s", elapsed)
+	reqDebugLogger.Info("-- reconcileServiceMonitor took %s", elapsed)
 }
 
-func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerCleanup(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult, semeruMarkedForDeletionChan <-chan bool) {
+func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerCleanup(reqDebugLogger logr.Logger, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult, semeruMarkedForDeletionChan <-chan bool) {
 	start := time.Now()
 	// Delete completed Semeru instances because all pods now point to the newest Semeru service
 	areCompletedSemeruInstancesMarkedToBeDeleted := <-semeruMarkedForDeletionChan
@@ -1110,7 +1110,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerCleanup(instance *olv
 				instanceMutex.Unlock()
 				reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to delete completed Semeru instance"}
 				elapsed := time.Since(start)
-				r.Log.Info("-- reconcileSemeruCloudCompilerCleanup failed with %s", elapsed)
+				reqDebugLogger.Info("-- reconcileSemeruCloudCompilerCleanup failed with %s", elapsed)
 				return
 			} else {
 				instanceMutex.Unlock()
@@ -1121,7 +1121,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerCleanup(instance *olv
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 	elapsed := time.Since(start)
-	r.Log.Info("-- reconcileSemeruCloudCompilerCleanup took %s", elapsed)
+	reqDebugLogger.Info("-- reconcileSemeruCloudCompilerCleanup took %s", elapsed)
 }
 
 func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, instance *olv1.OpenLibertyApplication, reqLogger logr.Logger, reqDebugLogger logr.Logger, isKnativeSupported bool, ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
@@ -1136,7 +1136,7 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 	reconcileResultChan := make(chan ReconcileResult, 9)
 	instanceMutex := &sync.Mutex{}
 
-	go r.reconcileImageStream(instance, instanceMutex, reconcileResultChan) // STATE: {reconcileResultChan: 1}
+	go r.reconcileImageStream(reqDebugLogger, instance, instanceMutex, reconcileResultChan) // STATE: {reconcileResultChan: 1}
 
 	// The if statement below depends on instance.Status.ImageReference being possibly set in reconcileImageStream, so it must block for the first reconcile result
 	reconcileResult := <-reconcileResultChan // STATE: {}
@@ -1161,18 +1161,18 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 
 	// obtain ltpa keys and config metadata
 	ltpaMetadataChan := make(chan *lutils.LTPAMetadata, 2)
-	go r.reconcileLTPAKeySharingEnabled(instance, instanceMutex, reconcileResultChan, ltpaMetadataChan) // STATE: {reconcileResultChan: 1, ltpaMetadataChan: 2}
+	go r.reconcileLTPAKeySharingEnabled(reqDebugLogger, instance, instanceMutex, reconcileResultChan, ltpaMetadataChan) // STATE: {reconcileResultChan: 1, ltpaMetadataChan: 2}
 
 	// obtain password encryption metadata
 	passwordEncryptionMetadataChan := make(chan *lutils.PasswordEncryptionMetadata, 1)
-	go r.reconcilePasswordEncryptionKeySharingEnabled(instance, instanceMutex, reconcileResultChan, passwordEncryptionMetadataChan) // STATE: {reconcileResultChan: 2, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1}
-	go r.reconcileServiceAccount(defaultMeta, instance, instanceMutex, reconcileResultChan)                                         // STATE: {reconcileResultChan: 3, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1}
+	go r.reconcilePasswordEncryptionKeySharingEnabled(reqDebugLogger, instance, instanceMutex, reconcileResultChan, passwordEncryptionMetadataChan) // STATE: {reconcileResultChan: 2, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1}
+	go r.reconcileServiceAccount(reqDebugLogger, defaultMeta, instance, instanceMutex, reconcileResultChan)                                         // STATE: {reconcileResultChan: 3, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1}
 
 	semeruMarkedForDeletionChan := make(chan bool, 1)
-	go r.reconcileSemeruCloudCompilerInit(instance, instanceMutex, reconcileResultChan, semeruMarkedForDeletionChan) // STATE: {reconcileResultChan: 4, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
+	go r.reconcileSemeruCloudCompilerInit(reqDebugLogger, instance, instanceMutex, reconcileResultChan, semeruMarkedForDeletionChan) // STATE: {reconcileResultChan: 4, ltpaMetadataChan: 2, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
 
 	// FRONTIER: knative service should have option to exit the reconcile loop
-	res, err := r.reconcileKnativeServiceSequential(defaultMeta, instance, instanceMutex, reqLogger, isKnativeSupported)
+	res, err := r.reconcileKnativeServiceSequential(reqDebugLogger, defaultMeta, instance, instanceMutex, reqLogger, isKnativeSupported)
 	if err != nil {
 		// block to pull from all go routines before exiting reconcile
 		<-ltpaMetadataChan               // STATE: {reconcileResultChan: 4, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
@@ -1213,10 +1213,10 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 		1) // reconcileLTPAConfigConcurrent() reads from sharedResourceReconcileResultChan and writes to this chan
 
 	useCertManagerChan := make(chan bool, 1)
-	go r.reconcileServiceCertificate(ba, instance, instanceMutex, reconcileResultChan, useCertManagerChan)                                                                                                        // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1}
-	go r.reconcilePasswordEncryptionKeyConcurrent(instance, instanceMutex, passwordEncryptionMetadata, sharedResourceReconcileResultChan, lastRotationChan, encryptionSecretNameChan)                             // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1, sharedResourceReconcileResultChan: 1, lastRotationChan: 1, encryptionSecretNameChan: 1}
-	go r.reconcileLTPAKeysConcurrent(instance, instanceMutex, ltpaKeysMetadata, ltpaConfigMetadata, sharedResourceReconcileResultChan, lastRotationChan, ltpaSecretNameChan, ltpaKeysLastRotationChan, reqLogger) // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1, sharedResourceReconcileResultChan: 2, lastRotationChan: 2, ltpaKeysLastRotationChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1}
-	go r.reconcileLTPAConfigConcurrent(instance, instanceMutex, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, sharedResourceHandoffReconcileResultChan, sharedResourceReconcileResultChan,
+	go r.reconcileServiceCertificate(reqDebugLogger, ba, instance, instanceMutex, reconcileResultChan, useCertManagerChan)                                                                                                        // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1}
+	go r.reconcilePasswordEncryptionKeyConcurrent(reqDebugLogger, instance, instanceMutex, passwordEncryptionMetadata, sharedResourceReconcileResultChan, lastRotationChan, encryptionSecretNameChan)                             // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1, sharedResourceReconcileResultChan: 1, lastRotationChan: 1, encryptionSecretNameChan: 1}
+	go r.reconcileLTPAKeysConcurrent(reqDebugLogger, instance, instanceMutex, ltpaKeysMetadata, ltpaConfigMetadata, sharedResourceReconcileResultChan, lastRotationChan, ltpaSecretNameChan, ltpaKeysLastRotationChan, reqLogger) // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1, sharedResourceReconcileResultChan: 2, lastRotationChan: 2, ltpaKeysLastRotationChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1}
+	go r.reconcileLTPAConfigConcurrent(reqDebugLogger, instance, instanceMutex, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, sharedResourceHandoffReconcileResultChan, sharedResourceReconcileResultChan,
 		lastRotationChan, ltpaKeysLastRotationChan, ltpaXMLSecretNameChan) // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
 
 	// FRONTIER: instances shouldn't proceed past if they are waiting for LTPA creation
@@ -1239,11 +1239,11 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 	// 	return r.ManageError(firstErroringReconcileResult.err, firstErroringReconcileResult.condition, instance)
 	// }
 
-	go r.reconcileSemeruCloudCompilerReady(instance, instanceMutex, reconcileResultChan)                     // STATE: {reconcileResultChan: 6, useCertManagerChan: 1, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
-	go r.reconcileService(defaultMeta, ba, instance, instanceMutex, reconcileResultChan, useCertManagerChan) // STATE: {reconcileResultChan: 7, useCertManagerChan: 1,semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
-	go r.reconcileNetworkPolicy(defaultMeta, instance, instanceMutex, reconcileResultChan)                   // STATE: {reconcileResultChan: 8, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
-	go r.reconcileServiceability(instance, instanceMutex, reqLogger, reconcileResultChan)                    // STATE: {reconcileResultChan: 9, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
-	go r.reconcileBindings(instance, instanceMutex, reconcileResultChan)                                     // STATE: {reconcileResultChan: 10, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	go r.reconcileSemeruCloudCompilerReady(reqDebugLogger, instance, instanceMutex, reconcileResultChan)                     // STATE: {reconcileResultChan: 6, useCertManagerChan: 1, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	go r.reconcileService(reqDebugLogger, defaultMeta, ba, instance, instanceMutex, reconcileResultChan, useCertManagerChan) // STATE: {reconcileResultChan: 7, useCertManagerChan: 1,semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	go r.reconcileNetworkPolicy(reqDebugLogger, defaultMeta, instance, instanceMutex, reconcileResultChan)                   // STATE: {reconcileResultChan: 8, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	go r.reconcileServiceability(reqDebugLogger, instance, instanceMutex, reqLogger, reconcileResultChan)                    // STATE: {reconcileResultChan: 9, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
+	go r.reconcileBindings(reqDebugLogger, instance, instanceMutex, reconcileResultChan)                                     // STATE: {reconcileResultChan: 10, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
 
 	// FRONTIER: instances shouldn't proceed past if they are waiting for certificate creation
 	reconcileResults := 10
@@ -1266,7 +1266,7 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 		return r.ManageError(firstErroringReconcileResult.err, firstErroringReconcileResult.condition, instance)
 	}
 
-	go r.reconcileStatefulSetDeployment(defaultMeta, instance, instanceMutex, ltpaConfigMetadata, passwordEncryptionMetadata, reconcileResultChan, sharedResourceHandoffReconcileResultChan, encryptionSecretNameChan, ltpaSecretNameChan, ltpaXMLSecretNameChan) // STATE: {reconcileResultChan: 1, semeruMarkedForDeletionChan: 1}
+	go r.reconcileStatefulSetDeployment(reqDebugLogger, defaultMeta, instance, instanceMutex, ltpaConfigMetadata, passwordEncryptionMetadata, reconcileResultChan, sharedResourceHandoffReconcileResultChan, encryptionSecretNameChan, ltpaSecretNameChan, ltpaXMLSecretNameChan) // STATE: {reconcileResultChan: 1, semeruMarkedForDeletionChan: 1}
 
 	// FRONTIER: past this point, it doesn't make sense to manage the route when the statefulset/deployment might possibly not exist, so block until completion
 	// STATE: {reconcileResultChan: 1, semeruMarkedForDeletionChan: 1}
@@ -1286,10 +1286,10 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 		return r.ManageError(firstErroringReconcileResult.err, firstErroringReconcileResult.condition, instance)
 	}
 	// STATE: {semeruMarkedForDeletionChan: 1}
-	go r.reconcileAutoscaling(defaultMeta, instance, instanceMutex, reconcileResultChan)                                // STATE: {semeruMarkedForDeletionChan: 1, reconcileResultChan: 1}
-	go r.reconcileRouteIngress(defaultMeta, ba, instance, instanceMutex, reqLogger, reconcileResultChan)                // STATE: {semeruMarkedForDeletionChan: 1, reconcileResultChan: 2}
-	go r.reconcileServiceMonitor(defaultMeta, instance, instanceMutex, reqLogger, reconcileResultChan)                  // STATE: {semeruMarkedForDeletionChan: 1, reconcileResultChan: 3}
-	go r.reconcileSemeruCloudCompilerCleanup(instance, instanceMutex, reconcileResultChan, semeruMarkedForDeletionChan) // STATE: {reconcileResultChan: 4}
+	go r.reconcileAutoscaling(reqDebugLogger, defaultMeta, instance, instanceMutex, reconcileResultChan)                                // STATE: {semeruMarkedForDeletionChan: 1, reconcileResultChan: 1}
+	go r.reconcileRouteIngress(reqDebugLogger, defaultMeta, ba, instance, instanceMutex, reqLogger, reconcileResultChan)                // STATE: {semeruMarkedForDeletionChan: 1, reconcileResultChan: 2}
+	go r.reconcileServiceMonitor(reqDebugLogger, defaultMeta, instance, instanceMutex, reqLogger, reconcileResultChan)                  // STATE: {semeruMarkedForDeletionChan: 1, reconcileResultChan: 3}
+	go r.reconcileSemeruCloudCompilerCleanup(reqDebugLogger, instance, instanceMutex, reconcileResultChan, semeruMarkedForDeletionChan) // STATE: {reconcileResultChan: 4}
 	// FRONTIER: pull from all remaining channels to manage success
 	reconcileResults = 4
 	foundFirstError = false
