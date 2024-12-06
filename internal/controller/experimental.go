@@ -446,9 +446,11 @@ func (r *ReconcileOpenLiberty) reconcileKnativeServiceSequential(reqDebugLogger 
 
 func (r *ReconcileOpenLiberty) reconcileServiceCertificate(reqDebugLogger logr.Logger, ba common.BaseComponent, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, serviceCertificateReconcileResultChan chan<- ReconcileResult, useCertManagerChan chan<- bool) {
 	start := time.Now()
+	fmt.Printf("-- reconcileServiceCertificate (1) queued for lock at t=%s\n", start)
 	instanceMutex.Lock()
 	useCertmanager, err := r.GenerateSvcCertSecret(ba, OperatorShortName, "Open Liberty Operator", OperatorName)
 	instanceMutex.Unlock()
+	fmt.Printf("-- reconcileServiceCertificate (1) queued for unlock at t=%s\n", time.Now())
 	useCertManagerChan <- useCertmanager
 	if err != nil {
 		elapsed := time.Since(start)
@@ -457,11 +459,13 @@ func (r *ReconcileOpenLiberty) reconcileServiceCertificate(reqDebugLogger logr.L
 		return
 	}
 
+	fmt.Printf("-- reconcileServiceCertificate (2) queued for lock at t=%s\n", time.Now())
 	instanceMutex.Lock()
 	if ba.GetService().GetCertificateSecretRef() != nil {
 		ba.GetStatus().SetReference(common.StatusReferenceCertSecretName, *ba.GetService().GetCertificateSecretRef())
 	}
 	instanceMutex.Unlock()
+	fmt.Printf("-- reconcileServiceCertificate (2) queued for unlock at t=%s\n", time.Now())
 	elapsed := time.Since(start)
 	fmt.Printf("-- reconcileServiceCertificate took %s\n", elapsed)
 	serviceCertificateReconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
@@ -469,24 +473,31 @@ func (r *ReconcileOpenLiberty) reconcileServiceCertificate(reqDebugLogger logr.L
 
 func (r *ReconcileOpenLiberty) reconcileService(reqDebugLogger logr.Logger, defaultMeta metav1.ObjectMeta, ba common.BaseComponent, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult, useCertManagerChan <-chan bool) {
 	start := time.Now()
+	fmt.Printf("-- reconcileService (1) queued for lock at t=%s\n", start)
 	svc := &corev1.Service{ObjectMeta: defaultMeta}
 	instanceMutex.Lock()
 	err := r.CreateOrUpdate(svc, instance, func() error {
 		oputils.CustomizeService(svc, ba)
 		svc.Annotations = oputils.MergeMaps(svc.Annotations, instance.Spec.Service.Annotations)
+		fmt.Printf("-- reconcileService (1) queued for unlock at t=%s\n", time.Now())
 		instanceMutex.Unlock()
 		useCertmanager := <-useCertManagerChan
 		if !useCertmanager && r.IsOpenShift() {
+			fmt.Printf("-- reconcileService (2) queued for lock at t=%s\n", time.Now())
 			instanceMutex.Lock()
 			oputils.AddOCPCertAnnotation(ba, svc)
+			fmt.Printf("-- reconcileService (2) queued for unlock at t=%s\n", time.Now())
 			instanceMutex.Unlock()
 		}
+		fmt.Printf("-- reconcileService (3) queued for lock at t=%s\n", time.Now())
 		instanceMutex.Lock()
 		monitoringEnabledLabelName := getMonitoringEnabledLabelName(ba)
 		if instance.Spec.Monitoring != nil {
+			fmt.Printf("-- reconcileService (3a) queued for unlock at t=%s\n", time.Now())
 			instanceMutex.Unlock()
 			svc.Labels[monitoringEnabledLabelName] = "true"
 		} else {
+			fmt.Printf("-- reconcileService (3b) queued for lock at t=%s\n", time.Now())
 			instanceMutex.Unlock()
 			delete(svc.Labels, monitoringEnabledLabelName)
 		}
@@ -497,15 +508,18 @@ func (r *ReconcileOpenLiberty) reconcileService(reqDebugLogger logr.Logger, defa
 		return
 	}
 
+	fmt.Printf("-- reconcileService (4) queued for lock at t=%s\n", time.Now())
 	instanceMutex.Lock()
 	if (ba.GetManageTLS() == nil || *ba.GetManageTLS()) &&
 		ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName] == "" {
+		fmt.Printf("-- reconcileService (4a) queued for unlock at t=%s\n", time.Now())
 		instanceMutex.Unlock()
 		elapsed := time.Since(start)
 		fmt.Printf("-- reconcileService failed with %s\n", elapsed)
 		reconcileResultChan <- ReconcileResult{err: errors.New("Failed to generate TLS certificate. Ensure cert-manager is installed and running"), condition: common.StatusConditionTypeReconciled}
 		return
 	} else {
+		fmt.Printf("-- reconcileService (4b) queued for unlock at t=%s\n", time.Now())
 		instanceMutex.Unlock()
 	}
 	elapsed := time.Since(start)
