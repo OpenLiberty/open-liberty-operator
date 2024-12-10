@@ -204,17 +204,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// 	return reconcile.Result{}, nil
 	// }
 
-	// message, err := r.reconcileManageErroringInstances(instance)
-	// if err != nil {
-	// 	if err == skippingForPendingInstanceErr {
-	// 		return r.ManageError(fmt.Errorf("Temporarily skipping this instance because it depends on another OpenLibertyApplication to recover; %s", message), common.StatusConditionTypeReconciled, instance) // Manage error while erroring instances are being worked on
-	// 	}
-	// 	// Manage success while erroring instances are being worked on
-	// 	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
-	// }
-	// defer r.CleanupInstance(instance)
-
-	// From here, the Open Liberty Application instance is stored in shared memory and can begin concurrent actions.
 	if r.isConcurrencyEnabled(instance) {
 		return r.concurrentReconcile(ba, instance, reqLogger, reqDebugLogger, isKnativeSupported, ctx, request)
 	} else {
@@ -503,9 +492,6 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-	} else {
-		reqLogger.Info("Reconcile LTPA: " + message + " " + ltpaSecretName + " " + ltpaKeysLastRotation)
-		reqLogger.Info(fmt.Sprintf("LTPA: %s,%s,%s", message, ltpaSecretName, ltpaKeysLastRotation))
 	}
 
 	// get the last key-related rotation time as a string to be used by reconcileLTPAConfig for non-leaders to yield (blocking) to the LTPA config leader

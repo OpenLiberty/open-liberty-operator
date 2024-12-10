@@ -285,11 +285,6 @@ func (in *OpenLibertyApplicationExperimental) DeepCopyInto(out *OpenLibertyAppli
 		*out = new(bool)
 		**out = **in
 	}
-	if in.ManageErroringInstances != nil {
-		in, out := &in.ManageErroringInstances, &out.ManageErroringInstances
-		*out = new(bool)
-		**out = **in
-	}
 	if in.ManageCache != nil {
 		in, out := &in.ManageCache, &out.ManageCache
 		*out = new(bool)

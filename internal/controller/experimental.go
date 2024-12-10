@@ -34,131 +34,9 @@ type ReconcileResult struct {
 	message   string
 }
 
-var instances *sync.Map
-var skippingForPendingInstanceErr, isSuccessInstanceErr error
-
-func init() {
-	isSuccessInstanceErr = fmt.Errorf("is success instance")
-	skippingForPendingInstanceErr = fmt.Errorf("skipping for pending instance")
-	instances = &sync.Map{}
-}
-
-type Instance struct {
-	state                    InstanceState
-	pendingOnInstanceName    string
-	pendingOnInstanceMessage string
-}
-
-type InstanceState int
-
-const (
-	SUCCESSFUL_INSTANCE InstanceState = iota
-	PENDING_INSTANCE    InstanceState = iota
-	ERRORING_INSTANCE   InstanceState = iota
-)
-
-func SetPendingLTPAInstance(instance *olv1.OpenLibertyApplication, leaderName string, err error) {
-	if strings.HasPrefix(err.Error(), "Waiting for OpenLibertyApplication instance") {
-		uniqueKey := getInstanceUniqueKey(instance)
-		leaderUniqueKey := getInstanceUniqueKeyByValues(leaderName, instance.GetNamespace())
-		instances.Store(uniqueKey, &Instance{
-			state:                    PENDING_INSTANCE,
-			pendingOnInstanceName:    leaderUniqueKey,
-			pendingOnInstanceMessage: err.Error(),
-		})
-	}
-}
-
-func getCurrentInstanceState(instance *olv1.OpenLibertyApplication) (string, InstanceState) {
-	message := ""
-	trueCount := 0
-	conditions := instance.Status.GetConditions()
-	n := len(conditions)
-	for _, cond := range conditions {
-		if cond.GetStatus() == corev1.ConditionTrue {
-			trueCount += 1
-		} else if cond.GetType() == common.StatusConditionTypeReconciled && strings.HasPrefix(cond.GetMessage(), "Waiting for OpenLibertyApplication instance") {
-			return message, PENDING_INSTANCE
-		}
-	}
-	if n > 0 && trueCount == n {
-		return message, SUCCESSFUL_INSTANCE
-	}
-	return message, ERRORING_INSTANCE
-}
-
-func getInstanceUniqueKey(instance *olv1.OpenLibertyApplication) string {
-	return fmt.Sprintf("%s|%s", instance.GetNamespace(), instance.GetName())
-}
-
-func getInstanceUniqueKeyByValues(instanceName, instanceNamespace string) string {
-	return fmt.Sprintf("%s|%s", instanceNamespace, instanceName)
-}
-
-func isBlockingForErroringInstances() bool {
-	isBlockingForErroringInstances := false
-	instances.Range(func(key, value any) bool {
-		if value.(*Instance).state == ERRORING_INSTANCE {
-			isBlockingForErroringInstances = true
-			return false
-		}
-		return true
-	})
-	return isBlockingForErroringInstances
-}
-
-func (r *ReconcileOpenLiberty) CleanupInstance(instance *olv1.OpenLibertyApplication) {
-	if r.isManagingErroringInstances(instance) {
-		fmt.Printf("Finalizing cleanup for instance %s in namespace %s.\n", instance.GetName(), instance.GetNamespace())
-		_, instanceState := getCurrentInstanceState(instance)
-		uniqueKey := getInstanceUniqueKey(instance)
-		currentInstanceObj, found := instances.Load(uniqueKey)
-		// if the instance has changed between instanceState and the stored currentInstanceObj.state then update the instance, avoiding pending instances
-		if instanceState != PENDING_INSTANCE && (!found || instanceState != currentInstanceObj.(*Instance).state) {
-			instances.Store(uniqueKey, &Instance{state: instanceState})
-		}
-	}
-}
-
-func (r *ReconcileOpenLiberty) reconcileManageErroringInstances(instance *olv1.OpenLibertyApplication) (string, error) {
-	if r.isManagingErroringInstances(instance) {
-		uniqueKey := getInstanceUniqueKey(instance)
-		currentInstanceObj, found := instances.Load(uniqueKey)
-		if found {
-			if currentInstanceObj.(*Instance).state == PENDING_INSTANCE {
-				pendingInstanceName := currentInstanceObj.(*Instance).pendingOnInstanceName
-				pendingOnInstanceMessage := currentInstanceObj.(*Instance).pendingOnInstanceMessage
-				pendingUniqueKey := getInstanceUniqueKeyByValues(pendingInstanceName, instance.GetNamespace())
-				pendingInstanceObj, found2 := instances.Load(pendingUniqueKey)
-				if found2 {
-					if pendingInstanceObj.(*Instance).state == SUCCESSFUL_INSTANCE {
-						return pendingOnInstanceMessage, nil // pending instance can proceed because the instance it is pendingOn is sucessful
-					}
-				}
-				return pendingOnInstanceMessage, skippingForPendingInstanceErr // this instance is still waiting on pendingOn instance to be registered in the instances sync.Map or to recover
-			} else if currentInstanceObj.(*Instance).state == SUCCESSFUL_INSTANCE {
-				// TODO: if this successful instance's generation has drifted from the observedGeneration, then move it to erroring state
-				if isBlockingForErroringInstances() {
-					return "", isSuccessInstanceErr
-				}
-			} else if currentInstanceObj.(*Instance).state == ERRORING_INSTANCE {
-				return "", nil // no errors because this instance should be reconciled
-			}
-		}
-	}
-	return "", nil
-}
-
 func (r *ReconcileOpenLiberty) isConcurrencyEnabled(instance *olv1.OpenLibertyApplication) bool {
 	if instance.GetExperimental() != nil && instance.GetExperimental().GetManageConcurrency() != nil && *instance.GetExperimental().GetManageConcurrency() {
 		return true
-	}
-	return false
-}
-
-func (r *ReconcileOpenLiberty) isManagingErroringInstances(instance *olv1.OpenLibertyApplication) bool {
-	if instance.GetExperimental() != nil && instance.GetExperimental().GetManageErroringInstances() != nil {
-		return *instance.GetExperimental().GetManageErroringInstances()
 	}
 	return false
 }
@@ -1077,7 +955,7 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 	passwordEncryptionMetadata := <-passwordEncryptionMetadataChan
 
 	sharedResourceReconcileResultChan := make(chan ReconcileResult,
-		2) // reconcilePasswordEncryptionKeyConcurrent() + reconcileLTPAKeysConcurrent() write to this chan
+		2) // reconcilePasswordEncryptionKeyConcurrent() and reconcileLTPAKeysConcurrent() write to this chan
 	sharedResourceHandoffReconcileResultChan := make(chan ReconcileResult,
 		1) // reconcileLTPAConfigConcurrent() reads from sharedResourceReconcileResultChan and writes to this chan
 

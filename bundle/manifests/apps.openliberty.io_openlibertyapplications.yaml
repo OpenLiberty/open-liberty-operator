@@ -1207,10 +1207,6 @@ spec:
                       (concurrency) when reconciling the application instance, otherwise
                       does nothing. Defaults to false.
                     type: boolean
-                  manageErroringInstances:
-                    description: If set to true, it will enable reconciling erroring
-                      instances first up until a max retry of 10 reconciles.
-                    type: boolean
                 type: object
               expose:
                 description: Expose the application externally via a Route, a Knative
