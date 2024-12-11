@@ -223,39 +223,6 @@ func (r *ReconcileOpenLiberty) reconcileLTPAConfig(instance *olv1.OpenLibertyApp
 	return "", ltpaXMLSecretName, nil
 }
 
-// If the LTPA Secret is being created but does not exist yet, the LTPA instance leader will halt the process and restart creation of LTPA keys
-func (r *ReconcileOpenLiberty) restartLTPAKeysGeneration(instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata) error {
-	_, thisInstanceIsLeader, _, err := r.reconcileLeader(instance, ltpaMetadata, LTPA_RESOURCE_SHARING_FILE_NAME, false)
-	if err != nil {
-		return err
-	}
-	if thisInstanceIsLeader {
-		ltpaSecret := &corev1.Secret{}
-		ltpaSecret.Name = OperatorShortName + "-managed-ltpa" + ltpaMetadata.Name
-		ltpaSecret.Namespace = instance.GetNamespace()
-		err = r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaSecret.Name, Namespace: ltpaSecret.Namespace}, ltpaSecret)
-		if err != nil && kerrors.IsNotFound(err) {
-			// Deleting the job request removes existing LTPA resources and restarts the LTPA generation process
-			ltpaJobRequest := &corev1.ConfigMap{}
-			ltpaJobRequest.Name = OperatorShortName + "-managed-ltpa-keys-job-request" + ltpaMetadata.Name
-			ltpaJobRequest.Namespace = instance.GetNamespace()
-			err = r.DeleteResource(ltpaJobRequest)
-			if err != nil {
-				return err
-			}
-
-			ltpaServiceAccount := &corev1.ServiceAccount{}
-			ltpaServiceAccountRootName := OperatorShortName + "-ltpa-keys"
-			ltpaServiceAccount.Name = ltpaServiceAccountRootName + ltpaMetadata.Name
-			err = r.DeleteResource(ltpaServiceAccount)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 // Generates the LTPA keys file and returns the name of the Secret storing its metadata
 func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata, reqLogger logr.Logger) (string, string, string, error) {
 	// Initialize LTPA resources
