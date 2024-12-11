@@ -91,3 +91,10 @@ patchesJson6902:
       - op: replace
         path: /metadata/name
         value: olo-leader-election-cluster-role
+  - target:
+      kind: ClusterRoleBinding
+      name: olo-cluster-liberty-proxy-rolebinding
+    patch: |-
+      - op: replace
+        path: /subjects/0/name
+        value: olo-liberty-proxy
