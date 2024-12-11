@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"strings"
 
-	rbacv1 "k8s.io/api/rbac/v1"
-
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -61,55 +59,12 @@ func (r *ReconcileOpenLiberty) getLibertyProxy(instance *olv1.OpenLibertyApplica
 func (r *ReconcileOpenLiberty) reconcileLibertyProxy(operatorNamespace string, instance *olv1.OpenLibertyApplication) (string, error) {
 	// ServiceAccount
 	proxyServiceAccount := &corev1.ServiceAccount{}
-	proxyServiceAccount.Name = OperatorShortName + "-proxy-sa"
+	proxyServiceAccount.Name = OperatorShortName + "-liberty-proxy"
 	proxyServiceAccount.Namespace = operatorNamespace
 	if err := r.CreateOrUpdate(proxyServiceAccount, nil, func() error {
 		return nil
 	}); err != nil {
 		return "Failed to reconcile ServiceAccount for the Liberty proxy", err
-	}
-
-	// ClusterRole
-	proxyClusterRole := &rbacv1.ClusterRole{}
-	proxyClusterRole.Name = OperatorShortName + "-proxy-clusterrole"
-	// proxyClusterRole.Namespace = operatorNamespace
-	if err := r.CreateOrUpdate(proxyClusterRole, nil, func() error {
-		proxyClusterRole.Rules = []rbacv1.PolicyRule{
-			{
-				Verbs:     []string{"create", "get", "update", "list", "watch"},
-				APIGroups: []string{""},
-				Resources: []string{"serviceaccounts"},
-			},
-			{
-				Verbs:     []string{"create", "get", "update", "list", "watch"},
-				APIGroups: []string{"cert-manager.io"},
-				Resources: []string{"issuers", "certificates"},
-			},
-		}
-		return nil
-	}); err != nil {
-		return "Failed to reconcile ClusterRole for the Liberty proxy", err
-	}
-
-	// ClusterRoleBinding
-	proxyClusterRoleBinding := &rbacv1.ClusterRoleBinding{}
-	proxyClusterRoleBinding.Name = OperatorShortName + "-proxy-clusterrolebinding"
-	if err := r.CreateOrUpdate(proxyClusterRoleBinding, nil, func() error {
-		proxyClusterRoleBinding.Subjects = []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      proxyServiceAccount.Name,
-				Namespace: proxyServiceAccount.Namespace,
-			},
-		}
-		proxyClusterRoleBinding.RoleRef = rbacv1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "ClusterRole",
-			Name:     proxyClusterRole.Name,
-		}
-		return nil
-	}); err != nil {
-		return "Failed to reconcile ClusterRoleBinding for the Liberty proxy", err
 	}
 
 	// Proxy

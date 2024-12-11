@@ -196,8 +196,6 @@ rules:
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
-  - clusterrolebindings
-  - clusterroles
   - rolebindings
   - roles
   verbs:
@@ -238,6 +236,23 @@ rules:
   - list
   - update
   - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/instance: open-liberty-operator
+    app.kubernetes.io/name: open-liberty-operator
+  name: liberty-proxy-rolebinding
+  namespace: olo-watched-ns
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: liberty-proxy-role
+subjects:
+- kind: ServiceAccount
+  name: olo-controller-manager
+  namespace: olo-ns
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
