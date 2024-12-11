@@ -46,5 +46,12 @@ patchesJson6902:
       - op: replace
         path: /roleRef/name
         value: olo-watched-manager-role
+  - target:
+      kind: RoleBinding
+      name: olo-watched-liberty-proxy-rolebinding
+    patch: |-
+      - op: replace
+        path: /subjects/0/name
+        value: olo-liberty-proxy
 
         
