@@ -7,6 +7,15 @@ metadata:
   name: olo-controller-manager
   namespace: open-liberty
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: open-liberty-operator
+    app.kubernetes.io/name: open-liberty-operator
+  name: olo-liberty-proxy
+  namespace: open-liberty
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -205,8 +214,6 @@ rules:
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
-  - clusterrolebindings
-  - clusterroles
   - rolebindings
   - roles
   verbs:
@@ -263,6 +270,23 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: olo-controller-manager
+  namespace: open-liberty
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/instance: open-liberty-operator
+    app.kubernetes.io/name: open-liberty-operator
+  name: olo-liberty-proxy-rolebinding
+  namespace: open-liberty
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: liberty-proxy-role
+subjects:
+- kind: ServiceAccount
+  name: olo-liberty-proxy
   namespace: open-liberty
 ---
 apiVersion: rbac.authorization.k8s.io/v1
