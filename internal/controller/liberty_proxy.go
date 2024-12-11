@@ -94,6 +94,9 @@ func (r *ReconcileOpenLiberty) reconcileLibertyProxy(operatorNamespace string, i
 		}
 		proxy.Spec.Service.Port = 9443
 		proxy.Spec.ManageTLS = &manageTLS
+		if proxy.Spec.ServiceAccount == nil {
+			proxy.Spec.ServiceAccount = &olv1.OpenLibertyApplicationServiceAccount{}
+		}
 		proxy.Spec.ServiceAccount.Name = &proxyServiceAccount.Name
 		// proxy.Spec.Volumes = []corev1.Volume{
 		// 	{
