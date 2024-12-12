@@ -13,6 +13,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+var (
+	libertyProxyName = "liberty-proxy"
+)
+
 type SecurityUtilityCreateLTPAKeysResponse struct {
 	LTPAKeys    string `json:"ltpa.keys,omitempty"`
 	RawPassword string `json:"rawPassword,omitempty"`
@@ -24,10 +28,10 @@ type SecurityUtilityEncodeResponse struct {
 	OK       bool   `json:"ok"`
 }
 
-func (r *ReconcileOpenLiberty) getLibertyProxyClient() (*http.Client, error) {
+func (r *ReconcileOpenLiberty) getLibertyProxyClient(operatorNamespace string) (*http.Client, error) {
 	caCertSecret := &corev1.Secret{}
 	caCertSecret.Name = OperatorShortName + "-ca-tls"
-	caCertSecret.Namespace = "proxy-test"
+	caCertSecret.Namespace = operatorNamespace
 	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: caCertSecret.Name, Namespace: caCertSecret.Namespace}, caCertSecret)
 	if err != nil {
 		return nil, err
@@ -44,9 +48,9 @@ func (r *ReconcileOpenLiberty) getLibertyProxyClient() (*http.Client, error) {
 	return client, nil
 }
 
-func (r *ReconcileOpenLiberty) getLibertyProxy(instance *olv1.OpenLibertyApplication, client *http.Client, cmd string, args ...string) (*http.Response, error) {
-	proxyServiceName := "liberty-proxy-1" // TODO: replace
-	proxyServiceNamespace := "proxy-test" // TODO: change
+func (r *ReconcileOpenLiberty) getLibertyProxy(operatorNamespace string, instance *olv1.OpenLibertyApplication, client *http.Client, cmd string, args ...string) (*http.Response, error) {
+	proxyServiceName := libertyProxyName       // TODO: replace
+	proxyServiceNamespace := operatorNamespace // TODO: change
 	cmdList := ""
 	if len(args) > 0 {
 		cmdList += "?"
@@ -59,7 +63,7 @@ func (r *ReconcileOpenLiberty) getLibertyProxy(instance *olv1.OpenLibertyApplica
 func (r *ReconcileOpenLiberty) reconcileLibertyProxy(operatorNamespace string, instance *olv1.OpenLibertyApplication) (string, error) {
 	// ServiceAccount
 	proxyServiceAccount := &corev1.ServiceAccount{}
-	proxyServiceAccount.Name = OperatorShortName + "-liberty-proxy"
+	proxyServiceAccount.Name = OperatorShortName + "-" + libertyProxyName
 	proxyServiceAccount.Namespace = operatorNamespace
 	if err := r.CreateOrUpdate(proxyServiceAccount, nil, func() error {
 		return nil
@@ -69,7 +73,7 @@ func (r *ReconcileOpenLiberty) reconcileLibertyProxy(operatorNamespace string, i
 
 	// Proxy
 	proxy := &olv1.OpenLibertyApplication{}
-	proxy.Name = "liberty-proxy"
+	proxy.Name = libertyProxyName
 	proxy.Namespace = operatorNamespace
 	expose := false
 	manageTLS := true
@@ -88,7 +92,7 @@ func (r *ReconcileOpenLiberty) reconcileLibertyProxy(operatorNamespace string, i
 				"app.kubernetes.io/name": "open-liberty-operator",
 			}
 		}
-		proxy.Spec.ApplicationImage = "liberty-proxy-1-ol"
+		proxy.Spec.ApplicationImage = "liberty-proxy-1-ol" // TODO: update
 		if proxy.Spec.Service == nil {
 			proxy.Spec.Service = &olv1.OpenLibertyApplicationService{}
 		}
