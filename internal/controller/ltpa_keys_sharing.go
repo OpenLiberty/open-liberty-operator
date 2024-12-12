@@ -186,11 +186,11 @@ func hasLTPAConfigResourceSuffixesEnv(instance *olv1.OpenLibertyApplication) (st
 }
 
 // Create or use an existing LTPA Secret identified by LTPA metadata for the OpenLibertyApplication instance
-func (r *ReconcileOpenLiberty) reconcileLTPAKeys(instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, reqLogger logr.Logger) (string, string, string, error) {
+func (r *ReconcileOpenLiberty) reconcileLTPAKeys(operatorNamespace string, instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, reqLogger logr.Logger) (string, string, string, error) {
 	ltpaSecretName := ""
 	ltpaKeysLastRotation := ""
 	if r.isLTPAKeySharingEnabled(instance) {
-		ltpaSecretNameTemp, ltpaKeysLastRotationTemp, _, err := r.generateLTPAKeys(instance, ltpaKeysMetadata, reqLogger)
+		ltpaSecretNameTemp, ltpaKeysLastRotationTemp, _, err := r.generateLTPAKeys(operatorNamespace, instance, ltpaKeysMetadata, reqLogger)
 		ltpaKeysLastRotation = ltpaKeysLastRotationTemp
 		ltpaSecretName = ltpaSecretNameTemp
 		if err != nil {
@@ -206,11 +206,11 @@ func (r *ReconcileOpenLiberty) reconcileLTPAKeys(instance *olv1.OpenLibertyAppli
 }
 
 // Create or use an existing LTPA Secret identified by LTPA metadata for the OpenLibertyApplication instance
-func (r *ReconcileOpenLiberty) reconcileLTPAConfig(instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, ltpaKeysLastRotation string, lastKeyRelatedRotation string) (string, string, error) {
+func (r *ReconcileOpenLiberty) reconcileLTPAConfig(operatorNamespace string, instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, ltpaKeysLastRotation string, lastKeyRelatedRotation string) (string, string, error) {
 	var err error
 	var ltpaXMLSecretName string
 	if r.isLTPAKeySharingEnabled(instance) {
-		ltpaXMLSecretName, err = r.generateLTPAConfig(instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
+		ltpaXMLSecretName, err = r.generateLTPAConfig(operatorNamespace, instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
 		if err != nil {
 			return "Failed to generate the shared LTPA config Secret", ltpaXMLSecretName, err
 		}
@@ -224,7 +224,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAConfig(instance *olv1.OpenLibertyApp
 }
 
 // Generates the LTPA keys file and returns the name of the Secret storing its metadata
-func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata, reqLogger logr.Logger) (string, string, string, error) {
+func (r *ReconcileOpenLiberty) generateLTPAKeys(operatorNamespace string, instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata, reqLogger logr.Logger) (string, string, string, error) {
 	// Initialize LTPA resources
 	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{Name: ""}
 
@@ -258,7 +258,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 		}
 
 		// Get client to Liberty proxy
-		client, err := r.getLibertyProxyClient()
+		client, err := r.getLibertyProxyClient(operatorNamespace)
 		if err != nil {
 			return "", "", "", err
 		}
@@ -272,9 +272,9 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 		var proxyRes *http.Response
 		var proxyErr error
 		if len(passwordEncryptionKey) > 0 {
-			proxyRes, proxyErr = r.getLibertyProxy(instance, client, "SecurityUtilityCreateLTPAKeys", fmt.Sprintf("key=%s", passwordEncryptionKey))
+			proxyRes, proxyErr = r.getLibertyProxy(operatorNamespace, instance, client, "SecurityUtilityCreateLTPAKeys", fmt.Sprintf("key=%s", passwordEncryptionKey))
 		} else {
-			proxyRes, proxyErr = r.getLibertyProxy(instance, client, "SecurityUtilityCreateLTPAKeys")
+			proxyRes, proxyErr = r.getLibertyProxy(operatorNamespace, instance, client, "SecurityUtilityCreateLTPAKeys")
 		}
 		if proxyErr != nil {
 			return "", "", "", proxyErr
@@ -322,7 +322,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 }
 
 // Generates the LTPA keys file and returns the name of the Secret storing its metadata
-func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, ltpaKeysLastRotation string, lastKeyRelatedRotation string) (string, error) {
+func (r *ReconcileOpenLiberty) generateLTPAConfig(operatorNamespace string, instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, ltpaKeysLastRotation string, lastKeyRelatedRotation string) (string, error) {
 	ltpaXMLSecret := &corev1.Secret{}
 	ltpaXMLSecretRootName := OperatorShortName + lutils.LTPAServerXMLSuffix
 	ltpaXMLSecret.Name = ltpaXMLSecretRootName + ltpaConfigMetadata.Name
@@ -439,7 +439,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 			password := string(ltpaSecret.Data["rawPassword"])
 
 			// Get client to Liberty proxy
-			client, err := r.getLibertyProxyClient()
+			client, err := r.getLibertyProxyClient(operatorNamespace)
 			if err != nil {
 				return "", err
 			}
@@ -454,9 +454,9 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 			var proxyRes *http.Response
 			var proxyErr error
 			if len(passwordEncryptionKey) > 0 {
-				proxyRes, proxyErr = r.getLibertyProxy(instance, client, "SecurityUtilityEncode", fmt.Sprintf("password=%s", password), fmt.Sprintf("key=%s", passwordEncryptionKey))
+				proxyRes, proxyErr = r.getLibertyProxy(operatorNamespace, instance, client, "SecurityUtilityEncode", fmt.Sprintf("password=%s", password), fmt.Sprintf("key=%s", passwordEncryptionKey))
 			} else {
-				proxyRes, proxyErr = r.getLibertyProxy(instance, client, "SecurityUtilityEncode", fmt.Sprintf("password=%s", password))
+				proxyRes, proxyErr = r.getLibertyProxy(operatorNamespace, instance, client, "SecurityUtilityEncode", fmt.Sprintf("password=%s", password))
 			}
 			if proxyErr != nil {
 				return "", err

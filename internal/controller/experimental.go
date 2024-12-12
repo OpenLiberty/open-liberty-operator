@@ -419,10 +419,10 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeyConcurrent(instance
 	sharedResourceReconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled, message: message}
 }
 
-func (r *ReconcileOpenLiberty) reconcileLTPAKeysConcurrent(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, reconcileResultChan chan<- ReconcileResult, lastRotationChan chan<- string, ltpaSecretNameChan chan<- string, ltpaKeysLastRotationChan chan<- string, reqLogger logr.Logger) {
+func (r *ReconcileOpenLiberty) reconcileLTPAKeysConcurrent(operatorNamespace string, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, reconcileResultChan chan<- ReconcileResult, lastRotationChan chan<- string, ltpaSecretNameChan chan<- string, ltpaKeysLastRotationChan chan<- string, reqLogger logr.Logger) {
 	// Create and manage the shared LTPA keys Secret if the feature is enabled
 	instanceMutex.Lock()
-	message, ltpaSecretName, ltpaKeysLastRotation, err := r.reconcileLTPAKeys(instance, ltpaKeysMetadata, reqLogger)
+	message, ltpaSecretName, ltpaKeysLastRotation, err := r.reconcileLTPAKeys(operatorNamespace, instance, ltpaKeysMetadata, reqLogger)
 	instanceMutex.Unlock()
 	ltpaSecretNameChan <- ltpaSecretName
 	lastRotationChan <- ltpaKeysLastRotation
@@ -434,7 +434,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAKeysConcurrent(instance *olv1.OpenLi
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled, message: message}
 }
 
-func (r *ReconcileOpenLiberty) reconcileLTPAConfigConcurrent(instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, reconcileResultChan chan<- ReconcileResult, sharedResourceReconcileResultChan <-chan ReconcileResult, lastRotationChan <-chan string, ltpaKeysLastRotationChan <-chan string, ltpaXMLSecretNameChan chan<- string) {
+func (r *ReconcileOpenLiberty) reconcileLTPAConfigConcurrent(operatorNamespace string, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, reconcileResultChan chan<- ReconcileResult, sharedResourceReconcileResultChan <-chan ReconcileResult, lastRotationChan <-chan string, ltpaKeysLastRotationChan <-chan string, ltpaXMLSecretNameChan chan<- string) {
 	// there are two shared resources this function depends on: LTPA and PasswordEncryption
 	for i := 0; i < 2; i++ {
 		sharedResourceReconcileResult := <-sharedResourceReconcileResultChan
@@ -463,7 +463,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAConfigConcurrent(instance *olv1.Open
 
 	// Using the LTPA keys and config metadata, create and manage the shared LTPA Liberty server XML if the feature is enabled
 	instanceMutex.Lock()
-	message, ltpaXMLSecretName, err := r.reconcileLTPAConfig(instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
+	message, ltpaXMLSecretName, err := r.reconcileLTPAConfig(operatorNamespace, instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
 	instanceMutex.Unlock()
 	ltpaXMLSecretNameChan <- ltpaXMLSecretName
 	if err != nil {
@@ -871,7 +871,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerCleanup(instance *olv
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 }
 
-func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, instance *olv1.OpenLibertyApplication, reqLogger logr.Logger, reqDebugLogger logr.Logger, isKnativeSupported bool, ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *ReconcileOpenLiberty) concurrentReconcile(operatorNamespace string, ba common.BaseComponent, instance *olv1.OpenLibertyApplication, reqLogger logr.Logger, reqDebugLogger logr.Logger, isKnativeSupported bool, ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	defaultMeta := metav1.ObjectMeta{
 		Name:      instance.Name,
 		Namespace: instance.Namespace,
@@ -960,10 +960,10 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(ba common.BaseComponent, inst
 		1) // reconcileLTPAConfigConcurrent() reads from sharedResourceReconcileResultChan and writes to this chan
 
 	useCertManagerChan := make(chan bool, 1)
-	go r.reconcileServiceCertificate(ba, instance, instanceMutex, reconcileResultChan, useCertManagerChan)                                                                                                        // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1}
-	go r.reconcilePasswordEncryptionKeyConcurrent(instance, instanceMutex, passwordEncryptionMetadata, sharedResourceReconcileResultChan, lastRotationChan, encryptionSecretNameChan)                             // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1, sharedResourceReconcileResultChan: 1, lastRotationChan: 1, encryptionSecretNameChan: 1}
-	go r.reconcileLTPAKeysConcurrent(instance, instanceMutex, ltpaKeysMetadata, ltpaConfigMetadata, sharedResourceReconcileResultChan, lastRotationChan, ltpaSecretNameChan, ltpaKeysLastRotationChan, reqLogger) // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1, sharedResourceReconcileResultChan: 2, lastRotationChan: 2, ltpaKeysLastRotationChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1}
-	go r.reconcileLTPAConfigConcurrent(instance, instanceMutex, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, sharedResourceHandoffReconcileResultChan, sharedResourceReconcileResultChan,
+	go r.reconcileServiceCertificate(ba, instance, instanceMutex, reconcileResultChan, useCertManagerChan)                                                                                                                           // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1}
+	go r.reconcilePasswordEncryptionKeyConcurrent(instance, instanceMutex, passwordEncryptionMetadata, sharedResourceReconcileResultChan, lastRotationChan, encryptionSecretNameChan)                                                // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1, sharedResourceReconcileResultChan: 1, lastRotationChan: 1, encryptionSecretNameChan: 1}
+	go r.reconcileLTPAKeysConcurrent(operatorNamespace, instance, instanceMutex, ltpaKeysMetadata, ltpaConfigMetadata, sharedResourceReconcileResultChan, lastRotationChan, ltpaSecretNameChan, ltpaKeysLastRotationChan, reqLogger) // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1, sharedResourceReconcileResultChan: 2, lastRotationChan: 2, ltpaKeysLastRotationChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1}
+	go r.reconcileLTPAConfigConcurrent(operatorNamespace, instance, instanceMutex, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, sharedResourceHandoffReconcileResultChan, sharedResourceReconcileResultChan,
 		lastRotationChan, ltpaKeysLastRotationChan, ltpaXMLSecretNameChan) // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1, useCertManagerChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
 	go r.reconcileSemeruCloudCompilerReady(instance, instanceMutex, reconcileResultChan)                     // STATE: {reconcileResultChan: 6, useCertManagerChan: 1, semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
 	go r.reconcileService(defaultMeta, ba, instance, instanceMutex, reconcileResultChan, useCertManagerChan) // STATE: {reconcileResultChan: 7, useCertManagerChan: 1,semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
