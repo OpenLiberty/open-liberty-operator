@@ -389,6 +389,51 @@ If the `.status.conditions.type` Ready type does not have a status of `True`, se
 
 The value of the `.status.versions.reconciled` parameter is the version of the operand that is deployed into the cluster after the reconcile loop completes.
 
+==== Viewing reconciliation frequency in the status [[viewing-reconciliation-frequency-in-the-status]]
+The operator controller periodically runs reconciliation to match the current state to the wanted state so that the managed resources remain functional. Open Liberty operator allows for increasing the reconciliation interval to reduce the controller's workload when status remains unchanged. The reconciliation frequency can be configured with the link:#operator-configmap[Operator ConfigMap] settings.
+
+The value of the `.status.conditions.unchangedConditionCount` parameter represents the number of reconciliation cycles during which the condition status type remains unchanged. Each time this value becomes an even number, the reconciliation interval increases according to the configurations in the `ConfigMap`. The reconciliation interval increase feature is enabled by default but can be disabled if needed.
+
+The `.status.reconcileInterval` parameter represents the current reconciliation interval of the instance. The parameter increases by the increase percentage, which is specified in the `ConfigMap`, based on the current interval. The calculation uses the base reconciliation interval, the increase percentage, and the count of unchanged status conditions, with the increases compounding over time. The maximum reconciliation interval is _240_ seconds for repeated failures and _120_ seconds for repeated successful status conditions.
+
+
+=== Operator ConfigMap [[operator-configmap]]
+
+The `ConfigMap` named `open-liberty-operator` is used for configuring Liberty operator managed resources. It is created once when the operator starts and is located in the operator's installed namespace.
+
+NOTE: For OCP users, the AllNamespaces install mode designates openshift-operators as the operator's installed namespace.
+
+This is a sample operator `ConfigMap` that would get generated when the operator is installed and running in the `test-namespace` namespace.
+
+[source,yaml]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: open-liberty-operator
+  namespace: test-namespace
+data:
+  certManagerCACertDuration: 8766h
+  certManagerCertDuration: 2160h
+  defaultHostname: ""
+  operatorLogLevel: info
+  reconcileIntervalIncreasePercentage: "100"
+  reconcileIntervalMinimum: "5"
+----
+
+And here is the set of descriptions corresponding to each configurable field.
+
+.Table 1. Operator ConfigMap data fields
+|===
+| Field                           | Description
+| `certManagerCACertDuration` | certManagerCACertDuration	The cert-manager issued CA certificate's duration before expiry in link:++https://pkg.go.dev/time#ParseDuration++[Go time.Duration] string format. The default value is 8766h (1 year). To learn more about this field see link:#generating-certificates-with-certificate-manager[Generating certificates with certificate manager].
+| `certManagerCertDuration`   | The cert-manager issued service certificate's duration before expiry in link:++https://pkg.go.dev/time#ParseDuration++[Go time.Duration] string format. The default value is 2160h (90 days). To learn more about this field see link:#generating-certificates-with-certificate-manager[Generating certificates with certificate manager].
+| `defaultHostname`   | The default hostname for the OpenLibertyApplication Route or Ingress URL when .spec.expose is set to true. To learn more about this field see link:#expose-applications-externally[Expose applications externally (`.spec.expose`, `.spec.createKnativeService`, `.spec.route`)].
+| `operatorLogLevel` | The log level for the Liberty operator. The default value is `info`, other options are `warning`, `fine`, `finer`, `finest`. The log level can be dynamically modified and takes effect immediately.
+| `reconcileIntervalMinimum` | The default value of the base reconciliation interval in seconds is _5_. The operator runs the reconciliation loop every reconciliation interval seconds for each instance. If an instance's status conditions remain unchanged for 2 consecutive reconciliation loops, the reconciliation interval increases to reduce the reconciliation frequency. The interval increases based on the base reconciliation interval and specified increase percentage. For more information on the operator's reconciliation frequency, see link:#viewing-reconciliation-frequency-in-the-status[Viewing reconciliation frequency in the status].
+| `reconcileIntervalIncreasePercentage` | When the reconciliation interval increases, the increase is calculated as a specified percentage of the current interval. To disable the reconciliation interval increase, set the value to _0_.
+|===
+
 === Operator configuration examples [[operator-configuration-examples]]
 
 Open Liberty Operator builds upon link:#common-component-documentation[components] from the generic link:++https://github.com/application-stacks/runtime-component-operator++[Runtime Component Operator] and provides additional features to customize your Open Liberty applications.
