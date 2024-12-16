@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: olo-watched-ns2
+
+
+resources:
+- ../../../overlays/watch-another-namespace/olo-watched-ns
+patches:
+- path: olo-watched-role.yaml
+- path: olo-watched-rolebinding.yaml
+- path: olo-leader-election-watched-role.yaml
+- path: olo-leader-election-watched-rolebinding.yaml
