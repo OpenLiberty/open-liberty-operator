@@ -49,8 +49,8 @@ func (r *ReconcileOpenLiberty) getLibertyProxyClient(operatorNamespace string) (
 }
 
 func (r *ReconcileOpenLiberty) getLibertyProxy(operatorNamespace string, instance *olv1.OpenLibertyApplication, client *http.Client, cmd string, args ...string) (*http.Response, error) {
-	proxyServiceName := libertyProxyName       // TODO: replace
-	proxyServiceNamespace := operatorNamespace // TODO: change
+	proxyServiceName := libertyProxyName
+	proxyServiceNamespace := operatorNamespace
 	cmdList := ""
 	if len(args) > 0 {
 		cmdList += "?"
