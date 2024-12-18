@@ -14,7 +14,6 @@ import (
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
 	tree "github.com/OpenLiberty/open-liberty-operator/utils/tree"
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -186,11 +185,11 @@ func hasLTPAConfigResourceSuffixesEnv(instance *olv1.OpenLibertyApplication) (st
 }
 
 // Create or use an existing LTPA Secret identified by LTPA metadata for the OpenLibertyApplication instance
-func (r *ReconcileOpenLiberty) reconcileLTPAKeys(operatorNamespace string, instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, reqLogger logr.Logger) (string, string, string, error) {
+func (r *ReconcileOpenLiberty) reconcileLTPAKeys(operatorNamespace string, instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata) (string, string, string, error) {
 	ltpaSecretName := ""
 	ltpaKeysLastRotation := ""
 	if r.isLTPAKeySharingEnabled(instance) {
-		ltpaSecretNameTemp, ltpaKeysLastRotationTemp, _, err := r.generateLTPAKeys(operatorNamespace, instance, ltpaKeysMetadata, reqLogger)
+		ltpaSecretNameTemp, ltpaKeysLastRotationTemp, _, err := r.generateLTPAKeys(operatorNamespace, instance, ltpaKeysMetadata)
 		ltpaKeysLastRotation = ltpaKeysLastRotationTemp
 		ltpaSecretName = ltpaSecretNameTemp
 		if err != nil {
@@ -224,7 +223,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAConfig(operatorNamespace string, ins
 }
 
 // Generates the LTPA keys file and returns the name of the Secret storing its metadata
-func (r *ReconcileOpenLiberty) generateLTPAKeys(operatorNamespace string, instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata, reqLogger logr.Logger) (string, string, string, error) {
+func (r *ReconcileOpenLiberty) generateLTPAKeys(operatorNamespace string, instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata) (string, string, string, error) {
 	// Initialize LTPA resources
 	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{Name: ""}
 

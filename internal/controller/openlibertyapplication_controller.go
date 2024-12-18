@@ -71,7 +71,7 @@ const applicationFinalizer = "finalizer.openlibertyapplications.apps.openliberty
 // move the current state of the cluster closer to the desired state.
 func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	// reqDebugLogger := reqLogger.V(common.LogLevelDebug)
+	reqDebugLogger := reqLogger.V(common.LogLevelDebug)
 	reqLogger.Info("Reconcile OpenLibertyApplication - starting")
 	ns, err := oputils.GetOperatorNamespace()
 	if err != nil {
@@ -208,11 +208,11 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	if !r.isConcurrencyEnabled(instance) {
 		return r.concurrentReconcile(ns, ba, instance, reqLogger, isKnativeSupported, ctx, request)
 	} else {
-		return r.sequentialReconcile(ba, instance, reqLogger, isKnativeSupported, ctx, request)
+		return r.sequentialReconcile(ns, ba, instance, reqLogger, reqDebugLogger, isKnativeSupported, ctx, request)
 	}
 }
 
-func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, reqLogger logr.Logger, isKnativeSupported bool, ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, reqLogger logr.Logger, reqDebugLogger logr.Logger, isKnativeSupported bool, ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	defaultMeta := metav1.ObjectMeta{
 		Name:      instance.Name,
 		Namespace: instance.Namespace,
@@ -249,7 +249,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 	var ltpaMetadataList *lutils.LTPAMetadataList
 	var ltpaKeysMetadata, ltpaConfigMetadata *lutils.LTPAMetadata
 	if r.isLTPAKeySharingEnabled(instance) {
-		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, LTPA_RESOURCE_SHARING_FILE_NAME)
+		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, LTPA_RESOURCE_SHARING_FILE_NAME, r.isCachingEnabled(instance))
 		if err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
@@ -263,7 +263,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 	var passwordEncryptionMetadataList *lutils.PasswordEncryptionMetadataList
 	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{}
 	if r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata) {
-		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
+		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, r.isCachingEnabled(instance))
 		if err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
@@ -487,7 +487,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(ba common.BaseComponent, inst
 	}
 
 	// Create and manage the shared LTPA keys Secret if the feature is enabled
-	message, ltpaSecretName, ltpaKeysLastRotation, err := r.reconcileLTPAKeys(instance, ltpaKeysMetadata, ltpaConfigMetadata)
+	message, ltpaSecretName, ltpaKeysLastRotation, err := r.reconcileLTPAKeys(operatorNamespace, instance, ltpaKeysMetadata)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
