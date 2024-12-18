@@ -3,7 +3,7 @@ module github.com/OpenLiberty/open-liberty-operator
 go 1.23
 
 require (
-	github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20241208202953-762c4a3794da
+	github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20241218195235-71bde81b6b01
 	github.com/cert-manager/cert-manager v1.13.6
 	github.com/go-logr/logr v1.4.1
 	github.com/onsi/ginkgo/v2 v2.17.1
