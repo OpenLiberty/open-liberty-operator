@@ -102,7 +102,7 @@ metadata:
     features.operators.openshift.io/token-auth-azure: "false"
     features.operators.openshift.io/token-auth-gcp: "false"
     olm.skipRange: '>=0.8.0 <1.4.1'
-    operators.operatorframework.io/builder: operator-sdk-v1.35.0
+    operators.operatorframework.io/builder: operator-sdk-v1.38.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/OpenLiberty/open-liberty-operator
     support: IBM
@@ -1107,6 +1107,21 @@ spec:
     mediatype: image/png
   install:
     spec:
+      clusterPermissions:
+      - rules:
+        - apiGroups:
+          - authentication.k8s.io
+          resources:
+          - tokenreviews
+          verbs:
+          - create
+        - apiGroups:
+          - authorization.k8s.io
+          resources:
+          - subjectaccessreviews
+          verbs:
+          - create
+        serviceAccountName: olo-controller-manager
       deployments:
       - label:
           app.kubernetes.io/instance: open-liberty-operator
@@ -1146,6 +1161,7 @@ spec:
                         - s390x
               containers:
               - args:
+                - --metrics-bind-address=:8443
                 - --health-probe-bind-address=:8081
                 - --enable-leader-election
                 command:
