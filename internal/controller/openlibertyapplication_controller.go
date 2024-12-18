@@ -71,7 +71,7 @@ const applicationFinalizer = "finalizer.openlibertyapplications.apps.openliberty
 // move the current state of the cluster closer to the desired state.
 func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqDebugLogger := reqLogger.V(common.LogLevelDebug)
+	// reqDebugLogger := reqLogger.V(common.LogLevelDebug)
 	reqLogger.Info("Reconcile OpenLibertyApplication - starting")
 	ns, err := oputils.GetOperatorNamespace()
 	if err != nil {
@@ -206,7 +206,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 	// From here, the Open Liberty Application instance is stored in shared memory and can begin concurrent actions.
 	if !r.isConcurrencyEnabled(instance) {
-		return r.concurrentReconcile(ba, instance, reqLogger, isKnativeSupported, ctx, request)
+		return r.concurrentReconcile(ns, ba, instance, reqLogger, isKnativeSupported, ctx, request)
 	} else {
 		return r.sequentialReconcile(ba, instance, reqLogger, isKnativeSupported, ctx, request)
 	}

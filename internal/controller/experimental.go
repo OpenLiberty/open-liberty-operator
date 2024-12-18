@@ -871,7 +871,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCloudCompilerCleanup(instance *olv
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 }
 
-func (r *ReconcileOpenLiberty) concurrentReconcile(operatorNamespace string, ba common.BaseComponent, instance *olv1.OpenLibertyApplication, reqLogger logr.Logger, reqDebugLogger logr.Logger, isKnativeSupported bool, ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *ReconcileOpenLiberty) concurrentReconcile(operatorNamespace string, ba common.BaseComponent, instance *olv1.OpenLibertyApplication, reqLogger logr.Logger, isKnativeSupported bool, ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	defaultMeta := metav1.ObjectMeta{
 		Name:      instance.Name,
 		Namespace: instance.Namespace,
