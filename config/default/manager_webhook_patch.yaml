@@ -4,7 +4,7 @@ metadata:
   name: controller-manager
   namespace: system
   labels:
-    app.kubernetes.io/name: open-liberty
+    app.kubernetes.io/name: open-liberty-operator
     app.kubernetes.io/managed-by: kustomize
 spec:
   template:
