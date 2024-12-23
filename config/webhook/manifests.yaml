@@ -10,7 +10,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-apps-openliberty-io-apps-openliberty-io-v1-openlibertyapplication
+      path: /validate-apps-openliberty-io-v1-openlibertyapplication
   failurePolicy: Fail
   name: vopenlibertyapplication-v1.kb.io
   rules:
