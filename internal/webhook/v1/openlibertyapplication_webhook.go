@@ -22,26 +22,23 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	appsopenlibertyiov1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
-	lcontroller "github.com/OpenLiberty/open-liberty-operator/internal/controller"
-	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
 )
 
 // nolint:unused
 // log is for logging in this package.
 var (
 	openlibertyapplicationlog = logf.Log.WithName("openlibertyapplication-resource")
-	lclient                   client.Client
+	// lclient                   client.Client
 )
 
 // SetupOpenLibertyApplicationWebhookWithManager registers the webhook for OpenLibertyApplication in the manager.
 func SetupOpenLibertyApplicationWebhookWithManager(mgr ctrl.Manager) error {
-	lclient = mgr.GetClient()
+	// lclient = mgr.GetClient()
 
 	return ctrl.NewWebhookManagedBy(mgr).For(&appsopenlibertyiov1.OpenLibertyApplication{}).
 		WithValidator(&OpenLibertyApplicationCustomValidator{}).
@@ -75,18 +72,18 @@ func (v *OpenLibertyApplicationCustomValidator) ValidateCreate(ctx context.Conte
 	}
 	openlibertyapplicationlog.Info("Validation for OpenLibertyApplication upon creation", "name", openlibertyapplication.GetName())
 
-	// TODO(user): fill in your validation logic upon object creation.
-	httpClient, err := lutils.GetLibertyProxyClient(lclient, "openshift-operators", lcontroller.OperatorShortName)
-	if err != nil {
-		return nil, err
-	}
-	res, err := lutils.GetLibertyProxy("openshift-operators", httpClient, "admissionwebhook")
-	if err != nil {
-		openlibertyapplicationlog.Error(err, "Error calling validation webhook")
-		return nil, err
-	}
-	openlibertyapplicationlog.Info("Received status response from calling liberty proxy: " + res.Status)
-	return nil, fmt.Errorf("err: block validate create: " + res.Status)
+	// // TODO(user): fill in your validation logic upon object creation.
+	// httpClient, err := lutils.GetLibertyProxyClient(lclient, "openshift-operators", lcontroller.OperatorShortName)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// res, err := lutils.GetLibertyProxy("openshift-operators", httpClient, "admissionwebhook")
+	// if err != nil {
+	// 	openlibertyapplicationlog.Error(err, "Error calling validation webhook")
+	// 	return nil, err
+	// }
+	// openlibertyapplicationlog.Info("Received status response from calling liberty proxy: " + res.Status)
+	return nil, nil // fmt.Errorf("err: block validate create: " + res.Status)
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type OpenLibertyApplication.
