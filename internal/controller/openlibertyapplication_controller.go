@@ -290,9 +290,12 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 		}
 	}
 
-	message, err := r.reconcileLibertyProxy("openshift-operators", instance)
+	if operatorNamespace == "" {
+		operatorNamespace = instance.GetNamespace()
+	}
+	message, err := r.reconcileLibertyProxy(operatorNamespace)
 	if err != nil {
-		reqLogger.Error(err, "Failed to reconcile Liberty proxy")
+		reqLogger.Error(err, "Failed to reconcile Liberty proxy: "+message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
