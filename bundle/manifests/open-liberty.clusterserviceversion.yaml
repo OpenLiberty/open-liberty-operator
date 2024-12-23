@@ -92,7 +92,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2024-12-23T21:20:56Z"
+    createdAt: "2024-12-23T21:50:03Z"
     description: Deploy and manage containerized Liberty applications
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "true"
@@ -1508,7 +1508,7 @@ spec:
     generateName: vopenlibertyapplication-v1.kb.io
     rules:
     - apiGroups:
-      - apps.openliberty.io.apps.openliberty.io
+      - apps.openliberty.io
       apiVersions:
       - v1
       operations:
