@@ -15,7 +15,7 @@ webhooks:
   name: vopenlibertyapplication-v1.kb.io
   rules:
   - apiGroups:
-    - apps.openliberty.io.apps.openliberty.io
+    - apps.openliberty.io
     apiVersions:
     - v1
     operations:
