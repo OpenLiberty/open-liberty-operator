@@ -129,7 +129,7 @@ func main() {
 		// Metrics: metricsServerOptions,
 		WebhookServer: &webhook.DefaultServer{
 			Options: webhook.Options{
-				Port: 9443,
+				Port: 443,
 			},
 		},
 		HealthProbeBindAddress: probeAddr,
