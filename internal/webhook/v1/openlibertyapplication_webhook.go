@@ -22,6 +22,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -33,14 +34,17 @@ import (
 
 // nolint:unused
 // log is for logging in this package.
-var openlibertyapplicationlog = logf.Log.WithName("openlibertyapplication-resource")
+var (
+	openlibertyapplicationlog = logf.Log.WithName("openlibertyapplication-resource")
+	lclient                   client.Client
+)
 
 // SetupOpenLibertyApplicationWebhookWithManager registers the webhook for OpenLibertyApplication in the manager.
 func SetupOpenLibertyApplicationWebhookWithManager(mgr ctrl.Manager) error {
+	lclient = mgr.GetClient()
+
 	return ctrl.NewWebhookManagedBy(mgr).For(&appsopenlibertyiov1.OpenLibertyApplication{}).
-		WithValidator(&OpenLibertyApplicationCustomValidator{
-			Manager: mgr,
-		}).
+		WithValidator(&OpenLibertyApplicationCustomValidator{}).
 		Complete()
 }
 
@@ -72,7 +76,7 @@ func (v *OpenLibertyApplicationCustomValidator) ValidateCreate(ctx context.Conte
 	openlibertyapplicationlog.Info("Validation for OpenLibertyApplication upon creation", "name", openlibertyapplication.GetName())
 
 	// TODO(user): fill in your validation logic upon object creation.
-	httpClient, err := lutils.GetLibertyProxyClient(v.Manager.GetClient(), "openshift-operators", lcontroller.OperatorShortName)
+	httpClient, err := lutils.GetLibertyProxyClient(lclient, "openshift-operators", lcontroller.OperatorShortName)
 	if err != nil {
 		return nil, err
 	}
