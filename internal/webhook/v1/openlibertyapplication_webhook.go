@@ -86,7 +86,7 @@ func (v *OpenLibertyApplicationCustomValidator) ValidateCreate(ctx context.Conte
 		return nil, err
 	}
 	openlibertyapplicationlog.Info("Received status response from calling liberty proxy: " + res.Status)
-	return nil, nil
+	return nil, fmt.Errorf("err: block validate create: " + res.Status)
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type OpenLibertyApplication.
