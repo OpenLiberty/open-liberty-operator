@@ -257,7 +257,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(operatorNamespace string, instan
 		}
 
 		// Get client to Liberty proxy
-		client, err := r.getLibertyProxyClient(operatorNamespace)
+		client, err := lutils.GetLibertyProxyClient(r.GetClient(), operatorNamespace, OperatorShortName)
 		if err != nil {
 			return "", "", "", err
 		}
@@ -271,9 +271,9 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(operatorNamespace string, instan
 		var proxyRes *http.Response
 		var proxyErr error
 		if len(passwordEncryptionKey) > 0 {
-			proxyRes, proxyErr = r.getLibertyProxy(operatorNamespace, instance, client, "SecurityUtilityCreateLTPAKeys", fmt.Sprintf("key=%s", passwordEncryptionKey))
+			proxyRes, proxyErr = lutils.GetLibertyProxy(operatorNamespace, client, "SecurityUtilityCreateLTPAKeys", fmt.Sprintf("key=%s", passwordEncryptionKey))
 		} else {
-			proxyRes, proxyErr = r.getLibertyProxy(operatorNamespace, instance, client, "SecurityUtilityCreateLTPAKeys")
+			proxyRes, proxyErr = lutils.GetLibertyProxy(operatorNamespace, client, "SecurityUtilityCreateLTPAKeys")
 		}
 		if proxyErr != nil {
 			return "", "", "", proxyErr
@@ -438,7 +438,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(operatorNamespace string, inst
 			password := string(ltpaSecret.Data["rawPassword"])
 
 			// Get client to Liberty proxy
-			client, err := r.getLibertyProxyClient(operatorNamespace)
+			client, err := lutils.GetLibertyProxyClient(r.GetClient(), operatorNamespace, OperatorShortName)
 			if err != nil {
 				return "", err
 			}
@@ -453,9 +453,9 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(operatorNamespace string, inst
 			var proxyRes *http.Response
 			var proxyErr error
 			if len(passwordEncryptionKey) > 0 {
-				proxyRes, proxyErr = r.getLibertyProxy(operatorNamespace, instance, client, "SecurityUtilityEncode", fmt.Sprintf("password=%s", password), fmt.Sprintf("key=%s", passwordEncryptionKey))
+				proxyRes, proxyErr = lutils.GetLibertyProxy(operatorNamespace, client, "SecurityUtilityEncode", fmt.Sprintf("password=%s", password), fmt.Sprintf("key=%s", passwordEncryptionKey))
 			} else {
-				proxyRes, proxyErr = r.getLibertyProxy(operatorNamespace, instance, client, "SecurityUtilityEncode", fmt.Sprintf("password=%s", password))
+				proxyRes, proxyErr = lutils.GetLibertyProxy(operatorNamespace, client, "SecurityUtilityEncode", fmt.Sprintf("password=%s", password))
 			}
 			if proxyErr != nil {
 				return "", err

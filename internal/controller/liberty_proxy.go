@@ -1,20 +1,9 @@
 package controller
 
 import (
-	"context"
-	"crypto/tls"
-	"crypto/x509"
-	"fmt"
-	"net/http"
-	"strings"
-
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
+	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-)
-
-var (
-	libertyProxyName = "liberty-proxy"
 )
 
 type SecurityUtilityCreateLTPAKeysResponse struct {
@@ -28,42 +17,46 @@ type SecurityUtilityEncodeResponse struct {
 	OK       bool   `json:"ok"`
 }
 
-func (r *ReconcileOpenLiberty) getLibertyProxyClient(operatorNamespace string) (*http.Client, error) {
-	caCertSecret := &corev1.Secret{}
-	caCertSecret.Name = OperatorShortName + "-ca-tls"
-	caCertSecret.Namespace = operatorNamespace
-	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: caCertSecret.Name, Namespace: caCertSecret.Namespace}, caCertSecret)
-	if err != nil {
-		return nil, err
-	}
-	caCerts := x509.NewCertPool()
-	caCerts.AppendCertsFromPEM(caCertSecret.Data["ca.crt"])
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				RootCAs: caCerts,
-			},
-		},
-	}
-	return client, nil
-}
+// var (
+// 	libertyProxyName = "liberty-proxy"
+// )
 
-func (r *ReconcileOpenLiberty) getLibertyProxy(operatorNamespace string, instance *olv1.OpenLibertyApplication, client *http.Client, cmd string, args ...string) (*http.Response, error) {
-	proxyServiceName := libertyProxyName
-	proxyServiceNamespace := operatorNamespace
-	cmdList := ""
-	if len(args) > 0 {
-		cmdList += "?"
-		cmdList += strings.Join(args, "&")
-	}
-	requestURL := fmt.Sprintf("https://%s.%s.svc.cluster.local:9443/proxy/%s%s", proxyServiceName, proxyServiceNamespace, cmd, cmdList)
-	return client.Get(requestURL)
-}
+// func (r *ReconcileOpenLiberty) getLibertyProxyClient(operatorNamespace string) (*http.Client, error) {
+// 	caCertSecret := &corev1.Secret{}
+// 	caCertSecret.Name = OperatorShortName + "-ca-tls"
+// 	caCertSecret.Namespace = operatorNamespace
+// 	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: caCertSecret.Name, Namespace: caCertSecret.Namespace}, caCertSecret)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	caCerts := x509.NewCertPool()
+// 	caCerts.AppendCertsFromPEM(caCertSecret.Data["ca.crt"])
+// 	client := &http.Client{
+// 		Transport: &http.Transport{
+// 			TLSClientConfig: &tls.Config{
+// 				RootCAs: caCerts,
+// 			},
+// 		},
+// 	}
+// 	return client, nil
+// }
 
-func (r *ReconcileOpenLiberty) reconcileLibertyProxy(operatorNamespace string, instance *olv1.OpenLibertyApplication) (string, error) {
+// func (r *ReconcileOpenLiberty) getLibertyProxy(operatorNamespace string, client *http.Client, cmd string, args ...string) (*http.Response, error) {
+// 	proxyServiceName := libertyProxyName
+// 	proxyServiceNamespace := operatorNamespace
+// 	cmdList := ""
+// 	if len(args) > 0 {
+// 		cmdList += "?"
+// 		cmdList += strings.Join(args, "&")
+// 	}
+// 	requestURL := fmt.Sprintf("https://%s.%s.svc.cluster.local:9443/proxy/%s%s", proxyServiceName, proxyServiceNamespace, cmd, cmdList)
+// 	return client.Get(requestURL)
+// }
+
+func (r *ReconcileOpenLiberty) reconcileLibertyProxy(operatorNamespace string) (string, error) {
 	// ServiceAccount
 	proxyServiceAccount := &corev1.ServiceAccount{}
-	proxyServiceAccount.Name = OperatorShortName + "-" + libertyProxyName
+	proxyServiceAccount.Name = OperatorShortName + "-" + lutils.LibertyProxyName
 	proxyServiceAccount.Namespace = operatorNamespace
 	if err := r.CreateOrUpdate(proxyServiceAccount, nil, func() error {
 		return nil
@@ -73,7 +66,7 @@ func (r *ReconcileOpenLiberty) reconcileLibertyProxy(operatorNamespace string, i
 
 	// Proxy
 	proxy := &olv1.OpenLibertyApplication{}
-	proxy.Name = libertyProxyName
+	proxy.Name = lutils.LibertyProxyName
 	proxy.Namespace = operatorNamespace
 	expose := false
 	manageTLS := true
