@@ -22,5 +22,5 @@ spec:
           matchLabels:
             webhook: enabled # Only from namespaces with this label
       ports:
-        - port: 443
+        - port: 9443
           protocol: TCP
