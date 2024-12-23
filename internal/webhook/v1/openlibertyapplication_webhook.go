@@ -27,6 +27,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	appsopenlibertyiov1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
+	lcontroller "github.com/OpenLiberty/open-liberty-operator/internal/controller"
+	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
 )
 
 // nolint:unused
@@ -36,7 +38,9 @@ var openlibertyapplicationlog = logf.Log.WithName("openlibertyapplication-resour
 // SetupOpenLibertyApplicationWebhookWithManager registers the webhook for OpenLibertyApplication in the manager.
 func SetupOpenLibertyApplicationWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).For(&appsopenlibertyiov1.OpenLibertyApplication{}).
-		WithValidator(&OpenLibertyApplicationCustomValidator{}).
+		WithValidator(&OpenLibertyApplicationCustomValidator{
+			Manager: mgr,
+		}).
 		Complete()
 }
 
@@ -54,6 +58,7 @@ func SetupOpenLibertyApplicationWebhookWithManager(mgr ctrl.Manager) error {
 // as this struct is used only for temporary operations and does not need to be deeply copied.
 type OpenLibertyApplicationCustomValidator struct {
 	//TODO(user): Add more fields as needed for validation
+	Manager ctrl.Manager
 }
 
 var _ webhook.CustomValidator = &OpenLibertyApplicationCustomValidator{}
@@ -67,7 +72,16 @@ func (v *OpenLibertyApplicationCustomValidator) ValidateCreate(ctx context.Conte
 	openlibertyapplicationlog.Info("Validation for OpenLibertyApplication upon creation", "name", openlibertyapplication.GetName())
 
 	// TODO(user): fill in your validation logic upon object creation.
-
+	httpClient, err := lutils.GetLibertyProxyClient(v.Manager.GetClient(), "openshift-operators", lcontroller.OperatorShortName)
+	if err != nil {
+		return nil, err
+	}
+	res, err := lutils.GetLibertyProxy("openshift-operators", httpClient, "admissionwebhook")
+	if err != nil {
+		openlibertyapplicationlog.Error(err, "Error calling validation webhook")
+		return nil, err
+	}
+	openlibertyapplicationlog.Info("Received status response from calling liberty proxy: " + res.Status)
 	return nil, nil
 }
 
