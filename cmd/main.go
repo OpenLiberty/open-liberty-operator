@@ -17,7 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"crypto/tls"
 	"flag"
 	"fmt"
 	"os"
@@ -78,7 +77,7 @@ func main() {
 	var enableLeaderElection bool
 	var probeAddr, metricsAddr string
 	secureMetrics := false
-	var tlsOpts []func(*tls.Config)
+	// var tlsOpts []func(*tls.Config)
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metrics endpoint binds to. "+"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
@@ -96,7 +95,7 @@ func main() {
 		// as certificates issued by a trusted Certificate Authority (CA). The primary risk is potentially allowing
 		// unauthorized access to sensitive metrics data. Consider replacing with CertDir, CertName, and KeyName
 		// to provide certificates, ensuring the server communicates using trusted and secure certificates.
-		TLSOpts: tlsOpts,
+		// TLSOpts: tlsOpts,
 	}
 
 	if secureMetrics {
