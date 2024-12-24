@@ -26,21 +26,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	appsopenlibertyiov1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
+	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
+	olcontroller "github.com/OpenLiberty/open-liberty-operator/internal/controller"
+	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // nolint:unused
 // log is for logging in this package.
 var (
 	openlibertyapplicationlog = logf.Log.WithName("openlibertyapplication-resource")
-	// lclient                   client.Client
+	lclient                   client.Client
 )
 
 // SetupOpenLibertyApplicationWebhookWithManager registers the webhook for OpenLibertyApplication in the manager.
 func SetupOpenLibertyApplicationWebhookWithManager(mgr ctrl.Manager) error {
-	// lclient = mgr.GetClient()
+	lclient = mgr.GetClient()
 
-	return ctrl.NewWebhookManagedBy(mgr).For(&appsopenlibertyiov1.OpenLibertyApplication{}).
+	return ctrl.NewWebhookManagedBy(mgr).For(&olv1.OpenLibertyApplication{}).
 		WithValidator(&OpenLibertyApplicationCustomValidator{}).
 		Complete()
 }
@@ -66,33 +69,33 @@ var _ webhook.CustomValidator = &OpenLibertyApplicationCustomValidator{}
 
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type OpenLibertyApplication.
 func (v *OpenLibertyApplicationCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	openlibertyapplication, ok := obj.(*appsopenlibertyiov1.OpenLibertyApplication)
+	openlibertyapplication, ok := obj.(*olv1.OpenLibertyApplication)
 	if !ok {
 		return nil, fmt.Errorf("expected a OpenLibertyApplication object but got %T", obj)
 	}
 	openlibertyapplicationlog.Info("Validation for OpenLibertyApplication upon creation", "name", openlibertyapplication.GetName())
 
-	// // TODO(user): fill in your validation logic upon object creation.
-	// httpClient, err := lutils.GetLibertyProxyClient(lclient, "openshift-operators", lcontroller.OperatorShortName)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// res, err := lutils.GetLibertyProxy("openshift-operators", httpClient, "admissionwebhook")
-	// if err != nil {
-	// 	openlibertyapplicationlog.Error(err, "Error calling validation webhook")
-	// 	return nil, err
-	// }
-	// openlibertyapplicationlog.Info("Received status response from calling liberty proxy: " + res.Status)
+	// TODO(user): fill in your validation logic upon object creation.
+	httpClient, err := lutils.GetLibertyProxyClient(lclient, "openshift-operators", olcontroller.OperatorShortName)
+	if err != nil {
+		return nil, err
+	}
+	res, err := lutils.GetLibertyProxy("openshift-operators", httpClient, "admissionwebhook")
+	if err != nil {
+		openlibertyapplicationlog.Error(err, "Error calling validation webhook")
+		return nil, err
+	}
+	openlibertyapplicationlog.Info("Received status response from calling liberty proxy: " + res.Status)
 	return nil, nil // fmt.Errorf("err: block validate create: " + res.Status)
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type OpenLibertyApplication.
 func (v *OpenLibertyApplicationCustomValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	openlibertyapplication, ok := newObj.(*appsopenlibertyiov1.OpenLibertyApplication)
-	if !ok {
-		return nil, fmt.Errorf("expected a OpenLibertyApplication object for the newObj but got %T", newObj)
-	}
-	openlibertyapplicationlog.Info("Validation for OpenLibertyApplication upon update", "name", openlibertyapplication.GetName())
+	// openlibertyapplication, ok := newObj.(*olv1.OpenLibertyApplication)
+	// if !ok {
+	// 	return nil, fmt.Errorf("expected a OpenLibertyApplication object for the newObj but got %T", newObj)
+	// }
+	// openlibertyapplicationlog.Info("Validation for OpenLibertyApplication upon update", "name", openlibertyapplication.GetName())
 
 	// TODO(user): fill in your validation logic upon object update.
 
@@ -101,11 +104,11 @@ func (v *OpenLibertyApplicationCustomValidator) ValidateUpdate(ctx context.Conte
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type OpenLibertyApplication.
 func (v *OpenLibertyApplicationCustomValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	openlibertyapplication, ok := obj.(*appsopenlibertyiov1.OpenLibertyApplication)
-	if !ok {
-		return nil, fmt.Errorf("expected a OpenLibertyApplication object but got %T", obj)
-	}
-	openlibertyapplicationlog.Info("Validation for OpenLibertyApplication upon deletion", "name", openlibertyapplication.GetName())
+	// openlibertyapplication, ok := obj.(*olv1.OpenLibertyApplication)
+	// if !ok {
+	// 	return nil, fmt.Errorf("expected a OpenLibertyApplication object but got %T", obj)
+	// }
+	// openlibertyapplicationlog.Info("Validation for OpenLibertyApplication upon deletion", "name", openlibertyapplication.GetName())
 
 	// TODO(user): fill in your validation logic upon object deletion.
 
