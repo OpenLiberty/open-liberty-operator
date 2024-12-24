@@ -440,7 +440,8 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 	// }
 
 	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: defaultMeta}
-	if np := instance.Spec.NetworkPolicy; np == nil || np != nil && !np.IsDisabled() {
+	// if np := instance.Spec.NetworkPolicy; np == nil || np != nil && !np.IsDisabled() {
+	if false {
 		err = r.CreateOrUpdate(networkPolicy, instance, func() error {
 			oputils.CustomizeNetworkPolicy(networkPolicy, r.IsOpenShift(), instance)
 			return nil
