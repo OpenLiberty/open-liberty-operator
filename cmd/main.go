@@ -44,6 +44,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	prometheusv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -126,7 +127,9 @@ func main() {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
-		// Metrics: metricsServerOptions,
+		Metrics: metricsserver.Options{
+			BindAddress: "0",
+		},
 		WebhookServer: &webhook.DefaultServer{
 			Options: webhook.Options{
 				Port: 9443,
