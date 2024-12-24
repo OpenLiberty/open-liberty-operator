@@ -62,7 +62,7 @@ func SetupOpenLibertyApplicationWebhookWithManager(mgr ctrl.Manager) error {
 // as this struct is used only for temporary operations and does not need to be deeply copied.
 type OpenLibertyApplicationCustomValidator struct {
 	//TODO(user): Add more fields as needed for validation
-	Manager ctrl.Manager
+	// Manager ctrl.Manager
 }
 
 var _ webhook.CustomValidator = &OpenLibertyApplicationCustomValidator{}
