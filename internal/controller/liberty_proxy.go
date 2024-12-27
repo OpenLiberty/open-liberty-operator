@@ -73,18 +73,19 @@ func (r *ReconcileOpenLiberty) reconcileLibertyProxy(operatorNamespace string) (
 	if err := r.CreateOrUpdate(proxy, nil, func() error {
 		proxy.Spec.Expose = &expose
 		if proxy.Spec.NetworkPolicy == nil {
-			proxy.Spec.NetworkPolicy = &olv1.OpenLibertyApplicationNetworkPolicy{}
+			trueBool := true
+			proxy.Spec.NetworkPolicy = &olv1.OpenLibertyApplicationNetworkPolicy{Disable: &trueBool}
 		}
-		if proxy.Spec.NetworkPolicy.NamespaceLabels == nil {
-			proxy.Spec.NetworkPolicy.NamespaceLabels = &map[string]string{
-				"kubernetes.io/metadata.name": "openshift-operators",
-			}
-		}
-		if proxy.Spec.NetworkPolicy.FromLabels == nil {
-			proxy.Spec.NetworkPolicy.FromLabels = &map[string]string{
-				"app.kubernetes.io/name": "open-liberty-operator",
-			}
-		}
+		// if proxy.Spec.NetworkPolicy.NamespaceLabels == nil {
+		// 	proxy.Spec.NetworkPolicy.NamespaceLabels = &map[string]string{
+		// 		"kubernetes.io/metadata.name": "openshift-operators",
+		// 	}
+		// }
+		// if proxy.Spec.NetworkPolicy.FromLabels == nil {
+		// 	proxy.Spec.NetworkPolicy.FromLabels = &map[string]string{
+		// 		"app.kubernetes.io/name": "open-liberty-operator",
+		// 	}
+		// }
 		proxy.Spec.ApplicationImage = "liberty-proxy-1-ol" // TODO: update
 		if proxy.Spec.Service == nil {
 			proxy.Spec.Service = &olv1.OpenLibertyApplicationService{}

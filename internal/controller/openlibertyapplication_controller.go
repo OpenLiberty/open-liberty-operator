@@ -458,7 +458,6 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 						},
 					},
 				})
-
 			}
 			return nil
 		})
