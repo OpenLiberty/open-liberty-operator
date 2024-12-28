@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	"github.com/OpenLiberty/open-liberty-operator/internal/controller"
@@ -127,11 +128,11 @@ func main() {
 		Metrics: metricsserver.Options{
 			BindAddress: "0",
 		},
-		// WebhookServer: &webhook.DefaultServer{
-		// 	Options: webhook.Options{
-		// 		Port: 9443,
-		// 	},
-		// },
+		WebhookServer: &webhook.DefaultServer{
+			Options: webhook.Options{
+				Port: 9443,
+			},
+		},
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "7111f50b.apps.openliberty.io",

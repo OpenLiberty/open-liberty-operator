@@ -107,6 +107,9 @@ func (r *ReconcileOpenLiberty) reconcileLTPAKeySharingEnabled(instance *olv1.Ope
 		}
 	} else {
 		instanceMutex.Unlock()
+		for i := 0; i < expectedMetadataLength; i++ {
+			ltpaMetadataChan <- nil
+		}
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 }
@@ -145,11 +148,12 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeySharingEnabled(inst
 		return
 	} else {
 		instanceMutex.Unlock()
+		for i := 0; i < expectedMetadataLength; i++ {
+			passwordEncryptionMetadataChan <- passwordEncryptionMetadata
+		}
 	}
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
-	for i := 0; i < expectedMetadataLength; i++ {
-		passwordEncryptionMetadataChan <- passwordEncryptionMetadata
-	}
+
 }
 
 func (r *ReconcileOpenLiberty) reconcileServiceAccount(defaultMeta metav1.ObjectMeta, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, reconcileResultChan chan<- ReconcileResult) {
@@ -999,6 +1003,7 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(operatorNamespace string, ba 
 			firstErroringReconcileResult = reconcileResult
 		}
 	}
+
 	// STATE: {semeruMarkedForDeletionChan: 1, sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
 	if foundFirstError {
 		<-semeruMarkedForDeletionChan              // STATE:  {sharedResourceHandoffReconcileResultChan: 1, encryptionSecretNameChan: 1, ltpaSecretNameChan: 1, ltpaXMLSecretNameChan: 1}
