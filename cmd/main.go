@@ -34,6 +34,7 @@ import (
 
 	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	"github.com/OpenLiberty/open-liberty-operator/internal/controller"
+	webhookappsopenlibertyiov1 "github.com/OpenLiberty/open-liberty-operator/internal/webhook/v1"
 
 	appsopenlibertyiov1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	"github.com/application-stacks/runtime-component-operator/common"
@@ -175,12 +176,12 @@ func main() {
 		os.Exit(1)
 	}
 	// nolint:goconst
-	// if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-	// 	if err = webhookappsopenlibertyiov1.SetupOpenLibertyApplicationWebhookWithManager(mgr); err != nil {
-	// 		setupLog.Error(err, "unable to create webhook", "webhook", "OpenLibertyApplication")
-	// 		os.Exit(1)
-	// 	}
-	// }
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = webhookappsopenlibertyiov1.SetupOpenLibertyApplicationWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenLibertyApplication")
+			os.Exit(1)
+		}
+	}
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
