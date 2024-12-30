@@ -354,22 +354,22 @@ func (r *ReconcileOpenLiberty) reconcileNetworkPolicy(defaultMeta metav1.ObjectM
 		err := r.CreateOrUpdate(networkPolicy, instance, func() error {
 			oputils.CustomizeNetworkPolicy(networkPolicy, r.IsOpenShift(), instance)
 			// add liberty proxy to ingress
-			if len(networkPolicy.Spec.Ingress) > 0 {
-				networkPolicy.Spec.Ingress[0].From = append(networkPolicy.Spec.Ingress[0].From, networkingv1.NetworkPolicyPeer{
-					NamespaceSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"kubernetes.io/metadata.name": "openshift-operators",
-						},
-					},
-					PodSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"app.kubernetes.io/managed-by": "open-liberty-operator",
-							"app.kubernetes.io/name":       "liberty-proxy",
-						},
-					},
-				})
+			// if len(networkPolicy.Spec.Ingress) > 0 {
+			// 	networkPolicy.Spec.Ingress[0].From = append(networkPolicy.Spec.Ingress[0].From, networkingv1.NetworkPolicyPeer{
+			// 		NamespaceSelector: &metav1.LabelSelector{
+			// 			MatchLabels: map[string]string{
+			// 				"kubernetes.io/metadata.name": "openshift-operators",
+			// 			},
+			// 		},
+			// 		PodSelector: &metav1.LabelSelector{
+			// 			MatchLabels: map[string]string{
+			// 				"app.kubernetes.io/managed-by": "open-liberty-operator",
+			// 				"app.kubernetes.io/name":       "liberty-proxy",
+			// 			},
+			// 		},
+			// 	})
 
-			}
+			// }
 			return nil
 		})
 		instanceMutex.Unlock()
