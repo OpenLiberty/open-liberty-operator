@@ -53,6 +53,38 @@ metadata:
   labels:
     app.kubernetes.io/instance: open-liberty-operator
     app.kubernetes.io/name: open-liberty-operator
+  name: olo-liberty-proxy-role
+  namespace: open-liberty
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - serviceaccounts
+  verbs:
+  - create
+  - get
+  - update
+  - list
+  - watch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - issuers
+  - certificates
+  verbs:
+  - create
+  - get
+  - update
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/instance: open-liberty-operator
+    app.kubernetes.io/name: open-liberty-operator
   name: olo-manager-role
   namespace: open-liberty
 rules:
@@ -317,7 +349,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: liberty-proxy-role
+  name: olo-liberty-proxy-role
 subjects:
 - kind: ServiceAccount
   name: olo-liberty-proxy
