@@ -81,7 +81,7 @@ func (v *OpenLibertyApplicationCustomValidator) ValidateCreate(ctx context.Conte
 	if err != nil {
 		return nil, err
 	}
-	res, err := lutils.GetLibertyProxy("openshift-operators", httpClient, "validatecreate")
+	res, err := lutils.GetLibertyProxy("openshift-operators", httpClient, "validatecreate", "name="+openlibertyapplication.GetName(), "namespace="+openlibertyapplication.GetNamespace(), "kind=OpenLibertyApplication")
 	if err != nil {
 		openlibertyapplicationlog.Error(err, "Error calling validation webhook")
 		return nil, err
@@ -126,7 +126,8 @@ func (v *OpenLibertyApplicationCustomValidator) ValidateDelete(ctx context.Conte
 	if err != nil {
 		return nil, err
 	}
-	res, err := lutils.GetLibertyProxy("openshift-operators", httpClient, "validatedelete")
+
+	res, err := lutils.GetLibertyProxy("openshift-operators", httpClient, "validatedelete", "name="+openlibertyapplication.GetName(), "namespace="+openlibertyapplication.GetNamespace(), "kind=OpenLibertyApplication")
 	if err != nil {
 		openlibertyapplicationlog.Error(err, "Error calling validation webhook")
 		return nil, err
