@@ -68,7 +68,7 @@ func (r *ReconcileOpenLiberty) reconcileLibertyProxy(operatorNamespace string) (
 	proxy := &olv1.OpenLibertyApplication{}
 	proxy.Name = lutils.LibertyProxyName
 	proxy.Namespace = operatorNamespace
-	expose := false
+	expose := true
 	manageTLS := true
 	if err := r.CreateOrUpdate(proxy, nil, func() error {
 		proxy.Spec.Expose = &expose

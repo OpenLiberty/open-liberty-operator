@@ -293,11 +293,11 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 	if operatorNamespace == "" {
 		operatorNamespace = instance.GetNamespace()
 	}
-	// message, err := r.reconcileLibertyProxy(operatorNamespace)
-	// if err != nil {
-	// 	reqLogger.Error(err, "Failed to reconcile Liberty proxy: "+message)
-	// 	return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-	// }
+	message, err := r.reconcileLibertyProxy(operatorNamespace)
+	if err != nil {
+		reqLogger.Error(err, "Failed to reconcile Liberty proxy: "+message)
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	}
 
 	serviceAccountName := oputils.GetServiceAccountName(instance)
 	if serviceAccountName != defaultMeta.Name {
