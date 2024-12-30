@@ -10,7 +10,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: liberty-proxy-role
+  name: olo-liberty-proxy-role
 subjects:
 - kind: ServiceAccount
   name: olo-liberty-proxy
