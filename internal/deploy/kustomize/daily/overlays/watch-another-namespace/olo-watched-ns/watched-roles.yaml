@@ -25,6 +25,7 @@ rules:
   - certificates
   verbs:
   - create
+  - delete
   - get
   - update
   - list
