@@ -329,7 +329,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 
 	// Check if SemeruCloudCompiler is enabled before reconciling the Semeru Compiler deployment and service.
 	// Otherwise, delete the Semeru Compiler deployment and service.
-	message := "Start Semeru Compiler reconcile"
+	message = "Start Semeru Compiler reconcile"
 	reqDebugLogger.Info(message)
 	err, message, areCompletedSemeruInstancesMarkedToBeDeleted := r.reconcileSemeruCompiler(instance)
 	if err != nil {
