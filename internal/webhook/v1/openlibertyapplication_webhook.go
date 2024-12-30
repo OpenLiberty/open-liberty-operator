@@ -79,7 +79,7 @@ func (v *OpenLibertyApplicationCustomValidator) ValidateCreate(ctx context.Conte
 	if err != nil {
 		return nil, err
 	}
-	res, err := lutils.GetLibertyProxy("openshift-operators", httpClient, "admissionwebhook")
+	res, err := lutils.GetLibertyProxy("openshift-operators", httpClient, "validatecreate")
 	if err != nil {
 		openlibertyapplicationlog.Error(err, "Error calling validation webhook")
 		return nil, err
@@ -103,13 +103,21 @@ func (v *OpenLibertyApplicationCustomValidator) ValidateUpdate(ctx context.Conte
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type OpenLibertyApplication.
 func (v *OpenLibertyApplicationCustomValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	// openlibertyapplication, ok := obj.(*olv1.OpenLibertyApplication)
-	// if !ok {
-	// 	return nil, fmt.Errorf("expected a OpenLibertyApplication object but got %T", obj)
-	// }
-	// openlibertyapplicationlog.Info("Validation for OpenLibertyApplication upon deletion", "name", openlibertyapplication.GetName())
-
+	openlibertyapplication, ok := obj.(*olv1.OpenLibertyApplication)
+	if !ok {
+		return nil, fmt.Errorf("expected a OpenLibertyApplication object but got %T", obj)
+	}
+	openlibertyapplicationlog.Info("Validation for OpenLibertyApplication upon deletion", "name", openlibertyapplication.GetName())
+	httpClient, err := lutils.GetLibertyProxyClient(lclient, "openshift-operators", olcontroller.OperatorShortName)
+	if err != nil {
+		return nil, err
+	}
+	res, err := lutils.GetLibertyProxy("openshift-operators", httpClient, "validatedelete")
+	if err != nil {
+		openlibertyapplicationlog.Error(err, "Error calling validation webhook")
+		return nil, err
+	}
+	openlibertyapplicationlog.Info("Received status response from calling liberty proxy: " + res.Status)
 	// TODO(user): fill in your validation logic upon object deletion.
-
 	return nil, nil
 }
