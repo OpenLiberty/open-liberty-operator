@@ -19,6 +19,8 @@ package v1
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -84,7 +86,19 @@ func (v *OpenLibertyApplicationCustomValidator) ValidateCreate(ctx context.Conte
 		openlibertyapplicationlog.Error(err, "Error calling validation webhook")
 		return nil, err
 	}
-	openlibertyapplicationlog.Info("Received status response from calling liberty proxy: " + res.Status)
+	defer res.Body.Close()
+
+	if res.StatusCode == http.StatusOK {
+		bodyBytes, err := io.ReadAll(res.Body)
+		if err != nil {
+			openlibertyapplicationlog.Error(err, "Failed to parse response from liberty proxy")
+		}
+		bodyString := string(bodyBytes)
+		openlibertyapplicationlog.Info("Received status response from calling liberty proxy: (" + res.Status + ")")
+		openlibertyapplicationlog.Info("    - response:" + bodyString)
+	} else {
+		openlibertyapplicationlog.Info("Received status response from calling liberty proxy: " + res.Status)
+	}
 	return nil, nil // fmt.Errorf("err: block validate create: " + res.Status)
 }
 
@@ -117,7 +131,19 @@ func (v *OpenLibertyApplicationCustomValidator) ValidateDelete(ctx context.Conte
 		openlibertyapplicationlog.Error(err, "Error calling validation webhook")
 		return nil, err
 	}
-	openlibertyapplicationlog.Info("Received status response from calling liberty proxy: " + res.Status)
+	defer res.Body.Close()
+
+	if res.StatusCode == http.StatusOK {
+		bodyBytes, err := io.ReadAll(res.Body)
+		if err != nil {
+			openlibertyapplicationlog.Error(err, "Failed to parse response from liberty proxy")
+		}
+		bodyString := string(bodyBytes)
+		openlibertyapplicationlog.Info("Received status response from calling liberty proxy: (" + res.Status + ")")
+		openlibertyapplicationlog.Info("    - response:" + bodyString)
+	} else {
+		openlibertyapplicationlog.Info("Received status response from calling liberty proxy: " + res.Status)
+	}
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil, nil
 }
