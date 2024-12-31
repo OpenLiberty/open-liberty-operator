@@ -70,7 +70,7 @@ COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/internal/controlle
 # COPY --from=liberty --chown=${USER_ID}:${GROUP_ID} /opt/ol/wlp/bin/securityUtility /internal/controller/assets/securityUtility
 COPY --from=liberty --chown=${USER_ID}:${GROUP_ID}  /opt/ol/wlp/bin/tools/ws-securityutil.jar /internal/controller/assets/ws-securityutil.jar
 USER 0
-RUN chmod g+rw /internal/controller/assets/ws-securityutil.jar
+RUN chmod a+rw /internal/controller/assets/ws-securityutil.jar
 
 USER ${USER_ID}:${GROUP_ID}
 
