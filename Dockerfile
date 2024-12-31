@@ -37,7 +37,7 @@ RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -ldflags="-s -w" -a -o mana
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+FROM registry.access.redhat.com/ubi8/openjdk-11:latest
 
 ARG USER_ID=65532
 ARG GROUP_ID=65532
@@ -67,7 +67,8 @@ COPY --chown=${USER_ID}:${GROUP_ID} LICENSE /licenses/
 WORKDIR /
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/manager .
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/internal/controller/assets/ /internal/controller/assets
-COPY --from=liberty --chown=${USER_ID}:${GROUP_ID} /opt/ol/wlp/bin/securityUtility /workspace/internal/controller/assets/securityUtility
+# COPY --from=liberty --chown=${USER_ID}:${GROUP_ID} /opt/ol/wlp/bin/securityUtility /internal/controller/assets/securityUtility
+COPY --from=liberty --chown=${USER_ID}:${GROUP_ID}  /opt/ol/wlp/bin/tools/ws-securityutil.jar /internal/controller/assets/ws-securityutil.jar
 
 USER ${USER_ID}:${GROUP_ID}
 
