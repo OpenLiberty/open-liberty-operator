@@ -14,6 +14,8 @@ github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.
 github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20241224212857-cc7004ead38f/go.mod h1:8WU1HjDRIjaV995vta57ddODOJTLdX9nTM/EtFb4N54=
 github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20250110194857-e44d7c4723b4 h1:CjymVhsnMpE8IbAFkAWLp83SSiBfzYBOljZppzlAX4Y=
 github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20250110194857-e44d7c4723b4/go.mod h1:8WU1HjDRIjaV995vta57ddODOJTLdX9nTM/EtFb4N54=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20250110201219-7eec5ee98c20 h1:HVA39T3i3oFoOTtc85YLN0Xj46ay9B2ikivTQFZFeYQ=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20250110201219-7eec5ee98c20/go.mod h1:8WU1HjDRIjaV995vta57ddODOJTLdX9nTM/EtFb4N54=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
