@@ -178,6 +178,8 @@ type OpenLibertyApplicationExperimental struct {
 	// If set to true, it will enable caching when reading the Decision Tree data structure, otherwise does nothing. Defaults to false.
 	// +operator-sdk:csv:customresourcedefinitions:order=2,type=spec,displayName="Manage Cache"
 	ManageCache *bool `json:"manageCache,omitempty"`
+
+	BypassWebhook *bool `json:"bypassWebhook,omitempty"`
 }
 
 // Defines the DNS
@@ -1658,4 +1660,11 @@ func (exp *OpenLibertyApplicationExperimental) GetManageConcurrency() *bool {
 		return nil
 	}
 	return exp.ManageConcurrency
+}
+
+func (exp *OpenLibertyApplicationExperimental) GetBypassWebhook() *bool {
+	if exp.BypassWebhook == nil {
+		return nil
+	}
+	return exp.BypassWebhook
 }
