@@ -447,12 +447,22 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKeyConcurrent(instance
 
 func (r *ReconcileOpenLiberty) reconcileLTPAKeysConcurrent(operatorNamespace string, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, reconcileResultChan chan<- ReconcileResult, lastRotationChan chan<- string, ltpaSecretNameChan chan<- string, ltpaKeysLastRotationChan chan<- string) {
 	// Create and manage the shared LTPA keys Secret if the feature is enabled
-	instanceMutex.Lock()
-	message, ltpaSecretName, ltpaKeysLastRotation, err := r.reconcileLTPAKeys(operatorNamespace, instance, ltpaKeysMetadata)
-	instanceMutex.Unlock()
-	ltpaSecretNameChan <- ltpaSecretName
-	lastRotationChan <- ltpaKeysLastRotation
-	ltpaKeysLastRotationChan <- ltpaKeysLastRotation
+	var err error
+	var message string
+	if ltpaKeysMetadata != nil {
+		instanceMutex.Lock()
+		ltpaMessage, ltpaSecretName, ltpaKeysLastRotation, ltpaErr := r.reconcileLTPAKeys(operatorNamespace, instance, ltpaKeysMetadata)
+		err = ltpaErr
+		message = ltpaMessage
+		instanceMutex.Unlock()
+		ltpaSecretNameChan <- ltpaSecretName
+		lastRotationChan <- ltpaKeysLastRotation
+		ltpaKeysLastRotationChan <- ltpaKeysLastRotation
+	} else {
+		ltpaSecretNameChan <- ""
+		lastRotationChan <- ""
+		ltpaKeysLastRotationChan <- ""
+	}
 	reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: message}
 }
 
@@ -945,6 +955,7 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(operatorNamespace string, ba 
 	res, err := r.reconcileKnativeServiceSequential(defaultMeta, instance, instanceMutex, reqLogger, isKnativeSupported)
 	if err != nil {
 		// block to pull from all go routines before exiting reconcile
+		<-ltpaMetadataChan               // STATE: {reconcileResultChan: 5, ltpaMetadataChan: 1, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
 		<-ltpaMetadataChan               // STATE: {reconcileResultChan: 5, passwordEncryptionMetadataChan: 1, semeruMarkedForDeletionChan: 1}
 		<-passwordEncryptionMetadataChan // STATE: {reconcileResultChan: 5, semeruMarkedForDeletionChan: 1}
 		<-semeruMarkedForDeletionChan    // STATE: {reconcileResultChan: 5}
