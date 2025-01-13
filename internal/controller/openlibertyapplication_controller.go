@@ -404,7 +404,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 		}
 	}
 
-	useCertmanager, err := r.GenerateSvcCertSecret(ba, OperatorShortName, "Open Liberty Operator", OperatorName)
+	useCertmanager, err := r.GenerateSvcCertSecret(ba, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance))
 	if err != nil {
 		reqLogger.Error(err, "Failed to reconcile CertManager Certificate")
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)

@@ -41,6 +41,13 @@ func (r *ReconcileOpenLiberty) isConcurrencyEnabled(instance *olv1.OpenLibertyAp
 	return false
 }
 
+func (r *ReconcileOpenLiberty) isCertOwnerEnabled(instance *olv1.OpenLibertyApplication) bool {
+	if instance.GetExperimental() != nil && instance.GetExperimental().GetManageCertOwner() != nil && *instance.GetExperimental().GetManageCertOwner() {
+		return true
+	}
+	return false
+}
+
 func (r *ReconcileOpenLiberty) isCachingEnabled(instance *olv1.OpenLibertyApplication) bool {
 	if instance.GetExperimental() != nil && instance.GetExperimental().GetManageCache() != nil && *instance.GetExperimental().GetManageCache() {
 		return true
@@ -295,7 +302,7 @@ func (r *ReconcileOpenLiberty) reconcileKnativeServiceSequential(defaultMeta met
 
 func (r *ReconcileOpenLiberty) reconcileServiceCertificate(ba common.BaseComponent, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, serviceCertificateReconcileResultChan chan<- ReconcileResult, useCertManagerChan chan<- bool) {
 	instanceMutex.Lock()
-	useCertmanager, err := r.GenerateSvcCertSecret(ba, OperatorShortName, "Open Liberty Operator", OperatorName)
+	useCertmanager, err := r.GenerateSvcCertSecret(ba, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance))
 	instanceMutex.Unlock()
 	useCertManagerChan <- useCertmanager
 	if err != nil {
