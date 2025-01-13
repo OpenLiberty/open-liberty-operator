@@ -1379,6 +1379,8 @@ spec:
               experimental:
                 description: Defines the Experimental concurrency feature
                 properties:
+                  bypassWebhook:
+                    type: boolean
                   manageCache:
                     description: If set to true, it will enable caching when reading
                       the Decision Tree data structure, otherwise does nothing. Defaults

@@ -76,6 +76,10 @@ func (v *OpenLibertyApplicationCustomValidator) ValidateCreate(ctx context.Conte
 	}
 	openlibertyapplicationlog.Info("Validation for OpenLibertyApplication upon creation", "name", openlibertyapplication.GetName())
 
+	if openlibertyapplication.GetExperimental() != nil && openlibertyapplication.GetExperimental().GetBypassWebhook() != nil && *openlibertyapplication.GetExperimental().GetBypassWebhook() {
+		return nil, nil
+	}
+
 	// TODO(user): fill in your validation logic upon object creation.
 	httpClient, err := lutils.GetLibertyProxyClient(lclient, "openshift-operators", olcontroller.OperatorShortName)
 	if err != nil {
@@ -124,6 +128,11 @@ func (v *OpenLibertyApplicationCustomValidator) ValidateDelete(ctx context.Conte
 		return nil, fmt.Errorf("expected a OpenLibertyApplication object but got %T", obj)
 	}
 	openlibertyapplicationlog.Info("Validation for OpenLibertyApplication upon deletion", "name", openlibertyapplication.GetName())
+
+	if openlibertyapplication.GetExperimental() != nil && openlibertyapplication.GetExperimental().GetBypassWebhook() != nil && *openlibertyapplication.GetExperimental().GetBypassWebhook() {
+		return nil, nil
+	}
+
 	httpClient, err := lutils.GetLibertyProxyClient(lclient, "openshift-operators", olcontroller.OperatorShortName)
 	if err != nil {
 		// return nil, err
