@@ -452,9 +452,9 @@ func (r *ReconcileOpenLiberty) reconcileLTPAKeysConcurrent(operatorNamespace str
 	if ltpaKeysMetadata != nil {
 		instanceMutex.Lock()
 		ltpaMessage, ltpaSecretName, ltpaKeysLastRotation, ltpaErr := r.reconcileLTPAKeys(operatorNamespace, instance, ltpaKeysMetadata)
+		instanceMutex.Unlock()
 		err = ltpaErr
 		message = ltpaMessage
-		instanceMutex.Unlock()
 		ltpaSecretNameChan <- ltpaSecretName
 		lastRotationChan <- ltpaKeysLastRotation
 		ltpaKeysLastRotationChan <- ltpaKeysLastRotation
@@ -462,6 +462,8 @@ func (r *ReconcileOpenLiberty) reconcileLTPAKeysConcurrent(operatorNamespace str
 		ltpaSecretNameChan <- ""
 		lastRotationChan <- ""
 		ltpaKeysLastRotationChan <- ""
+		err = nil
+		message = ""
 	}
 	reconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: message}
 }
