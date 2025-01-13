@@ -180,6 +180,8 @@ type OpenLibertyApplicationExperimental struct {
 	ManageCache *bool `json:"manageCache,omitempty"`
 
 	BypassWebhook *bool `json:"bypassWebhook,omitempty"`
+
+	ManageCertOwner *bool `json:"manageCertOwner,omitempty"`
 }
 
 // Defines the DNS
@@ -1667,4 +1669,11 @@ func (exp *OpenLibertyApplicationExperimental) GetBypassWebhook() *bool {
 		return nil
 	}
 	return exp.BypassWebhook
+}
+
+func (exp *OpenLibertyApplicationExperimental) GetManageCertOwner() *bool {
+	if exp.ManageCertOwner == nil {
+		return nil
+	}
+	return exp.ManageCertOwner
 }
