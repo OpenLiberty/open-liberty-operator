@@ -496,14 +496,19 @@ func (r *ReconcileOpenLiberty) reconcileLTPAConfigConcurrent(operatorNamespace s
 	}
 
 	// Using the LTPA keys and config metadata, create and manage the shared LTPA Liberty server XML if the feature is enabled
-	instanceMutex.Lock()
-	message, ltpaXMLSecretName, err := r.reconcileLTPAConfig(operatorNamespace, instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
-	instanceMutex.Unlock()
-	ltpaXMLSecretNameChan <- ltpaXMLSecretName
-	if err != nil {
-		reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled, message: message}
-		return
+	if ltpaConfigMetadata != nil {
+		instanceMutex.Lock()
+		message, ltpaXMLSecretName, err := r.reconcileLTPAConfig(operatorNamespace, instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
+		instanceMutex.Unlock()
+		ltpaXMLSecretNameChan <- ltpaXMLSecretName
+		if err != nil {
+			reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled, message: message}
+			return
+		}
+	} else {
+		ltpaXMLSecretNameChan <- ""
 	}
+
 	reconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 }
 

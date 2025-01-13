@@ -281,7 +281,7 @@ func AddSecretResourceVersionAsEnvVar(pts *corev1.PodTemplateSpec, la *olv1.Open
 func GetMaxTime(args ...string) (string, error) {
 	maxVal := -1
 	for _, arg := range args {
-		val := -1
+		val := 0
 		if arg != "" {
 			t, err := strconv.Atoi(arg)
 			if err != nil {
