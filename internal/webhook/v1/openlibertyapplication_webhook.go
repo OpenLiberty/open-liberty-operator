@@ -77,12 +77,15 @@ func (v *OpenLibertyApplicationCustomValidator) ValidateCreate(ctx context.Conte
 	openlibertyapplicationlog.Info("Validation for OpenLibertyApplication upon creation", "name", openlibertyapplication.GetName())
 
 	if openlibertyapplication.GetExperimental() != nil && openlibertyapplication.GetExperimental().GetBypassWebhook() != nil && *openlibertyapplication.GetExperimental().GetBypassWebhook() {
+		openlibertyapplicationlog.Info("Bypassing webhook call upon creation", "name", openlibertyapplication.GetName())
 		return nil, nil
 	}
 
+	openlibertyapplicationlog.Info("Calling Liberty Proxy from webhook for creation", "name", openlibertyapplication.GetName())
 	// TODO(user): fill in your validation logic upon object creation.
 	httpClient, err := lutils.GetLibertyProxyClient(lclient, "openshift-operators", olcontroller.OperatorShortName)
 	if err != nil {
+		openlibertyapplicationlog.Error(err, "Error getting Liberty Proxy client")
 		// return nil, err
 		return nil, nil
 	}
