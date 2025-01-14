@@ -152,7 +152,7 @@ func createCertManagerIssuerAndCerts(client client.Client, prefix string, namesp
 		issuer.Spec.CA.SecretName = CustomCACert.Name
 
 	}
-	err = client.Create(context.TODO(), issuer, nil)
+	err = client.Create(context.TODO(), issuer)
 	openlibertyapplicationlog.Info("Reached the end of cert initialization")
 	return err
 }
