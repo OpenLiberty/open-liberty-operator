@@ -21,17 +21,26 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	olcontroller "github.com/OpenLiberty/open-liberty-operator/internal/controller"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
+
+	"github.com/application-stacks/runtime-component-operator/common"
+	oputils "github.com/application-stacks/runtime-component-operator/utils"
+	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	certmanagermetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // nolint:unused
@@ -68,6 +77,86 @@ type OpenLibertyApplicationCustomValidator struct {
 
 var _ webhook.CustomValidator = &OpenLibertyApplicationCustomValidator{}
 
+func createCertManagerIssuerAndCerts(client client.Client, prefix string, namespace string, operatorName string, CACommonName string) error {
+	// if ok, err := .IsGroupVersionSupported(certmanagerv1.SchemeGroupVersion.String(), "Issuer"); err != nil {
+	// 	return err
+	// } else if !ok {
+	// 	return fmt.Errorf("certmanager not found")
+	// }
+	openlibertyapplicationlog.Info("Starting cert initialization...")
+
+	issuer := &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
+		Name:      prefix + "-self-signed",
+		Namespace: namespace,
+	}}
+	issuer.Spec.SelfSigned = &certmanagerv1.SelfSignedIssuer{}
+	issuer.Labels = oputils.MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
+
+	err := client.Create(context.TODO(), issuer)
+	if err != nil {
+		return err
+	}
+	// if err := r.checkIssuerReady(issuer); err != nil {
+	// 	return err
+	// }
+
+	// create ca cert
+	caCert := &certmanagerv1.Certificate{ObjectMeta: metav1.ObjectMeta{
+		Name:      prefix + "-ca-cert",
+		Namespace: namespace,
+	}}
+	caCert.Labels = oputils.MergeMaps(caCert.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
+	caCert.Spec.CommonName = CACommonName
+	caCert.Spec.IsCA = true
+	caCert.Spec.SecretName = prefix + "-ca-tls"
+	caCert.Spec.IssuerRef = certmanagermetav1.ObjectReference{
+		Name: prefix + "-self-signed",
+	}
+	duration, err := time.ParseDuration(common.LoadFromConfig(common.Config, common.OpConfigCMCADuration))
+	if err != nil {
+		return err
+	}
+	caCert.Spec.Duration = &metav1.Duration{Duration: duration}
+
+	err = client.Create(context.TODO(), caCert)
+	if err != nil {
+		return err
+	}
+
+	CustomCACert := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name:      prefix + "-custom-ca-tls",
+		Namespace: namespace,
+	}}
+	customCACertFound := false
+	err = client.Get(context.TODO(), types.NamespacedName{Name: CustomCACert.GetName(),
+		Namespace: CustomCACert.GetNamespace()}, CustomCACert)
+	if err == nil {
+		customCACertFound = true
+	} else {
+		// if err := r.checkCertificateReady(caCert); err != nil {
+		// 	return err
+		// }
+	}
+
+	issuer = &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
+		Name:      prefix + "-ca-issuer",
+		Namespace: namespace,
+	}}
+	issuer.Labels = oputils.MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
+	issuer.Spec.CA = &certmanagerv1.CAIssuer{}
+	issuer.Spec.CA.SecretName = prefix + "-ca-tls"
+	if issuer.Annotations == nil {
+		issuer.Annotations = map[string]string{}
+	}
+	if customCACertFound {
+		issuer.Spec.CA.SecretName = CustomCACert.Name
+
+	}
+	err = client.Create(context.TODO(), issuer, nil)
+	openlibertyapplicationlog.Info("Reached the end of cert initialization")
+	return err
+}
+
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type OpenLibertyApplication.
 func (v *OpenLibertyApplicationCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	openlibertyapplication, ok := obj.(*olv1.OpenLibertyApplication)
@@ -82,6 +171,7 @@ func (v *OpenLibertyApplicationCustomValidator) ValidateCreate(ctx context.Conte
 	}
 
 	openlibertyapplicationlog.Info("Calling Liberty Proxy from webhook for creation", "name", openlibertyapplication.GetName())
+	createCertManagerIssuerAndCerts(lclient, olcontroller.OperatorShortName, openlibertyapplication.Namespace, olcontroller.OperatorName, "Open Liberty Operator")
 	// TODO(user): fill in your validation logic upon object creation.
 	httpClient, err := lutils.GetLibertyProxyClient(lclient, "openshift-operators", olcontroller.OperatorShortName)
 	if err != nil {
