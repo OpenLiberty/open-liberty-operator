@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -32,13 +31,9 @@ import (
 	olcontroller "github.com/OpenLiberty/open-liberty-operator/internal/controller"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
 
-	"github.com/application-stacks/runtime-component-operator/common"
 	oputils "github.com/application-stacks/runtime-component-operator/utils"
 	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	certmanagermetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -100,59 +95,59 @@ func createCertManagerIssuerAndCerts(client client.Client, prefix string, namesp
 	// 	return err
 	// }
 
-	// create ca cert
-	caCert := &certmanagerv1.Certificate{ObjectMeta: metav1.ObjectMeta{
-		Name:      prefix + "-ca-cert",
-		Namespace: namespace,
-	}}
-	caCert.Labels = oputils.MergeMaps(caCert.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
-	caCert.Spec.CommonName = CACommonName
-	caCert.Spec.IsCA = true
-	caCert.Spec.SecretName = prefix + "-ca-tls"
-	caCert.Spec.IssuerRef = certmanagermetav1.ObjectReference{
-		Name: prefix + "-self-signed",
-	}
-	duration, err := time.ParseDuration(common.LoadFromConfig(common.Config, common.OpConfigCMCADuration))
-	if err != nil {
-		return err
-	}
-	caCert.Spec.Duration = &metav1.Duration{Duration: duration}
+	// // create ca cert
+	// caCert := &certmanagerv1.Certificate{ObjectMeta: metav1.ObjectMeta{
+	// 	Name:      prefix + "-ca-cert",
+	// 	Namespace: namespace,
+	// }}
+	// caCert.Labels = oputils.MergeMaps(caCert.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
+	// caCert.Spec.CommonName = CACommonName
+	// caCert.Spec.IsCA = true
+	// caCert.Spec.SecretName = prefix + "-ca-tls"
+	// caCert.Spec.IssuerRef = certmanagermetav1.ObjectReference{
+	// 	Name: prefix + "-self-signed",
+	// }
+	// duration, err := time.ParseDuration(common.LoadFromConfig(common.Config, common.OpConfigCMCADuration))
+	// if err != nil {
+	// 	return err
+	// }
+	// caCert.Spec.Duration = &metav1.Duration{Duration: duration}
 
-	err = client.Create(context.TODO(), caCert)
-	if err != nil {
-		return err
-	}
+	// err = client.Create(context.TODO(), caCert)
+	// if err != nil {
+	// 	return err
+	// }
 
-	CustomCACert := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-		Name:      prefix + "-custom-ca-tls",
-		Namespace: namespace,
-	}}
-	customCACertFound := false
-	err = client.Get(context.TODO(), types.NamespacedName{Name: CustomCACert.GetName(),
-		Namespace: CustomCACert.GetNamespace()}, CustomCACert)
-	if err == nil {
-		customCACertFound = true
-	} else {
-		// if err := r.checkCertificateReady(caCert); err != nil {
-		// 	return err
-		// }
-	}
+	// CustomCACert := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+	// 	Name:      prefix + "-custom-ca-tls",
+	// 	Namespace: namespace,
+	// }}
+	// customCACertFound := false
+	// err = client.Get(context.TODO(), types.NamespacedName{Name: CustomCACert.GetName(),
+	// 	Namespace: CustomCACert.GetNamespace()}, CustomCACert)
+	// if err == nil {
+	// 	customCACertFound = true
+	// } else {
+	// 	// if err := r.checkCertificateReady(caCert); err != nil {
+	// 	// 	return err
+	// 	// }
+	// }
 
-	issuer = &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
-		Name:      prefix + "-ca-issuer",
-		Namespace: namespace,
-	}}
-	issuer.Labels = oputils.MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
-	issuer.Spec.CA = &certmanagerv1.CAIssuer{}
-	issuer.Spec.CA.SecretName = prefix + "-ca-tls"
-	if issuer.Annotations == nil {
-		issuer.Annotations = map[string]string{}
-	}
-	if customCACertFound {
-		issuer.Spec.CA.SecretName = CustomCACert.Name
+	// issuer = &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
+	// 	Name:      prefix + "-ca-issuer",
+	// 	Namespace: namespace,
+	// }}
+	// issuer.Labels = oputils.MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
+	// issuer.Spec.CA = &certmanagerv1.CAIssuer{}
+	// issuer.Spec.CA.SecretName = prefix + "-ca-tls"
+	// if issuer.Annotations == nil {
+	// 	issuer.Annotations = map[string]string{}
+	// }
+	// if customCACertFound {
+	// 	issuer.Spec.CA.SecretName = CustomCACert.Name
 
-	}
-	err = client.Create(context.TODO(), issuer)
+	// }
+	// err = client.Create(context.TODO(), issuer)
 	openlibertyapplicationlog.Info("Reached the end of cert initialization")
 	return err
 }
