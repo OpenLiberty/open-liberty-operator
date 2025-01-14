@@ -22,7 +22,6 @@ import (
 	"io"
 	"net/http"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -151,11 +150,11 @@ func createCertManagerIssuerAndCerts(client client.Client, prefix, name, namespa
 	// }
 	// err = client.Create(context.TODO(), issuer)
 
-	serviceAccount := &corev1.ServiceAccount{}
-	serviceAccount.Name = name
-	serviceAccount.Namespace = namespace
-	err = client.Create(context.TODO(), serviceAccount)
-	openlibertyapplicationlog.Info("Reached the end of cert/SA initialization")
+	// serviceAccount := &corev1.ServiceAccount{}
+	// serviceAccount.Name = name
+	// serviceAccount.Namespace = namespace
+	// err = client.Create(context.TODO(), serviceAccount)
+	// openlibertyapplicationlog.Info("Reached the end of cert/SA initialization")
 	return err
 }
 
