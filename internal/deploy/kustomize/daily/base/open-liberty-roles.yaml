@@ -60,9 +60,19 @@ rules:
   - ""
   resources:
   - pods
+  verbs:
+  - create
+  - get
+  - update
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - serviceaccounts
   verbs:
   - create
+  - delete
   - get
   - update
   - list
