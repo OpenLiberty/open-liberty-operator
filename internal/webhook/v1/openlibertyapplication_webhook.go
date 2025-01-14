@@ -22,6 +22,7 @@ import (
 	"io"
 	"net/http"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -31,9 +32,6 @@ import (
 	olcontroller "github.com/OpenLiberty/open-liberty-operator/internal/controller"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
 
-	oputils "github.com/application-stacks/runtime-component-operator/utils"
-	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -72,25 +70,25 @@ type OpenLibertyApplicationCustomValidator struct {
 
 var _ webhook.CustomValidator = &OpenLibertyApplicationCustomValidator{}
 
-func createCertManagerIssuerAndCerts(client client.Client, prefix string, namespace string, operatorName string, CACommonName string) error {
+func createCertManagerIssuerAndCerts(client client.Client, prefix, name, namespace, operatorName, CACommonName string) error {
 	// if ok, err := .IsGroupVersionSupported(certmanagerv1.SchemeGroupVersion.String(), "Issuer"); err != nil {
 	// 	return err
 	// } else if !ok {
 	// 	return fmt.Errorf("certmanager not found")
 	// }
-	openlibertyapplicationlog.Info("Starting cert initialization...")
+	// openlibertyapplicationlog.Info("Starting cert initialization...")
 
-	issuer := &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
-		Name:      prefix + "-self-signed",
-		Namespace: namespace,
-	}}
-	issuer.Spec.SelfSigned = &certmanagerv1.SelfSignedIssuer{}
-	issuer.Labels = oputils.MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
+	// issuer := &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
+	// 	Name:      prefix + "-self-signed",
+	// 	Namespace: namespace,
+	// }}
+	// issuer.Spec.SelfSigned = &certmanagerv1.SelfSignedIssuer{}
+	// issuer.Labels = oputils.MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
 
-	err := client.Create(context.TODO(), issuer)
-	if err != nil {
-		return err
-	}
+	// err := client.Create(context.TODO(), issuer)
+	// if err != nil {
+	// 	return err
+	// }
 	// if err := r.checkIssuerReady(issuer); err != nil {
 	// 	return err
 	// }
@@ -148,7 +146,12 @@ func createCertManagerIssuerAndCerts(client client.Client, prefix string, namesp
 
 	// }
 	// err = client.Create(context.TODO(), issuer)
-	openlibertyapplicationlog.Info("Reached the end of cert initialization")
+
+	serviceAccount := &corev1.ServiceAccount{}
+	serviceAccount.Name = name
+	serviceAccount.Namespace = namespace
+	err := client.Create(context.TODO(), serviceAccount)
+	openlibertyapplicationlog.Info("Reached the end of cert/SA initialization")
 	return err
 }
 
@@ -166,33 +169,33 @@ func (v *OpenLibertyApplicationCustomValidator) ValidateCreate(ctx context.Conte
 	}
 
 	openlibertyapplicationlog.Info("Calling Liberty Proxy from webhook for creation", "name", openlibertyapplication.GetName())
-	createCertManagerIssuerAndCerts(lclient, olcontroller.OperatorShortName, openlibertyapplication.Namespace, olcontroller.OperatorName, "Open Liberty Operator")
+	createCertManagerIssuerAndCerts(lclient, olcontroller.OperatorShortName, openlibertyapplication.Name, openlibertyapplication.Namespace, olcontroller.OperatorName, "Open Liberty Operator")
 	// TODO(user): fill in your validation logic upon object creation.
-	httpClient, err := lutils.GetLibertyProxyClient(lclient, "openshift-operators", olcontroller.OperatorShortName)
-	if err != nil {
-		openlibertyapplicationlog.Error(err, "Error getting Liberty Proxy client")
-		// return nil, err
-		return nil, nil
-	}
-	res, err := lutils.GetLibertyProxy("openshift-operators", httpClient, "validatecreate", "name="+openlibertyapplication.GetName(), "namespace="+openlibertyapplication.GetNamespace(), "kind=OpenLibertyApplication")
-	if err != nil {
-		openlibertyapplicationlog.Error(err, "Error calling validation webhook")
-		// return nil, err
-		return nil, nil
-	}
-	defer res.Body.Close()
+	// httpClient, err := lutils.GetLibertyProxyClient(lclient, "openshift-operators", olcontroller.OperatorShortName)
+	// if err != nil {
+	// 	openlibertyapplicationlog.Error(err, "Error getting Liberty Proxy client")
+	// 	// return nil, err
+	// 	return nil, nil
+	// }
+	// res, err := lutils.GetLibertyProxy("openshift-operators", httpClient, "validatecreate", "name="+openlibertyapplication.GetName(), "namespace="+openlibertyapplication.GetNamespace(), "kind=OpenLibertyApplication")
+	// if err != nil {
+	// 	openlibertyapplicationlog.Error(err, "Error calling validation webhook")
+	// 	// return nil, err
+	// 	return nil, nil
+	// }
+	// defer res.Body.Close()
 
-	if res.StatusCode == http.StatusOK {
-		bodyBytes, err := io.ReadAll(res.Body)
-		if err != nil {
-			openlibertyapplicationlog.Error(err, "Failed to parse response from liberty proxy")
-		}
-		bodyString := string(bodyBytes)
-		openlibertyapplicationlog.Info("Received status response from calling liberty proxy: (" + res.Status + ")")
-		openlibertyapplicationlog.Info("    - response:" + bodyString)
-	} else {
-		openlibertyapplicationlog.Info("Received status response from calling liberty proxy: " + res.Status)
-	}
+	// if res.StatusCode == http.StatusOK {
+	// 	bodyBytes, err := io.ReadAll(res.Body)
+	// 	if err != nil {
+	// 		openlibertyapplicationlog.Error(err, "Failed to parse response from liberty proxy")
+	// 	}
+	// 	bodyString := string(bodyBytes)
+	// 	openlibertyapplicationlog.Info("Received status response from calling liberty proxy: (" + res.Status + ")")
+	// 	openlibertyapplicationlog.Info("    - response:" + bodyString)
+	// } else {
+	// 	openlibertyapplicationlog.Info("Received status response from calling liberty proxy: " + res.Status)
+	// }
 	return nil, nil // fmt.Errorf("err: block validate create: " + res.Status)
 }
 
