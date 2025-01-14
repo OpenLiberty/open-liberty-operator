@@ -31,9 +31,13 @@ import (
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	olcontroller "github.com/OpenLiberty/open-liberty-operator/internal/controller"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
+	oputils "github.com/application-stacks/runtime-component-operator/utils"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // nolint:unused
@@ -78,14 +82,14 @@ func createCertManagerIssuerAndCerts(client client.Client, prefix, name, namespa
 	// }
 	// openlibertyapplicationlog.Info("Starting cert initialization...")
 
-	// issuer := &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
-	// 	Name:      prefix + "-self-signed",
-	// 	Namespace: namespace,
-	// }}
-	// issuer.Spec.SelfSigned = &certmanagerv1.SelfSignedIssuer{}
-	// issuer.Labels = oputils.MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
+	issuer := &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
+		Name:      prefix + "-self-signed",
+		Namespace: namespace,
+	}}
+	issuer.Spec.SelfSigned = &certmanagerv1.SelfSignedIssuer{}
+	issuer.Labels = oputils.MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
 
-	// err := client.Create(context.TODO(), issuer)
+	err := client.Create(context.TODO(), issuer)
 	// if err != nil {
 	// 	return err
 	// }
@@ -150,7 +154,7 @@ func createCertManagerIssuerAndCerts(client client.Client, prefix, name, namespa
 	serviceAccount := &corev1.ServiceAccount{}
 	serviceAccount.Name = name
 	serviceAccount.Namespace = namespace
-	err := client.Create(context.TODO(), serviceAccount)
+	err = client.Create(context.TODO(), serviceAccount)
 	openlibertyapplicationlog.Info("Reached the end of cert/SA initialization")
 	return err
 }
