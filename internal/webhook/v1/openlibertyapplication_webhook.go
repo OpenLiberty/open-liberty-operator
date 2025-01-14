@@ -36,6 +36,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -87,8 +88,7 @@ func createCertManagerIssuerAndCerts(client client.Client, prefix, name, namespa
 	}}
 	issuer.Spec.SelfSigned = &certmanagerv1.SelfSignedIssuer{}
 	issuer.Labels = oputils.MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
-
-	err := client.Create(context.TODO(), issuer)
+	client.Create(context.TODO(), issuer)
 	// if err != nil {
 	// 	return err
 	// }
@@ -150,12 +150,12 @@ func createCertManagerIssuerAndCerts(client client.Client, prefix, name, namespa
 	// }
 	// err = client.Create(context.TODO(), issuer)
 
-	// serviceAccount := &corev1.ServiceAccount{}
-	// serviceAccount.Name = name
-	// serviceAccount.Namespace = namespace
-	// err = client.Create(context.TODO(), serviceAccount)
-	// openlibertyapplicationlog.Info("Reached the end of cert/SA initialization")
-	return err
+	serviceAccount := &corev1.ServiceAccount{}
+	serviceAccount.Name = name
+	serviceAccount.Namespace = namespace
+	client.Create(context.TODO(), serviceAccount)
+	openlibertyapplicationlog.Info("Reached the end of cert/SA initialization")
+	return nil
 }
 
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type OpenLibertyApplication.
