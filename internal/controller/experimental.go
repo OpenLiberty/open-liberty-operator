@@ -313,6 +313,8 @@ func (r *ReconcileOpenLiberty) reconcileServiceCertificate(ba common.BaseCompone
 	instanceMutex.Lock()
 	if ba.GetService().GetCertificateSecretRef() != nil {
 		ba.GetStatus().SetReference(common.StatusReferenceCertSecretName, *ba.GetService().GetCertificateSecretRef())
+	}
+	if ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName] != "" {
 		workerCache.ReleaseWorkingInstance(instance.GetNamespace(), instance.GetName())
 	}
 	instanceMutex.Unlock()
