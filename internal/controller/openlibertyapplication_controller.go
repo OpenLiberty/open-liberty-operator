@@ -52,6 +52,12 @@ type ReconcileOpenLiberty struct {
 
 const applicationFinalizer = "finalizer.openlibertyapplications.apps.openliberty.io"
 
+var workerCache *WorkerCache
+
+func init() {
+	workerCache.Init()
+}
+
 // +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,resourceNames=restricted,verbs=use,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=apps.openliberty.io,resources=openlibertyapplications;openlibertyapplications/status;openlibertyapplications/finalizers,verbs=get;list;watch;create;update;patch;delete,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=get;list;watch;create;update;delete,namespace=open-liberty-operator
@@ -203,6 +209,11 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// if currentGen == 1 {
 	// 	return reconcile.Result{}, nil
 	// }
+
+	if !workerCache.ReserveWorkingInstance(instance.GetNamespace(), instance.GetName()) {
+		return r.ManageError(fmt.Errorf("This instance is being temporarily throttled because the operator has hit a maximum number of workers"), common.StatusConditionTypeReconciled, instance)
+	}
+	defer workerCache.ReleaseWorkingInstance(instance.GetNamespace(), instance.GetName())
 
 	// From here, the Open Liberty Application instance is stored in shared memory and can begin concurrent actions.
 	if !r.isConcurrencyEnabled(instance) {
