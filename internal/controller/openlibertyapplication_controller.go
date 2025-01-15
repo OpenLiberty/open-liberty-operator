@@ -55,6 +55,7 @@ const applicationFinalizer = "finalizer.openlibertyapplications.apps.openliberty
 var workerCache *WorkerCache
 
 func init() {
+	workerCache = &WorkerCache{}
 	workerCache.Init()
 }
 
