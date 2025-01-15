@@ -1084,5 +1084,6 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(operatorNamespace string, ba 
 	instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 	instance.Status.Versions.Reconciled = lutils.OperandVersion
 	reqLogger.Info("Reconcile OpenLibertyApplication - concurrent completed")
+	workerCache.ReleaseWorkingInstance(instance.GetNamespace(), instance.GetName())
 	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
 }

@@ -213,7 +213,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	if !workerCache.ReserveWorkingInstance(instance.GetNamespace(), instance.GetName()) {
 		return r.ManageError(fmt.Errorf("This instance is being temporarily throttled because the operator has hit a maximum number of workers"), common.StatusConditionTypeReconciled, instance)
 	}
-	defer workerCache.ReleaseWorkingInstance(instance.GetNamespace(), instance.GetName())
 
 	// From here, the Open Liberty Application instance is stored in shared memory and can begin concurrent actions.
 	if !r.isConcurrencyEnabled(instance) {
@@ -868,6 +867,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 	instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 	instance.Status.Versions.Reconciled = lutils.OperandVersion
 	reqLogger.Info("Reconcile OpenLibertyApplication - completed")
+	workerCache.ReleaseWorkingInstance(instance.GetNamespace(), instance.GetName())
 	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
 }
 
