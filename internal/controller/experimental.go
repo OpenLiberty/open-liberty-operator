@@ -313,8 +313,8 @@ func (r *ReconcileOpenLiberty) reconcileServiceCertificate(ba common.BaseCompone
 	instanceMutex.Lock()
 	if ba.GetService().GetCertificateSecretRef() != nil {
 		ba.GetStatus().SetReference(common.StatusReferenceCertSecretName, *ba.GetService().GetCertificateSecretRef())
+		workerCache.ReleaseWorkingInstance(instance.GetNamespace(), instance.GetName())
 	}
-	workerCache.ReleaseWorkingInstance(instance.GetNamespace(), instance.GetName())
 	instanceMutex.Unlock()
 	serviceCertificateReconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 }
