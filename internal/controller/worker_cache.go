@@ -32,8 +32,13 @@ func getWorkerKey(namespace, name string) string {
 
 // Reserves space in the cache for a working instance
 func (wc *WorkerCache) ReserveWorkingInstance(namespace, name string) bool {
+	workerKey := getWorkerKey(namespace, name)
+	_, ok := wc.store.Load(workerKey)
+	if ok {
+		return true
+	}
 	if wc.GetTotalWorkers() < MAX_WORKERS {
-		wc.store.Store(getWorkerKey(namespace, name), 0)
+		wc.store.Store(workerKey, 0)
 		return true
 	}
 	return false
