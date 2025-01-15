@@ -314,8 +314,18 @@ func (r *ReconcileOpenLiberty) reconcileServiceCertificate(ba common.BaseCompone
 	if ba.GetService().GetCertificateSecretRef() != nil {
 		ba.GetStatus().SetReference(common.StatusReferenceCertSecretName, *ba.GetService().GetCertificateSecretRef())
 	}
-	if ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName] != "" {
-		workerCache.ReleaseWorkingInstance(instance.GetNamespace(), instance.GetName())
+	if secretName := ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName]; secretName != "" {
+		secret := &corev1.Secret{}
+		secret.Name = secretName
+		secret.Namespace = instance.GetNamespace()
+		err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: instance.GetNamespace()}, secret)
+		if err != nil {
+			instanceMutex.Unlock()
+			serviceCertificateReconcileResultChan <- ReconcileResult{err: fmt.Errorf("Secret %q was not found in namespace %q, %w", secretName, instance.GetNamespace(), err), condition: common.StatusConditionTypeReconciled}
+			return
+		} else {
+			workerCache.ReleaseWorkingInstance(instance.GetNamespace(), instance.GetName())
+		}
 	}
 	instanceMutex.Unlock()
 	serviceCertificateReconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}

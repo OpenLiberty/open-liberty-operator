@@ -423,8 +423,16 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 	if ba.GetService().GetCertificateSecretRef() != nil {
 		ba.GetStatus().SetReference(common.StatusReferenceCertSecretName, *ba.GetService().GetCertificateSecretRef())
 	}
-	if ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName] != "" {
-		workerCache.ReleaseWorkingInstance(instance.GetNamespace(), instance.GetName())
+	if secretName := ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName]; secretName != "" {
+		secret := &corev1.Secret{}
+		secret.Name = secretName
+		secret.Namespace = instance.GetNamespace()
+		err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: instance.GetNamespace()}, secret)
+		if err != nil {
+			return r.ManageError(fmt.Errorf("Secret %q was not found in namespace %q, %w", secretName, instance.GetNamespace(), err), common.StatusConditionTypeReconciled, instance)
+		} else {
+			workerCache.ReleaseWorkingInstance(instance.GetNamespace(), instance.GetName())
+		}
 	}
 
 	svc := &corev1.Service{ObjectMeta: defaultMeta}
