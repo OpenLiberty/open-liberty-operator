@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -20,7 +21,9 @@ func (wc *WorkerCache) Init() {
 func (wc *WorkerCache) GetTotalWorkers() int {
 	workers := 0
 	wc.store.Range(func(key, value any) bool {
-		workers += 1
+		if strings.HasPrefix(key.(string), WORKER_KEY) {
+			workers += 1
+		}
 		return true
 	})
 	return workers
