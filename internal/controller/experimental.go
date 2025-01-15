@@ -314,6 +314,7 @@ func (r *ReconcileOpenLiberty) reconcileServiceCertificate(ba common.BaseCompone
 	if ba.GetService().GetCertificateSecretRef() != nil {
 		ba.GetStatus().SetReference(common.StatusReferenceCertSecretName, *ba.GetService().GetCertificateSecretRef())
 	}
+	workerCache.ReleaseWorkingInstance(instance.GetNamespace(), instance.GetName())
 	instanceMutex.Unlock()
 	serviceCertificateReconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
 }
@@ -1084,6 +1085,5 @@ func (r *ReconcileOpenLiberty) concurrentReconcile(operatorNamespace string, ba 
 	instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 	instance.Status.Versions.Reconciled = lutils.OperandVersion
 	reqLogger.Info("Reconcile OpenLibertyApplication - concurrent completed")
-	workerCache.ReleaseWorkingInstance(instance.GetNamespace(), instance.GetName())
 	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
 }
