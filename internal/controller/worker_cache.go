@@ -1,14 +1,15 @@
 package controller
 
 import (
+	"container/heap"
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 )
 
 type WorkerCache struct {
 	store                 *sync.Map
+	pq                    PriorityQueue
 	maxWorkers            int
 	maxCertManagerWorkers int
 }
@@ -17,14 +18,6 @@ const WORKER_KEY = "worker"
 const CERTMANAGER_WORKER_KEY = "cm-worker"
 const ALLOWED_CERTMANAGER_WORKER_KEY = "allowed-" + CERTMANAGER_WORKER_KEY
 const ALLOWED_WORKER_KEY = "allowed-" + WORKER_KEY
-
-// const MAX_WORKERS = 15
-// const MAX_CERTMANAGER_WORKERS = 10
-
-const DELAY_WORKER_TIME_KEY = "delay-worker-time"
-const DELAY_WORKER_COUNT_KEY = "delay-worker-count"
-const WORKER_DELAY = 3
-const MAX_WORKER_PER_DELAY = 5
 
 type Worker int
 
@@ -37,6 +30,7 @@ func (wc *WorkerCache) Init(maxWorkers, maxCertManagerWorkers int) {
 	wc.store = &sync.Map{}
 	wc.maxWorkers = maxWorkers
 	wc.maxCertManagerWorkers = maxCertManagerWorkers
+	wc.pq = make(PriorityQueue, 0)
 }
 
 func (wc *WorkerCache) GetTotalWorkers(worker Worker) int {
@@ -92,61 +86,13 @@ func (wc *WorkerCache) ReserveWorkingInstance(worker Worker, namespace, name str
 	if _, ok := wc.store.Load(allowedWorkerKey); ok {
 		return true
 	}
-	now := time.Now().Unix()
-	// worker should have delay
-	if worker == WORKER {
-		if lastTime, ok := wc.store.Load(DELAY_WORKER_TIME_KEY); ok {
-			lastCount, countOk := wc.store.Load(DELAY_WORKER_COUNT_KEY)
-			if countOk {
-				// exit if worker is queued too early
-				if now-lastTime.(int64) < WORKER_DELAY && lastCount.(int) >= MAX_WORKER_PER_DELAY {
-					return false
-				}
-			} else {
-				// exit if worker is queued too early
-				if now-lastTime.(int64) < WORKER_DELAY {
-					return false
-				}
-			}
-		}
-	}
 
 	workerKey := getWorkerKey(worker, namespace, name)
 	if _, ok := wc.store.Load(workerKey); ok {
-		if worker == WORKER {
-			// save the last worked time
-			if lastTime, ok := wc.store.Load(DELAY_WORKER_TIME_KEY); ok {
-				if now-lastTime.(int64) < WORKER_DELAY {
-					val, _ := wc.store.Load(DELAY_WORKER_COUNT_KEY)
-					wc.store.Store(DELAY_WORKER_COUNT_KEY, val.(int)+1)
-				} else {
-					wc.store.Store(DELAY_WORKER_TIME_KEY, now)
-					wc.store.Store(DELAY_WORKER_COUNT_KEY, 0)
-				}
-			} else {
-				wc.store.Store(DELAY_WORKER_TIME_KEY, now)
-				wc.store.Store(DELAY_WORKER_COUNT_KEY, 0)
-			}
-		}
 		return true
 	}
 	if wc.GetTotalWorkers(worker) < wc.GetMaxWorkers(worker) {
 		wc.store.Store(workerKey, 0)
-		if worker == WORKER {
-			// save the last worked time
-			if lastTime, ok := wc.store.Load(DELAY_WORKER_TIME_KEY); ok {
-				if now-lastTime.(int64) < WORKER_DELAY {
-					val, _ := wc.store.Load(DELAY_WORKER_COUNT_KEY)
-					wc.store.Store(DELAY_WORKER_COUNT_KEY, val.(int)+1)
-				} else {
-					wc.store.Store(DELAY_WORKER_TIME_KEY, now)
-					wc.store.Store(DELAY_WORKER_COUNT_KEY, 0)
-				}
-			} else {
-				wc.store.Store(DELAY_WORKER_TIME_KEY, now)
-				wc.store.Store(DELAY_WORKER_COUNT_KEY, 0)
-			}
-		}
 		return true
 	}
 	return false
@@ -156,4 +102,17 @@ func (wc *WorkerCache) ReserveWorkingInstance(worker Worker, namespace, name str
 func (wc *WorkerCache) ReleaseWorkingInstance(worker Worker, namespace, name string) {
 	wc.store.Delete(getWorkerKey(worker, namespace, name))
 	wc.store.Store(getAllowedWorkerKey(worker, namespace, name), 0)
+}
+
+func createItem(namespace, name string, resource *Resource) *Item {
+	return &Item{resource: resource, namespace: namespace, name: name, priority: resource.priority, index: 0}
+}
+
+func (wc *WorkerCache) CreateWork(namespace, name string, resource *Resource) bool {
+	heap.Push(&wc.pq, createItem(namespace, name, resource))
+	return true
+}
+
+func (wc *WorkerCache) GetWork() *Item {
+	return heap.Pop(&wc.pq).(*Item)
 }
