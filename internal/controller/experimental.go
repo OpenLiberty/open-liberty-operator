@@ -302,7 +302,7 @@ func (r *ReconcileOpenLiberty) reconcileKnativeServiceSequential(defaultMeta met
 
 func (r *ReconcileOpenLiberty) reconcileServiceCertificate(ba common.BaseComponent, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, serviceCertificateReconcileResultChan chan<- ReconcileResult, useCertManagerChan chan<- bool) {
 	instanceMutex.Lock()
-	useCertmanager, err := r.GenerateSvcCertSecret(ba, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance))
+	useCertmanager, err := r.generateSvcCertSecret(ba, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance))
 	instanceMutex.Unlock()
 	useCertManagerChan <- useCertmanager
 	if err != nil {
@@ -324,7 +324,7 @@ func (r *ReconcileOpenLiberty) reconcileServiceCertificate(ba common.BaseCompone
 			serviceCertificateReconcileResultChan <- ReconcileResult{err: fmt.Errorf("Secret %q was not found in namespace %q, %w", secretName, instance.GetNamespace(), err), condition: common.StatusConditionTypeReconciled}
 			return
 		} else {
-			workerCache.ReleaseWorkingInstance(instance.GetNamespace(), instance.GetName())
+			workerCache.ReleaseWorkingInstance(WORKER, instance.GetNamespace(), instance.GetName())
 		}
 	}
 	instanceMutex.Unlock()
