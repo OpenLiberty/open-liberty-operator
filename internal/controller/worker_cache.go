@@ -8,15 +8,18 @@ import (
 )
 
 type WorkerCache struct {
-	store *sync.Map
+	store                 *sync.Map
+	maxWorkers            int
+	maxCertManagerWorkers int
 }
 
 const WORKER_KEY = "worker"
 const CERTMANAGER_WORKER_KEY = "cm-worker"
 const ALLOWED_CERTMANAGER_WORKER_KEY = "allowed-" + CERTMANAGER_WORKER_KEY
 const ALLOWED_WORKER_KEY = "allowed-" + WORKER_KEY
-const MAX_WORKERS = 15
-const MAX_CERTMANAGER_WORKERS = 10
+
+// const MAX_WORKERS = 15
+// const MAX_CERTMANAGER_WORKERS = 10
 
 const DELAY_WORKER_TIME_KEY = "delay-worker-time"
 const DELAY_WORKER_COUNT_KEY = "delay-worker-count"
@@ -30,8 +33,10 @@ const (
 	CERTMANAGER_WORKER Worker = iota
 )
 
-func (wc *WorkerCache) Init() {
+func (wc *WorkerCache) Init(maxWorkers, maxCertManagerWorkers int) {
 	wc.store = &sync.Map{}
+	wc.maxWorkers = maxWorkers
+	wc.maxCertManagerWorkers = maxCertManagerWorkers
 }
 
 func (wc *WorkerCache) GetTotalWorkers(worker Worker) int {
@@ -43,9 +48,9 @@ func (wc *WorkerCache) GetTotalWorkers(worker Worker) int {
 
 func (wc *WorkerCache) GetMaxWorkers(worker Worker) int {
 	if worker == CERTMANAGER_WORKER {
-		return MAX_CERTMANAGER_WORKERS
+		return wc.maxCertManagerWorkers
 	}
-	return MAX_WORKERS
+	return wc.maxWorkers
 }
 
 func (wc *WorkerCache) countWorkers(workerKey string) int {
