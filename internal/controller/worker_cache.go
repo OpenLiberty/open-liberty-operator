@@ -15,7 +15,7 @@ const WORKER_KEY = "worker"
 const CERTMANAGER_WORKER_KEY = "cm-worker"
 const ALLOWED_CERTMANAGER_WORKER_KEY = "allowed-" + CERTMANAGER_WORKER_KEY
 const ALLOWED_WORKER_KEY = "allowed-" + WORKER_KEY
-const MAX_WORKERS = 10
+const MAX_WORKERS = 15
 const MAX_CERTMANAGER_WORKERS = 10
 
 const DELAY_WORKER_TIME_KEY = "delay-worker-time"
