@@ -13,7 +13,7 @@ type WorkerCache struct {
 const WORKER_KEY = "worker"
 const CERTMANAGER_WORKER_KEY = "cm-worker"
 const ALLOWED_WORKER_KEY = "allowed-worker"
-const MAX_WORKERS = 15
+const MAX_WORKERS = 10
 const MAX_CERTMANAGER_WORKERS = 10
 
 type Worker int
