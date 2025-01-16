@@ -55,20 +55,24 @@ func (wc *WorkerCache) countWorkers(workerKey string) int {
 
 func getWorkerKey(worker Worker, namespace, name string) string {
 	if worker == CERTMANAGER_WORKER {
-		return getGenericKey(CERTMANAGER_WORKER_KEY, namespace, name)
+		return getNamespacedKey(CERTMANAGER_WORKER_KEY, namespace)
 	}
 	return getGenericKey(WORKER_KEY, namespace, name)
 }
 
 func getAllowedWorkerKey(worker Worker, namespace, name string) string {
 	if worker == CERTMANAGER_WORKER {
-		return getGenericKey(ALLOWED_CERTMANAGER_WORKER_KEY, namespace, name)
+		return getNamespacedKey(ALLOWED_CERTMANAGER_WORKER_KEY, namespace)
 	}
 	return getGenericKey(ALLOWED_WORKER_KEY, namespace, name)
 }
 
 func getGenericKey(rootKey, namespace, name string) string {
 	return fmt.Sprintf("%s-%s-%s", rootKey, namespace, name)
+}
+
+func getNamespacedKey(rootKey, namespace string) string {
+	return fmt.Sprintf("%s-%s", rootKey, namespace)
 }
 
 // Reserves space in the cache for a working instance
