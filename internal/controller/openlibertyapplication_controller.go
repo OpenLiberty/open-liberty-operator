@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -59,10 +60,10 @@ var APIVersionNotFoundError = errors.New("APIVersion is not available")
 
 var workerCache *WorkerCache
 
-func init() {
-	workerCache = &WorkerCache{}
-	workerCache.Init()
-}
+// func init() {
+// 	workerCache = &WorkerCache{}
+// 	workerCache.Init()
+// }
 
 // +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,resourceNames=restricted,verbs=use,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=apps.openliberty.io,resources=openlibertyapplications;openlibertyapplications/status;openlibertyapplications/finalizers,verbs=get;list;watch;create;update;patch;delete,namespace=open-liberty-operator
@@ -116,6 +117,14 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 	} else {
 		common.LoadFromConfigMap(common.Config, configMap)
+	}
+
+	if workerCache == nil {
+		maxWorkers, _ := strconv.ParseInt(common.LoadFromConfig(common.Config, common.OpConfigMaxWorkers), 10, 64)
+		maxCertManagerWorkers, _ := strconv.ParseInt(common.LoadFromConfig(common.Config, common.OpConfigMaxCertManagerWorkers), 10, 64)
+
+		workerCache = &WorkerCache{}
+		workerCache.Init(int(maxWorkers), int(maxCertManagerWorkers))
 	}
 
 	// Fetch the OpenLiberty instance
