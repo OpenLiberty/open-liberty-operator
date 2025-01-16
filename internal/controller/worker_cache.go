@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 )
 
 type WorkerCache struct {
@@ -16,6 +17,8 @@ const ALLOWED_CERTMANAGER_WORKER_KEY = "allowed-" + CERTMANAGER_WORKER_KEY
 const ALLOWED_WORKER_KEY = "allowed-" + WORKER_KEY
 const MAX_WORKERS = 10
 const MAX_CERTMANAGER_WORKERS = 10
+const DELAY_WORKER_KEY = "delay-worker"
+const WORKER_DELAY = 3
 
 type Worker int
 
@@ -81,12 +84,31 @@ func (wc *WorkerCache) ReserveWorkingInstance(worker Worker, namespace, name str
 	if _, ok := wc.store.Load(allowedWorkerKey); ok {
 		return true
 	}
+	now := time.Now().Unix()
+	// worker should have delay
+	if worker == WORKER {
+		if lastTime, ok := wc.store.Load(DELAY_WORKER_KEY); ok {
+			// exit if worker is queued too early
+			if now-lastTime.(int64) < WORKER_DELAY {
+				return false
+			}
+		}
+	}
+
 	workerKey := getWorkerKey(worker, namespace, name)
 	if _, ok := wc.store.Load(workerKey); ok {
+		if worker == WORKER {
+			// save the last worked time
+			wc.store.Store(DELAY_WORKER_KEY, now)
+		}
 		return true
 	}
 	if wc.GetTotalWorkers(worker) < wc.GetMaxWorkers(worker) {
 		wc.store.Store(workerKey, 0)
+		if worker == WORKER {
+			// save the last worked time
+			wc.store.Store(DELAY_WORKER_KEY, now)
+		}
 		return true
 	}
 	return false
