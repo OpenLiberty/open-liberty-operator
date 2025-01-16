@@ -233,6 +233,149 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 }
 
+func (r *ReconcileOpenLiberty) checkCertificateReady(cert *certmanagerv1.Certificate) error {
+	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: cert.Name, Namespace: cert.Namespace}, cert)
+	if err != nil {
+		return err
+	}
+	isReady := false
+	for _, condition := range cert.Status.Conditions {
+		if condition.Type == certmanagerv1.CertificateConditionReady {
+			if condition.Status == certmanagermetav1.ConditionTrue {
+				isReady = true
+			}
+		}
+	}
+	if !isReady {
+		return fmt.Errorf("certificate %s is not ready", cert.Name)
+	}
+	return nil
+}
+
+func (r *ReconcileOpenLiberty) checkIssuerReady(issuer *certmanagerv1.Issuer) error {
+	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: issuer.Name, Namespace: issuer.Namespace}, issuer)
+	if err != nil {
+		return err
+	}
+	isReady := false
+	for _, condition := range issuer.Status.Conditions {
+		if condition.Type == certmanagerv1.IssuerConditionReady {
+			if condition.Status == certmanagermetav1.ConditionTrue {
+				isReady = true
+			}
+		}
+	}
+	if !isReady {
+		return fmt.Errorf("issuer %s is not ready", issuer.Name)
+	}
+	return nil
+}
+
+func (r *ReconcileOpenLiberty) generateCMIssuer(namespace string, prefix string, CACommonName string, operatorName string, isCreateOrUpdate bool) error {
+	if ok, err := r.IsGroupVersionSupported(certmanagerv1.SchemeGroupVersion.String(), "Issuer"); err != nil {
+		return err
+	} else if !ok {
+		return APIVersionNotFoundError
+	}
+
+	var err error
+
+	issuer := &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
+		Name:      prefix + "-self-signed",
+		Namespace: namespace,
+	}}
+	if isCreateOrUpdate {
+		err := r.CreateOrUpdate(issuer, nil, func() error {
+			issuer.Spec.SelfSigned = &certmanagerv1.SelfSignedIssuer{}
+			issuer.Labels = oputils.MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	if err := r.checkIssuerReady(issuer); err != nil {
+		return err
+	}
+
+	caCert := &certmanagerv1.Certificate{ObjectMeta: metav1.ObjectMeta{
+		Name:      prefix + "-ca-cert",
+		Namespace: namespace,
+	}}
+
+	if isCreateOrUpdate {
+		err = r.CreateOrUpdate(caCert, nil, func() error {
+			caCert.Labels = oputils.MergeMaps(caCert.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
+			caCert.Spec.CommonName = CACommonName
+			caCert.Spec.IsCA = true
+			caCert.Spec.SecretName = prefix + "-ca-tls"
+			caCert.Spec.IssuerRef = certmanagermetav1.ObjectReference{
+				Name: prefix + "-self-signed",
+			}
+
+			duration, err := time.ParseDuration(common.LoadFromConfig(common.Config, common.OpConfigCMCADuration))
+			if err != nil {
+				return err
+			}
+
+			caCert.Spec.Duration = &metav1.Duration{Duration: duration}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	CustomCACert := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name:      prefix + "-custom-ca-tls",
+		Namespace: namespace,
+	}}
+	customCACertFound := false
+	err = r.GetClient().Get(context.Background(), types.NamespacedName{Name: CustomCACert.GetName(),
+		Namespace: CustomCACert.GetNamespace()}, CustomCACert)
+	if err == nil {
+		customCACertFound = true
+	} else {
+		if err := r.checkCertificateReady(caCert); err != nil {
+			return err
+		}
+	}
+
+	issuer = &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
+		Name:      prefix + "-ca-issuer",
+		Namespace: namespace,
+	}}
+	if isCreateOrUpdate {
+		err = r.CreateOrUpdate(issuer, nil, func() error {
+			issuer.Labels = oputils.MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
+			issuer.Spec.CA = &certmanagerv1.CAIssuer{}
+			issuer.Spec.CA.SecretName = prefix + "-ca-tls"
+			if issuer.Annotations == nil {
+				issuer.Annotations = map[string]string{}
+			}
+			if customCACertFound {
+				issuer.Spec.CA.SecretName = CustomCACert.Name
+
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	for i := range issuer.Status.Conditions {
+		if issuer.Status.Conditions[i].Type == certmanagerv1.IssuerConditionReady && issuer.Status.Conditions[i].Status == certmanagermetav1.ConditionFalse {
+			return errors.New("Certificate Issuer is not ready")
+		}
+		if issuer.Status.Conditions[i].Type == certmanagerv1.IssuerConditionReady && issuer.Status.Conditions[i].ObservedGeneration != issuer.ObjectMeta.Generation {
+			return errors.New("Certificate Issuer is not ready")
+		}
+	}
+	return nil
+}
+
 func (r *ReconcileOpenLiberty) generateSvcCertSecret(ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, prefix string, CACommonName string, operatorName string, addOwnerReference bool) (bool, error) {
 	delete(ba.GetStatus().GetReferences(), common.StatusReferenceCertSecretName)
 	cleanup := func() {
@@ -274,11 +417,17 @@ func (r *ReconcileOpenLiberty) generateSvcCertSecret(ba common.BaseComponent, in
 	} else if ok {
 		bao := ba.(metav1.Object)
 
-		if !workerCache.ReserveWorkingInstance(CERTMANAGER_WORKER, instance.GetNamespace(), instance.GetName()) {
-			return true, fmt.Errorf("Too many CM workers, throttling")
-		}
+		// if !workerCache.ReserveWorkingInstance(CERTMANAGER_WORKER, instance.GetNamespace(), instance.GetName()) {
+		// 	return true, fmt.Errorf("Too many CM workers, throttling")
+		// }
 
-		cmIssuerErr := r.GenerateCMIssuer(bao.GetNamespace(), prefix, CACommonName, operatorName)
+		// workerCache.CreateWork(bao.GetNamespace(), bao.GetName(), &Resource{
+		// 	resourceName: "Issuer",
+		// 	namespace:    bao.GetNamespace(),
+		// 	name:         bao.GetName(),
+		// 	priority:     5,
+		// })
+		cmIssuerErr := r.generateCMIssuer(bao.GetNamespace(), prefix, CACommonName, operatorName, true)
 		if cmIssuerErr != nil {
 			if errors.Is(cmIssuerErr, APIVersionNotFoundError) {
 				return false, nil
@@ -286,7 +435,7 @@ func (r *ReconcileOpenLiberty) generateSvcCertSecret(ba common.BaseComponent, in
 			return true, cmIssuerErr
 		}
 
-		workerCache.ReleaseWorkingInstance(CERTMANAGER_WORKER, instance.GetNamespace(), instance.GetName())
+		// workerCache.ReleaseWorkingInstance(CERTMANAGER_WORKER, instance.GetNamespace(), instance.GetName())
 		if !workerCache.ReserveWorkingInstance(WORKER, instance.GetNamespace(), instance.GetName()) {
 			return true, fmt.Errorf("Too many workers, throttling")
 		}
