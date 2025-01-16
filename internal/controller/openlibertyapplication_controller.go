@@ -266,7 +266,7 @@ func (r *ReconcileOpenLiberty) generateSvcCertSecret(ba common.BaseComponent, in
 		bao := ba.(metav1.Object)
 
 		if !workerCache.ReserveWorkingInstance(CERTMANAGER_WORKER, instance.GetNamespace(), instance.GetName()) {
-			return true, fmt.Errorf("This instance is being temporarily throttled because the operator has hit a maximum number of workers")
+			return true, fmt.Errorf("Not enough CM workers, throttling")
 		}
 
 		cmIssuerErr := r.GenerateCMIssuer(bao.GetNamespace(), prefix, CACommonName, operatorName)
@@ -279,7 +279,7 @@ func (r *ReconcileOpenLiberty) generateSvcCertSecret(ba common.BaseComponent, in
 
 		workerCache.ReleaseWorkingInstance(CERTMANAGER_WORKER, instance.GetNamespace(), instance.GetName())
 		if !workerCache.ReserveWorkingInstance(WORKER, instance.GetNamespace(), instance.GetName()) {
-			return true, fmt.Errorf("This instance is being temporarily throttled because the operator has hit a maximum number of workers")
+			return true, fmt.Errorf("Not enough workers, throttling")
 		}
 
 		svcCertSecretName := bao.GetName() + "-svc-tls-cm"
