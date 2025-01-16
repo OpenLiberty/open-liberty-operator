@@ -17,8 +17,11 @@ const ALLOWED_CERTMANAGER_WORKER_KEY = "allowed-" + CERTMANAGER_WORKER_KEY
 const ALLOWED_WORKER_KEY = "allowed-" + WORKER_KEY
 const MAX_WORKERS = 10
 const MAX_CERTMANAGER_WORKERS = 10
-const DELAY_WORKER_KEY = "delay-worker"
+
+const DELAY_WORKER_TIME_KEY = "delay-worker-time"
+const DELAY_WORKER_COUNT_KEY = "delay-worker-count"
 const WORKER_DELAY = 3
+const MAX_WORKER_PER_DELAY = 5
 
 type Worker int
 
@@ -87,10 +90,18 @@ func (wc *WorkerCache) ReserveWorkingInstance(worker Worker, namespace, name str
 	now := time.Now().Unix()
 	// worker should have delay
 	if worker == WORKER {
-		if lastTime, ok := wc.store.Load(DELAY_WORKER_KEY); ok {
-			// exit if worker is queued too early
-			if now-lastTime.(int64) < WORKER_DELAY {
-				return false
+		if lastTime, ok := wc.store.Load(DELAY_WORKER_TIME_KEY); ok {
+			lastCount, countOk := wc.store.Load(DELAY_WORKER_COUNT_KEY)
+			if countOk {
+				// exit if worker is queued too early
+				if now-lastTime.(int64) < WORKER_DELAY && lastCount.(int) >= MAX_WORKER_PER_DELAY {
+					return false
+				}
+			} else {
+				// exit if worker is queued too early
+				if now-lastTime.(int64) < WORKER_DELAY {
+					return false
+				}
 			}
 		}
 	}
@@ -99,7 +110,18 @@ func (wc *WorkerCache) ReserveWorkingInstance(worker Worker, namespace, name str
 	if _, ok := wc.store.Load(workerKey); ok {
 		if worker == WORKER {
 			// save the last worked time
-			wc.store.Store(DELAY_WORKER_KEY, now)
+			if lastTime, ok := wc.store.Load(DELAY_WORKER_TIME_KEY); ok {
+				if now-lastTime.(int64) < WORKER_DELAY {
+					val, _ := wc.store.Load(DELAY_WORKER_COUNT_KEY)
+					wc.store.Store(DELAY_WORKER_COUNT_KEY, val.(int)+1)
+				} else {
+					wc.store.Store(DELAY_WORKER_TIME_KEY, now)
+					wc.store.Store(DELAY_WORKER_COUNT_KEY, 0)
+				}
+			} else {
+				wc.store.Store(DELAY_WORKER_TIME_KEY, now)
+				wc.store.Store(DELAY_WORKER_COUNT_KEY, 0)
+			}
 		}
 		return true
 	}
@@ -107,7 +129,18 @@ func (wc *WorkerCache) ReserveWorkingInstance(worker Worker, namespace, name str
 		wc.store.Store(workerKey, 0)
 		if worker == WORKER {
 			// save the last worked time
-			wc.store.Store(DELAY_WORKER_KEY, now)
+			if lastTime, ok := wc.store.Load(DELAY_WORKER_TIME_KEY); ok {
+				if now-lastTime.(int64) < WORKER_DELAY {
+					val, _ := wc.store.Load(DELAY_WORKER_COUNT_KEY)
+					wc.store.Store(DELAY_WORKER_COUNT_KEY, val.(int)+1)
+				} else {
+					wc.store.Store(DELAY_WORKER_TIME_KEY, now)
+					wc.store.Store(DELAY_WORKER_COUNT_KEY, 0)
+				}
+			} else {
+				wc.store.Store(DELAY_WORKER_TIME_KEY, now)
+				wc.store.Store(DELAY_WORKER_COUNT_KEY, 0)
+			}
 		}
 		return true
 	}
