@@ -12,7 +12,8 @@ type WorkerCache struct {
 
 const WORKER_KEY = "worker"
 const CERTMANAGER_WORKER_KEY = "cm-worker"
-const ALLOWED_WORKER_KEY = "allowed-worker"
+const ALLOWED_CERTMANAGER_WORKER_KEY = "allowed-" + CERTMANAGER_WORKER_KEY
+const ALLOWED_WORKER_KEY = "allowed-" + WORKER_KEY
 const MAX_WORKERS = 10
 const MAX_CERTMANAGER_WORKERS = 10
 
@@ -59,11 +60,10 @@ func getWorkerKey(worker Worker, namespace, name string) string {
 	return getGenericKey(WORKER_KEY, namespace, name)
 }
 
-func getCertManagerWorkerKey(namespace, name string) string {
-	return getGenericKey(WORKER_KEY, namespace, name)
-}
-
-func getAllowedWorkerKey(namespace, name string) string {
+func getAllowedWorkerKey(worker Worker, namespace, name string) string {
+	if worker == CERTMANAGER_WORKER {
+		return getGenericKey(ALLOWED_CERTMANAGER_WORKER_KEY, namespace, name)
+	}
 	return getGenericKey(ALLOWED_WORKER_KEY, namespace, name)
 }
 
@@ -73,7 +73,7 @@ func getGenericKey(rootKey, namespace, name string) string {
 
 // Reserves space in the cache for a working instance
 func (wc *WorkerCache) ReserveWorkingInstance(worker Worker, namespace, name string) bool {
-	allowedWorkerKey := getAllowedWorkerKey(namespace, name)
+	allowedWorkerKey := getAllowedWorkerKey(worker, namespace, name)
 	if _, ok := wc.store.Load(allowedWorkerKey); ok {
 		return true
 	}
@@ -91,5 +91,5 @@ func (wc *WorkerCache) ReserveWorkingInstance(worker Worker, namespace, name str
 // Release this instance from the worker queue and allow this worker to bypass queue on a subsequent cache lookup
 func (wc *WorkerCache) ReleaseWorkingInstance(worker Worker, namespace, name string) {
 	wc.store.Delete(getWorkerKey(worker, namespace, name))
-	wc.store.Store(getAllowedWorkerKey(namespace, name), 0)
+	wc.store.Store(getAllowedWorkerKey(worker, namespace, name), 0)
 }
