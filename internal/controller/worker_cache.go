@@ -12,6 +12,7 @@ type WorkerCache struct {
 	pq                    PriorityQueue
 	maxWorkers            int
 	maxCertManagerWorkers int
+	workCount             int
 }
 
 const WORKER_KEY = "worker"
@@ -31,6 +32,7 @@ func (wc *WorkerCache) Init(maxWorkers, maxCertManagerWorkers int) {
 	wc.maxWorkers = maxWorkers
 	wc.maxCertManagerWorkers = maxCertManagerWorkers
 	wc.pq = make(PriorityQueue, 0)
+	wc.workCount = 0
 }
 
 func (wc *WorkerCache) GetTotalWorkers(worker Worker) int {
@@ -109,10 +111,15 @@ func createItem(namespace, name string, resource *Resource) *Item {
 }
 
 func (wc *WorkerCache) CreateWork(namespace, name string, resource *Resource) bool {
+	wc.workCount += 1
 	heap.Push(&wc.pq, createItem(namespace, name, resource))
 	return true
 }
 
 func (wc *WorkerCache) GetWork() *Item {
-	return heap.Pop(&wc.pq).(*Item)
+	if wc.workCount > 0 {
+		wc.workCount -= 1
+		return heap.Pop(&wc.pq).(*Item)
+	}
+	return nil
 }

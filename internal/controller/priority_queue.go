@@ -1,6 +1,9 @@
 package controller
 
+import olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
+
 type Resource struct {
+	instance     *olv1.OpenLibertyApplication
 	resourceName string
 	namespace    string
 	name         string
@@ -10,6 +13,7 @@ type Resource struct {
 // An Item is something we manage in a priority queue.
 type Item struct {
 	resource  *Resource
+	instance  *olv1.OpenLibertyApplication
 	name      string
 	namespace string
 	priority  int // The priority of the item in the queue.

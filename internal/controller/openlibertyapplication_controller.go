@@ -376,7 +376,7 @@ func (r *ReconcileOpenLiberty) generateCMIssuer(namespace string, prefix string,
 	return nil
 }
 
-func (r *ReconcileOpenLiberty) generateSvcCertSecret(ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, prefix string, CACommonName string, operatorName string, addOwnerReference bool) (bool, error) {
+func (r *ReconcileOpenLiberty) generateSvcCertSecret(ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, prefix string, CACommonName string, operatorName string, addOwnerReference bool, requiresReservation bool) (bool, error) {
 	delete(ba.GetStatus().GetReferences(), common.StatusReferenceCertSecretName)
 	cleanup := func() {
 		if ok, err := r.IsGroupVersionSupported(certmanagerv1.SchemeGroupVersion.String(), "Certificate"); err != nil {
@@ -436,7 +436,14 @@ func (r *ReconcileOpenLiberty) generateSvcCertSecret(ba common.BaseComponent, in
 		}
 
 		// workerCache.ReleaseWorkingInstance(CERTMANAGER_WORKER, instance.GetNamespace(), instance.GetName())
-		if !workerCache.ReserveWorkingInstance(WORKER, instance.GetNamespace(), instance.GetName()) {
+		if requiresReservation && !workerCache.ReserveWorkingInstance(WORKER, instance.GetNamespace(), instance.GetName()) {
+			workerCache.CreateWork(bao.GetNamespace(), bao.GetName(), &Resource{
+				resourceName: "Certificate",
+				namespace:    bao.GetNamespace(),
+				name:         bao.GetName(),
+				instance:     instance,
+				priority:     5,
+			})
 			return true, fmt.Errorf("Too many workers, throttling")
 		}
 
@@ -753,7 +760,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 		}
 	}
 
-	useCertmanager, err := r.generateSvcCertSecret(ba, instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance))
+	useCertmanager, err := r.generateSvcCertSecret(ba, instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance), true)
 	if err != nil {
 		reqLogger.Error(err, "Failed to reconcile CertManager Certificate")
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -770,6 +777,13 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 			return r.ManageError(fmt.Errorf("Secret %q was not found in namespace %q, %w", secretName, instance.GetNamespace(), err), common.StatusConditionTypeReconciled, instance)
 		} else {
 			workerCache.ReleaseWorkingInstance(WORKER, instance.GetNamespace(), instance.GetName())
+			if useCertmanager {
+				// queue next work
+				item := workerCache.GetWork()
+				if item != nil {
+					r.generateSvcCertSecret(ba, item.instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance), false) // pre-load for the next instance without reservation
+				}
+			}
 		}
 	}
 
