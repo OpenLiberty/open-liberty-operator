@@ -779,7 +779,13 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 			workerCache.ReleaseWorkingInstance(WORKER, instance.GetNamespace(), instance.GetName())
 			if useCertmanager {
 				// queue next work
-				item := workerCache.GetWork()
+				item := workerCache.GetWork(instance.GetNamespace(), instance.GetName(), &Resource{
+					resourceName: "Certificate",
+					namespace:    instance.GetNamespace(),
+					name:         instance.GetName(),
+					instance:     instance,
+					priority:     5,
+				})
 				if item != nil {
 					r.generateSvcCertSecret(ba, item.instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance), false) // pre-load for the next instance without reservation
 				}
