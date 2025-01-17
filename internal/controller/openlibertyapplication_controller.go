@@ -271,32 +271,27 @@ func (r *ReconcileOpenLiberty) checkIssuerReady(issuer *certmanagerv1.Issuer) er
 	return nil
 }
 
-func (r *ReconcileOpenLiberty) generateCMIssuer(namespace string, prefix string, CACommonName string, operatorName string, isCreateOrUpdate bool) error {
+func (r *ReconcileOpenLiberty) generateCMIssuer(namespace string, prefix string, CACommonName string, operatorName string) (string, error) {
 	if ok, err := r.IsGroupVersionSupported(certmanagerv1.SchemeGroupVersion.String(), "Issuer"); err != nil {
-		return err
+		return "", err
 	} else if !ok {
-		return APIVersionNotFoundError
+		return "", APIVersionNotFoundError
 	}
-
-	var err error
 
 	issuer := &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
 		Name:      prefix + "-self-signed",
 		Namespace: namespace,
 	}}
-	if isCreateOrUpdate {
-		err := r.CreateOrUpdate(issuer, nil, func() error {
-			issuer.Spec.SelfSigned = &certmanagerv1.SelfSignedIssuer{}
-			issuer.Labels = oputils.MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
-			return nil
-		})
-		if err != nil {
-			return err
-		}
+	err := r.CreateOrUpdate(issuer, nil, func() error {
+		issuer.Spec.SelfSigned = &certmanagerv1.SelfSignedIssuer{}
+		issuer.Labels = oputils.MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
+		return nil
+	})
+	if err != nil {
+		return "", err
 	}
-
 	if err := r.checkIssuerReady(issuer); err != nil {
-		return err
+		return "", err
 	}
 
 	caCert := &certmanagerv1.Certificate{ObjectMeta: metav1.ObjectMeta{
@@ -304,27 +299,26 @@ func (r *ReconcileOpenLiberty) generateCMIssuer(namespace string, prefix string,
 		Namespace: namespace,
 	}}
 
-	if isCreateOrUpdate {
-		err = r.CreateOrUpdate(caCert, nil, func() error {
-			caCert.Labels = oputils.MergeMaps(caCert.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
-			caCert.Spec.CommonName = CACommonName
-			caCert.Spec.IsCA = true
-			caCert.Spec.SecretName = prefix + "-ca-tls"
-			caCert.Spec.IssuerRef = certmanagermetav1.ObjectReference{
-				Name: prefix + "-self-signed",
-			}
+	caCertSecretName := prefix + "-ca-tls"
+	err = r.CreateOrUpdate(caCert, nil, func() error {
+		caCert.Labels = oputils.MergeMaps(caCert.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
+		caCert.Spec.CommonName = CACommonName
+		caCert.Spec.IsCA = true
+		caCert.Spec.SecretName = caCertSecretName
+		caCert.Spec.IssuerRef = certmanagermetav1.ObjectReference{
+			Name: prefix + "-self-signed",
+		}
 
-			duration, err := time.ParseDuration(common.LoadFromConfig(common.Config, common.OpConfigCMCADuration))
-			if err != nil {
-				return err
-			}
-
-			caCert.Spec.Duration = &metav1.Duration{Duration: duration}
-			return nil
-		})
+		duration, err := time.ParseDuration(common.LoadFromConfig(common.Config, common.OpConfigCMCADuration))
 		if err != nil {
 			return err
 		}
+
+		caCert.Spec.Duration = &metav1.Duration{Duration: duration}
+		return nil
+	})
+	if err != nil {
+		return caCertSecretName, err
 	}
 
 	CustomCACert := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
@@ -338,7 +332,7 @@ func (r *ReconcileOpenLiberty) generateCMIssuer(namespace string, prefix string,
 		customCACertFound = true
 	} else {
 		if err := r.checkCertificateReady(caCert); err != nil {
-			return err
+			return caCertSecretName, err
 		}
 	}
 
@@ -346,37 +340,35 @@ func (r *ReconcileOpenLiberty) generateCMIssuer(namespace string, prefix string,
 		Name:      prefix + "-ca-issuer",
 		Namespace: namespace,
 	}}
-	if isCreateOrUpdate {
-		err = r.CreateOrUpdate(issuer, nil, func() error {
-			issuer.Labels = oputils.MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
-			issuer.Spec.CA = &certmanagerv1.CAIssuer{}
-			issuer.Spec.CA.SecretName = prefix + "-ca-tls"
-			if issuer.Annotations == nil {
-				issuer.Annotations = map[string]string{}
-			}
-			if customCACertFound {
-				issuer.Spec.CA.SecretName = CustomCACert.Name
-
-			}
-			return nil
-		})
-		if err != nil {
-			return err
+	err = r.CreateOrUpdate(issuer, nil, func() error {
+		issuer.Labels = oputils.MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
+		issuer.Spec.CA = &certmanagerv1.CAIssuer{}
+		issuer.Spec.CA.SecretName = prefix + "-ca-tls"
+		if issuer.Annotations == nil {
+			issuer.Annotations = map[string]string{}
 		}
+		if customCACertFound {
+			issuer.Spec.CA.SecretName = CustomCACert.Name
+
+		}
+		return nil
+	})
+	if err != nil {
+		return caCertSecretName, err
 	}
 
 	for i := range issuer.Status.Conditions {
 		if issuer.Status.Conditions[i].Type == certmanagerv1.IssuerConditionReady && issuer.Status.Conditions[i].Status == certmanagermetav1.ConditionFalse {
-			return errors.New("Certificate Issuer is not ready")
+			return caCertSecretName, errors.New("Certificate Issuer is not ready")
 		}
 		if issuer.Status.Conditions[i].Type == certmanagerv1.IssuerConditionReady && issuer.Status.Conditions[i].ObservedGeneration != issuer.ObjectMeta.Generation {
-			return errors.New("Certificate Issuer is not ready")
+			return caCertSecretName, errors.New("Certificate Issuer is not ready")
 		}
 	}
-	return nil
+	return caCertSecretName, nil
 }
 
-func (r *ReconcileOpenLiberty) generateSvcCertSecret(ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, prefix string, CACommonName string, operatorName string, addOwnerReference bool, requiresReservation bool) (bool, error) {
+func (r *ReconcileOpenLiberty) generateSvcCertIssuer(ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, prefix string, CACommonName string, operatorName string, addOwnerReference bool, requiresReservation bool) (bool, string, error) {
 	delete(ba.GetStatus().GetReferences(), common.StatusReferenceCertSecretName)
 	cleanup := func() {
 		if ok, err := r.IsGroupVersionSupported(certmanagerv1.SchemeGroupVersion.String(), "Certificate"); err != nil {
@@ -392,59 +384,61 @@ func (r *ReconcileOpenLiberty) generateSvcCertSecret(ba common.BaseComponent, in
 
 	if ba.GetCreateKnativeService() != nil && *ba.GetCreateKnativeService() {
 		cleanup()
-		return false, nil
+		return false, "", nil
 	}
 	if ba.GetService() != nil && ba.GetService().GetCertificateSecretRef() != nil {
 		cleanup()
-		return false, nil
+		return false, "", nil
 	}
 	if ba.GetManageTLS() != nil && !*ba.GetManageTLS() {
 		cleanup()
-		return false, nil
+		return false, "", nil
 	}
 	if ba.GetService() != nil && ba.GetService().GetAnnotations() != nil {
 		if _, ok := ba.GetService().GetAnnotations()["service.beta.openshift.io/serving-cert-secret-name"]; ok {
 			cleanup()
-			return false, nil
+			return false, "", nil
 		}
 		if _, ok := ba.GetService().GetAnnotations()["service.alpha.openshift.io/serving-cert-secret-name"]; ok {
 			cleanup()
-			return false, nil
+			return false, "", nil
 		}
 	}
+	if ok, err := r.IsGroupVersionSupported(certmanagerv1.SchemeGroupVersion.String(), "Certificate"); err != nil {
+		return false, "", err
+	} else if ok {
+		bao := ba.(metav1.Object)
+
+		issuerSecretName, cmIssuerErr := r.generateCMIssuer(bao.GetNamespace(), prefix, CACommonName, operatorName)
+		if cmIssuerErr != nil {
+			if errors.Is(cmIssuerErr, APIVersionNotFoundError) {
+				return false, issuerSecretName, nil
+			}
+			return true, issuerSecretName, cmIssuerErr
+		}
+	} else {
+		return false, "", nil
+	}
+	return true, "", nil
+}
+
+func (r *ReconcileOpenLiberty) generateSvcCertSecret(ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, prefix string, CACommonName string, operatorName string, addOwnerReference bool, requiresReservation bool) (bool, error) {
 	if ok, err := r.IsGroupVersionSupported(certmanagerv1.SchemeGroupVersion.String(), "Certificate"); err != nil {
 		return false, err
 	} else if ok {
 		bao := ba.(metav1.Object)
 
-		// if !workerCache.ReserveWorkingInstance(CERTMANAGER_WORKER, instance.GetNamespace(), instance.GetName()) {
-		// 	return true, fmt.Errorf("Too many CM workers, throttling")
-		// }
-
-		// workerCache.CreateWork(bao.GetNamespace(), bao.GetName(), &Resource{
-		// 	resourceName: "Issuer",
-		// 	namespace:    bao.GetNamespace(),
-		// 	name:         bao.GetName(),
-		// 	priority:     5,
-		// })
-		cmIssuerErr := r.generateCMIssuer(bao.GetNamespace(), prefix, CACommonName, operatorName, true)
-		if cmIssuerErr != nil {
-			if errors.Is(cmIssuerErr, APIVersionNotFoundError) {
-				return false, nil
-			}
-			return true, cmIssuerErr
-		}
-
-		// workerCache.ReleaseWorkingInstance(CERTMANAGER_WORKER, instance.GetNamespace(), instance.GetName())
 		if requiresReservation && !workerCache.ReserveWorkingInstance(WORKER, instance.GetNamespace(), instance.GetName()) {
-			workerCache.CreateWork(bao.GetNamespace(), bao.GetName(), &Resource{
-				resourceName: "Certificate",
-				namespace:    bao.GetNamespace(),
-				name:         bao.GetName(),
-				instance:     instance,
-				priority:     5,
-			})
-			return true, fmt.Errorf("Too many workers, throttling")
+			if workerCache.PeekIssuerWork() == nil {
+				workerCache.CreateCertificateWork(bao.GetNamespace(), bao.GetName(), &Resource{
+					resourceName: "Certificate",
+					namespace:    bao.GetNamespace(),
+					name:         bao.GetName(),
+					instance:     instance,
+					priority:     5,
+				})
+			}
+			return true, fmt.Errorf("too many certificate workers, throttling...")
 		}
 
 		svcCertSecretName := bao.GetName() + "-svc-tls-cm"
@@ -759,12 +753,29 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 			r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
 	}
-
-	useCertmanager, err := r.generateSvcCertSecret(ba, instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance), true)
+	useCertmanager, issuerSecretName, err := r.generateSvcCertIssuer(ba, instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance), true)
 	if err != nil {
-		reqLogger.Error(err, "Failed to reconcile CertManager Certificate")
+		reqLogger.Error(err, "Failed to reconcile CertManager Issuer")
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
+	if secretName := issuerSecretName; secretName != "" {
+		secret := &corev1.Secret{}
+		secret.Name = secretName
+		secret.Namespace = instance.GetNamespace()
+		err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: instance.GetNamespace()}, secret)
+		if err != nil {
+			return r.ManageError(fmt.Errorf("Secret %q was not found in namespace %q, %w", secretName, instance.GetNamespace(), err), common.StatusConditionTypeReconciled, instance)
+		}
+	}
+
+	if useCertmanager {
+		_, err := r.generateSvcCertSecret(ba, instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance), true)
+		if err != nil {
+			reqLogger.Error(err, "Failed to reconcile CertManager Certificate")
+			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		}
+	}
+
 	if ba.GetService().GetCertificateSecretRef() != nil {
 		ba.GetStatus().SetReference(common.StatusReferenceCertSecretName, *ba.GetService().GetCertificateSecretRef())
 	}
@@ -777,15 +788,9 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 			return r.ManageError(fmt.Errorf("Secret %q was not found in namespace %q, %w", secretName, instance.GetNamespace(), err), common.StatusConditionTypeReconciled, instance)
 		} else {
 			workerCache.ReleaseWorkingInstance(WORKER, instance.GetNamespace(), instance.GetName())
-			if useCertmanager {
-				// queue next work
-				item := workerCache.GetWork(instance.GetNamespace(), instance.GetName(), &Resource{
-					resourceName: "Certificate",
-					namespace:    instance.GetNamespace(),
-					name:         instance.GetName(),
-					instance:     instance,
-					priority:     5,
-				})
+			if useCertmanager && workerCache.PeekIssuerWork() == nil {
+				// perform certificate work
+				item := workerCache.GetCertificateWork()
 				if item != nil {
 					r.generateSvcCertSecret(ba, item.instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance), false) // pre-load for the next instance without reservation
 				}

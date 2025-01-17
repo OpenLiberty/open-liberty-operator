@@ -302,11 +302,19 @@ func (r *ReconcileOpenLiberty) reconcileKnativeServiceSequential(defaultMeta met
 
 func (r *ReconcileOpenLiberty) reconcileServiceCertificate(ba common.BaseComponent, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, serviceCertificateReconcileResultChan chan<- ReconcileResult, useCertManagerChan chan<- bool) {
 	instanceMutex.Lock()
-	useCertmanager, err := r.generateSvcCertSecret(ba, instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance), true)
+	useCertmanager, _, err1 := r.generateSvcCertIssuer(ba, instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance), true)
+	var err2 error
+	if useCertmanager {
+		_, err2 = r.generateSvcCertSecret(ba, instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance), true)
+	}
 	instanceMutex.Unlock()
 	useCertManagerChan <- useCertmanager
-	if err != nil {
-		serviceCertificateReconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile CertManager Certificate"}
+	if err1 != nil {
+		serviceCertificateReconcileResultChan <- ReconcileResult{err: err1, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile CertManager Certificate"}
+		return
+	}
+	if err2 != nil {
+		serviceCertificateReconcileResultChan <- ReconcileResult{err: err2, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile CertManager Certificate"}
 		return
 	}
 
