@@ -10,10 +10,12 @@ import (
 
 type WorkerCache struct {
 	store                 *sync.Map
-	pq                    PriorityQueue
+	issuerQueue           PriorityQueue
+	certificateQueue      PriorityQueue
 	maxWorkers            int
 	maxCertManagerWorkers int
-	workCount             int
+	issuerWorkCount       int
+	certificateWorkCount  int
 	visited               *sync.Map
 }
 
@@ -33,8 +35,10 @@ func (wc *WorkerCache) Init(maxWorkers, maxCertManagerWorkers int) {
 	wc.store = &sync.Map{}
 	wc.maxWorkers = maxWorkers
 	wc.maxCertManagerWorkers = maxCertManagerWorkers
-	wc.pq = make(PriorityQueue, 0)
-	wc.workCount = 0
+	wc.issuerQueue = make(PriorityQueue, 0)
+	wc.certificateQueue = make(PriorityQueue, 0)
+	wc.issuerWorkCount = 0
+	wc.certificateWorkCount = 0
 	wc.visited = &sync.Map{}
 }
 
@@ -110,6 +114,8 @@ func (wc *WorkerCache) ReleaseWorkingInstance(worker Worker, namespace, name str
 }
 
 func createItem(namespace, name string, resource *Resource) *Item {
+	resource.namespace = namespace
+	resource.name = name
 	return &Item{resource: resource, namespace: namespace, name: name, priority: resource.priority, index: 0}
 }
 
@@ -117,23 +123,60 @@ func getWorkKey(namespace, name string, resource *Resource) string {
 	return fmt.Sprintf("%s-%s-%s", resource.resourceName, namespace, name)
 }
 
-func (wc *WorkerCache) CreateWork(namespace, name string, resource *Resource) bool {
+func (wc *WorkerCache) CreateIssuerWork(namespace, name string, resource *Resource) bool {
 	workKey := getWorkKey(namespace, name, resource)
 	if _, ok := wc.visited.Load(workKey); !ok {
 		wc.visited.Store(workKey, time.Now().Unix())
-		wc.workCount += 1
-		heap.Push(&wc.pq, createItem(namespace, name, resource))
+		wc.issuerWorkCount += 1
+		heap.Push(&wc.issuerQueue, createItem(namespace, name, resource))
 		return true
 	}
 	return false
 }
 
-func (wc *WorkerCache) GetWork(namespace, name string, resource *Resource) *Item {
+func (wc *WorkerCache) PeekIssuerWork() *Item {
+	if wc.issuerWorkCount > 0 {
+		item := wc.GetIssuerWork()
+		wc.CreateIssuerWork(item.namespace, item.name, item.resource)
+	}
+	return nil
+}
+
+func (wc *WorkerCache) GetIssuerWork() *Item {
+	if wc.issuerWorkCount > 0 {
+		wc.issuerWorkCount -= 1
+		item := heap.Pop(&wc.issuerQueue).(*Item)
+		wc.visited.Delete(getWorkKey(item.namespace, item.name, item.resource))
+		return item
+	}
+	return nil
+}
+
+func (wc *WorkerCache) CreateCertificateWork(namespace, name string, resource *Resource) bool {
 	workKey := getWorkKey(namespace, name, resource)
-	if wc.workCount > 0 {
-		wc.workCount -= 1
-		wc.visited.Delete(workKey)
-		return heap.Pop(&wc.pq).(*Item)
+	if _, ok := wc.visited.Load(workKey); !ok {
+		wc.visited.Store(workKey, time.Now().Unix())
+		wc.certificateWorkCount += 1
+		heap.Push(&wc.certificateQueue, createItem(namespace, name, resource))
+		return true
+	}
+	return false
+}
+
+func (wc *WorkerCache) PeekCertificateWork() *Item {
+	if wc.certificateWorkCount > 0 {
+		item := wc.GetCertificateWork()
+		wc.CreateCertificateWork(item.namespace, item.name, item.resource)
+	}
+	return nil
+}
+
+func (wc *WorkerCache) GetCertificateWork() *Item {
+	if wc.certificateWorkCount > 0 {
+		wc.certificateWorkCount -= 1
+		item := heap.Pop(&wc.certificateQueue).(*Item)
+		wc.visited.Delete(getWorkKey(item.namespace, item.name, item.resource))
+		return item
 	}
 	return nil
 }
