@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 )
 
 type WorkerCache struct {
@@ -13,6 +14,7 @@ type WorkerCache struct {
 	maxWorkers            int
 	maxCertManagerWorkers int
 	workCount             int
+	visited               *sync.Map
 }
 
 const WORKER_KEY = "worker"
@@ -33,6 +35,7 @@ func (wc *WorkerCache) Init(maxWorkers, maxCertManagerWorkers int) {
 	wc.maxCertManagerWorkers = maxCertManagerWorkers
 	wc.pq = make(PriorityQueue, 0)
 	wc.workCount = 0
+	wc.visited = &sync.Map{}
 }
 
 func (wc *WorkerCache) GetTotalWorkers(worker Worker) int {
@@ -110,15 +113,26 @@ func createItem(namespace, name string, resource *Resource) *Item {
 	return &Item{resource: resource, namespace: namespace, name: name, priority: resource.priority, index: 0}
 }
 
-func (wc *WorkerCache) CreateWork(namespace, name string, resource *Resource) bool {
-	wc.workCount += 1
-	heap.Push(&wc.pq, createItem(namespace, name, resource))
-	return true
+func getWorkKey(namespace, name string, resource *Resource) string {
+	return fmt.Sprintf("%s-%s-%s", resource.resourceName, namespace, name)
 }
 
-func (wc *WorkerCache) GetWork() *Item {
+func (wc *WorkerCache) CreateWork(namespace, name string, resource *Resource) bool {
+	workKey := getWorkKey(namespace, name, resource)
+	if _, ok := wc.visited.Load(workKey); !ok {
+		wc.visited.Store(workKey, time.Now().Unix())
+		wc.workCount += 1
+		heap.Push(&wc.pq, createItem(namespace, name, resource))
+		return true
+	}
+	return false
+}
+
+func (wc *WorkerCache) GetWork(namespace, name string, resource *Resource) *Item {
+	workKey := getWorkKey(namespace, name, resource)
 	if wc.workCount > 0 {
 		wc.workCount -= 1
+		wc.visited.Delete(workKey)
 		return heap.Pop(&wc.pq).(*Item)
 	}
 	return nil
