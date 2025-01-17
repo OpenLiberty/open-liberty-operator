@@ -88,7 +88,7 @@ func createCertManagerIssuerAndCerts(client client.Client, prefix, name, namespa
 	}}
 	issuer.Spec.SelfSigned = &certmanagerv1.SelfSignedIssuer{}
 	issuer.Labels = oputils.MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
-	// client.Create(context.TODO(), issuer)
+	client.Create(context.TODO(), issuer)
 	// if err != nil {
 	// 	return err
 	// }
