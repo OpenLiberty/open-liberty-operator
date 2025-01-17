@@ -302,16 +302,29 @@ func (r *ReconcileOpenLiberty) reconcileKnativeServiceSequential(defaultMeta met
 
 func (r *ReconcileOpenLiberty) reconcileServiceCertificate(ba common.BaseComponent, instance *olv1.OpenLibertyApplication, instanceMutex *sync.Mutex, serviceCertificateReconcileResultChan chan<- ReconcileResult, useCertManagerChan chan<- bool) {
 	instanceMutex.Lock()
-	useCertmanager, _, err1 := r.generateSvcCertIssuer(ba, instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance), true)
+	useCertmanager, issuerSecretName, err1 := r.generateSvcCertIssuer(ba, instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance), true)
+	useCertManagerChan <- useCertmanager
+	instanceMutex.Unlock()
+	if err1 != nil {
+		serviceCertificateReconcileResultChan <- ReconcileResult{err: err1, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile CertManager Issuer"}
+		return
+	}
+	if secretName := issuerSecretName; secretName != "" {
+		secret := &corev1.Secret{}
+		secret.Name = secretName
+		secret.Namespace = instance.GetNamespace()
+		err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secret.Name, Namespace: secret.Namespace}, secret)
+		if err != nil {
+			serviceCertificateReconcileResultChan <- ReconcileResult{err: err, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile CertManager Issuer Secret"}
+			return
+		}
+	}
+
 	var err2 error
 	if useCertmanager {
+		instanceMutex.Lock()
 		_, err2 = r.generateSvcCertSecret(ba, instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance), true)
-	}
-	instanceMutex.Unlock()
-	useCertManagerChan <- useCertmanager
-	if err1 != nil {
-		serviceCertificateReconcileResultChan <- ReconcileResult{err: err1, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile CertManager Certificate"}
-		return
+		instanceMutex.Unlock()
 	}
 	if err2 != nil {
 		serviceCertificateReconcileResultChan <- ReconcileResult{err: err2, condition: common.StatusConditionTypeReconciled, message: "Failed to reconcile CertManager Certificate"}
