@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
+	certmanagermetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -30,6 +32,7 @@ import (
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	olcontroller "github.com/OpenLiberty/open-liberty-operator/internal/controller"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
+	"github.com/application-stacks/runtime-component-operator/common"
 	oputils "github.com/application-stacks/runtime-component-operator/utils"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -96,25 +99,25 @@ func createCertManagerIssuerAndCerts(client client.Client, prefix, name, namespa
 	// 	return err
 	// }
 
-	// // create ca cert
-	// caCert := &certmanagerv1.Certificate{ObjectMeta: metav1.ObjectMeta{
-	// 	Name:      prefix + "-ca-cert",
-	// 	Namespace: namespace,
-	// }}
-	// caCert.Labels = oputils.MergeMaps(caCert.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
-	// caCert.Spec.CommonName = CACommonName
-	// caCert.Spec.IsCA = true
-	// caCert.Spec.SecretName = prefix + "-ca-tls"
-	// caCert.Spec.IssuerRef = certmanagermetav1.ObjectReference{
-	// 	Name: prefix + "-self-signed",
-	// }
-	// duration, err := time.ParseDuration(common.LoadFromConfig(common.Config, common.OpConfigCMCADuration))
-	// if err != nil {
-	// 	return err
-	// }
-	// caCert.Spec.Duration = &metav1.Duration{Duration: duration}
+	// create ca cert
+	caCert := &certmanagerv1.Certificate{ObjectMeta: metav1.ObjectMeta{
+		Name:      prefix + "-ca-cert",
+		Namespace: namespace,
+	}}
+	caCert.Labels = oputils.MergeMaps(caCert.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
+	caCert.Spec.CommonName = CACommonName
+	caCert.Spec.IsCA = true
+	caCert.Spec.SecretName = prefix + "-ca-tls"
+	caCert.Spec.IssuerRef = certmanagermetav1.ObjectReference{
+		Name: prefix + "-self-signed",
+	}
+	duration, err := time.ParseDuration(common.LoadFromConfig(common.Config, common.OpConfigCMCADuration))
+	if err != nil {
+		return err
+	}
+	caCert.Spec.Duration = &metav1.Duration{Duration: duration}
 
-	// err = client.Create(context.TODO(), caCert)
+	client.Create(context.TODO(), caCert)
 	// if err != nil {
 	// 	return err
 	// }
