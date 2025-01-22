@@ -92,7 +92,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2024-12-13T20:47:41Z"
+    createdAt: "2025-01-22T22:49:50Z"
     description: Deploy and manage containerized Liberty applications
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "true"
@@ -101,7 +101,7 @@ metadata:
     features.operators.openshift.io/token-auth-aws: "false"
     features.operators.openshift.io/token-auth-azure: "false"
     features.operators.openshift.io/token-auth-gcp: "false"
-    olm.skipRange: '>=0.8.0 <1.4.1'
+    olm.skipRange: '>=0.8.0 <1.4.2'
     operators.operatorframework.io/builder: operator-sdk-v1.35.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/OpenLiberty/open-liberty-operator
@@ -111,7 +111,7 @@ metadata:
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
     operatorframework.io/os.linux: supported
-  name: open-liberty.v1.4.1
+  name: open-liberty.v1.4.2
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -488,6 +488,10 @@ spec:
         path: monitoring.endpoints
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:endpointList
+      - description: Hide reconcile interval of the instance in the status section.
+          Reconcile Interval is listed in the status section by default.
+        displayName: Hide Reconcile Interval
+        path: reconcileIntervalHide
       - description: Controls which nodes the pod are scheduled to run on, based on
           labels on the node.
         displayName: Node Affinity
@@ -1462,4 +1466,4 @@ spec:
     name: liberty-sample-app
   - image: icr.io/appcafe/open-liberty-operator:daily
     name: open-liberty-operator
-  version: 1.4.1
+  version: 1.4.2

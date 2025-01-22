@@ -15,7 +15,7 @@ metadata:
     features.operators.openshift.io/token-auth-aws: "false"
     features.operators.openshift.io/token-auth-azure: "false"
     features.operators.openshift.io/token-auth-gcp: "false"
-    olm.skipRange: '>=0.8.0 <1.4.1'
+    olm.skipRange: '>=0.8.0 <1.4.2'
     repository: https://github.com/OpenLiberty/open-liberty-operator
     support: IBM
   labels:
@@ -400,6 +400,10 @@ spec:
         path: monitoring.endpoints
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:endpointList
+      - description: Hide reconcile interval of the instance in the status section.
+          Reconcile Interval is listed in the status section by default.
+        displayName: Hide Reconcile Interval
+        path: reconcileIntervalHide
       - description: Controls which nodes the pod are scheduled to run on, based on
           labels on the node.
         displayName: Node Affinity
