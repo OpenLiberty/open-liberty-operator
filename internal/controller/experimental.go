@@ -344,9 +344,10 @@ func (r *ReconcileOpenLiberty) reconcileServiceCertificate(ba common.BaseCompone
 			instanceMutex.Unlock()
 			serviceCertificateReconcileResultChan <- ReconcileResult{err: fmt.Errorf("Secret %q was not found in namespace %q, %w", secretName, instance.GetNamespace(), err), condition: common.StatusConditionTypeReconciled}
 			return
-		} else {
-			workerCache.ReleaseWorkingInstance(WORKER, instance.GetNamespace(), instance.GetName())
 		}
+		//  else {
+		// 	workerCache.ReleaseWorkingInstance(WORKER, instance.GetNamespace(), instance.GetName())
+		// }
 	}
 	instanceMutex.Unlock()
 	serviceCertificateReconcileResultChan <- ReconcileResult{err: nil, condition: common.StatusConditionTypeReconciled}
