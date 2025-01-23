@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -58,7 +57,7 @@ const applicationFinalizer = "finalizer.openlibertyapplications.apps.openliberty
 
 var APIVersionNotFoundError = errors.New("APIVersion is not available")
 
-var workerCache *WorkerCache
+// var workerCache *WorkerCache
 
 // func init() {
 // 	workerCache = &WorkerCache{}
@@ -119,13 +118,13 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		common.LoadFromConfigMap(common.Config, configMap)
 	}
 
-	if workerCache == nil {
-		maxWorkers, _ := strconv.ParseInt(common.LoadFromConfig(common.Config, common.OpConfigMaxWorkers), 10, 64)
-		maxCertManagerWorkers, _ := strconv.ParseInt(common.LoadFromConfig(common.Config, common.OpConfigMaxCertManagerWorkers), 10, 64)
+	// if workerCache == nil {
+	// 	maxWorkers, _ := strconv.ParseInt(common.LoadFromConfig(common.Config, common.OpConfigMaxWorkers), 10, 64)
+	// 	maxCertManagerWorkers, _ := strconv.ParseInt(common.LoadFromConfig(common.Config, common.OpConfigMaxCertManagerWorkers), 10, 64)
 
-		workerCache = &WorkerCache{}
-		workerCache.Init(int(maxWorkers), int(maxCertManagerWorkers))
-	}
+	// 	workerCache = &WorkerCache{}
+	// 	workerCache.Init(int(maxWorkers), int(maxCertManagerWorkers))
+	// }
 
 	// Fetch the OpenLiberty instance
 	instance := &openlibertyv1.OpenLibertyApplication{}
@@ -428,18 +427,18 @@ func (r *ReconcileOpenLiberty) generateSvcCertSecret(ba common.BaseComponent, in
 	} else if ok {
 		bao := ba.(metav1.Object)
 
-		if requiresReservation && !workerCache.ReserveWorkingInstance(WORKER, instance.GetNamespace(), instance.GetName()) {
-			if workerCache.PeekIssuerWork() == nil {
-				workerCache.CreateCertificateWork(bao.GetNamespace(), bao.GetName(), &Resource{
-					resourceName: "Certificate",
-					namespace:    bao.GetNamespace(),
-					name:         bao.GetName(),
-					instance:     instance,
-					priority:     5,
-				})
-			}
-			return true, fmt.Errorf("too many certificate workers, throttling...")
-		}
+		// if requiresReservation && !workerCache.ReserveWorkingInstance(WORKER, instance.GetNamespace(), instance.GetName()) {
+		// 	if workerCache.PeekIssuerWork() == nil {
+		// 		workerCache.CreateCertificateWork(bao.GetNamespace(), bao.GetName(), &Resource{
+		// 			resourceName: "Certificate",
+		// 			namespace:    bao.GetNamespace(),
+		// 			name:         bao.GetName(),
+		// 			instance:     instance,
+		// 			priority:     5,
+		// 		})
+		// 	}
+		// 	return true, fmt.Errorf("too many certificate workers, throttling...")
+		// }
 
 		svcCertSecretName := bao.GetName() + "-svc-tls-cm"
 
@@ -786,16 +785,17 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 		err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: instance.GetNamespace()}, secret)
 		if err != nil {
 			return r.ManageError(fmt.Errorf("Secret %q was not found in namespace %q, %w", secretName, instance.GetNamespace(), err), common.StatusConditionTypeReconciled, instance)
-		} else {
-			workerCache.ReleaseWorkingInstance(WORKER, instance.GetNamespace(), instance.GetName())
-			if useCertmanager && workerCache.PeekIssuerWork() == nil {
-				// perform certificate work
-				item := workerCache.GetCertificateWork()
-				if item != nil {
-					r.generateSvcCertSecret(ba, item.instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance), false) // pre-load for the next instance without reservation
-				}
-			}
 		}
+		// else {
+		// 	workerCache.ReleaseWorkingInstance(WORKER, instance.GetNamespace(), instance.GetName())
+		// 	if useCertmanager && workerCache.PeekIssuerWork() == nil {
+		// 		// perform certificate work
+		// 		item := workerCache.GetCertificateWork()
+		// 		if item != nil {
+		// 			r.generateSvcCertSecret(ba, item.instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance), false) // pre-load for the next instance without reservation
+		// 		}
+		// 	}
+		// }
 	}
 
 	svc := &corev1.Service{ObjectMeta: defaultMeta}
