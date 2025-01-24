@@ -226,7 +226,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// }
 
 	// From here, the Open Liberty Application instance is stored in shared memory and can begin concurrent actions.
-	if !r.isConcurrencyEnabled(instance) {
+	if r.isConcurrencyEnabled(instance) {
 		return r.concurrentReconcile(ns, ba, instance, reqLogger, isKnativeSupported, ctx, request)
 	} else {
 		return r.sequentialReconcile(ns, ba, instance, reqLogger, reqDebugLogger, isKnativeSupported, ctx, request)
