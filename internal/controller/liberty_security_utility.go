@@ -9,6 +9,7 @@ import (
 const SECURITY_UTILITY_BINARY = "/opt/ol/wlp/bin/securityUtility"
 const SECURITY_UTILITY_ENCODE = "encode"
 const SECURITY_UTILITY_CREATE_LTPA_KEYS = "createLTPAKeys"
+const SECURITY_UTILITY_OUTPUT_FOLDER = "/opt/ol/wlp/output"
 
 func encode(password string, passwordKey *string) ([]byte, error) {
 	params := []string{}
@@ -24,6 +25,8 @@ func encode(password string, passwordKey *string) ([]byte, error) {
 func createLTPAKeys(password string, passwordKey *string) ([]byte, error) {
 	params := []string{}
 	params = append(params, SECURITY_UTILITY_CREATE_LTPA_KEYS)
+	tmpFileName := fmt.Sprintf("ltpa-keys-%s.keys", password)
+	params = append(params, fmt.Sprintf("--file=%s/%s", SECURITY_UTILITY_OUTPUT_FOLDER, tmpFileName))
 	params = append(params, fmt.Sprintf("--passwordEncoding=%s", "aes")) // use aes encoding
 	if passwordKey != nil && len(*passwordKey) > 0 {
 		params = append(params, fmt.Sprintf("--passwordKey=%s", *passwordKey))
