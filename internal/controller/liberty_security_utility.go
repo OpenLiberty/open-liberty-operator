@@ -39,7 +39,7 @@ func callSecurityUtility(params []string) ([]byte, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err != nil {
-		return []byte{}, err
+		return []byte{}, fmt.Errorf("SecurityUtility ERROR: %s", cmd.Stderr)
 	}
 	return []byte{}, nil
 }
