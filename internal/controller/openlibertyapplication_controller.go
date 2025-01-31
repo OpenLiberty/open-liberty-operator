@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -58,13 +57,6 @@ const applicationFinalizer = "finalizer.openlibertyapplications.apps.openliberty
 
 var APIVersionNotFoundError = errors.New("APIVersion is not available")
 
-var workerCache *WorkerCache
-
-// func init() {
-// 	workerCache = &WorkerCache{}
-// 	workerCache.Init()
-// }
-
 // +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,resourceNames=restricted,verbs=use,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=apps.openliberty.io,resources=openlibertyapplications;openlibertyapplications/status;openlibertyapplications/finalizers,verbs=get;list;watch;create;update;patch;delete,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=get;list;watch;create;update;delete,namespace=open-liberty-operator
@@ -117,14 +109,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 	} else {
 		common.LoadFromConfigMap(common.Config, configMap)
-	}
-
-	if workerCache == nil {
-		maxWorkers, _ := strconv.ParseInt(common.LoadFromConfig(common.Config, common.OpConfigMaxWorkers), 10, 64)
-		maxCertManagerWorkers, _ := strconv.ParseInt(common.LoadFromConfig(common.Config, common.OpConfigMaxCertManagerWorkers), 10, 64)
-
-		workerCache = &WorkerCache{}
-		workerCache.Init(int(maxWorkers), int(maxCertManagerWorkers))
 	}
 
 	// Fetch the OpenLiberty instance
@@ -422,24 +406,11 @@ func (r *ReconcileOpenLiberty) generateSvcCertIssuer(ba common.BaseComponent, in
 	return true, "", nil
 }
 
-func (r *ReconcileOpenLiberty) generateSvcCertSecret(ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, prefix string, CACommonName string, operatorName string, addOwnerReference bool, requiresReservation bool) (bool, error) {
+func (r *ReconcileOpenLiberty) generateSvcCertSecret(ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, prefix string, CACommonName string, operatorName string, addOwnerReference bool) (bool, error) {
 	if ok, err := r.IsGroupVersionSupported(certmanagerv1.SchemeGroupVersion.String(), "Certificate"); err != nil {
 		return false, err
 	} else if ok {
 		bao := ba.(metav1.Object)
-
-		if requiresReservation && !workerCache.ReserveWorkingInstance(WORKER, instance.GetNamespace(), instance.GetName()) {
-			if workerCache.PeekIssuerWork() == nil {
-				workerCache.CreateCertificateWork(bao.GetNamespace(), bao.GetName(), &Resource{
-					resourceName: "Certificate",
-					namespace:    bao.GetNamespace(),
-					name:         bao.GetName(),
-					instance:     instance,
-					priority:     5,
-				})
-			}
-			return true, fmt.Errorf("too many certificate workers, throttling...")
-		}
 
 		svcCertSecretName := bao.GetName() + "-svc-tls-cm"
 
@@ -769,7 +740,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 	}
 
 	if useCertmanager {
-		_, err := r.generateSvcCertSecret(ba, instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance), true)
+		_, err := r.generateSvcCertSecret(ba, instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance))
 		if err != nil {
 			reqLogger.Error(err, "Failed to reconcile CertManager Certificate")
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -786,15 +757,6 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 		err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: instance.GetNamespace()}, secret)
 		if err != nil {
 			return r.ManageError(fmt.Errorf("Secret %q was not found in namespace %q, %w", secretName, instance.GetNamespace(), err), common.StatusConditionTypeReconciled, instance)
-		} else {
-			workerCache.ReleaseWorkingInstance(WORKER, instance.GetNamespace(), instance.GetName())
-			if useCertmanager && workerCache.PeekIssuerWork() == nil {
-				// perform certificate work
-				item := workerCache.GetCertificateWork()
-				if item != nil {
-					r.generateSvcCertSecret(ba, item.instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance), false) // pre-load for the next instance without reservation
-				}
-			}
 		}
 	}
 
