@@ -67,11 +67,8 @@ COPY --chown=${USER_ID}:${GROUP_ID} LICENSE /licenses/
 WORKDIR /
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/manager .
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/internal/controller/assets/ /internal/controller/assets
-# COPY --from=liberty --chown=${USER_ID}:${GROUP_ID} /opt/ol/wlp/bin/securityUtility /internal/controller/assets/securityUtility
-COPY --from=liberty --chown=${USER_ID}:${GROUP_ID}  /opt/ol/wlp/bin/tools/ws-securityutil.jar /internal/controller/assets/ws-securityutil.jar
-USER 0
-RUN chmod a+rw /internal/controller/assets/ws-securityutil.jar
+COPY --from=liberty --chown=${USER_ID}:${GROUP_ID} /opt/ /opt
 
-USER ${USER_ID}:${GROUP_ID}
+RUN /opt/ol/wlp/bin/securityUtility encode abc123
 
 ENTRYPOINT ["/manager"]
