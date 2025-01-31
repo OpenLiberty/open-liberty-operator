@@ -67,8 +67,6 @@ COPY --chown=${USER_ID}:${GROUP_ID} LICENSE /licenses/
 WORKDIR /
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/manager .
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/internal/controller/assets/ /internal/controller/assets
-COPY --from=liberty --chown=${USER_ID}:${GROUP_ID} /opt/ /opt
-
-RUN /opt/ol/wlp/bin/securityUtility encode abc123
+COPY --from=liberty --chown=${USER_ID}:${GROUP_ID} /opt .
 
 ENTRYPOINT ["/manager"]
