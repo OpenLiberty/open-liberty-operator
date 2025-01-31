@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"bytes"
 	"fmt"
 	"os/exec"
 )
@@ -33,9 +34,12 @@ func createLTPAKeys(password string, passwordKey *string) ([]byte, error) {
 
 func callSecurityUtility(params []string) ([]byte, error) {
 	cmd := exec.Command(SECURITY_UTILITY_BINARY, params...)
-	stdout, err := cmd.Output()
+	err := cmd.Run()
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 	if err != nil {
 		return []byte{}, err
 	}
-	return stdout, nil
+	return []byte{}, nil
 }
