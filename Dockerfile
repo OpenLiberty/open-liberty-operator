@@ -39,6 +39,8 @@ RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -ldflags="-s -w" -a -o mana
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM registry.access.redhat.com/ubi8/openjdk-11:latest
 
+RUN adduser -u 65532 -r -g root -s /usr/sbin/nologin default
+
 ARG USER_ID=65532
 ARG GROUP_ID=65532
 
