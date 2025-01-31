@@ -908,6 +908,15 @@ func GetCommaSeparatedArray(stringList string) []string {
 }
 
 var letterNums = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
+var letterNums2 = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890")
+
+func GetRandomAlphanumeric(length int) string {
+	b := make([]rune, length)
+	for i := range b {
+		b[i] = letterNums2[rand.IntN(len(letterNums2))]
+	}
+	return string(b)
+}
 
 func GetRandomLowerAlphanumericSuffix(length int) string {
 	b := make([]rune, length)

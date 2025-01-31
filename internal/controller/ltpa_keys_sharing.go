@@ -2,10 +2,7 @@ package controller
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -256,43 +253,24 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(operatorNamespace string, instan
 			return "", "", leaderName, fmt.Errorf("Waiting for OpenLibertyApplication instance '" + leaderName + "' to generate the shared LTPA keys file for the namespace '" + instance.Namespace + "'.")
 		}
 
-		// Get client to Liberty proxy
-		client, err := lutils.GetLibertyProxyClient(r.GetClient(), operatorNamespace, OperatorShortName)
-		if err != nil {
-			return "", "", "", err
-		}
-
 		// Check the password encryption key
 		passwordEncryptionKey, encryptionSecretLastRotation, encryptionKeySharingEnabled, err := r.getInternalPasswordEncryptionKeyState(instance, passwordEncryptionMetadata)
 		if encryptionKeySharingEnabled && err != nil {
 			return "", "", "", err
 		}
 
-		var proxyRes *http.Response
-		var proxyErr error
+		password := lutils.GetRandomAlphanumeric(15)
+		var currentPasswordEncryptionKey *string
 		if len(passwordEncryptionKey) > 0 {
-			proxyRes, proxyErr = lutils.GetLibertyProxy(operatorNamespace, client, "SecurityUtilityCreateLTPAKeys", fmt.Sprintf("key=%s", passwordEncryptionKey))
+			currentPasswordEncryptionKey = &passwordEncryptionKey
 		} else {
-			proxyRes, proxyErr = lutils.GetLibertyProxy(operatorNamespace, client, "SecurityUtilityCreateLTPAKeys")
+			currentPasswordEncryptionKey = nil
 		}
-		if proxyErr != nil {
-			return "", "", "", proxyErr
-		}
-		defer proxyRes.Body.Close()
-
-		var ltpaResponse SecurityUtilityCreateLTPAKeysResponse
-		if err := json.NewDecoder(proxyRes.Body).Decode(&ltpaResponse); err != nil {
-			return "", "", "", fmt.Errorf("could not parse response from the liberty proxy")
-		}
-
-		// Create LTPA Secret
-		if !ltpaResponse.OK {
-			return "", "", "", fmt.Errorf("received an invalid response from the liberty proxy")
-		}
-		ltpaKeysStringData, err := base64.StdEncoding.DecodeString(ltpaResponse.LTPAKeys)
+		ltpaKeysStringData, err := createLTPAKeys(password, currentPasswordEncryptionKey)
 		if err != nil {
-			return "", "", "", fmt.Errorf("could not base64 decode LTPA keys from the liberty proxy")
+			return "", "", "", err
 		}
+
 		ltpaSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaMetadata.PathIndex
 		ltpaSecret.Data = make(map[string][]byte)
 		if passwordEncryptionKey != "" && encryptionSecretLastRotation != "" {
@@ -300,7 +278,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(operatorNamespace string, instan
 		}
 		lastRotation := strconv.FormatInt(time.Now().Unix(), 10)
 		ltpaSecret.Data["lastRotation"] = []byte(lastRotation)
-		ltpaSecret.Data["rawPassword"] = []byte(ltpaResponse.RawPassword)
+		ltpaSecret.Data["rawPassword"] = []byte(password)
 		ltpaSecret.Data[lutils.LTPAKeysFileName] = ltpaKeysStringData
 
 		if err := r.CreateOrUpdate(ltpaSecret, nil, func() error {
@@ -437,40 +415,22 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(operatorNamespace string, inst
 		} else { // otherwise, create the LTPA Config
 			password := string(ltpaSecret.Data["rawPassword"])
 
-			// Get client to Liberty proxy
-			client, err := lutils.GetLibertyProxyClient(r.GetClient(), operatorNamespace, OperatorShortName)
-			if err != nil {
-				return "", err
-			}
-
 			// Check the password encryption key
 			passwordEncryptionKey, encryptionSecretLastRotation, encryptionKeySharingEnabled, err := r.getInternalPasswordEncryptionKeyState(instance, passwordEncryptionMetadata)
 			if encryptionKeySharingEnabled && err != nil {
 				return "", err
 			}
 
-			// Make request for the LTPA config
-			var proxyRes *http.Response
-			var proxyErr error
+			// password := lutils.GetRandomAlphanumeric(15)
+			var currentPasswordEncryptionKey *string
 			if len(passwordEncryptionKey) > 0 {
-				proxyRes, proxyErr = lutils.GetLibertyProxy(operatorNamespace, client, "SecurityUtilityEncode", fmt.Sprintf("password=%s", password), fmt.Sprintf("key=%s", passwordEncryptionKey))
+				currentPasswordEncryptionKey = &passwordEncryptionKey
 			} else {
-				proxyRes, proxyErr = lutils.GetLibertyProxy(operatorNamespace, client, "SecurityUtilityEncode", fmt.Sprintf("password=%s", password))
+				currentPasswordEncryptionKey = nil
 			}
-			if proxyErr != nil {
+			encodedPassword, err := encode(password, currentPasswordEncryptionKey)
+			if err != nil {
 				return "", err
-			}
-			defer proxyRes.Body.Close()
-
-			var ltpaConfigResponse SecurityUtilityEncodeResponse
-			if err := json.NewDecoder(proxyRes.Body).Decode(&ltpaConfigResponse); err != nil {
-				return "", fmt.Errorf("could not parse response from the operator liberty proxy")
-			}
-			fmt.Printf("LTPA config response: %+v\n", ltpaConfigResponse)
-
-			// Create LTPA config Secret
-			if !ltpaConfigResponse.OK {
-				return "", fmt.Errorf("received an invalid response from the operator liberty proxy")
 			}
 
 			ltpaConfigSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaConfigMetadata.PathIndex
@@ -479,7 +439,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(operatorNamespace string, inst
 				ltpaConfigSecret.Data["encryptionSecretLastRotation"] = []byte(encryptionSecretLastRotation)
 			}
 			ltpaConfigSecret.Data["lastRotation"] = []byte(ltpaSecret.Data["lastRotation"])
-			ltpaConfigSecret.Data["password"] = []byte(ltpaConfigResponse.Password)
+			ltpaConfigSecret.Data["password"] = encodedPassword
 
 			if err := r.CreateOrUpdate(ltpaConfigSecret, nil, func() error {
 				return nil
