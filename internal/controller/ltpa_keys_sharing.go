@@ -271,7 +271,10 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(operatorNamespace string, instan
 		if err != nil {
 			return "", "", "", err
 		}
-		ltpaKeysStringData := base64.RawStdEncoding.EncodeToString(rawLTPAKeysStringData)
+		ltpaKeysStringData, err := base64.StdEncoding.DecodeString(string(rawLTPAKeysStringData))
+		if err != nil {
+			return "", "", "", err
+		}
 
 		ltpaSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaMetadata.PathIndex
 		ltpaSecret.Data = make(map[string][]byte)
@@ -281,7 +284,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(operatorNamespace string, instan
 		lastRotation := strconv.FormatInt(time.Now().Unix(), 10)
 		ltpaSecret.Data["lastRotation"] = []byte(lastRotation)
 		ltpaSecret.Data["rawPassword"] = []byte(password)
-		ltpaSecret.Data[lutils.LTPAKeysFileName] = []byte(ltpaKeysStringData)
+		ltpaSecret.Data[lutils.LTPAKeysFileName] = ltpaKeysStringData
 
 		if err := r.CreateOrUpdate(ltpaSecret, nil, func() error {
 			return nil
