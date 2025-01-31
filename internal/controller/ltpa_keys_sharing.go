@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"strings"
@@ -266,10 +267,11 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(operatorNamespace string, instan
 		} else {
 			currentPasswordEncryptionKey = nil
 		}
-		ltpaKeysStringData, err := createLTPAKeys(password, currentPasswordEncryptionKey)
+		rawLTPAKeysStringData, err := createLTPAKeys(password, currentPasswordEncryptionKey)
 		if err != nil {
 			return "", "", "", err
 		}
+		ltpaKeysStringData := base64.RawStdEncoding.EncodeToString(rawLTPAKeysStringData)
 
 		ltpaSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaMetadata.PathIndex
 		ltpaSecret.Data = make(map[string][]byte)
@@ -279,7 +281,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(operatorNamespace string, instan
 		lastRotation := strconv.FormatInt(time.Now().Unix(), 10)
 		ltpaSecret.Data["lastRotation"] = []byte(lastRotation)
 		ltpaSecret.Data["rawPassword"] = []byte(password)
-		ltpaSecret.Data[lutils.LTPAKeysFileName] = ltpaKeysStringData
+		ltpaSecret.Data[lutils.LTPAKeysFileName] = []byte(ltpaKeysStringData)
 
 		if err := r.CreateOrUpdate(ltpaSecret, nil, func() error {
 			return nil
