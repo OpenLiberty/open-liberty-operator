@@ -67,11 +67,9 @@ COPY --chown=${USER_ID}:${GROUP_ID} LICENSE /licenses/
 WORKDIR /
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/manager .
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/internal/controller/assets/ /internal/controller/assets
-COPY --from=liberty --chown=${USER_ID}:0 /opt/ol/wlp/bin /opt/ol/wlp/bin
-# COPY --from=liberty --chown=${USER_ID}:0 /opt/java /opt/java
+COPY --from=liberty --chown=${USER_ID}:0 /opt/ol/wlp /opt/ol/wlp
 USER 0 
 RUN chmod -R g+rw /opt/ol
-# RUN chmod -R g+rw /opt/java
 USER $USER_ID
 
 ENTRYPOINT ["/manager"]
