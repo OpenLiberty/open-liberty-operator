@@ -30,11 +30,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	"github.com/OpenLiberty/open-liberty-operator/internal/controller"
-	webhookappsopenlibertyiov1 "github.com/OpenLiberty/open-liberty-operator/internal/webhook/v1"
 
 	appsopenlibertyiov1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	"github.com/application-stacks/runtime-component-operator/common"
@@ -129,11 +127,6 @@ func main() {
 		Metrics: metricsserver.Options{
 			BindAddress: "0",
 		},
-		WebhookServer: &webhook.DefaultServer{
-			Options: webhook.Options{
-				Port: 9443,
-			},
-		},
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "7111f50b.apps.openliberty.io",
@@ -175,14 +168,6 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenLibertyTrace")
 		os.Exit(1)
 	}
-	// nolint:goconst
-	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = webhookappsopenlibertyiov1.SetupOpenLibertyApplicationWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "OpenLibertyApplication")
-			os.Exit(1)
-		}
-	}
-	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
