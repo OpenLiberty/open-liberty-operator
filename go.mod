@@ -88,6 +88,5 @@ require (
 
 replace (
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.14.0
-	golang.org/x/net => golang.org/x/net v0.30.0
 	golang.org/x/text => golang.org/x/text v0.14.0
 )
