@@ -77,7 +77,7 @@ spec:
           allowPrivilegeEscalation: false
           privileged: false
           runAsNonRoot: true
-          readOnlyRootFilesystem: false
+          readOnlyRootFilesystem: true
           capabilities:
             drop:
               - ALL
@@ -90,6 +90,13 @@ spec:
           requests:
             cpu: 200m
             memory: 128Mi
+        volumeMounts:
+          - name: scratch
+            mountPath: /opt/ol/wlp/output
+            subPath: create-ltpa-keys
+      volumes:
+        - name: scratch
+          emptyDir: {}
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
       affinity:

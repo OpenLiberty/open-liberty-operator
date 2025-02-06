@@ -92,7 +92,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2025-02-03T20:46:16Z"
+    createdAt: "2025-02-06T14:49:48Z"
     description: Deploy and manage containerized Liberty applications
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "true"
@@ -1213,16 +1213,23 @@ spec:
                     drop:
                     - ALL
                   privileged: false
-                  readOnlyRootFilesystem: false
+                  readOnlyRootFilesystem: true
                   runAsNonRoot: true
                   seccompProfile:
                     type: RuntimeDefault
+                volumeMounts:
+                - mountPath: /opt/ol/wlp/output
+                  name: scratch
+                  subPath: create-ltpa-keys
               securityContext:
                 runAsNonRoot: true
                 seccompProfile:
                   type: RuntimeDefault
               serviceAccountName: olo-controller-manager
               terminationGracePeriodSeconds: 10
+              volumes:
+              - emptyDir: {}
+                name: scratch
       permissions:
       - rules:
         - apiGroups:
