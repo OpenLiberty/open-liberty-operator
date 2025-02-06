@@ -66,7 +66,7 @@ WORKDIR /
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/manager .
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/internal/controller/assets/ /internal/controller/assets
 
-RUN curl -L --output - "https://repo1.maven.org/maven2/io/openliberty/openliberty-kernel/${LIBERTY_VERSION}/openliberty-kernel-${LIBERTY_VERSION}.zip | tar -xz -C /opt/ol/" \
+RUN curl -L --output - "https://repo1.maven.org/maven2/io/openliberty/openliberty-kernel/${LIBERTY_VERSION}/openliberty-kernel-${LIBERTY_VERSION}.zip" | tar -xz -C /opt/ol/" \
     mkdir -p /opt/ol/wlp/output
 
 ENTRYPOINT ["/manager"]
