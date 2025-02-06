@@ -1,5 +1,3 @@
-FROM icr.io/appcafe/open-liberty:full-java21-openj9-ubi-minimal as liberty
-
 # Build the manager binary
 FROM registry.access.redhat.com/ubi8-minimal:latest as builder
 ARG GO_PLATFORM=amd64
@@ -66,6 +64,5 @@ COPY --chown=${USER_ID}:${GROUP_ID} LICENSE /licenses/
 WORKDIR /
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/manager .
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/internal/controller/assets/ /internal/controller/assets
-COPY --from=liberty --chown=${USER_ID}:0 /opt/ol/wlp /opt/ol/wlp
 
 ENTRYPOINT ["/manager"]
