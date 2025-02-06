@@ -70,7 +70,7 @@ COPY --chown=${USER_ID}:${GROUP_ID} LICENSE /licenses/
 WORKDIR /
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/manager .
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/internal/controller/assets/ /internal/controller/assets
-COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/opt/ol/wlp/ /opt/ol/wlp
+COPY --from=builder --chown=${USER_ID}:0 /workspace/opt/ol/wlp/ /opt/ol/wlp
 
 
 ENTRYPOINT ["/manager"]
