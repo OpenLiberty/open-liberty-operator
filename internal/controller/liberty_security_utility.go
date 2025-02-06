@@ -29,7 +29,7 @@ func createLTPAKeys(password string, passwordKey *string) ([]byte, error) {
 	callDeleteFile(tmpFilePath)
 
 	// mkdir if not exists
-	callMkdir(SECURITY_UTILITY_OUTPUT_FOLDER)
+	// callMkdir(SECURITY_UTILITY_OUTPUT_FOLDER)
 
 	// create the key
 	params := []string{}
