@@ -46,6 +46,7 @@ ARG VCS_URL="https://github.com/OpenLiberty/open-liberty-operator"
 ARG NAME="open-liberty-operator"
 ARG SUMMARY="Open Liberty Operator"
 ARG DESCRIPTION="This image contains the controllers for Open Liberty Operator."
+ARG LIBERTY_VERSION=25.0.0.1
 
 LABEL name=$NAME \
       vendor=IBM \
@@ -64,5 +65,8 @@ COPY --chown=${USER_ID}:${GROUP_ID} LICENSE /licenses/
 WORKDIR /
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/manager .
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/internal/controller/assets/ /internal/controller/assets
+
+RUN curl -L --output - "https://repo1.maven.org/maven2/io/openliberty/openliberty-kernel/${LIBERTY_VERSION}/openliberty-kernel-${LIBERTY_VERSION}.zip | tar -xz -C /opt/ol/" \
+    mkdir /opt/ol/wlp/output
 
 ENTRYPOINT ["/manager"]
