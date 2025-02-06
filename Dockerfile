@@ -2,8 +2,9 @@
 FROM registry.access.redhat.com/ubi8-minimal:latest as builder
 ARG GO_PLATFORM=amd64
 ARG GO_VERSION_ARG
+ARG LIBERTY_VERSION=25.0.0.1
 ENV PATH=$PATH:/usr/local/go/bin
-RUN microdnf install tar gzip
+RUN microdnf install tar gzip unzip
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -16,7 +17,12 @@ RUN if [ -z "${GO_VERSION_ARG}" ]; then \
       GO_VERSION=${GO_VERSION_ARG}; \
     fi; \
     rm -rf /usr/local/go; \
-    curl -L --output - "https://golang.org/dl/go${GO_VERSION}.linux-${GO_PLATFORM}.tar.gz" | tar -xz -C /usr/local/
+    curl -L --output - "https://golang.org/dl/go${GO_VERSION}.linux-${GO_PLATFORM}.tar.gz" | tar -xz -C /usr/local/ \
+    mkdir -p /opt/ol \
+    curl -L -o /opt/ol/wlp.zip "https://repo1.maven.org/maven2/io/openliberty/openliberty-kernel/${LIBERTY_VERSION}/openliberty-kernel-${LIBERTY_VERSION}.zip" \
+    unzip /opt/ol/wlp.zip \
+    rm -f /opt/ol/wlp.zip \
+    mkdir -p /opt/ol/wlp/output
 
 
 # cache deps before building and copying source so that we don't need to re-download as much
@@ -46,7 +52,6 @@ ARG VCS_URL="https://github.com/OpenLiberty/open-liberty-operator"
 ARG NAME="open-liberty-operator"
 ARG SUMMARY="Open Liberty Operator"
 ARG DESCRIPTION="This image contains the controllers for Open Liberty Operator."
-ARG LIBERTY_VERSION=25.0.0.1
 
 LABEL name=$NAME \
       vendor=IBM \
@@ -65,8 +70,7 @@ COPY --chown=${USER_ID}:${GROUP_ID} LICENSE /licenses/
 WORKDIR /
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/manager .
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/internal/controller/assets/ /internal/controller/assets
+COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /opt/ol/wlp /opt/ol/wlp
 
-RUN curl -L --output - "https://repo1.maven.org/maven2/io/openliberty/openliberty-kernel/${LIBERTY_VERSION}/openliberty-kernel-${LIBERTY_VERSION}.zip" | tar -xz -C /opt/ol/ \
-    mkdir -p /opt/ol/wlp/output
 
 ENTRYPOINT ["/manager"]
