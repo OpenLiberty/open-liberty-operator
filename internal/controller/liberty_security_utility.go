@@ -22,10 +22,15 @@ func encode(password string, passwordKey *string) ([]byte, error) {
 }
 
 func createLTPAKeys(password string, passwordKey *string) ([]byte, error) {
-	params := []string{}
-	params = append(params, SECURITY_UTILITY_CREATE_LTPA_KEYS)
 	tmpFileName := fmt.Sprintf("ltpa-keys-%s.keys", password)
 	tmpFilePath := fmt.Sprintf("%s/%s", SECURITY_UTILITY_OUTPUT_FOLDER, tmpFileName)
+
+	// delete possible colliding file
+	callDeleteFile(tmpFilePath)
+
+	// create the key
+	params := []string{}
+	params = append(params, SECURITY_UTILITY_CREATE_LTPA_KEYS)
 	params = append(params, fmt.Sprintf("--file=%s", tmpFilePath))
 	params = append(params, fmt.Sprintf("--passwordEncoding=%s", "aes")) // use aes encoding
 	if passwordKey != nil && len(*passwordKey) > 0 {
@@ -41,11 +46,15 @@ func createLTPAKeys(password string, passwordKey *string) ([]byte, error) {
 	bytesOut, err := callCommand("/bin/bash", params)
 
 	// delete the key
-	params = []string{}
-	params = append(params, "-c")
-	params = append(params, fmt.Sprintf("rm -f %s", tmpFilePath))
-	callCommand("/bin/bash", params)
+	callDeleteFile(tmpFilePath)
 	return bytesOut, err
+}
+
+func callDeleteFile(filePath string) {
+	params := []string{}
+	params = append(params, "-c")
+	params = append(params, fmt.Sprintf("rm -f %s", filePath))
+	callCommand("/bin/bash", params)
 }
 
 func callSecurityUtility(params []string) ([]byte, error) {
