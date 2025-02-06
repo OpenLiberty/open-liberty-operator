@@ -34,10 +34,18 @@ func createLTPAKeys(password string, passwordKey *string) ([]byte, error) {
 	params = append(params, fmt.Sprintf("--password=%s", password))
 	callSecurityUtility(params)
 
+	// read the key
 	params = []string{}
 	params = append(params, "-c")
 	params = append(params, fmt.Sprintf("cat %s | base64", tmpFilePath))
-	return callCommand("/bin/bash", params)
+	bytesOut, err := callCommand("/bin/bash", params)
+
+	// delete the key
+	params = []string{}
+	params = append(params, "-c")
+	params = append(params, fmt.Sprintf("rm -f %s", tmpFilePath))
+	callCommand("/bin/bash", params)
+	return bytesOut, err
 }
 
 func callSecurityUtility(params []string) ([]byte, error) {
