@@ -20,7 +20,7 @@ RUN if [ -z "${GO_VERSION_ARG}" ]; then \
     curl -L --output - "https://golang.org/dl/go${GO_VERSION}.linux-${GO_PLATFORM}.tar.gz" | tar -xz -C /usr/local/; \
     mkdir -p opt/ol; \
     curl -L -o opt/ol/wlp.zip "https://repo1.maven.org/maven2/io/openliberty/openliberty-kernel/${LIBERTY_VERSION}/openliberty-kernel-${LIBERTY_VERSION}.zip"; \
-    unzip opt/ol/wlp.zip; \
+    unzip opt/ol/wlp.zip -d opt/ol/wlp; \
     rm -f opt/ol/wlp.zip; \
     mkdir -p opt/ol/wlp/output;
 
