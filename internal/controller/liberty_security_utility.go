@@ -47,19 +47,18 @@ func createLTPAKeys(password string, passwordKey *string) ([]byte, error) {
 	params = append(params, "-c")
 	params = append(params, fmt.Sprintf("cat %s | base64", tmpFilePath))
 	bytesOut, err := callCommand("/bin/bash", params)
-	fmt.Println("Generate security utility cmd 2: " + string(bytesOut))
 
 	// delete the key
 	callDeleteFile(tmpFilePath)
 	return bytesOut, err
 }
 
-func callMkdir(folderPath string) {
-	params := []string{}
-	params = append(params, "-c")
-	params = append(params, fmt.Sprintf("mkdir -p %s", folderPath))
-	callCommand("/bin/bash", params)
-}
+// func callMkdir(folderPath string) {
+// 	params := []string{}
+// 	params = append(params, "-c")
+// 	params = append(params, fmt.Sprintf("mkdir -p %s", folderPath))
+// 	callCommand("/bin/bash", params)
+// }
 
 func callDeleteFile(filePath string) {
 	params := []string{}
@@ -73,7 +72,6 @@ func callSecurityUtility(params []string) ([]byte, error) {
 }
 
 func callCommand(binary string, params []string) ([]byte, error) {
-	fmt.Println("bin: " + binary)
 	cmd := exec.Command(binary, params...)
 	stdout, err := cmd.Output()
 	if err != nil {
