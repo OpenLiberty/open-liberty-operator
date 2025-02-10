@@ -15,8 +15,8 @@ import (
 )
 
 // Validates the resource decision tree YAML and generates the leader tracking state (Secret) for maintaining multiple shared resources
-func (r *ReconcileOpenLiberty) reconcileResourceTrackingState(instance *olv1.OpenLibertyApplication, leaderTrackerType string, withCache bool) (lutils.LeaderTrackerMetadataList, error) {
-	treeMap, replaceMap, err := tree.ParseDecisionTree(leaderTrackerType, nil, withCache)
+func (r *ReconcileOpenLiberty) reconcileResourceTrackingState(instance *olv1.OpenLibertyApplication, leaderTrackerType string) (lutils.LeaderTrackerMetadataList, error) {
+	treeMap, replaceMap, err := tree.ParseDecisionTree(leaderTrackerType, nil)
 	if err != nil {
 		return nil, err
 	}

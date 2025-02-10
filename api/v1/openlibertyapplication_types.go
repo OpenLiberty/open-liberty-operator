@@ -163,25 +163,6 @@ type OpenLibertyApplicationSpec struct {
 	// DNS settings for the application pod.
 	// +operator-sdk:csv:customresourcedefinitions:order=35,type=spec,displayName="DNS"
 	DNS *OpenLibertyApplicationDNS `json:"dns,omitempty"`
-
-	Experimental *OpenLibertyApplicationExperimental `json:"experimental,omitempty"`
-
-	ManageCache *bool `json:"enableCaching,omitempty"`
-}
-
-// Defines the Experimental concurrency feature
-type OpenLibertyApplicationExperimental struct {
-	// If set to true, it will enable experimental mode (concurrency) when reconciling the application instance, otherwise does nothing. Defaults to false.
-	// +operator-sdk:csv:customresourcedefinitions:order=1,type=spec,displayName="Manage Concurrency"
-	ManageConcurrency *bool `json:"manageConcurrency,omitempty"`
-
-	// If set to true, it will enable caching when reading the Decision Tree data structure, otherwise does nothing. Defaults to false.
-	// +operator-sdk:csv:customresourcedefinitions:order=2,type=spec,displayName="Manage Cache"
-	ManageCache *bool `json:"manageCache,omitempty"`
-
-	BypassWebhook *bool `json:"bypassWebhook,omitempty"`
-
-	ManageCertOwner *bool `json:"manageCertOwner,omitempty"`
 }
 
 // Defines the DNS
@@ -1640,40 +1621,4 @@ func convertFromCommonStatusEndpointScope(c common.StatusEndpointScope) StatusEn
 	default:
 		panic(c)
 	}
-}
-
-// GetExperimental returns the experimental config for this application instance
-func (cr *OpenLibertyApplication) GetExperimental() *OpenLibertyApplicationExperimental {
-	if cr.Spec.Experimental == nil {
-		return nil
-	}
-	return cr.Spec.Experimental
-}
-
-func (exp *OpenLibertyApplicationExperimental) GetManageCache() *bool {
-	if exp.ManageCache == nil {
-		return nil
-	}
-	return exp.ManageCache
-}
-
-func (exp *OpenLibertyApplicationExperimental) GetManageConcurrency() *bool {
-	if exp.ManageConcurrency == nil {
-		return nil
-	}
-	return exp.ManageConcurrency
-}
-
-func (exp *OpenLibertyApplicationExperimental) GetBypassWebhook() *bool {
-	if exp.BypassWebhook == nil {
-		return nil
-	}
-	return exp.BypassWebhook
-}
-
-func (exp *OpenLibertyApplicationExperimental) GetManageCertOwner() *bool {
-	if exp.ManageCertOwner == nil {
-		return nil
-	}
-	return exp.ManageCertOwner
 }

@@ -208,332 +208,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// if currentGen == 1 {
 	// 	return reconcile.Result{}, nil
 	// }
-
-	// From here, the Open Liberty Application instance is stored in shared memory and can begin concurrent actions.
-	if r.isConcurrencyEnabled(instance) {
-		return r.concurrentReconcile(ns, ba, instance, reqLogger, isKnativeSupported, ctx, request)
-	} else {
-		return r.sequentialReconcile(ns, ba, instance, reqLogger, reqDebugLogger, isKnativeSupported, ctx, request)
-	}
-}
-
-func (r *ReconcileOpenLiberty) checkCertificateReady(cert *certmanagerv1.Certificate) error {
-	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: cert.Name, Namespace: cert.Namespace}, cert)
-	if err != nil {
-		return err
-	}
-	isReady := false
-	for _, condition := range cert.Status.Conditions {
-		if condition.Type == certmanagerv1.CertificateConditionReady {
-			if condition.Status == certmanagermetav1.ConditionTrue {
-				isReady = true
-			}
-		}
-	}
-	if !isReady {
-		return fmt.Errorf("certificate %s is not ready", cert.Name)
-	}
-	return nil
-}
-
-func (r *ReconcileOpenLiberty) checkIssuerReady(issuer *certmanagerv1.Issuer) error {
-	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: issuer.Name, Namespace: issuer.Namespace}, issuer)
-	if err != nil {
-		return err
-	}
-	isReady := false
-	for _, condition := range issuer.Status.Conditions {
-		if condition.Type == certmanagerv1.IssuerConditionReady {
-			if condition.Status == certmanagermetav1.ConditionTrue {
-				isReady = true
-			}
-		}
-	}
-	if !isReady {
-		return fmt.Errorf("issuer %s is not ready", issuer.Name)
-	}
-	return nil
-}
-
-func (r *ReconcileOpenLiberty) generateCMIssuer(namespace string, prefix string, CACommonName string, operatorName string) (string, error) {
-	if ok, err := r.IsGroupVersionSupported(certmanagerv1.SchemeGroupVersion.String(), "Issuer"); err != nil {
-		return "", err
-	} else if !ok {
-		return "", APIVersionNotFoundError
-	}
-
-	issuer := &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
-		Name:      prefix + "-self-signed",
-		Namespace: namespace,
-	}}
-	err := r.CreateOrUpdate(issuer, nil, func() error {
-		issuer.Spec.SelfSigned = &certmanagerv1.SelfSignedIssuer{}
-		issuer.Labels = oputils.MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
-		return nil
-	})
-	if err != nil {
-		return "", err
-	}
-	if err := r.checkIssuerReady(issuer); err != nil {
-		return "", err
-	}
-
-	caCert := &certmanagerv1.Certificate{ObjectMeta: metav1.ObjectMeta{
-		Name:      prefix + "-ca-cert",
-		Namespace: namespace,
-	}}
-
-	caCertSecretName := prefix + "-ca-tls"
-	err = r.CreateOrUpdate(caCert, nil, func() error {
-		caCert.Labels = oputils.MergeMaps(caCert.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
-		caCert.Spec.CommonName = CACommonName
-		caCert.Spec.IsCA = true
-		caCert.Spec.SecretName = caCertSecretName
-		caCert.Spec.IssuerRef = certmanagermetav1.ObjectReference{
-			Name: prefix + "-self-signed",
-		}
-
-		duration, err := time.ParseDuration(common.LoadFromConfig(common.Config, common.OpConfigCMCADuration))
-		if err != nil {
-			return err
-		}
-
-		caCert.Spec.Duration = &metav1.Duration{Duration: duration}
-		return nil
-	})
-	if err != nil {
-		return caCertSecretName, err
-	}
-
-	CustomCACert := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-		Name:      prefix + "-custom-ca-tls",
-		Namespace: namespace,
-	}}
-	customCACertFound := false
-	err = r.GetClient().Get(context.Background(), types.NamespacedName{Name: CustomCACert.GetName(),
-		Namespace: CustomCACert.GetNamespace()}, CustomCACert)
-	if err == nil {
-		customCACertFound = true
-	} else {
-		if err := r.checkCertificateReady(caCert); err != nil {
-			return caCertSecretName, err
-		}
-	}
-
-	issuer = &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
-		Name:      prefix + "-ca-issuer",
-		Namespace: namespace,
-	}}
-	err = r.CreateOrUpdate(issuer, nil, func() error {
-		issuer.Labels = oputils.MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
-		issuer.Spec.CA = &certmanagerv1.CAIssuer{}
-		issuer.Spec.CA.SecretName = prefix + "-ca-tls"
-		if issuer.Annotations == nil {
-			issuer.Annotations = map[string]string{}
-		}
-		if customCACertFound {
-			issuer.Spec.CA.SecretName = CustomCACert.Name
-
-		}
-		return nil
-	})
-	if err != nil {
-		return caCertSecretName, err
-	}
-
-	for i := range issuer.Status.Conditions {
-		if issuer.Status.Conditions[i].Type == certmanagerv1.IssuerConditionReady && issuer.Status.Conditions[i].Status == certmanagermetav1.ConditionFalse {
-			return caCertSecretName, errors.New("Certificate Issuer is not ready")
-		}
-		if issuer.Status.Conditions[i].Type == certmanagerv1.IssuerConditionReady && issuer.Status.Conditions[i].ObservedGeneration != issuer.ObjectMeta.Generation {
-			return caCertSecretName, errors.New("Certificate Issuer is not ready")
-		}
-	}
-	return caCertSecretName, nil
-}
-
-func (r *ReconcileOpenLiberty) generateSvcCertIssuer(ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, prefix string, CACommonName string, operatorName string, addOwnerReference bool, requiresReservation bool) (bool, string, error) {
-	delete(ba.GetStatus().GetReferences(), common.StatusReferenceCertSecretName)
-	cleanup := func() {
-		if ok, err := r.IsGroupVersionSupported(certmanagerv1.SchemeGroupVersion.String(), "Certificate"); err != nil {
-			return
-		} else if ok {
-			obj := ba.(metav1.Object)
-			svcCert := &certmanagerv1.Certificate{}
-			svcCert.Name = obj.GetName() + "-svc-tls-cm"
-			svcCert.Namespace = obj.GetNamespace()
-			r.GetClient().Delete(context.Background(), svcCert)
-		}
-	}
-
-	if ba.GetCreateKnativeService() != nil && *ba.GetCreateKnativeService() {
-		cleanup()
-		return false, "", nil
-	}
-	if ba.GetService() != nil && ba.GetService().GetCertificateSecretRef() != nil {
-		cleanup()
-		return false, "", nil
-	}
-	if ba.GetManageTLS() != nil && !*ba.GetManageTLS() {
-		cleanup()
-		return false, "", nil
-	}
-	if ba.GetService() != nil && ba.GetService().GetAnnotations() != nil {
-		if _, ok := ba.GetService().GetAnnotations()["service.beta.openshift.io/serving-cert-secret-name"]; ok {
-			cleanup()
-			return false, "", nil
-		}
-		if _, ok := ba.GetService().GetAnnotations()["service.alpha.openshift.io/serving-cert-secret-name"]; ok {
-			cleanup()
-			return false, "", nil
-		}
-	}
-	if ok, err := r.IsGroupVersionSupported(certmanagerv1.SchemeGroupVersion.String(), "Certificate"); err != nil {
-		return false, "", err
-	} else if ok {
-		bao := ba.(metav1.Object)
-
-		issuerSecretName, cmIssuerErr := r.generateCMIssuer(bao.GetNamespace(), prefix, CACommonName, operatorName)
-		if cmIssuerErr != nil {
-			if errors.Is(cmIssuerErr, APIVersionNotFoundError) {
-				return false, issuerSecretName, nil
-			}
-			return true, issuerSecretName, cmIssuerErr
-		}
-	} else {
-		return false, "", nil
-	}
-	return true, "", nil
-}
-
-func (r *ReconcileOpenLiberty) generateSvcCertSecret(ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, prefix string, CACommonName string, operatorName string, addOwnerReference bool) (bool, error) {
-	if ok, err := r.IsGroupVersionSupported(certmanagerv1.SchemeGroupVersion.String(), "Certificate"); err != nil {
-		return false, err
-	} else if ok {
-		bao := ba.(metav1.Object)
-
-		svcCertSecretName := bao.GetName() + "-svc-tls-cm"
-
-		svcCert := &certmanagerv1.Certificate{ObjectMeta: metav1.ObjectMeta{
-			Name:      svcCertSecretName,
-			Namespace: bao.GetNamespace(),
-		}}
-
-		customIssuer := &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
-			Name:      prefix + "-custom-issuer",
-			Namespace: bao.GetNamespace(),
-		}}
-
-		customIssuerFound := false
-		err = r.GetClient().Get(context.Background(), types.NamespacedName{Name: customIssuer.Name,
-			Namespace: customIssuer.Namespace}, customIssuer)
-		if err == nil {
-			customIssuerFound = true
-		}
-
-		shouldRefreshCertSecret := false
-		var owner metav1.Object
-		if addOwnerReference {
-			owner = bao
-		} else {
-			owner = nil
-		}
-		err = r.CreateOrUpdate(svcCert, owner, func() error {
-			svcCert.Labels = ba.GetLabels()
-			svcCert.Annotations = oputils.MergeMaps(svcCert.Annotations, ba.GetAnnotations())
-			if ba.GetService() != nil {
-				if ba.GetService().GetCertificate() != nil {
-					if ba.GetService().GetCertificate().GetAnnotations() != nil {
-						svcCert.Annotations = oputils.MergeMaps(svcCert.Annotations, ba.GetService().GetCertificate().GetAnnotations())
-					}
-				}
-			}
-
-			svcCert.Spec.CommonName = trimCommonName(bao.GetName(), bao.GetNamespace())
-			svcCert.Spec.DNSNames = make([]string, 4)
-			svcCert.Spec.DNSNames[0] = bao.GetName() + "." + bao.GetNamespace() + ".svc"
-			svcCert.Spec.DNSNames[1] = bao.GetName() + "." + bao.GetNamespace() + ".svc.cluster.local"
-			svcCert.Spec.DNSNames[2] = bao.GetName() + "." + bao.GetNamespace()
-			svcCert.Spec.DNSNames[3] = bao.GetName()
-			if ba.GetStatefulSet() != nil {
-				svcCert.Spec.DNSNames = append(svcCert.Spec.DNSNames, bao.GetName()+"-headless."+bao.GetNamespace()+".svc")
-				svcCert.Spec.DNSNames = append(svcCert.Spec.DNSNames, bao.GetName()+"-headless."+bao.GetNamespace()+".svc.cluster.local")
-				svcCert.Spec.DNSNames = append(svcCert.Spec.DNSNames, bao.GetName()+"-headless."+bao.GetNamespace())
-				svcCert.Spec.DNSNames = append(svcCert.Spec.DNSNames, bao.GetName()+"-headless")
-				// Wildcard entries for the pods
-				svcCert.Spec.DNSNames = append(svcCert.Spec.DNSNames, "*."+bao.GetName()+"-headless."+bao.GetNamespace()+".svc")
-				svcCert.Spec.DNSNames = append(svcCert.Spec.DNSNames, "*."+bao.GetName()+"-headless."+bao.GetNamespace()+".svc.cluster.local")
-				svcCert.Spec.DNSNames = append(svcCert.Spec.DNSNames, "*."+bao.GetName()+"-headless."+bao.GetNamespace())
-				svcCert.Spec.DNSNames = append(svcCert.Spec.DNSNames, "*."+bao.GetName()+"-headless")
-			}
-			svcCert.Spec.IsCA = false
-			svcCert.Spec.IssuerRef = certmanagermetav1.ObjectReference{
-				Name: prefix + "-ca-issuer",
-			}
-			if customIssuerFound {
-				svcCert.Spec.IssuerRef.Name = customIssuer.Name
-			}
-
-			rVersion, _ := oputils.GetIssuerResourceVersion(r.GetClient(), svcCert)
-			if svcCert.Spec.SecretTemplate == nil {
-				svcCert.Spec.SecretTemplate = &certmanagerv1.CertificateSecretTemplate{
-					Annotations: map[string]string{},
-				}
-			}
-
-			if svcCert.Spec.SecretTemplate.Annotations[ba.GetGroupName()+"/cm-issuer-version"] != rVersion {
-				if svcCert.Spec.SecretTemplate.Annotations == nil {
-					svcCert.Spec.SecretTemplate.Annotations = map[string]string{}
-				}
-				svcCert.Spec.SecretTemplate.Annotations[ba.GetGroupName()+"/cm-issuer-version"] = rVersion
-				shouldRefreshCertSecret = true
-			}
-
-			svcCert.Spec.SecretName = svcCertSecretName
-
-			duration, err := time.ParseDuration(common.LoadFromConfig(common.Config, common.OpConfigCMCertDuration))
-			if err != nil {
-				return err
-			}
-			svcCert.Spec.Duration = &metav1.Duration{Duration: duration}
-
-			return nil
-		})
-		if err != nil {
-			return true, err
-		}
-		if shouldRefreshCertSecret {
-			r.DeleteResource(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: svcCertSecretName, Namespace: svcCert.Namespace}})
-		}
-		ba.GetStatus().SetReference(common.StatusReferenceCertSecretName, svcCertSecretName)
-	} else {
-		return false, nil
-	}
-	return true, nil
-}
-
-// Create a common name for a certificate that is no longer
-// that 64 bytes
-func trimCommonName(compName string, ns string) (cn string) {
-
-	commonName := compName + "." + ns + ".svc"
-	if len(commonName) > 64 {
-		// Try removing '.svc'
-		commonName = compName + "." + ns
-	}
-	if len(commonName) > 64 {
-		// Try removing the namespace
-		commonName = compName
-	}
-	if len(commonName) > 64 {
-		// Just have to truncate
-		commonName = commonName[:64]
-	}
-
-	return commonName
-}
-
-func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, reqLogger logr.Logger, reqDebugLogger logr.Logger, isKnativeSupported bool, ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	defaultMeta := metav1.ObjectMeta{
 		Name:      instance.Name,
 		Namespace: instance.Namespace,
@@ -570,7 +244,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 	var ltpaMetadataList *lutils.LTPAMetadataList
 	var ltpaKeysMetadata, ltpaConfigMetadata *lutils.LTPAMetadata
 	if r.isLTPAKeySharingEnabled(instance) {
-		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, LTPA_RESOURCE_SHARING_FILE_NAME, r.isCachingEnabled(instance))
+		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, LTPA_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
@@ -584,7 +258,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 	var passwordEncryptionMetadataList *lutils.PasswordEncryptionMetadataList
 	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{}
 	if r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata) {
-		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, r.isCachingEnabled(instance))
+		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
@@ -611,8 +285,8 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 		}
 	}
 
-	if operatorNamespace == "" {
-		operatorNamespace = instance.GetNamespace()
+	if ns == "" {
+		ns = instance.GetNamespace()
 	}
 
 	serviceAccountName := oputils.GetServiceAccountName(instance)
@@ -719,7 +393,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 			r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
 	}
-	useCertmanager, issuerSecretName, err := r.generateSvcCertIssuer(ba, instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance), true)
+	useCertmanager, issuerSecretName, err := r.generateSvcCertIssuer(ba, instance, OperatorShortName, "Open Liberty Operator", OperatorName)
 	if err != nil {
 		reqLogger.Error(err, "Failed to reconcile CertManager Issuer")
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -735,7 +409,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 	}
 
 	if useCertmanager {
-		_, err := r.generateSvcCertSecret(ba, instance, OperatorShortName, "Open Liberty Operator", OperatorName, r.isCertOwnerEnabled(instance))
+		_, err := r.generateSvcCertSecret(ba, instance, OperatorShortName, "Open Liberty Operator", OperatorName)
 		if err != nil {
 			reqLogger.Error(err, "Failed to reconcile CertManager Certificate")
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -847,7 +521,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 	}
 
 	// Create and manage the shared LTPA keys Secret if the feature is enabled
-	message, ltpaSecretName, ltpaKeysLastRotation, err := r.reconcileLTPAKeys(operatorNamespace, instance, ltpaKeysMetadata)
+	message, ltpaSecretName, ltpaKeysLastRotation, err := r.reconcileLTPAKeys(instance, ltpaKeysMetadata)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -861,7 +535,7 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 	}
 
 	// Using the LTPA keys and config metadata, create and manage the shared LTPA Liberty server XML if the feature is enabled
-	message, ltpaXMLSecretName, err := r.reconcileLTPAConfig(operatorNamespace, instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
+	message, ltpaXMLSecretName, err := r.reconcileLTPAConfig(instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -1200,6 +874,316 @@ func (r *ReconcileOpenLiberty) sequentialReconcile(operatorNamespace string, ba 
 	instance.Status.Versions.Reconciled = lutils.OperandVersion
 	reqLogger.Info("Reconcile OpenLibertyApplication - completed")
 	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
+}
+
+func (r *ReconcileOpenLiberty) checkCertificateReady(cert *certmanagerv1.Certificate) error {
+	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: cert.Name, Namespace: cert.Namespace}, cert)
+	if err != nil {
+		return err
+	}
+	isReady := false
+	for _, condition := range cert.Status.Conditions {
+		if condition.Type == certmanagerv1.CertificateConditionReady {
+			if condition.Status == certmanagermetav1.ConditionTrue {
+				isReady = true
+			}
+		}
+	}
+	if !isReady {
+		return fmt.Errorf("certificate %s is not ready", cert.Name)
+	}
+	return nil
+}
+
+func (r *ReconcileOpenLiberty) checkIssuerReady(issuer *certmanagerv1.Issuer) error {
+	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: issuer.Name, Namespace: issuer.Namespace}, issuer)
+	if err != nil {
+		return err
+	}
+	isReady := false
+	for _, condition := range issuer.Status.Conditions {
+		if condition.Type == certmanagerv1.IssuerConditionReady {
+			if condition.Status == certmanagermetav1.ConditionTrue {
+				isReady = true
+			}
+		}
+	}
+	if !isReady {
+		return fmt.Errorf("issuer %s is not ready", issuer.Name)
+	}
+	return nil
+}
+
+func (r *ReconcileOpenLiberty) generateCMIssuer(namespace string, prefix string, CACommonName string, operatorName string) (string, error) {
+	if ok, err := r.IsGroupVersionSupported(certmanagerv1.SchemeGroupVersion.String(), "Issuer"); err != nil {
+		return "", err
+	} else if !ok {
+		return "", APIVersionNotFoundError
+	}
+
+	issuer := &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
+		Name:      prefix + "-self-signed",
+		Namespace: namespace,
+	}}
+	err := r.CreateOrUpdate(issuer, nil, func() error {
+		issuer.Spec.SelfSigned = &certmanagerv1.SelfSignedIssuer{}
+		issuer.Labels = oputils.MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	if err := r.checkIssuerReady(issuer); err != nil {
+		return "", err
+	}
+
+	caCert := &certmanagerv1.Certificate{ObjectMeta: metav1.ObjectMeta{
+		Name:      prefix + "-ca-cert",
+		Namespace: namespace,
+	}}
+
+	caCertSecretName := prefix + "-ca-tls"
+	err = r.CreateOrUpdate(caCert, nil, func() error {
+		caCert.Labels = oputils.MergeMaps(caCert.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
+		caCert.Spec.CommonName = CACommonName
+		caCert.Spec.IsCA = true
+		caCert.Spec.SecretName = caCertSecretName
+		caCert.Spec.IssuerRef = certmanagermetav1.ObjectReference{
+			Name: prefix + "-self-signed",
+		}
+
+		duration, err := time.ParseDuration(common.LoadFromConfig(common.Config, common.OpConfigCMCADuration))
+		if err != nil {
+			return err
+		}
+
+		caCert.Spec.Duration = &metav1.Duration{Duration: duration}
+		return nil
+	})
+	if err != nil {
+		return caCertSecretName, err
+	}
+
+	CustomCACert := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name:      prefix + "-custom-ca-tls",
+		Namespace: namespace,
+	}}
+	customCACertFound := false
+	err = r.GetClient().Get(context.Background(), types.NamespacedName{Name: CustomCACert.GetName(),
+		Namespace: CustomCACert.GetNamespace()}, CustomCACert)
+	if err == nil {
+		customCACertFound = true
+	} else {
+		if err := r.checkCertificateReady(caCert); err != nil {
+			return caCertSecretName, err
+		}
+	}
+
+	issuer = &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
+		Name:      prefix + "-ca-issuer",
+		Namespace: namespace,
+	}}
+	err = r.CreateOrUpdate(issuer, nil, func() error {
+		issuer.Labels = oputils.MergeMaps(issuer.Labels, map[string]string{"app.kubernetes.io/managed-by": operatorName})
+		issuer.Spec.CA = &certmanagerv1.CAIssuer{}
+		issuer.Spec.CA.SecretName = prefix + "-ca-tls"
+		if issuer.Annotations == nil {
+			issuer.Annotations = map[string]string{}
+		}
+		if customCACertFound {
+			issuer.Spec.CA.SecretName = CustomCACert.Name
+
+		}
+		return nil
+	})
+	if err != nil {
+		return caCertSecretName, err
+	}
+
+	for i := range issuer.Status.Conditions {
+		if issuer.Status.Conditions[i].Type == certmanagerv1.IssuerConditionReady && issuer.Status.Conditions[i].Status == certmanagermetav1.ConditionFalse {
+			return caCertSecretName, errors.New("Certificate Issuer is not ready")
+		}
+		if issuer.Status.Conditions[i].Type == certmanagerv1.IssuerConditionReady && issuer.Status.Conditions[i].ObservedGeneration != issuer.ObjectMeta.Generation {
+			return caCertSecretName, errors.New("Certificate Issuer is not ready")
+		}
+	}
+	return caCertSecretName, nil
+}
+
+func (r *ReconcileOpenLiberty) generateSvcCertIssuer(ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, prefix string, CACommonName string, operatorName string) (bool, string, error) {
+	delete(ba.GetStatus().GetReferences(), common.StatusReferenceCertSecretName)
+	cleanup := func() {
+		if ok, err := r.IsGroupVersionSupported(certmanagerv1.SchemeGroupVersion.String(), "Certificate"); err != nil {
+			return
+		} else if ok {
+			obj := ba.(metav1.Object)
+			svcCert := &certmanagerv1.Certificate{}
+			svcCert.Name = obj.GetName() + "-svc-tls-cm"
+			svcCert.Namespace = obj.GetNamespace()
+			r.GetClient().Delete(context.Background(), svcCert)
+		}
+	}
+
+	if ba.GetCreateKnativeService() != nil && *ba.GetCreateKnativeService() {
+		cleanup()
+		return false, "", nil
+	}
+	if ba.GetService() != nil && ba.GetService().GetCertificateSecretRef() != nil {
+		cleanup()
+		return false, "", nil
+	}
+	if ba.GetManageTLS() != nil && !*ba.GetManageTLS() {
+		cleanup()
+		return false, "", nil
+	}
+	if ba.GetService() != nil && ba.GetService().GetAnnotations() != nil {
+		if _, ok := ba.GetService().GetAnnotations()["service.beta.openshift.io/serving-cert-secret-name"]; ok {
+			cleanup()
+			return false, "", nil
+		}
+		if _, ok := ba.GetService().GetAnnotations()["service.alpha.openshift.io/serving-cert-secret-name"]; ok {
+			cleanup()
+			return false, "", nil
+		}
+	}
+	if ok, err := r.IsGroupVersionSupported(certmanagerv1.SchemeGroupVersion.String(), "Certificate"); err != nil {
+		return false, "", err
+	} else if ok {
+		bao := ba.(metav1.Object)
+
+		issuerSecretName, cmIssuerErr := r.generateCMIssuer(bao.GetNamespace(), prefix, CACommonName, operatorName)
+		if cmIssuerErr != nil {
+			if errors.Is(cmIssuerErr, APIVersionNotFoundError) {
+				return false, issuerSecretName, nil
+			}
+			return true, issuerSecretName, cmIssuerErr
+		}
+	} else {
+		return false, "", nil
+	}
+	return true, "", nil
+}
+
+func (r *ReconcileOpenLiberty) generateSvcCertSecret(ba common.BaseComponent, instance *openlibertyv1.OpenLibertyApplication, prefix string, CACommonName string, operatorName string) (bool, error) {
+	if ok, err := r.IsGroupVersionSupported(certmanagerv1.SchemeGroupVersion.String(), "Certificate"); err != nil {
+		return false, err
+	} else if ok {
+		bao := ba.(metav1.Object)
+
+		svcCertSecretName := bao.GetName() + "-svc-tls-cm"
+
+		svcCert := &certmanagerv1.Certificate{ObjectMeta: metav1.ObjectMeta{
+			Name:      svcCertSecretName,
+			Namespace: bao.GetNamespace(),
+		}}
+
+		customIssuer := &certmanagerv1.Issuer{ObjectMeta: metav1.ObjectMeta{
+			Name:      prefix + "-custom-issuer",
+			Namespace: bao.GetNamespace(),
+		}}
+
+		customIssuerFound := false
+		err = r.GetClient().Get(context.Background(), types.NamespacedName{Name: customIssuer.Name,
+			Namespace: customIssuer.Namespace}, customIssuer)
+		if err == nil {
+			customIssuerFound = true
+		}
+
+		shouldRefreshCertSecret := false
+		err = r.CreateOrUpdate(svcCert, bao, func() error {
+			svcCert.Labels = ba.GetLabels()
+			svcCert.Annotations = oputils.MergeMaps(svcCert.Annotations, ba.GetAnnotations())
+			if ba.GetService() != nil {
+				if ba.GetService().GetCertificate() != nil {
+					if ba.GetService().GetCertificate().GetAnnotations() != nil {
+						svcCert.Annotations = oputils.MergeMaps(svcCert.Annotations, ba.GetService().GetCertificate().GetAnnotations())
+					}
+				}
+			}
+
+			svcCert.Spec.CommonName = trimCommonName(bao.GetName(), bao.GetNamespace())
+			svcCert.Spec.DNSNames = make([]string, 4)
+			svcCert.Spec.DNSNames[0] = bao.GetName() + "." + bao.GetNamespace() + ".svc"
+			svcCert.Spec.DNSNames[1] = bao.GetName() + "." + bao.GetNamespace() + ".svc.cluster.local"
+			svcCert.Spec.DNSNames[2] = bao.GetName() + "." + bao.GetNamespace()
+			svcCert.Spec.DNSNames[3] = bao.GetName()
+			if ba.GetStatefulSet() != nil {
+				svcCert.Spec.DNSNames = append(svcCert.Spec.DNSNames, bao.GetName()+"-headless."+bao.GetNamespace()+".svc")
+				svcCert.Spec.DNSNames = append(svcCert.Spec.DNSNames, bao.GetName()+"-headless."+bao.GetNamespace()+".svc.cluster.local")
+				svcCert.Spec.DNSNames = append(svcCert.Spec.DNSNames, bao.GetName()+"-headless."+bao.GetNamespace())
+				svcCert.Spec.DNSNames = append(svcCert.Spec.DNSNames, bao.GetName()+"-headless")
+				// Wildcard entries for the pods
+				svcCert.Spec.DNSNames = append(svcCert.Spec.DNSNames, "*."+bao.GetName()+"-headless."+bao.GetNamespace()+".svc")
+				svcCert.Spec.DNSNames = append(svcCert.Spec.DNSNames, "*."+bao.GetName()+"-headless."+bao.GetNamespace()+".svc.cluster.local")
+				svcCert.Spec.DNSNames = append(svcCert.Spec.DNSNames, "*."+bao.GetName()+"-headless."+bao.GetNamespace())
+				svcCert.Spec.DNSNames = append(svcCert.Spec.DNSNames, "*."+bao.GetName()+"-headless")
+			}
+			svcCert.Spec.IsCA = false
+			svcCert.Spec.IssuerRef = certmanagermetav1.ObjectReference{
+				Name: prefix + "-ca-issuer",
+			}
+			if customIssuerFound {
+				svcCert.Spec.IssuerRef.Name = customIssuer.Name
+			}
+
+			rVersion, _ := oputils.GetIssuerResourceVersion(r.GetClient(), svcCert)
+			if svcCert.Spec.SecretTemplate == nil {
+				svcCert.Spec.SecretTemplate = &certmanagerv1.CertificateSecretTemplate{
+					Annotations: map[string]string{},
+				}
+			}
+
+			if svcCert.Spec.SecretTemplate.Annotations[ba.GetGroupName()+"/cm-issuer-version"] != rVersion {
+				if svcCert.Spec.SecretTemplate.Annotations == nil {
+					svcCert.Spec.SecretTemplate.Annotations = map[string]string{}
+				}
+				svcCert.Spec.SecretTemplate.Annotations[ba.GetGroupName()+"/cm-issuer-version"] = rVersion
+				shouldRefreshCertSecret = true
+			}
+
+			svcCert.Spec.SecretName = svcCertSecretName
+
+			duration, err := time.ParseDuration(common.LoadFromConfig(common.Config, common.OpConfigCMCertDuration))
+			if err != nil {
+				return err
+			}
+			svcCert.Spec.Duration = &metav1.Duration{Duration: duration}
+
+			return nil
+		})
+		if err != nil {
+			return true, err
+		}
+		if shouldRefreshCertSecret {
+			r.DeleteResource(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: svcCertSecretName, Namespace: svcCert.Namespace}})
+		}
+		ba.GetStatus().SetReference(common.StatusReferenceCertSecretName, svcCertSecretName)
+	} else {
+		return false, nil
+	}
+	return true, nil
+}
+
+// Create a common name for a certificate that is no longer
+// that 64 bytes
+func trimCommonName(compName string, ns string) (cn string) {
+
+	commonName := compName + "." + ns + ".svc"
+	if len(commonName) > 64 {
+		// Try removing '.svc'
+		commonName = compName + "." + ns
+	}
+	if len(commonName) > 64 {
+		// Try removing the namespace
+		commonName = compName
+	}
+	if len(commonName) > 64 {
+		// Just have to truncate
+		commonName = commonName[:64]
+	}
+
+	return commonName
 }
 
 func (r *ReconcileOpenLiberty) isOpenLibertyApplicationReady(ba common.BaseComponent) bool {

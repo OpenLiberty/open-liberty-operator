@@ -485,13 +485,11 @@ func GetLabelFromDecisionPath(operandVersionString string, pathOptions []string,
 	return label, nil
 }
 
-func ParseDecisionTree(leaderTrackerType string, fileName *string, withCache bool) (map[string]interface{}, map[string]map[string]string, error) {
-	if withCache {
-		// First check the in-memory cache to see if a cached decision tree already exists
-		cachedTreeMap, cachedReplaceMap := TreeCache.Maps(leaderTrackerType)
-		if cachedTreeMap != nil && cachedReplaceMap != nil {
-			return cachedTreeMap, cachedReplaceMap, nil
-		}
+func ParseDecisionTree(leaderTrackerType string, fileName *string) (map[string]interface{}, map[string]map[string]string, error) {
+	// First check the in-memory cache to see if a cached decision tree already exists
+	cachedTreeMap, cachedReplaceMap := TreeCache.Maps(leaderTrackerType)
+	if cachedTreeMap != nil && cachedReplaceMap != nil {
+		return cachedTreeMap, cachedReplaceMap, nil
 	}
 
 	var tree []byte
@@ -528,9 +526,7 @@ func ParseDecisionTree(leaderTrackerType string, fileName *string, withCache boo
 		return nil, nil, err
 	}
 
-	if withCache {
-		TreeCache.SetDecisionTree(leaderTrackerType, treeMap, replaceMap)
-	}
+	TreeCache.SetDecisionTree(leaderTrackerType, treeMap, replaceMap)
 
 	return treeMap, replaceMap, nil
 }
