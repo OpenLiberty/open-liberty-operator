@@ -1193,12 +1193,19 @@ spec:
                   runAsNonRoot: true
                   seccompProfile:
                     type: RuntimeDefault
+                volumeMounts:
+                - mountPath: /opt/ol/wlp/output
+                  name: scratch
+                  subPath: create-ltpa-keys
               securityContext:
                 runAsNonRoot: true
                 seccompProfile:
                   type: RuntimeDefault
               serviceAccountName: olo-controller-manager
               terminationGracePeriodSeconds: 10
+              volumes:
+              - emptyDir: {}
+                name: scratch
       permissions:
       - rules:
         - apiGroups:
