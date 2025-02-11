@@ -653,6 +653,11 @@ func (in *OpenLibertyApplicationSpec) DeepCopyInto(out *OpenLibertyApplicationSp
 		*out = new(bool)
 		**out = **in
 	}
+	if in.ManageResourceCaching != nil {
+		in, out := &in.ManageResourceCaching, &out.ManageResourceCaching
+		*out = new(bool)
+		**out = **in
+	}
 	if in.ManageTLS != nil {
 		in, out := &in.ManageTLS, &out.ManageTLS
 		*out = new(bool)

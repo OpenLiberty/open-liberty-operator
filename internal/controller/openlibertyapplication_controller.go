@@ -21,12 +21,14 @@ import (
 	imageutil "github.com/openshift/library-go/pkg/image/imageutil"
 	"github.com/pkg/errors"
 	prometheusv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"golang.org/x/time/rate"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/workqueue"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -95,8 +97,14 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 	configMap, err := r.GetOpConfigMap(OperatorName, ns)
 	if err != nil {
-		reqLogger.Info("Failed to get open-liberty-operator config map, error: " + err.Error())
-		oputils.CreateConfigMap(OperatorName)
+		if kerrors.IsNotFound(err) {
+			reqLogger.Info("Failed to get open-liberty-operator config map, error: " + err.Error())
+			oputils.CreateConfigMap(OperatorName)
+		} else {
+			// Error reading the object - requeue the request.
+			reqLogger.Info("Failed to get open-liberty-operator config map, error: " + err.Error())
+			return reconcile.Result{}, err
+		}
 	} else {
 		common.LoadFromConfigMap(common.Config, configMap)
 	}
@@ -235,7 +243,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	var ltpaMetadataList *lutils.LTPAMetadataList
 	var ltpaKeysMetadata, ltpaConfigMetadata *lutils.LTPAMetadata
 	if r.isLTPAKeySharingEnabled(instance) {
-		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, LTPA_RESOURCE_SHARING_FILE_NAME)
+		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, LTPA_RESOURCE_SHARING_FILE_NAME, r.isResourceCachingEnabled(instance))
 		if err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
@@ -249,7 +257,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	var passwordEncryptionMetadataList *lutils.PasswordEncryptionMetadataList
 	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{}
 	if r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata) {
-		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
+		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, r.isResourceCachingEnabled(instance))
 		if err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
@@ -277,7 +285,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 
 		reqLogger.Info("Updating status.imageReference", "status.imageReference", instance.Status.ImageReference)
-		err = r.UpdateStatus(instance)
+		err := r.UpdateStatus(instance)
 		if err != nil {
 			reqLogger.Error(err, "Error updating Open Liberty application status")
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -288,7 +296,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	if serviceAccountName != defaultMeta.Name {
 		if serviceAccountName == "" {
 			serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
-			err = r.CreateOrUpdate(serviceAccount, instance, func() error {
+			err := r.CreateOrUpdate(serviceAccount, instance, func() error {
 				return oputils.CustomizeServiceAccount(serviceAccount, instance, r.GetClient())
 			})
 			if err != nil {
@@ -297,7 +305,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			}
 		} else {
 			serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
-			err = r.DeleteResource(serviceAccount)
+			err := r.DeleteResource(serviceAccount)
 			if err != nil {
 				reqLogger.Error(err, "Failed to delete ServiceAccount")
 				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -833,6 +841,12 @@ func (r *ReconcileOpenLiberty) isOpenLibertyApplicationReady(ba common.BaseCompo
 	return false
 }
 
+func DefaultOpenLibertyApplicationControllerRateLimiter() workqueue.RateLimiter {
+	return workqueue.NewMaxOfRateLimiter(
+		&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Inf, 1000)},
+	)
+}
+
 func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 
 	mgr.GetFieldIndexer().IndexField(context.Background(), &openlibertyv1.OpenLibertyApplication{}, indexFieldImageStreamName, func(obj client.Object) []string {
@@ -951,6 +965,7 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 
 	return b.WithOptions(controller.Options{
 		MaxConcurrentReconciles: maxConcurrentReconciles,
+		RateLimiter:             DefaultOpenLibertyApplicationControllerRateLimiter(),
 	}).Complete(r)
 }
 

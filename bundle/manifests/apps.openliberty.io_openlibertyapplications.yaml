@@ -2519,6 +2519,10 @@ spec:
                 description: Enable management of password encryption key sharing
                   amongst Liberty containers. Defaults to false.
                 type: boolean
+              manageResourceCaching:
+                description: Enable management of shared resources using the operator's
+                  in-memory cache. Defaults to true.
+                type: boolean
               manageTLS:
                 description: Enable management of TLS certificates. Defaults to true.
                 type: boolean
