@@ -296,10 +296,21 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 			}
 		} else {
+			// a custom SA is being used so delete the default SA, if it exists
 			serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
 			err = r.DeleteResource(serviceAccount)
 			if err != nil {
 				reqLogger.Error(err, "Failed to delete ServiceAccount")
+				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			}
+
+			// customize the custom SA with operator labels and known image pull secrets
+			customServiceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: serviceAccountName, Namespace: instance.Namespace}}
+			err = r.CreateOrUpdate(customServiceAccount, instance, func() error {
+				return oputils.CustomizeServiceAccount(customServiceAccount, instance, r.GetClient())
+			})
+			if err != nil {
+				reqLogger.Error(err, "Failed to reconcile custom ServiceAccount")
 				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 			}
 		}
