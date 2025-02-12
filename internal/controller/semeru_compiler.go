@@ -458,7 +458,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCMCertificate(ola *openlibertyv1.O
 		svcCert.Labels = ola.GetLabels()
 		svcCert.Labels[getSemeruGenerationLabelName(ola)] = getGeneration(ola)
 		svcCert.Spec.IssuerRef = certmanagermetav1.ObjectReference{
-			Name: "olo-ca-issuer",
+			Name: OperatorShortName + "-ca-issuer",
 		}
 		if customIssuerFound {
 			svcCert.Spec.IssuerRef.Name = customIssuer.Name
