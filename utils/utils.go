@@ -358,7 +358,7 @@ func CreateServiceabilityPVC(instance *olv1.OpenLibertyApplication) *corev1.Pers
 			Annotations: instance.GetAnnotations(),
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
-			Resources: corev1.ResourceRequirements{
+			Resources: corev1.VolumeResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceStorage: resource.MustParse(instance.GetServiceability().GetSize()),
 				},
