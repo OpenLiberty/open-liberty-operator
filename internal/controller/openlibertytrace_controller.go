@@ -44,6 +44,7 @@ const serviceabilityDir = "/serviceability"
 
 // +kubebuilder:rbac:groups=apps.openliberty.io,resources=openlibertytraces;openlibertytraces/status;openlibertytraces/finalizers,verbs=get;list;watch;create;update;patch;delete,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=core,resources=pods;pods/exec,verbs=get;list;watch;create;update;patch;delete,namespace=open-liberty-operator
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete,namespace=open-liberty-operator
 
 // Reconcile reads that state of the cluster for an OpenLibertyTrace object and makes changes based on the state read
 // and what is in the OpenLibertyTrace.Spec
