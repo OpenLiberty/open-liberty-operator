@@ -1,0 +1,3 @@
+apiVersion: apps.openliberty.io/v1
+kind: OpenLibertyTrace
+name: "{0}"
