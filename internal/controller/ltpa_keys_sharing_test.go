@@ -106,7 +106,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	r := createReconcilerFromOpenLibertyApp(instance)
 
 	// First, get the LTPA leader tracker which is not initialized
-	leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	leaderTracker, _, err := lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 
 	emptyLeaderTracker := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -147,7 +147,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	leaderTracker, _, err = lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	leaderTracker, _, err = lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData := map[string][]byte{}
 	expectedLeaderTrackerData[lutils.ResourcesKey] = []byte("")
 	expectedLeaderTrackerData[lutils.ResourceOwnersKey] = []byte("")
@@ -201,7 +201,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	}
 
 	// Fourth, check that the leader tracker received the new LTPA state
-	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData = map[string][]byte{
 		lutils.ResourcesKey:           []byte("-ab215"),
 		lutils.ResourceOwnersKey:      []byte(name),
@@ -247,7 +247,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	}, LTPA_RESOURCE_SHARING_FILE_NAME, true)
 
 	// Sixth, check that the LTPA leader tracker was updated
-	leaderTracker, _, err = lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	leaderTracker, _, err = lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData = map[string][]byte{
 		lutils.ResourcesKey:           []byte("-ab215,-cd123"),
 		lutils.ResourceOwnersKey:      []byte(fmt.Sprintf("%s,%s", instance.Name, instance.Name)),
@@ -347,7 +347,7 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 	}
 
 	// Lastly, check that the LTPA leader tracker processes the two LTPA Secrets created
-	leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	leaderTracker, _, err := lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData := map[string][]byte{
 		lutils.ResourcesKey:           []byte("-b12g1,-bazc1"),
 		lutils.ResourceOwnersKey:      []byte(","), // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
@@ -425,7 +425,7 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T) {
 	}
 
 	// Lastly, check that the LTPA leader tracker upgraded the two LTPA Secrets created
-	leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	leaderTracker, _, err := lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData := map[string][]byte{
 		lutils.ResourcesKey:           []byte("-b12g1,-bazc1"),
 		lutils.ResourceOwnersKey:      []byte(","),                                       // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
@@ -515,7 +515,7 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngr
 	}
 
 	// Thirdly, check that the LTPA leader tracker upgraded the two LTPA Secrets created
-	leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	leaderTracker, _, err := lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData := map[string][]byte{
 		lutils.ResourcesKey:           []byte("-b12g1,-bazc1,-ccccc"),
 		lutils.ResourceOwnersKey:      []byte(",,"),                                                        // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
@@ -544,7 +544,7 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngr
 
 	r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)
 
-	leaderTracker, _, err = lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	leaderTracker, _, err = lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData = map[string][]byte{
 		lutils.ResourcesKey:           []byte("-b12g1,-bazc1,-ccccc"),
 		lutils.ResourceOwnersKey:      []byte(",,"),                                             // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
