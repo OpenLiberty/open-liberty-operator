@@ -201,7 +201,7 @@ func CanTraverseTree(treeMap map[string]interface{}, path string, allowSubPaths 
 	}
 	// string check
 	if castedString, isString := castString(mapLastElement); isString {
-		if isString && castedString == pathValue {
+		if isString && (castedString == pathValue || castedString == "*") { // allow wildcard '*' as last string
 			return currPathString + "." + castedString, nil
 		}
 		return currPathString, fmt.Errorf("while traversing path '" + pathKey + "' the last element in .tree expected a string but the path last element was not a matching string")

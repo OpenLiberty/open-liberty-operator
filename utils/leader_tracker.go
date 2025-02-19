@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -190,10 +189,10 @@ func CustomizeLeaderTracker(leaderTracker *corev1.Secret, trackerList *[]LeaderT
 	// leaderTracker.Data[ResourceSubleasesKey] = []byte(subleases)
 }
 
-func GetLeaderTracker(instance *olv1.OpenLibertyApplication, operatorShortName string, leaderTrackerType string, client client.Client) (*corev1.Secret, *[]LeaderTracker, error) {
+func GetLeaderTracker(namespace string, operatorShortName string, leaderTrackerType string, client client.Client) (*corev1.Secret, *[]LeaderTracker, error) {
 	leaderTracker := &corev1.Secret{}
 	leaderTracker.Name = operatorShortName + "-managed-leader-tracking-" + leaderTrackerType
-	leaderTracker.Namespace = instance.GetNamespace()
+	leaderTracker.Namespace = namespace
 	leaderTracker.Labels = GetRequiredLabels(leaderTracker.Name, "")
 	if err := client.Get(context.TODO(), types.NamespacedName{Name: leaderTracker.Name, Namespace: leaderTracker.Namespace}, leaderTracker); err != nil {
 		// return a default leaderTracker
