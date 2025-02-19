@@ -8,6 +8,7 @@ import (
 	"time"
 
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
+	tree "github.com/OpenLiberty/open-liberty-operator/utils/tree"
 	oputils "github.com/application-stacks/runtime-component-operator/utils"
 	"github.com/go-logr/logr"
 
@@ -84,6 +85,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	var traceMetadataList *lutils.TraceMetadataList
 	var traceMetadata, prevPodTraceMetadata *lutils.TraceMetadata
 	leaderMetadataList, err := r.reconcileResourceTrackingState(instance, TRACE_RESOURCE_SHARING_FILE_NAME)
+
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -99,7 +101,9 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 
 	}
 
-	leaderName, thisInstanceIsLeader, _, err := r.reconcileLeader(instance, traceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, true, true)
+	leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
+		return r.CreateOrUpdate(obj, owner, cb)
+	}, OperatorShortName, instance.GetName(), instance.GetNamespace(), traceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, true, true)
 	if err != nil && !kerrors.IsNotFound(err) {
 		return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, err
 	}
@@ -120,7 +124,9 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 
 	oldPodLeaderName := ""
 	if prevPodTraceMetadata != nil {
-		prevPodLeaderName, _, _, err := r.reconcileLeader(instance, prevPodTraceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, false, true)
+		prevPodLeaderName, _, _, err := tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
+			return r.CreateOrUpdate(obj, owner, cb)
+		}, OperatorShortName, instance.GetName(), instance.GetNamespace(), prevPodTraceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, false, true)
 		if err != nil && !kerrors.IsNotFound(err) {
 			return reconcile.Result{}, err
 		}
@@ -314,7 +320,7 @@ func (r *ReconcileOpenLibertyTrace) DeleteResource(obj client.Object) error {
 
 	_, err = apiutil.GVKForObject(obj, r.Scheme)
 	if err == nil {
-		//log.Info("Reconciled", "Kind", gvk.Kind, "Name", metaObj.GetName(), "Status", "deleted")
+		//log.Info("Reconciled", "Kind", gvk.Kind, "Name", owner.GetName(), "Status", "deleted")
 	}
 	return nil
 }
@@ -329,7 +335,13 @@ func (r *ReconcileOpenLibertyTrace) finalizeOpenLibertyTrace(reqLogger logr.Logg
 	if oldPodLeaderName == "" && prevTraceEnabled == corev1.ConditionTrue {
 		r.disableTraceOnPrevPod(reqLogger, prevPodName, podNamespace)
 	}
-	r.RemoveLeaderTrackerReference(olt, TRACE_RESOURCE_SHARING_FILE_NAME)
+	tree.RemoveLeaderTrackerReference(r.GetClient(),
+		func(obj client.Object, owner metav1.Object, cb func() error) error {
+			return r.CreateOrUpdate(obj, owner, cb)
+		},
+		func(obj client.Object) error {
+			return r.DeleteResource(obj)
+		}, olt.GetName(), olt.GetNamespace(), OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME)
 	return nil
 }
 
