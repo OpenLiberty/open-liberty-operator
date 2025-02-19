@@ -317,7 +317,7 @@ func TestGetLeaderTrackerWithoutSecret(t *testing.T) {
 	cl := fakeclient.NewFakeClient(objs...)
 
 	var referenceLeaderTrackers *[]LeaderTracker
-	leaderTrackerSecret, leaderTrackers, err := GetLeaderTracker(instance, "olo", "ltpa", cl)
+	leaderTrackerSecret, leaderTrackers, err := GetLeaderTracker(instance.GetNamespace(), "olo", "ltpa", cl)
 	tests := []Test{
 		{"get leader tracker without secret - secret name matches", "olo-managed-leader-tracking-ltpa", leaderTrackerSecret.Name},
 		{"get leader tracker without secret - leaderTrackers is nil", referenceLeaderTrackers, leaderTrackers},
@@ -345,7 +345,7 @@ func TestGetLeaderTrackerWithEmptySecret(t *testing.T) {
 	emptySecret.Namespace = namespace
 	createEmptySecretErr := cl.Create(context.TODO(), emptySecret)
 
-	_, leaderTrackers, err := GetLeaderTracker(instance, "olo", "ltpa", cl)
+	_, leaderTrackers, err := GetLeaderTracker(instance.GetNamespace(), "olo", "ltpa", cl)
 	tests := []Test{
 		{"get leader tracker with empty secret - create empty secret without error", nil, createEmptySecretErr},
 		{"get leader tracker with empty secret - no error", nil, err},
@@ -380,7 +380,7 @@ func TestGetLeaderTrackerWithOneSecretEntry(t *testing.T) {
 	// oneSecret.Data[ResourceSubleasesKey] = []byte(mockLeaderTracker.Sublease)
 	createOneSecretErr := cl.Create(context.TODO(), oneSecret)
 
-	_, leaderTrackers, err := GetLeaderTracker(instance, "olo", "ltpa", cl)
+	_, leaderTrackers, err := GetLeaderTracker(instance.GetNamespace(), "olo", "ltpa", cl)
 	tests := []Test{
 		{"get leader tracker with one secret entry - create secret without error", nil, createOneSecretErr},
 		{"get leader tracker with one secret entry - no error", nil, err},
@@ -418,7 +418,7 @@ func TestGetLeaderTrackerWithOneSecretEntryWithMissingKey(t *testing.T) {
 	oneSecret.Data[ResourcePathIndicesKey] = []byte(mockLeaderTracker.PathIndex)
 	// oneSecret.Data[ResourcePathsKey] = []byte(mockLeaderTracker.Path) // remove path key
 	createOneSecretErr := cl.Create(context.TODO(), oneSecret)
-	_, leaderTrackers, err := GetLeaderTracker(instance, "olo", "ltpa", cl)
+	_, leaderTrackers, err := GetLeaderTracker(instance.GetNamespace(), "olo", "ltpa", cl)
 
 	// GetLeaderTracker should delete the secret
 	checkOneSecret := &corev1.Secret{}
@@ -461,7 +461,7 @@ func TestGetLeaderTrackerWithTwoSecretEntries(t *testing.T) {
 	twoSecret.Data[ResourcePathsKey] = []byte(fmt.Sprintf("%s,%s", mock1LeaderTracker.Path, mock2LeaderTracker.Path))
 	// twoSecret.Data[ResourceSubleasesKey] = []byte(fmt.Sprintf("%s,%s", mock1LeaderTracker.Sublease, mock2LeaderTracker.Sublease))
 	createTwoSecretErr := cl.Create(context.TODO(), twoSecret)
-	_, leaderTrackers, err := GetLeaderTracker(instance, "olo", "ltpa", cl)
+	_, leaderTrackers, err := GetLeaderTracker(instance.GetNamespace(), "olo", "ltpa", cl)
 
 	tests := []Test{
 		{"get leader tracker with two secret entries - create secret without error", nil, createTwoSecretErr},
@@ -505,7 +505,7 @@ func TestGetLeaderTrackerWithTwoSecretEntriesAndMissingEntry(t *testing.T) {
 	twoSecret.Data[ResourcePathIndicesKey] = []byte(fmt.Sprintf("%s,%s", mock1LeaderTracker.PathIndex, mock2LeaderTracker.PathIndex))
 	// twoSecret.Data[ResourcePathsKey] = []byte(fmt.Sprintf("%s,%s", mock1LeaderTracker.Path, mock2LeaderTracker.Path)) // missing mock2LeaderTracker.Sublease
 	createTwoSecretErr := cl.Create(context.TODO(), twoSecret)
-	_, leaderTrackers, err := GetLeaderTracker(instance, "olo", "ltpa", cl)
+	_, leaderTrackers, err := GetLeaderTracker(instance.GetNamespace(), "olo", "ltpa", cl)
 
 	// GetLeaderTracker should delete the secret
 	checkTwoSecret := &corev1.Secret{}

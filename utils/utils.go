@@ -134,6 +134,38 @@ type LTPAConfig struct {
 	EncryptionKeySharingEnabled bool // true or false
 }
 
+type TraceMetadata struct {
+	Kind       string
+	APIVersion string
+	Name       string
+	Path       string
+	PathIndex  string
+}
+
+func (m TraceMetadata) GetName() string {
+	return m.Name
+}
+func (m TraceMetadata) GetPath() string {
+	return m.Path
+}
+func (m TraceMetadata) GetPathIndex() string {
+	return m.PathIndex
+}
+func (m TraceMetadata) GetKind() string {
+	return m.Kind
+}
+func (m TraceMetadata) GetAPIVersion() string {
+	return m.APIVersion
+}
+
+type TraceMetadataList struct {
+	Items []LeaderTrackerMetadata
+}
+
+func (ml TraceMetadataList) GetItems() []LeaderTrackerMetadata {
+	return ml.Items
+}
+
 // Validate if the OpenLibertyApplication is valid
 func Validate(olapp *olv1.OpenLibertyApplication) (bool, error) {
 	// Serviceability validation

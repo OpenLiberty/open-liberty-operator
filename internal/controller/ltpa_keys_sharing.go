@@ -62,7 +62,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 			return metadataList, err
 		}
 		// retrieve the LTPA leader tracker to re-use an existing name or to create a new metadata.Name
-		leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+		leaderTracker, _, err := lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 		if err != nil {
 			return metadataList, err
 		}

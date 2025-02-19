@@ -207,7 +207,7 @@ func GetLeaderTracker(instance *olv1.OpenLibertyApplication, operatorShortName s
 
 	leaderTracker := &corev1.Secret{}
 	leaderTracker.Name = operatorShortName + "-managed-leader-tracking-" + leaderTrackerType
-	leaderTracker.Namespace = instance.GetNamespace()
+	leaderTracker.Namespace = namespace
 	leaderTracker.Labels = GetRequiredLabels(leaderTracker.Name, "")
 	if err := client.Get(context.TODO(), types.NamespacedName{Name: leaderTracker.Name, Namespace: leaderTracker.Namespace}, leaderTracker); err != nil {
 		// return a default leaderTracker
