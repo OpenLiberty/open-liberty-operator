@@ -10,6 +10,7 @@ import (
 	"github.com/go-logr/logr"
 
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
+	tree "github.com/OpenLiberty/open-liberty-operator/utils/tree"
 	oputils "github.com/application-stacks/runtime-component-operator/utils"
 
 	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
@@ -970,8 +971,20 @@ func getMonitoringEnabledLabelName(ba common.BaseComponent) string {
 }
 
 func (r *ReconcileOpenLiberty) finalizeOpenLibertyApplication(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, pvcName string, pvcNamespace string) error {
-	r.RemoveLeaderTrackerReference(olapp, LTPA_RESOURCE_SHARING_FILE_NAME)
-	r.RemoveLeaderTrackerReference(olapp, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
+	tree.RemoveLeaderTrackerReference(r.GetClient(),
+		func(obj client.Object, owner metav1.Object, cb func() error) error {
+			return r.CreateOrUpdate(obj, owner, cb)
+		},
+		func(obj client.Object) error {
+			return r.DeleteResource(obj)
+		}, olapp.GetName(), olapp.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME)
+	tree.RemoveLeaderTrackerReference(r.GetClient(),
+		func(obj client.Object, owner metav1.Object, cb func() error) error {
+			return r.CreateOrUpdate(obj, owner, cb)
+		},
+		func(obj client.Object) error {
+			return r.DeleteResource(obj)
+		}, olapp.GetName(), olapp.GetNamespace(), OperatorShortName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 	r.deletePVC(reqLogger, pvcName, pvcNamespace)
 	return nil
 }
