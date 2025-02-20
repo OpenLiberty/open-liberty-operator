@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME = "password-encryption"
@@ -25,7 +26,9 @@ func init() {
 
 func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (string, string, string, error) {
 	if r.isPasswordEncryptionKeySharingEnabled(instance) {
-		leaderName, thisInstanceIsLeader, _, err := r.reconcileLeader(instance, passwordEncryptionMetadata, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, true)
+		leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
+			return r.CreateOrUpdate(obj, owner, cb)
+		}, OperatorShortName, instance.GetName(), instance.GetNamespace(), passwordEncryptionMetadata, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, true, false)
 		if err != nil && !kerrors.IsNotFound(err) {
 			return "", "", "", err
 		}
@@ -60,7 +63,13 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(instance *olv1.Ope
 			return "Failed to get the password encryption key Secret", "", "", err
 		}
 	} else {
-		err := r.RemoveLeaderTrackerReference(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
+		err := tree.RemoveLeaderTrackerReference(r.GetClient(),
+			func(obj client.Object, owner metav1.Object, cb func() error) error {
+				return r.CreateOrUpdate(obj, owner, cb)
+			},
+			func(obj client.Object) error {
+				return r.DeleteResource(obj)
+			}, instance.GetName(), instance.GetNamespace(), OperatorShortName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
 			return "Failed to remove leader tracking reference to the password encryption key", "", "", err
 		}
