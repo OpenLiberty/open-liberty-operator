@@ -14,10 +14,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -139,7 +141,13 @@ func TestLTPALeaderTracker(t *testing.T) {
 	}
 
 	assetsFolder := getAssetsFolder()
-	err = r.reconcileLeaderTracker(instance, treeMap, replaceMap, "v10_4_1", LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)
+	err = tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), func() ([]*unstructured.UnstructuredList, []string, error) {
+		return r.OpenLibertyApplicationLeaderTrackerGenerator(instance, treeMap, replaceMap, "v10_4_1", LTPA_RESOURCE_SHARING_FILE_NAME, nil)
+	}, func(obj client.Object, owner metav1.Object, cb func() error) error {
+		return r.CreateOrUpdate(obj, owner, cb)
+	}, func(obj client.Object) error {
+		return r.DeleteResource(obj)
+	}, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)
 	tests = []Test{
 		{"initialize LTPA leader tracker", nil, err},
 	}
@@ -185,11 +193,13 @@ func TestLTPALeaderTracker(t *testing.T) {
 	}
 
 	// Mock the process where the operator saves the LTPA Secret, storing it into the leader tracker
-	leaderName, isLeader, pathIndex, err := r.reconcileLeader(instance, &lutils.LTPAMetadata{
+	leaderName, isLeader, pathIndex, err := tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
+		return r.CreateOrUpdate(obj, owner, cb)
+	}, OperatorShortName, instance.GetName(), instance.GetNamespace(), &lutils.LTPAMetadata{
 		Path:      latestOperandVersion + ".a.b.e.true",
 		PathIndex: latestOperandVersion + ".2",
 		Name:      "-ab215",
-	}, LTPA_RESOURCE_SHARING_FILE_NAME, true)
+	}, LTPA_RESOURCE_SHARING_FILE_NAME, true, false)
 	tests = []Test{
 		{"update leader tracker based on path index 2 of complex decision tree - error", nil, err},
 		{"update leader tracker based on path index 2 of complex decision tree - path index", pathIndex, latestOperandVersion + ".2"},
@@ -240,11 +250,13 @@ func TestLTPALeaderTracker(t *testing.T) {
 	}
 
 	// Mock the process where the operator saves the LTPA Secret, storing it into the leader tracker
-	r.reconcileLeader(instance, &lutils.LTPAMetadata{
+	tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
+		return r.CreateOrUpdate(obj, owner, cb)
+	}, OperatorShortName, instance.GetName(), instance.GetNamespace(), &lutils.LTPAMetadata{
 		Path:      latestOperandVersion + ".a.b.d.true",
 		PathIndex: latestOperandVersion + ".1",
 		Name:      "-cd123",
-	}, LTPA_RESOURCE_SHARING_FILE_NAME, true)
+	}, LTPA_RESOURCE_SHARING_FILE_NAME, true, false)
 
 	// Sixth, check that the LTPA leader tracker was updated
 	leaderTracker, _, err = lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
@@ -340,7 +352,13 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 	// Second, initialize the LTPA leader tracker
 	assetsFolder := getAssetsFolder()
 	tests = []Test{
-		{"initialize LTPA leader tracker error", nil, r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+		{"initialize LTPA leader tracker error", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), func() ([]*unstructured.UnstructuredList, []string, error) {
+			return r.OpenLibertyApplicationLeaderTrackerGenerator(instance, treeMap, replaceMap, latestOperandVersion, "ltpa", nil)
+		}, func(obj client.Object, owner metav1.Object, cb func() error) error {
+			return r.CreateOrUpdate(obj, owner, cb)
+		}, func(obj client.Object) error {
+			return r.DeleteResource(obj)
+		}, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -418,7 +436,13 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T) {
 	latestOperandVersion = "v10_4_20" // upgrade the version
 	assetsFolder := getAssetsFolder()
 	tests = []Test{
-		{"reconcileLeaderTracker at version v10_4_20", nil, r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+		{"reconcileLeaderTracker at version v10_4_20", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), func() ([]*unstructured.UnstructuredList, []string, error) {
+			return r.OpenLibertyApplicationLeaderTrackerGenerator(instance, treeMap, replaceMap, latestOperandVersion, "ltpa", nil)
+		}, func(obj client.Object, owner metav1.Object, cb func() error) error {
+			return r.CreateOrUpdate(obj, owner, cb)
+		}, func(obj client.Object) error {
+			return r.DeleteResource(obj)
+		}, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -508,7 +532,13 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngr
 	latestOperandVersion = "v10_4_500" // upgrade the version
 	assetsFolder := getAssetsFolder()
 	tests = []Test{
-		{"reconcileLeaderTracker at version v10_4_500", nil, r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+		{"reconcileLeaderTracker at version v10_4_500", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), func() ([]*unstructured.UnstructuredList, []string, error) {
+			return r.OpenLibertyApplicationLeaderTrackerGenerator(instance, treeMap, replaceMap, latestOperandVersion, "ltpa", nil)
+		}, func(obj client.Object, owner metav1.Object, cb func() error) error {
+			return r.CreateOrUpdate(obj, owner, cb)
+		}, func(obj client.Object) error {
+			return r.DeleteResource(obj)
+		}, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -536,13 +566,25 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngr
 	// Fourthly, downgrade the decision tree version and initialize the leader tracker (run initialize once to delete the old configMap)
 	latestOperandVersion = "v10_3_3"
 	tests = []Test{
-		{"Downgrade LTPA Leader Tracker from v10_4_500 to v10_3_3", nil, r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+		{"Downgrade LTPA Leader Tracker from v10_4_500 to v10_3_3", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), func() ([]*unstructured.UnstructuredList, []string, error) {
+			return r.OpenLibertyApplicationLeaderTrackerGenerator(instance, treeMap, replaceMap, latestOperandVersion, "ltpa", nil)
+		}, func(obj client.Object, owner metav1.Object, cb func() error) error {
+			return r.CreateOrUpdate(obj, owner, cb)
+		}, func(obj client.Object) error {
+			return r.DeleteResource(obj)
+		}, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
 	}
 
-	r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)
+	tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), func() ([]*unstructured.UnstructuredList, []string, error) {
+		return r.OpenLibertyApplicationLeaderTrackerGenerator(instance, treeMap, replaceMap, latestOperandVersion, "ltpa", nil)
+	}, func(obj client.Object, owner metav1.Object, cb func() error) error {
+		return r.CreateOrUpdate(obj, owner, cb)
+	}, func(obj client.Object) error {
+		return r.DeleteResource(obj)
+	}, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)
 
 	leaderTracker, _, err = lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData = map[string][]byte{

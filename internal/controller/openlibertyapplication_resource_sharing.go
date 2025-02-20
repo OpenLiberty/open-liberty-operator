@@ -11,10 +11,11 @@ import (
 	tree "github.com/OpenLiberty/open-liberty-operator/utils/tree"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Validates the resource decision tree YAML and generates the leader tracking state (Secret) for maintaining multiple shared resources
 func (r *ReconcileOpenLiberty) reconcileResourceTrackingState(instance *olv1.OpenLibertyApplication, leaderTrackerType string) (lutils.LeaderTrackerMetadataList, error) {
 	treeMap, replaceMap, err := tree.ParseDecisionTree(leaderTrackerType, nil)
 	if err != nil {
@@ -26,12 +27,23 @@ func (r *ReconcileOpenLiberty) reconcileResourceTrackingState(instance *olv1.Ope
 		return nil, err
 	}
 
-	// persist or create a Secret to store the shared resources' state
-	err = r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, nil)
-	if err != nil {
-		return nil, err
-	}
+	return tree.ReconcileResourceTrackingState(instance.GetNamespace(), OperatorShortName, leaderTrackerType, r.GetClient(),
+		func() (lutils.LeaderTrackerMetadataList, error) {
+			return r.OpenLibertyApplicationSharedResourceGenerator(instance, treeMap, latestOperandVersion, leaderTrackerType)
+		},
+		func() ([]*unstructured.UnstructuredList, []string, error) {
+			return r.OpenLibertyApplicationLeaderTrackerGenerator(instance, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, nil)
+		},
+		func(obj client.Object, owner metav1.Object, cb func() error) error {
+			return r.CreateOrUpdate(obj, owner, cb)
+		},
+		func(obj client.Object) error {
+			return r.DeleteResource(obj)
+		},
+		treeMap, replaceMap, latestOperandVersion)
+}
 
+func (r *ReconcileOpenLiberty) OpenLibertyApplicationSharedResourceGenerator(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, latestOperandVersion, leaderTrackerType string) (lutils.LeaderTrackerMetadataList, error) {
 	// return the metadata specific to the operator version, instance configuration, and shared resource being reconciled
 	if leaderTrackerType == LTPA_RESOURCE_SHARING_FILE_NAME {
 		ltpaMetadataList, err := r.reconcileLTPAMetadata(instance, treeMap, latestOperandVersion, nil)
@@ -146,45 +158,39 @@ func (r *ReconcileOpenLiberty) reconcileLeaderWithState(instance *olv1.OpenLiber
 func (r *ReconcileOpenLiberty) createNewLeaderTrackerList(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, leaderTrackerType string, assetsFolder *string) (*[]lutils.LeaderTracker, error) {
 	var resourcesMatrix []*unstructured.UnstructuredList
 	var resourcesRootNameList []string
-
 	if leaderTrackerType == LTPA_RESOURCE_SHARING_FILE_NAME {
 		// 1. Add LTPA key Secret
 		resourcesList, resourceRootName, keyErr := r.GetLTPAKeyResources(instance, treeMap, replaceMap, latestOperandVersion, assetsFolder)
 		if keyErr != nil {
-			return nil, keyErr
+			return nil, nil, keyErr
 		}
 		resourcesMatrix = append(resourcesMatrix, resourcesList)
 		resourcesRootNameList = append(resourcesRootNameList, resourceRootName)
 		// 2. Add LTPA password Secret (config 1)
 		resourcesList, resourceRootName, keyErr = r.GetLTPAConfigResources(instance, treeMap, replaceMap, latestOperandVersion, assetsFolder, LTPA_CONFIG_1_RESOURCE_SHARING_FILE_NAME)
 		if keyErr != nil {
-			return nil, keyErr
+			return nil, nil, keyErr
 		}
 		resourcesMatrix = append(resourcesMatrix, resourcesList)
 		resourcesRootNameList = append(resourcesRootNameList, resourceRootName)
 		// 3. Add LTPA password Secret (config 2)
 		resourcesList, resourceRootName, keyErr = r.GetLTPAConfigResources(instance, treeMap, replaceMap, latestOperandVersion, assetsFolder, LTPA_CONFIG_2_RESOURCE_SHARING_FILE_NAME)
 		if keyErr != nil {
-			return nil, keyErr
+			return nil, nil, keyErr
 		}
 		resourcesMatrix = append(resourcesMatrix, resourcesList)
 		resourcesRootNameList = append(resourcesRootNameList, resourceRootName)
 	} else if leaderTrackerType == PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME {
 		resourcesList, resourceRootName, passwordErr := r.GetPasswordEncryptionResources(instance, treeMap, replaceMap, latestOperandVersion, assetsFolder)
 		if passwordErr != nil {
-			return nil, passwordErr
+			return nil, nil, passwordErr
 		}
 		resourcesMatrix = append(resourcesMatrix, resourcesList)
 		resourcesRootNameList = append(resourcesRootNameList, resourceRootName)
 	} else {
-		return nil, fmt.Errorf("a valid leaderTrackerType was not specified for createNewLeaderTrackerList")
+		return nil, nil, fmt.Errorf("a valid leaderTrackerType was not specified for createNewLeaderTrackerList")
 	}
-
-	leaderTracker := make([]lutils.LeaderTracker, 0)
-	for i, resourcesList := range resourcesMatrix {
-		r.UpdateLeaderTrackersFromUnstructuredList(&leaderTracker, resourcesList, treeMap, replaceMap, latestOperandVersion, resourcesRootNameList[i])
-	}
-	return &leaderTracker, nil
+	return resourcesMatrix, resourcesRootNameList, nil
 }
 
 // Reconciles the latest LeaderTracker state to be used by the operator
