@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
@@ -17,6 +18,10 @@ import (
 )
 
 const PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME = "password-encryption"
+
+func init() {
+	lutils.LeaderTrackerMutexes.Store(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, &sync.Mutex{})
+}
 
 func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (string, string, string, error) {
 	if r.isPasswordEncryptionKeySharingEnabled(instance) {
@@ -147,6 +152,29 @@ func (r *ReconcileOpenLiberty) isUsingPasswordEncryptionKeySharing(instance *olv
 	return false
 }
 
+func (r *ReconcileOpenLiberty) getInternalPasswordEncryptionKeyState(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (string, string, bool, error) {
+	if !r.isPasswordEncryptionKeySharingEnabled(instance) {
+		return "", "", false, nil
+	}
+	secret, err := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata)
+	if err != nil {
+		return "", "", true, err
+	}
+	passwordEncryptionKey := ""
+	encryptionSecretLastRotation := ""
+	if key, found := secret.Data["passwordEncryptionKey"]; found {
+		passwordEncryptionKey = string(key)
+	}
+	if lastRotation, found := secret.Data["lastRotation"]; found {
+		encryptionSecretLastRotation = string(lastRotation)
+	}
+	if passwordEncryptionKey == "" || encryptionSecretLastRotation == "" {
+		// no need to delete because mirrorEncryptionKeySecretState will create/update the Secret
+		return "", "", true, fmt.Errorf("the internal password encryption key Secret contains one or more missing fields")
+	}
+	return passwordEncryptionKey, encryptionSecretLastRotation, true, nil
+}
+
 // Returns the Secret that contains the password encryption key used internally by the operator
 func (r *ReconcileOpenLiberty) hasInternalEncryptionKeySecret(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (*corev1.Secret, error) {
 	return r.getSecret(instance, lutils.LocalPasswordEncryptionKeyRootName+passwordEncryptionMetadata.Name+"-internal")
@@ -250,7 +278,7 @@ func (r *ReconcileOpenLiberty) createPasswordEncryptionKeyLibertyConfig(instance
 	}
 
 	// The Secret to hold the server.xml that will override the password encryption key for the Liberty server
-	// This server.xml will be mounted in /output/resources/liberty-operator/encryptionKey.xml
+	// This server.xml will be mounted in /output/liberty-operator/encryptionKey.xml
 	encryptionXMLSecretName := OperatorShortName + lutils.ManagedEncryptionServerXML + passwordEncryptionMetadata.Name
 	encryptionXMLSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{

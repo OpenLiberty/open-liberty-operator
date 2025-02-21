@@ -486,20 +486,39 @@ func GetLabelFromDecisionPath(operandVersionString string, pathOptions []string,
 }
 
 func ParseDecisionTree(leaderTrackerType string, fileName *string) (map[string]interface{}, map[string]map[string]string, error) {
-	var tree []byte
-	var err error
-	// Allow specifying custom file for testing
+	// get file name
+	treeFileName := ""
 	if fileName != nil {
-		tree, err = os.ReadFile(*fileName)
+		treeFileName = *fileName
+	} else {
+		treeFileName = fmt.Sprintf("internal/controller/assets/%s-decision-tree.yaml", leaderTrackerType)
+	}
+
+	// get last modified time
+	lastModifiedTime := int64(-1)
+	if fileName != nil {
+		file, err := os.Stat(treeFileName)
 		if err != nil {
 			return nil, nil, err
 		}
-	} else {
-		tree, err = os.ReadFile("internal/controller/assets/" + leaderTrackerType + "-decision-tree.yaml")
-		if err != nil {
-			return nil, nil, err
+		lastModifiedTime = file.ModTime().Unix()
+	}
+	if lastModifiedTime != -1 {
+		// check the in-memory cache to see if a cached decision tree already exists
+		cachedTreeMap, cachedReplaceMap := TreeCache.Maps(leaderTrackerType, treeFileName, lastModifiedTime)
+		if cachedTreeMap != nil && cachedReplaceMap != nil {
+			return cachedTreeMap, cachedReplaceMap, nil
 		}
 	}
+
+	// read the tree
+	var tree []byte
+	var err error
+	tree, err = os.ReadFile(treeFileName)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	ltpaDecisionTreeYAML := make(map[string]interface{})
 	err = yaml.Unmarshal(tree, ltpaDecisionTreeYAML)
 	if err != nil {
@@ -518,6 +537,11 @@ func ParseDecisionTree(leaderTrackerType string, fileName *string) (map[string]i
 
 	if err := ValidateMaps(treeMap, replaceMap); err != nil {
 		return nil, nil, err
+	}
+
+	// save the tree to cache
+	if lastModifiedTime != -1 {
+		TreeCache.SetDecisionTree(leaderTrackerType, treeMap, replaceMap, treeFileName, lastModifiedTime)
 	}
 
 	return treeMap, replaceMap, nil
