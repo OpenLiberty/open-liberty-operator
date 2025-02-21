@@ -45,7 +45,7 @@ const LTPAKeysXMLFileName = "managedLTPA.xml"
 const LTPAKeysMountXMLFileName = "managedLTPAMount.xml"
 
 // Mount constants
-const SecureMountPath = "/output/resources/liberty-operator"
+const SecureMountPath = "/output/liberty-operator"
 const overridesMountPath = "/config/configDropins/overrides"
 
 // Password encryption constants
@@ -704,7 +704,7 @@ func isVolumeFound(pts *corev1.PodTemplateSpec, name string) bool {
 }
 
 func ConfigurePasswordEncryption(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string, passwordEncryptionMetadata *PasswordEncryptionMetadata) {
-	// Mount a volume /output/resources/liberty-operator/encryptionKey.xml to store the Liberty Password Encryption Key
+	// Mount a volume /output/liberty-operator/encryptionKey.xml to store the Liberty Password Encryption Key
 	MountSecretAsVolume(pts, operatorShortName+ManagedEncryptionServerXML+passwordEncryptionMetadata.Name, CreateVolumeMount(SecureMountPath, EncryptionKeyXMLFileName))
 
 	// Mount a volume /config/configDropins/overrides/encryptionKeyMount.xml to import the Liberty Password Encryption Key
@@ -713,10 +713,10 @@ func ConfigurePasswordEncryption(pts *corev1.PodTemplateSpec, la *olv1.OpenLiber
 
 // ConfigureLTPA setups the shared-storage for LTPA keys file generation
 func ConfigureLTPAConfig(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string, ltpaSecretName string, ltpaSuffixName string) {
-	// Mount a volume /output/resources/liberty-operator/ltpa.keys to store the ltpa.keys file
+	// Mount a volume /output/liberty-operator/ltpa.keys to store the ltpa.keys file
 	MountSecretAsVolume(pts, ltpaSecretName, CreateVolumeMount(SecureMountPath, LTPAKeysFileName))
 
-	// Mount a volume /output/resources/liberty-operator/managedLTPA.xml to store the Liberty Server XML
+	// Mount a volume /output/liberty-operator/managedLTPA.xml to store the Liberty Server XML
 	MountSecretAsVolume(pts, operatorShortName+LTPAServerXMLSuffix+ltpaSuffixName, CreateVolumeMount(SecureMountPath, LTPAKeysXMLFileName))
 
 	// Mount a volume /config/configDropins/overrides/managedLTPAMount.xml to import the managedLTPA.xml file
