@@ -250,7 +250,7 @@ func (r *ReconcileOpenLiberty) createPasswordEncryptionKeyLibertyConfig(instance
 	}
 
 	// The Secret to hold the server.xml that will override the password encryption key for the Liberty server
-	// This server.xml will be mounted in /output/resources/liberty-operator/encryptionKey.xml
+	// This server.xml will be mounted in /output/liberty-operator/encryptionKey.xml
 	encryptionXMLSecretName := OperatorShortName + lutils.ManagedEncryptionServerXML + passwordEncryptionMetadata.Name
 	encryptionXMLSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
