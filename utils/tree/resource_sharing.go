@@ -12,6 +12,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+type ResourceSharingFactory interface {
+	Resources() func() (lutils.LeaderTrackerMetadataList, error)
+	LeaderTrackers() func() ([]*unstructured.UnstructuredList, []string, error)
+	CreateOrUpdate() func(obj client.Object, owner metav1.Object, cb func() error) error
+	DeleteResources() func(obj client.Object) error
+	LeaderTrackerName() func(map[string]interface{}) (string, error)
+}
+
 // If shouldElectNewLeader is set to true, the OpenLibertyApplication instance will be set and returned as the resource leader
 // Otherwise, returns the current shared resource leader
 func ReconcileLeader(client client.Client, createOrUpdateCallback func(client.Object, metav1.Object, func() error) error, operatorShortName, name, namespace string, leaderMetadata lutils.LeaderTrackerMetadata, leaderTrackerType string, shouldElectNewLeader bool, removeDanglingResources bool) (string, bool, string, error) {
@@ -132,57 +140,49 @@ func SaveLeaderTracker(createOrUpdateCallback func(client.Object, metav1.Object,
 
 // Validates the resource decision tree YAML and generates the leader tracking state (Secret) for maintaining multiple shared resources
 func ReconcileResourceTrackingState(namespace, operatorShortName, leaderTrackerType string,
-	client client.Client,
-	resourceGenerator func() (lutils.LeaderTrackerMetadataList, error),
-	leaderTrackerGenerator func() ([]*unstructured.UnstructuredList, []string, error),
-	createOrUpdateCallback func(client.Object, metav1.Object, func() error) error,
-	deleteResourceCallback func(obj client.Object) error,
+	client client.Client, rsf ResourceSharingFactory,
 	treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string) (lutils.LeaderTrackerMetadataList, error) {
 
 	// persist or create a Secret to store the shared resources' state
-	err := ReconcileLeaderTracker(namespace, operatorShortName, client, leaderTrackerGenerator, createOrUpdateCallback, deleteResourceCallback, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, nil)
+	err := ReconcileLeaderTracker(namespace, operatorShortName, client, rsf, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, nil)
 	if err != nil {
 		return nil, err
 	}
-	return resourceGenerator()
+	return rsf.Resources()()
 }
 
 // Reconciles the latest LeaderTracker state to be used by the operator
-func ReconcileLeaderTracker(namespace string, operatorShortName string, client client.Client,
-	leaderTrackerGenerator func() ([]*unstructured.UnstructuredList, []string, error),
-	createOrUpdateCallback func(client.Object, metav1.Object, func() error) error,
-	deleteResourceCallback func(obj client.Object) error,
-	treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, leaderTrackerType string, assetsFolder *string) error {
+func ReconcileLeaderTracker(namespace string, operatorShortName string, client client.Client, rsf ResourceSharingFactory, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, leaderTrackerType string, assetsFolder *string) error {
 	leaderTracker, _, err := lutils.GetLeaderTracker(namespace, operatorShortName, leaderTrackerType, client)
 	// If the Leader Tracker is missing, create from scratch
 	if err != nil && kerrors.IsNotFound(err) {
 		leaderTracker.Labels[lutils.LeaderVersionLabel] = latestOperandVersion
 		leaderTracker.ResourceVersion = ""
-		leaderTrackers, err := CreateNewLeaderTrackerList(leaderTrackerGenerator, createOrUpdateCallback, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, assetsFolder)
+		leaderTrackers, err := CreateNewLeaderTrackerList(rsf, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, assetsFolder)
 		if err != nil {
 			return err
 		}
-		return SaveLeaderTracker(createOrUpdateCallback, leaderTracker, leaderTrackers)
+		return SaveLeaderTracker(rsf.CreateOrUpdate(), leaderTracker, leaderTrackers)
 	} else if err != nil {
 		return err
 	}
 	// If the Leader Tracker is outdated, delete it so that it gets recreated in another reconcile
 	if leaderTracker.Labels[lutils.LeaderVersionLabel] != latestOperandVersion {
-		if err := deleteResourceCallback(leaderTracker); err != nil {
+		if err := rsf.DeleteResources()(leaderTracker); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func CreateNewLeaderTrackerList(leaderTrackerGenerator func() ([]*unstructured.UnstructuredList, []string, error), createOrUpdateCallback func(client.Object, metav1.Object, func() error) error, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, leaderTrackerType string, assetsFolder *string) (*[]lutils.LeaderTracker, error) {
-	resourcesMatrix, resourcesRootNameList, err := leaderTrackerGenerator()
+func CreateNewLeaderTrackerList(rsf ResourceSharingFactory, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, leaderTrackerType string, assetsFolder *string) (*[]lutils.LeaderTracker, error) {
+	resourcesMatrix, resourcesRootNameList, err := rsf.LeaderTrackers()()
 	if err != nil {
 		return nil, err
 	}
 	leaderTracker := make([]lutils.LeaderTracker, 0)
 	for i, resourcesList := range resourcesMatrix {
-		UpdateLeaderTrackersFromUnstructuredList(createOrUpdateCallback, &leaderTracker, resourcesList, treeMap, replaceMap, latestOperandVersion, resourcesRootNameList[i])
+		UpdateLeaderTrackersFromUnstructuredList(rsf, &leaderTracker, resourcesList, treeMap, replaceMap, latestOperandVersion, resourcesRootNameList[i])
 	}
 	return &leaderTracker, nil
 }
@@ -212,7 +212,7 @@ func RemoveLeader(createOrUpdateCallback func(client.Object, metav1.Object, func
 	return nil
 }
 
-func UpdateLeaderTrackersFromUnstructuredList(createOrUpdateCallback func(client.Object, metav1.Object, func() error) error, leaderTrackers *[]lutils.LeaderTracker, resourceList *unstructured.UnstructuredList, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, resourceRootName string) error {
+func UpdateLeaderTrackersFromUnstructuredList(rsf ResourceSharingFactory, leaderTrackers *[]lutils.LeaderTracker, resourceList *unstructured.UnstructuredList, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, resourceRootName string) error {
 	for i, resource := range resourceList.Items {
 		labelsMap, _, err := unstructured.NestedMap(resource.Object, "metadata", "labels")
 		if err != nil {
@@ -244,7 +244,7 @@ func UpdateLeaderTrackersFromUnstructuredList(createOrUpdateCallback func(client
 					leader.PathIndex = newPathIndex
 					leader.Path = path
 					// the path may have changed so the path index reference needs to be updated directly in the resource
-					if err := createOrUpdateCallback(&resourceList.Items[i], nil, func() error {
+					if err := rsf.CreateOrUpdate()(&resourceList.Items[i], nil, func() error {
 						labelsMap, _, err := unstructured.NestedMap(resourceList.Items[i].Object, "metadata", "labels")
 						if err != nil {
 							return err
@@ -264,7 +264,7 @@ func UpdateLeaderTrackersFromUnstructuredList(createOrUpdateCallback func(client
 				// A valid decision tree path could not be found, so it will not be used by the operator and this resource will not be tracked
 				continue
 			}
-			nameString, _, err := unstructured.NestedString(resource.Object, "metadata", "name")
+			nameString, err := rsf.LeaderTrackerName()(resource.Object) // the leader.Name field value is determined by *_resource_sharing.go impl of the ResourceSharingFactory interface
 			if err != nil {
 				return err
 			}
