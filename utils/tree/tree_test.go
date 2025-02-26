@@ -155,7 +155,7 @@ func TestGetLatestOperandVersion(t *testing.T) {
 	latestOperandVersion3, err3 := GetLatestOperandVersion(treeMap, "v10_4_1")
 
 	// Test complex
-	fileName = getControllerFolder() + "/tests/ltpa-decision-tree-complex.yaml"
+	fileName = getControllerFolder() + "/tests/decision-tree-complex.yaml"
 	treeMap, _, _ = ParseDecisionTree("ltpa", &fileName)
 	latestOperandVersion4, err4 := GetLatestOperandVersion(treeMap, "v10_4_499")
 
@@ -207,7 +207,7 @@ func TestReplacePath(t *testing.T) {
 	newPath3d, err3d := ReplacePath("v10_4_0.managePasswordEncryption.true", "v10_3_3", treeMap, replaceMap)
 
 	// Test complex
-	fileName = getControllerFolder() + "/tests/ltpa-decision-tree-complex.yaml"
+	fileName = getControllerFolder() + "/tests/decision-tree-complex.yaml"
 	treeMap, replaceMap, _ = ParseDecisionTree("ltpa", &fileName)
 	newPath4a, err4a := ReplacePath("v10_4_500.a.f.g.i.bar", "v10_4_21", treeMap, replaceMap)
 
@@ -305,7 +305,7 @@ func TestGetLeafIndex(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 	// Test complex
-	fileName = getControllerFolder() + "/tests/ltpa-decision-tree-complex.yaml"
+	fileName = getControllerFolder() + "/tests/decision-tree-complex.yaml"
 	treeMap, _, _ = ParseDecisionTree("ltpa", &fileName)
 	tests = []Test{
 		{"get leaf index - complex generations", -1, GetLeafIndex(treeMap, "")},
@@ -368,7 +368,7 @@ func TestGetPathFromLeafIndex(t *testing.T) {
 	}
 
 	// Test complex
-	fileName = getControllerFolder() + "/tests/ltpa-decision-tree-complex.yaml"
+	fileName = getControllerFolder() + "/tests/decision-tree-complex.yaml"
 	treeMap, _, _ = ParseDecisionTree("ltpa", &fileName)
 	// valid paths
 	validPaths = []string{"v10_2_2.test", "v10_3_3.a.b", "v10_4_1.a.b.c.true", "v10_4_1.a.b.d.true", "v10_4_1.a.b.e.true", "v10_4_1.a.b.e.false",
