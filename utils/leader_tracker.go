@@ -146,6 +146,21 @@ func (tracker *LeaderTracker) EvictOwnerIfSubleaseHasExpired() bool {
 	return false
 }
 
+func LeaderTrackersContains(leaderTrackers *[]LeaderTracker, leader LeaderTracker) bool {
+	if leaderTrackers == nil {
+		return false
+	}
+	for _, compLeader := range *leaderTrackers {
+		if compLeader.Name == leader.Name &&
+			compLeader.Owner == leader.Owner &&
+			compLeader.Path == leader.Path &&
+			compLeader.PathIndex == leader.PathIndex {
+			return true
+		}
+	}
+	return false
+}
+
 func InsertIntoSortedLeaderTrackers(leaderTrackers *[]LeaderTracker, newLeader *LeaderTracker) {
 	insertIndex := -1
 	for i, leader := range *leaderTrackers {
