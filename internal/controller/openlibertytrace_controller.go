@@ -122,6 +122,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	prevTraceEnabled := instance.GetStatus().GetCondition(openlibertyv1.OperationStatusConditionTypeEnabled).Status
 	podChanged := prevPodName != podName
 
+	// read whether or not the prevPod is being managed by another OpenLibertyTrace leader instance
 	oldPodLeaderName := ""
 	if prevPodTraceMetadata != nil {
 		prevPodLeaderName, _, _, err := tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
@@ -130,7 +131,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 		if err != nil && !kerrors.IsNotFound(err) {
 			return reconcile.Result{}, err
 		}
-		if prevPodLeaderName != leaderName {
+		if prevPodLeaderName != leaderName { // don't set oldPodLeaderName when this instance is managing prevPod
 			oldPodLeaderName = prevPodLeaderName
 		}
 	}
