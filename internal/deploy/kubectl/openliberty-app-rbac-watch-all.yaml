@@ -52,7 +52,6 @@ rules:
   - apps
   resources:
   - deployments/finalizers
-  - statefulsets
   verbs:
   - update
 - apiGroups:
@@ -61,31 +60,9 @@ rules:
   - openlibertyapplications
   - openlibertyapplications/finalizers
   - openlibertyapplications/status
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps.openliberty.io
-  resources:
   - openlibertydumps
   - openlibertydumps/finalizers
   - openlibertydumps/status
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps.openliberty.io
-  resources:
   - openlibertytraces
   - openlibertytraces/finalizers
   - openlibertytraces/status
@@ -244,6 +221,40 @@ rules:
   - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/instance: open-liberty-operator
+    app.kubernetes.io/name: open-liberty-operator
+  name: olo-cluster-metrics-auth-role
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/instance: open-liberty-operator
+    app.kubernetes.io/name: open-liberty-operator
+  name: olo-cluster-metrics-reader
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   labels:
@@ -270,6 +281,22 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: olo-cluster-manager-role
+subjects:
+- kind: ServiceAccount
+  name: olo-controller-manager
+  namespace: OPEN_LIBERTY_OPERATOR_NAMESPACE
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/instance: open-liberty-operator
+    app.kubernetes.io/name: open-liberty-operator
+  name: olo-cluster-metrics-auth-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: olo-cluster-metrics-auth-role
 subjects:
 - kind: ServiceAccount
   name: olo-controller-manager
