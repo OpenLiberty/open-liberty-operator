@@ -105,7 +105,7 @@ func (r *ReconcileOpenLibertyTrace) OpenLibertyTraceLeaderTrackerGenerator(insta
 
 // Search the cluster namespace for existing Trace CRs
 func (r *ReconcileOpenLibertyTrace) GetTraceResources(instance *olv1.OpenLibertyTrace, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, assetsFolder *string, fileName string) (*unstructured.UnstructuredList, string, error) {
-	traceResourceList, _, err := lutils.CreateUnstructuredResourceListFromSignature(fileName, assetsFolder, "")
+	traceResourceList, _, err := lutils.CreateUnstructuredResourceListFromSignature(fileName, assetsFolder)
 	if err != nil {
 		return nil, "", err
 	}

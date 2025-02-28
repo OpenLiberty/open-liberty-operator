@@ -19,7 +19,9 @@ import (
 )
 
 var (
-	traceSpecification = "*=info:com.ibm.ws.webcontainer*=all"
+	traceSpecification               = "*=info:com.ibm.ws.webcontainer*=all"
+	traceLeaderTrackerVersion_v1_4_2 = "v1_4_2"
+	// traceLeaderTrackerVersion_v*_*_* = "v*_*_*" // create this flag when testing a new upgrade path
 )
 
 func TestTraceGetLeaderTrackerIsEmpty(t *testing.T) {
@@ -48,11 +50,21 @@ func TestTraceDecisionTreeIsValid(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
+	// check the test trace 2 gen decision tree
+	fileName = getControllerFolder() + "/tests/trace-decision-tree-2-generations.yaml"
+	_, _, err = tree.ParseDecisionTree(TRACE_RESOURCE_SHARING_FILE_NAME, &fileName)
+	tests = []Test{
+		{"parse test trace decision tree 2 generations", nil, err},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+
 	// check the test decision tree
 	fileName = getControllerFolder() + "/tests/decision-tree-complex.yaml"
 	_, _, err = tree.ParseDecisionTree(TRACE_RESOURCE_SHARING_FILE_NAME, &fileName)
 	tests = []Test{
-		{"parse decision tree complex", nil, err},
+		{"parse test decision tree complex", nil, err},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -234,7 +246,7 @@ func TestTraceLeaderTrackerManagesOnePod(t *testing.T) {
 	// create a trace instance
 	trace1Name := traceName + "-one"
 	trace1PodName := traceName + "-pod-one"
-	trace1Instance := createTraceCR(trace1Name, trace1PodName, "v1_4_1.0", nil)
+	trace1Instance := createTraceCR(trace1Name, trace1PodName, traceLeaderTrackerVersion_v1_4_2+".0", nil)
 	tests := []Test{
 		{"create Trace CR from based on path index 0 of trace decision tree", nil, r.CreateOrUpdate(trace1Instance, nil, func() error { return nil })},
 	}
@@ -256,16 +268,16 @@ func TestTraceLeaderTrackerManagesOnePod(t *testing.T) {
 	leader1 := lutils.LeaderTracker{
 		Name:      trace1PodName,
 		Owner:     "", // no owners associated with the Trace CRs because the mock decision tree is not registered to use with the operator
-		Path:      "v1_4_1.name.*",
-		PathIndex: "v1_4_1.0",
+		Path:      traceLeaderTrackerVersion_v1_4_2 + ".name.*",
+		PathIndex: traceLeaderTrackerVersion_v1_4_2 + ".0",
 	}
 
 	tests = []Test{
 		{"get Trace leader tracker name", "olo-managed-leader-tracking-" + TRACE_RESOURCE_SHARING_FILE_NAME, leaderTracker.Name},
 		{"get Trace leader tracker namespace", namespace, leaderTracker.Namespace},
-		{"get Trace leader trackers is not nil", leaderTrackers != nil, true},
-		{"get Trace leader trackers matches length", len(*leaderTrackers), 1},
-		{"get Trace leader trackers contains leader1", lutils.LeaderTrackersContains(leaderTrackers, leader1), true},
+		{"get Trace leader trackers is not nil", true, leaderTrackers != nil},
+		{"get Trace leader trackers matches length", 1, len(*leaderTrackers)},
+		{"get Trace leader trackers contains leader1", true, lutils.LeaderTrackersContains(leaderTrackers, leader1)},
 		{"get Trace leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
 		{"get Trace leader tracker error", nil, err},
 	}
@@ -274,7 +286,7 @@ func TestTraceLeaderTrackerManagesOnePod(t *testing.T) {
 	}
 }
 
-// Check that Trace CRs could manage more than one pod tied to wildcard path v1_4_1.name
+// Check that Trace CRs could manage more than one pod tied to wildcard path v1_4_2.name
 func TestTraceLeaderTrackerManagesTwoPods(t *testing.T) {
 	instance, r := mockOpenLibertyTrace()
 
@@ -288,12 +300,12 @@ func TestTraceLeaderTrackerManagesTwoPods(t *testing.T) {
 	// create first instance
 	trace1Name := traceName + "-one"
 	trace1PodName := traceName + "-pod-one"
-	trace1Instance := createTraceCR(trace1Name, trace1PodName, "v1_4_1.0", nil)
+	trace1Instance := createTraceCR(trace1Name, trace1PodName, traceLeaderTrackerVersion_v1_4_2+".0", nil)
 
 	// create second instance
 	trace2Name := traceName + "-two"
 	trace2PodName := traceName + "-pod-two"
-	trace2Instance := createTraceCR(trace2Name, trace2PodName, "v1_4_1.0", nil)
+	trace2Instance := createTraceCR(trace2Name, trace2PodName, traceLeaderTrackerVersion_v1_4_2+".0", nil)
 
 	// check instances can be created
 	tests := []Test{
@@ -318,23 +330,23 @@ func TestTraceLeaderTrackerManagesTwoPods(t *testing.T) {
 	leader1 := lutils.LeaderTracker{
 		Name:      trace1PodName,
 		Owner:     "", // no owners associated with the Trace CRs because the mock decision tree is not registered to use with the operator
-		Path:      "v1_4_1.name.*",
-		PathIndex: "v1_4_1.0",
+		Path:      traceLeaderTrackerVersion_v1_4_2 + ".name.*",
+		PathIndex: traceLeaderTrackerVersion_v1_4_2 + ".0",
 	}
 	leader2 := lutils.LeaderTracker{
 		Name:      trace2PodName,
 		Owner:     "", // no owners associated with the Trace CRs because the mock decision tree is not registered to use with the operator
-		Path:      "v1_4_1.name.*",
-		PathIndex: "v1_4_1.0",
+		Path:      traceLeaderTrackerVersion_v1_4_2 + ".name.*",
+		PathIndex: traceLeaderTrackerVersion_v1_4_2 + ".0",
 	}
 
 	tests = []Test{
 		{"get Trace leader tracker name", "olo-managed-leader-tracking-" + TRACE_RESOURCE_SHARING_FILE_NAME, leaderTracker.Name},
 		{"get Trace leader tracker namespace", namespace, leaderTracker.Namespace},
 		{"get Trace leader trackers is not nil", leaderTrackers != nil, true},
-		{"get Trace leader trackers matches length", len(*leaderTrackers), 2},
-		{"get Trace leader trackers contains leader1", lutils.LeaderTrackersContains(leaderTrackers, leader1), true},
-		{"get Trace leader trackers contains leader1", lutils.LeaderTrackersContains(leaderTrackers, leader2), true},
+		{"get Trace leader trackers matches length", 2, len(*leaderTrackers)},
+		{"get Trace leader trackers contains leader1", true, lutils.LeaderTrackersContains(leaderTrackers, leader1)},
+		{"get Trace leader trackers contains leader1", true, lutils.LeaderTrackersContains(leaderTrackers, leader2)},
 		{"get Trace leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
 		{"get Trace leader tracker error", nil, err},
 	}
@@ -343,21 +355,21 @@ func TestTraceLeaderTrackerManagesTwoPods(t *testing.T) {
 	}
 }
 
-// Check that Trace CRs could update from being managed by v1_4_1.name to another wildcard path v100_4_1.othername
+// Check that Trace CRs could update from being managed by v1_4_2.name to another wildcard path v100_4_2.othername
 func TestTraceLeaderTrackerManagesOnePodWithUpgrade(t *testing.T) {
 	instance, r := mockOpenLibertyTrace()
 
 	traceName := "example-trace"
 
 	// load decision tree
-	latestOperandVersion := "v10_4_1"
+	latestOperandVersion := "v10_4_2"
 	fileName := getControllerFolder() + "/assets/trace-decision-tree.yaml"
 	treeMap, replaceMap, _ := tree.ParseDecisionTree(TRACE_RESOURCE_SHARING_FILE_NAME, &fileName)
 
 	// create instance
 	trace1Name := traceName + "-one"
 	trace1PodName := traceName + "-pod-one"
-	trace1Instance := createTraceCR(trace1Name, trace1PodName, "v1_4_1.0", nil)
+	trace1Instance := createTraceCR(trace1Name, trace1PodName, traceLeaderTrackerVersion_v1_4_2+".0", nil)
 	tests := []Test{
 		{"create Trace CR from based on path index 0 of trace decision tree", nil, r.CreateOrUpdate(trace1Instance, nil, func() error { return nil })},
 	}
@@ -379,16 +391,16 @@ func TestTraceLeaderTrackerManagesOnePodWithUpgrade(t *testing.T) {
 	leader1 := lutils.LeaderTracker{
 		Name:      trace1PodName,
 		Owner:     "", // no owners associated with the Trace CRs because the mock decision tree is not registered to use with the operator
-		Path:      "v1_4_1.name.*",
-		PathIndex: "v1_4_1.0",
+		Path:      traceLeaderTrackerVersion_v1_4_2 + ".name.*",
+		PathIndex: traceLeaderTrackerVersion_v1_4_2 + ".0",
 	}
 
 	tests = []Test{
 		{"get Trace leader tracker name", "olo-managed-leader-tracking-" + TRACE_RESOURCE_SHARING_FILE_NAME, leaderTracker.Name},
 		{"get Trace leader tracker namespace", namespace, leaderTracker.Namespace},
-		{"get Trace leader trackers is not nil", leaderTrackers != nil, true},
-		{"get Trace leader trackers matches length", len(*leaderTrackers), 1},
-		{"get Trace leader trackers contains leader1", lutils.LeaderTrackersContains(leaderTrackers, leader1), true},
+		{"get Trace leader trackers is not nil", true, leaderTrackers != nil},
+		{"get Trace leader trackers matches length", 1, len(*leaderTrackers)},
+		{"get Trace leader trackers contains leader1", true, lutils.LeaderTrackersContains(leaderTrackers, leader1)},
 		{"get Trace leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
 		{"get Trace leader tracker error", nil, err},
 	}
@@ -512,9 +524,7 @@ func TestReconcileLeaderTrackerWhenTraceExistWithUpgrade(t *testing.T) {
 
 // This tests that the Trace leader tracker can have cluster awareness of Trace CRs before operator reconciliation and upgrade the Trace CRs to the latest decision tree version
 func TestReconcileLeaderTrackerWhenTraceExistsWithMultipleUpgradesAndDowngrades(t *testing.T) {
-	spec := openlibertyv1.OpenLibertyTraceSpec{}
-	instance := createOpenLibertyTrace(name, namespace, spec)
-	r := createReconcilerFromOpenLibertyTrace(instance)
+	instance, r := mockOpenLibertyTrace()
 
 	fileName := getControllerFolder() + "/tests/decision-tree-complex.yaml"
 	treeMap, replaceMap, _ := tree.ParseDecisionTree(TRACE_RESOURCE_SHARING_FILE_NAME, &fileName)
@@ -576,10 +586,10 @@ func TestReconcileLeaderTrackerWhenTraceExistsWithMultipleUpgradesAndDowngrades(
 		{"get Trace leader tracker name", "olo-managed-leader-tracking-" + TRACE_RESOURCE_SHARING_FILE_NAME, leaderTracker.Name},
 		{"get Trace leader tracker namespace", namespace, leaderTracker.Namespace},
 		{"get Trace leader trackers is not nil", leaderTrackers != nil, true},
-		{"get Trace leader trackers matches length", len(*leaderTrackers), 3},
-		{"get Trace leader trackers contains leader1", lutils.LeaderTrackersContains(leaderTrackers, leader1), true},
-		{"get Trace leader trackers contains leader2", lutils.LeaderTrackersContains(leaderTrackers, leader2), true},
-		{"get Trace leader trackers contains leader3", lutils.LeaderTrackersContains(leaderTrackers, leader3), true},
+		{"get Trace leader trackers matches length", 3, len(*leaderTrackers)},
+		{"get Trace leader trackers contains leader1", true, lutils.LeaderTrackersContains(leaderTrackers, leader1)},
+		{"get Trace leader trackers contains leader2", true, lutils.LeaderTrackersContains(leaderTrackers, leader2)},
+		{"get Trace leader trackers contains leader3", true, lutils.LeaderTrackersContains(leaderTrackers, leader3)},
 		{"get Trace leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
 		{"get Trace leader tracker error", nil, err},
 	}
@@ -624,10 +634,195 @@ func TestReconcileLeaderTrackerWhenTraceExistsWithMultipleUpgradesAndDowngrades(
 		{"get Trace leader tracker error", nil, err},
 		{"get Trace leader tracker name", "olo-managed-leader-tracking-" + TRACE_RESOURCE_SHARING_FILE_NAME, leaderTracker.Name},
 		{"get Trace leader tracker namespace", namespace, leaderTracker.Namespace},
-		{"get Trace leader trackers matches length", len(*leaderTrackers), 3},
-		{"get Trace leader trackers contains leader1", lutils.LeaderTrackersContains(leaderTrackers, leader1), true},
-		{"get Trace leader trackers contains leader2", lutils.LeaderTrackersContains(leaderTrackers, leader2), true},
-		{"get Trace leader trackers contains leader3", lutils.LeaderTrackersContains(leaderTrackers, leader3), true},
+		{"get Trace leader trackers matches length", 3, len(*leaderTrackers)},
+		{"get Trace leader trackers contains leader1", true, lutils.LeaderTrackersContains(leaderTrackers, leader1)},
+		{"get Trace leader trackers contains leader2", true, lutils.LeaderTrackersContains(leaderTrackers, leader2)},
+		{"get Trace leader trackers contains leader3", true, lutils.LeaderTrackersContains(leaderTrackers, leader3)},
+		{"get Trace leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+// This tests that the Trace leader tracker can upgrade using the wildcard entry
+func TestReconcileLeaderTrackerWhenTraceExistsWithWildcardUpgrade(t *testing.T) {
+	instance, r := mockOpenLibertyTrace()
+
+	fileName := getControllerFolder() + "/tests/trace-decision-tree-2-generations.yaml"
+	treeMap, replaceMap, _ := tree.ParseDecisionTree(TRACE_RESOURCE_SHARING_FILE_NAME, &fileName)
+
+	latestOperandVersion := "v10_4_2"
+
+	// create trace instance
+	traceName := "example-trace"
+	complexTraceName := traceName + "-one"
+	complexTracePodName := traceName + "-pod-one"
+	complexTrace := createTraceCR(complexTraceName, complexTracePodName, latestOperandVersion+".0", nil)
+
+	// create another trace instance
+	complexTrace2Name := traceName + "-two"
+	complexTrace2PodName := traceName + "-pod-two"
+	complexTrace2 := createTraceCR(complexTrace2Name, complexTrace2PodName, latestOperandVersion+".0", nil)
+
+	tests := []Test{
+		{"create Trace CR based on path index 0 of 2nd gen decision tree", nil, r.CreateOrUpdate(complexTrace, nil, func() error { return nil })},
+		{"create Trace CR based on path index 0 of 2nd gen decision tree", nil, r.CreateOrUpdate(complexTrace2, nil, func() error { return nil })},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// init the leader tracker but on a higher version of the decision tree
+	latestOperandVersion = "v10_4_3" // upgrade the version
+	assetsFolder := getAssetsFolder()
+	rsf := r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME)
+	tests = []Test{
+		{"reconcileLeaderTracker at version v10_4_3", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// validate the leader tracker upgraded the two Trace CRs created
+	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	expectedLeaderTrackerData := map[string][]byte{
+		lutils.ResourcesKey:           []byte(fmt.Sprintf("%s,%s", complexTracePodName, complexTrace2PodName)),
+		lutils.ResourceOwnersKey:      []byte(","),                                       // no owners associated with the Trace CR because this decision tree (only for test) is not registered to use with the operator
+		lutils.ResourcePathsKey:       []byte("v10_4_3.type.name.*,v10_4_3.type.name.*"), // These paths have been upgraded to v1_4_3 based on replaceMap
+		lutils.ResourcePathIndicesKey: []byte("v10_4_3.1,v10_4_3.1"),                     // These path indices have been upgraded to v1_4_3 based on tree indices
+	}
+	tests = []Test{
+		{"get Trace leader tracker name", "olo-managed-leader-tracking-" + TRACE_RESOURCE_SHARING_FILE_NAME, leaderTracker.Name},
+		{"get Trace leader tracker namespace", namespace, leaderTracker.Namespace},
+		{"get Trace leader tracker name", 2, len(*leaderTrackers)},
+		{"get Trace leader tracker owners name", ",", string(leaderTracker.Data[lutils.ResourceOwnersKey])},
+		{"get Trace leader tracker key name", fmt.Sprintf("%s,%s", complexTracePodName, complexTrace2PodName), string(leaderTracker.Data[lutils.ResourcesKey])},
+		{"get Trace leader tracker data", expectedLeaderTrackerData, leaderTracker.Data},
+		{"get Trace leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
+		{"get Trace leader tracker error", nil, err},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+// This tests that the Trace leader tracker can upgrade and downgrade using the wildcard entry
+func TestReconcileLeaderTrackerWhenTraceExistsWithMultipleWildcardUpgradesAndDowngrades(t *testing.T) {
+	instance, r := mockOpenLibertyTrace()
+
+	fileName := getControllerFolder() + "/tests/trace-decision-tree-3-generations.yaml"
+	treeMap, replaceMap, _ := tree.ParseDecisionTree(TRACE_RESOURCE_SHARING_FILE_NAME, &fileName)
+
+	// create 3 trace instances
+	latestOperandVersion := "v10_4_2"
+	traceName := "example-trace"
+	complexTraceName := traceName + "-one"
+	complexTrace2Name := traceName + "-two"
+	complexTrace3Name := traceName + "-three"
+	complexTracePodName := traceName + "-pod-one"
+	complexTrace2PodName := traceName + "-pod-two"
+	complexTrace3PodName := traceName + "-pod-three"
+	complexTrace := createTraceCR(complexTraceName, complexTracePodName, "v10_4_2.0", nil)
+	complexTrace2 := createTraceCR(complexTrace2Name, complexTrace2PodName, "v10_4_2.0", nil)
+	complexTrace3 := createTraceCR(complexTrace3Name, complexTrace3PodName, "v10_4_2.0", nil)
+	tests := []Test{
+		{"create Trace CR based on path index 0 of 3rd gen decision tree", nil, r.CreateOrUpdate(complexTrace, nil, func() error { return nil })},
+		{"create Trace CR based on path index 0 of 3rd gen decision tree", nil, r.CreateOrUpdate(complexTrace2, nil, func() error { return nil })},
+		{"create Trace CR based on path index 0 of 3rd gen decision tree", nil, r.CreateOrUpdate(complexTrace3, nil, func() error { return nil })},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// init the leader tracker but on a higher version of the decision tree
+	latestOperandVersion = "v10_4_500"
+	assetsFolder := getAssetsFolder()
+	rsf := r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME)
+	tests = []Test{
+		{"reconcileLeaderTracker at version v10_4_500", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// check the Trace leader tracker upgraded the 3 trace instances created
+	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	leader1 := lutils.LeaderTracker{
+		Name:      complexTracePodName,
+		Owner:     "",                      // no owners associated with the Trace CRs because this decision tree (only for test) is not registered to use with the operator
+		Path:      "v10_4_500.type.name.*", // These paths have been upgraded to v10_4_500 based on replaceMap
+		PathIndex: "v10_4_500.3",           // These path indices have been upgraded to v10_4_500 based on tree
+	}
+	leader2 := lutils.LeaderTracker{
+		Name:      complexTrace2PodName,
+		Owner:     "",
+		Path:      "v10_4_500.type.name.*",
+		PathIndex: "v10_4_500.3",
+	}
+	leader3 := lutils.LeaderTracker{
+		Name:      complexTrace3PodName,
+		Owner:     "",
+		Path:      "v10_4_500.type.name.*",
+		PathIndex: "v10_4_500.3",
+	}
+
+	tests = []Test{
+		{"get Trace leader tracker name", "olo-managed-leader-tracking-" + TRACE_RESOURCE_SHARING_FILE_NAME, leaderTracker.Name},
+		{"get Trace leader tracker namespace", namespace, leaderTracker.Namespace},
+		{"get Trace leader trackers is not nil", leaderTrackers != nil, true},
+		{"get Trace leader trackers matches length", 3, len(*leaderTrackers)},
+		{"get Trace leader trackers contains leader1", true, lutils.LeaderTrackersContains(leaderTrackers, leader1)},
+		{"get Trace leader trackers contains leader2", true, lutils.LeaderTrackersContains(leaderTrackers, leader2)},
+		{"get Trace leader trackers contains leader3", true, lutils.LeaderTrackersContains(leaderTrackers, leader3)},
+		{"get Trace leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
+		{"get Trace leader tracker error", nil, err},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// downgrade the decision tree version and initialize the leader tracker
+	latestOperandVersion = "v10_4_3"
+	rsf = r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME)
+	tests = []Test{
+		{"downgrade Trace Leader Tracker from v10_4_500 to v10_4_3", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	rsf = r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME)
+	tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)
+
+	leaderTracker, leaderTrackers, err = lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	leader1 = lutils.LeaderTracker{
+		Name:      complexTracePodName,
+		Owner:     "",                    // no owners associated with the Trace CRs because this decision tree (only for test) is not registered to use with the operator
+		Path:      "v10_4_3.type.name.*", // This path has been downgraded to v10_4_3 based on replaceMap
+		PathIndex: "v10_4_3.1",           // This path index has been downgraded to v10_4_3 based on tree
+	}
+	leader2 = lutils.LeaderTracker{
+		Name:      complexTrace2PodName,
+		Owner:     "",
+		Path:      "v10_4_3.type.name.*",
+		PathIndex: "v10_4_3.1",
+	}
+	leader3 = lutils.LeaderTracker{
+		Name:      complexTrace3PodName,
+		Owner:     "",
+		Path:      "v10_4_3.type.name.*",
+		PathIndex: "v10_4_3.1",
+	}
+
+	tests = []Test{
+		{"get Trace leader tracker error", nil, err},
+		{"get Trace leader tracker name", "olo-managed-leader-tracking-" + TRACE_RESOURCE_SHARING_FILE_NAME, leaderTracker.Name},
+		{"get Trace leader tracker namespace", namespace, leaderTracker.Namespace},
+		{"get Trace leader trackers matches length", 3, len(*leaderTrackers)},
+		{"get Trace leader trackers contains leader1", true, lutils.LeaderTrackersContains(leaderTrackers, leader1)},
+		{"get Trace leader trackers contains leader2", true, lutils.LeaderTrackersContains(leaderTrackers, leader2)},
+		{"get Trace leader trackers contains leader3", true, lutils.LeaderTrackersContains(leaderTrackers, leader3)},
 		{"get Trace leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
 	}
 	if err := verifyTests(tests); err != nil {
