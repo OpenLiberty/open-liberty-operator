@@ -588,7 +588,7 @@ func ReplacePath(path string, targetVersion string, treeMap map[string]interface
 	currVersion := strings.Split(currPath, ".")[0]
 	sortedKeys := getSortedKeysFromReplaceMap(replaceMap)
 	if !lutils.IsValidOperandVersion(currVersion) || !lutils.IsValidOperandVersion(targetVersion) {
-		return "", fmt.Errorf("there was no valid upgrade path to migrate the LTPA Secret on path %s, this may occur when the LTPA decision tree was modified from the history of an older multi-LTPA Liberty operator, first delete the affected/outdated LTPA Secret(s) then delete the olo-managed-leader-tracking-ltpa ConfigMap to resolve the operator state", path)
+		return "", fmt.Errorf("there was no valid upgrade path to migrate the shared resource on path %s, this may occur when the decision tree was modified from the history of an older operator revision, first delete the affected/outdated resources then delete the olo-managed-leader-tracking-* Secret to resolve the operator state", path)
 	}
 	cmp := lutils.CompareOperandVersion(currVersion, targetVersion)
 	latestOperandVersion, _ := GetLatestOperandVersion(treeMap, targetVersion)

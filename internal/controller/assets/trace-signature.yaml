@@ -1,3 +1,4 @@
 apiVersion: apps.openliberty.io/v1
 kind: OpenLibertyTrace
 name: "{0}"
+rootName: "" # empty root name is used because pod names are determined by the cluster
