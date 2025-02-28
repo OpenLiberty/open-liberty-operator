@@ -308,7 +308,6 @@ func CreateUnstructuredResourceListFromSignature(leaderTrackerType string, asset
 	}
 	apiVersion, apiVersionFound := resourceSignatureYAML["apiVersion"]
 	kind, kindFound := resourceSignatureYAML["kind"]
-	rootName := resourceSignatureYAML["rootName"]
 	if !apiVersionFound || !kindFound {
 		return nil, "", fmt.Errorf("the operator bundled the shared resource '" + leaderTrackerType + "' with an invalid signature")
 	}
@@ -319,7 +318,7 @@ func CreateUnstructuredResourceListFromSignature(leaderTrackerType string, asset
 	rootName, rootNameFound := resourceSignatureYAML["rootName"]
 	sharedResourceRootName := ""
 	if rootNameFound {
-		unstructuredResourceRootName, err := parseUnstructuredResourceName(leaderTrackerType, rootName.(string), args[0])
+		unstructuredResourceRootName, err := parseUnstructuredResourceName(leaderTrackerType, rootName.(string), args...)
 		if err != nil {
 			return nil, "", err
 		}
@@ -332,10 +331,12 @@ func CreateUnstructuredResourceListFromSignature(leaderTrackerType string, asset
 func parseUnstructuredResourceName(leaderTrackerType string, nameStr string, args ...string) (string, error) {
 	for i, replacementString := range args {
 		replaceToken := fmt.Sprintf("{%d}", i)
-		if strings.Contains(nameStr, replaceToken) {
-			nameStr = strings.ReplaceAll(nameStr, replaceToken, replacementString)
-		} else {
-			return "", fmt.Errorf("the operator bundled the shared resource '" + leaderTrackerType + "' with an invalid signature; parseUnstructuredResourceName len(args) does not match the number of replacement tokens in the provided signature")
+		if len(nameStr) > 0 {
+			if strings.Contains(nameStr, replaceToken) {
+				nameStr = strings.ReplaceAll(nameStr, replaceToken, replacementString)
+			} else {
+				return "", fmt.Errorf("the operator bundled the shared resource '" + leaderTrackerType + "' with an invalid signature; parseUnstructuredResourceName len(args) does not match the number of replacement tokens in the provided signature")
+			}
 		}
 	}
 	return nameStr, nil
