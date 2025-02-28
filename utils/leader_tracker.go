@@ -323,7 +323,6 @@ func CreateUnstructuredResourceListFromSignature(leaderTrackerType string, asset
 	}
 	apiVersion, apiVersionFound := resourceSignatureYAML["apiVersion"]
 	kind, kindFound := resourceSignatureYAML["kind"]
-	rootName := resourceSignatureYAML["rootName"]
 	if !apiVersionFound || !kindFound {
 		return nil, "", fmt.Errorf("the operator bundled the shared resource '%s' with an invalid signature", leaderTrackerType)
 	}
@@ -334,7 +333,7 @@ func CreateUnstructuredResourceListFromSignature(leaderTrackerType string, asset
 	rootName, rootNameFound := resourceSignatureYAML["rootName"]
 	sharedResourceRootName := ""
 	if rootNameFound {
-		unstructuredResourceRootName, err := parseUnstructuredResourceName(leaderTrackerType, rootName.(string), args[0])
+		unstructuredResourceRootName, err := parseUnstructuredResourceName(leaderTrackerType, rootName.(string), args...)
 		if err != nil {
 			return nil, "", err
 		}
