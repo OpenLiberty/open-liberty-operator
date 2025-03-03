@@ -280,12 +280,10 @@ func getUnstructuredResourceSignature(leaderTrackerType string, assetsPath *stri
 	if assetsPath != nil {
 		folderPath = *assetsPath
 	} else {
-		folderPath = "assets"
+		folderPath = "internal/controller/assets"
 	}
 	signature, err := os.ReadFile(folderPath + "/" + leaderTrackerType + "-signature.yaml")
 	if err != nil {
-		wd, _ := os.Getwd()
-		fmt.Println(wd)
 		return nil, err
 	}
 	resourceSignatureYAML := make(map[string]interface{})
