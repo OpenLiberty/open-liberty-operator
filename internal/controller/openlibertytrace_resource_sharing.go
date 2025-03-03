@@ -67,10 +67,12 @@ func (r *ReconcileOpenLibertyTrace) reconcileResourceTrackingState(instance *olv
 		return nil, err
 	}
 
-	latestOperandVersion, err := tree.GetLatestOperandVersion(treeMap, "")
-	if err != nil {
-		return nil, err
-	}
+	// TODO: use helper after test
+	// latestOperandVersion, err := tree.GetLatestOperandVersion(treeMap, "")
+	// if err != nil {
+	// 	return nil, err
+	// }
+	latestOperandVersion := "v1_4_2"
 	rsf := r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, leaderTrackerType)
 	return tree.ReconcileResourceTrackingState(instance.GetNamespace(), OperatorShortName, leaderTrackerType, r.GetClient(), rsf, treeMap, replaceMap, latestOperandVersion)
 }
