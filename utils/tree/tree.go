@@ -498,8 +498,7 @@ func ParseDecisionTree(leaderTrackerType string, fileName *string) (map[string]i
 		tree, err = os.ReadFile("internal/controller/assets/" + leaderTrackerType + "-decision-tree.yaml")
 		if err != nil {
 			wd, _ := os.Getwd()
-			fmt.Println(wd)
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("wd: %s: %v\n", wd, err)
 		}
 	}
 	ltpaDecisionTreeYAML := make(map[string]interface{})
