@@ -3,6 +3,8 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
@@ -114,7 +116,30 @@ func (r *ReconcileOpenLibertyTrace) GetTraceResources(instance *olv1.OpenLiberty
 	if err := r.GetClient().List(context.TODO(), traceResourceList, client.InNamespace(instance.GetNamespace())); err != nil {
 		return nil, "", err
 	}
-	fmt.Printf("unstructured: %s %s \n", traceResourceList.GetKind(), traceResourceList.GetAPIVersion())
-	fmt.Printf("len: %d\n", len(traceResourceList.Items))
+
+	// If the Trace CR is not annotated with a resource tracking label, patch the CR instance with a leader tracking label to work on the current resource tracking impl.
+	for i := range len(traceResourceList.Items) {
+		defaultUpdatedPathIndex := ""
+		// path is hardcoded to start replaceMap translation at "v1_4_2.name.*"
+		if path, err := tree.ReplacePath("v1_4_2.name.*", latestOperandVersion, treeMap, replaceMap); err == nil {
+			defaultUpdatedPathIndex = strings.Split(path, ".")[0] + "." + strconv.FormatInt(int64(tree.GetLeafIndex(treeMap, path)), 10)
+		}
+		if defaultUpdatedPathIndex != "" {
+			if err := r.CreateOrUpdate(&traceResourceList.Items[i], nil, func() error {
+				// add the ResourcePathIndexLabel
+				labelsMap, _, _ := unstructured.NestedMap(traceResourceList.Items[i].Object, "metadata", "labels")
+				if labelsMap == nil {
+					labelsMap = make(map[string]interface{})
+				}
+				labelsMap[lutils.ResourcePathIndexLabel] = defaultUpdatedPathIndex
+				if err := unstructured.SetNestedMap(traceResourceList.Items[i].Object, labelsMap, "metadata", "labels"); err != nil {
+					return err
+				}
+				return nil
+			}); err != nil {
+				return traceResourceList, "", err
+			}
+		}
+	}
 	return traceResourceList, "", nil
 }
