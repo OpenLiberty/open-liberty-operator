@@ -284,6 +284,8 @@ func getUnstructuredResourceSignature(leaderTrackerType string, assetsPath *stri
 	}
 	signature, err := os.ReadFile(folderPath + "/" + leaderTrackerType + "-signature.yaml")
 	if err != nil {
+		wd, _ := os.Getwd()
+		fmt.Println(wd)
 		return nil, err
 	}
 	resourceSignatureYAML := make(map[string]interface{})
