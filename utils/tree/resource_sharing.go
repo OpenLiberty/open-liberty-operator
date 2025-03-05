@@ -1,6 +1,7 @@
 package tree
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -14,7 +15,7 @@ import (
 
 type ResourceSharingFactory interface {
 	Resources() func() (lutils.LeaderTrackerMetadataList, error)
-	LeaderTrackers() func() ([]*unstructured.UnstructuredList, []string, error)
+	LeaderTrackers() func(assetsFolder *string) ([]*unstructured.UnstructuredList, []string, error)
 	CreateOrUpdate() func(obj client.Object, owner metav1.Object, cb func() error) error
 	DeleteResources() func(obj client.Object) error
 	LeaderTrackerName() func(map[string]interface{}) (string, error)
@@ -176,14 +177,17 @@ func ReconcileLeaderTracker(namespace string, operatorShortName string, client c
 }
 
 func CreateNewLeaderTrackerList(rsf ResourceSharingFactory, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, leaderTrackerType string, assetsFolder *string) (*[]lutils.LeaderTracker, error) {
-	resourcesMatrix, resourcesRootNameList, err := rsf.LeaderTrackers()()
+	resourcesMatrix, resourcesRootNameList, err := rsf.LeaderTrackers()(assetsFolder)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("ok here: %d\n", len(resourcesMatrix[0].Items))
 	leaderTracker := make([]lutils.LeaderTracker, 0)
 	for i, resourcesList := range resourcesMatrix {
+		fmt.Printf("iter: %d\n", i)
 		UpdateLeaderTrackersFromUnstructuredList(rsf, &leaderTracker, resourcesList, treeMap, replaceMap, latestOperandVersion, resourcesRootNameList[i])
 	}
+	fmt.Printf("ok here now: %d\n", len(leaderTracker))
 	return &leaderTracker, nil
 }
 
