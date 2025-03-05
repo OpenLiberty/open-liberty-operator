@@ -37,7 +37,7 @@ var log = logf.Log.WithName("openliberty_utils")
 // Constant Values
 const serviceabilityMountPath = "/serviceability"
 const ssoEnvVarPrefix = "SEC_SSO_"
-const OperandVersion = "1.4.1"
+const OperandVersion = "1.4.2"
 
 // LTPA constants
 const managedLTPAMountPath = "/config/managedLTPA"
