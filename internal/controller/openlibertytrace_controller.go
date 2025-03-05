@@ -12,10 +12,10 @@ import (
 	oputils "github.com/application-stacks/runtime-component-operator/utils"
 	"github.com/go-logr/logr"
 
+	"reflect"
+
 	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -67,7 +67,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	instance := &openlibertyv1.OpenLibertyTrace{}
 	err := r.Client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if kerrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
@@ -172,7 +172,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	}
 
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: podName, Namespace: podNamespace}, &corev1.Pod{})
-	if err != nil && errors.IsNotFound(err) {
+	if err != nil && kerrors.IsNotFound(err) {
 		//Pod is not found. Return and don't requeue
 		reqLogger.Error(err, "Pod "+podName+" was not found in namespace "+podNamespace)
 		return r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
@@ -266,7 +266,7 @@ func (r *ReconcileOpenLibertyTrace) UpdateStatus(issue error, conditionType open
 
 func (r *ReconcileOpenLibertyTrace) disableTraceOnPrevPod(reqLogger logr.Logger, prevPodName string, podNamespace string) {
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: prevPodName, Namespace: podNamespace}, &corev1.Pod{})
-	if err != nil && errors.IsNotFound(err) {
+	if err != nil && kerrors.IsNotFound(err) {
 		//Previous Pod is not found. No-op
 		reqLogger.Info("Previous pod " + prevPodName + " was not found in namespace " + podNamespace)
 	} else {
@@ -305,7 +305,7 @@ func (r *ReconcileOpenLibertyTrace) CreateOrUpdate(obj client.Object, owner meta
 func (r *ReconcileOpenLibertyTrace) DeleteResource(obj client.Object) error {
 	err := r.GetClient().Delete(context.TODO(), obj)
 	if err != nil {
-		if !apierrors.IsNotFound(err) {
+		if !kerrors.IsNotFound(err) {
 			//log.Error(err, "Unable to delete object ", "object", obj)
 			return err
 		}
@@ -378,8 +378,8 @@ func (r *ReconcileOpenLibertyTrace) SetupWithManager(mgr ctrl.Manager) error {
 
 	pred := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			// Ignore updates to CR status in which case metadata.Generation does not change
-			return e.ObjectOld.GetGeneration() != e.ObjectNew.GetGeneration() && (isClusterWide || watchNamespacesMap[e.ObjectOld.GetNamespace()])
+			// Ignore updates to CR status in which case metadata.Generation does not change, unless labels were changed
+			return (e.ObjectOld.GetGeneration() != e.ObjectNew.GetGeneration() || !reflect.DeepEqual(e.ObjectOld.GetLabels(), e.ObjectNew.GetLabels())) && (isClusterWide || watchNamespacesMap[e.ObjectOld.GetNamespace()])
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
 			return isClusterWide || watchNamespacesMap[e.Object.GetNamespace()]

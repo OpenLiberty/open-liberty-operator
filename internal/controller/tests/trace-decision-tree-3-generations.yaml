@@ -1,5 +1,5 @@
 tree:
-  v10_4_2:
+  v1_4_2:
     name: "*"
   v10_4_3:
     type:
@@ -16,6 +16,6 @@ tree:
       name: "*" # 3
 replace:
   v10_4_3:
-    "v10_4_2.name.*": "v10_4_3.type.name.*"
+    "v1_4_2.name.*": "v10_4_3.type.name.*"
   v10_4_500:
     "v10_4_3.type.name.*": "v10_4_500.type.name.*"
