@@ -98,41 +98,28 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 		if numTraceItems >= 2 {
 			prevPodTraceMetadata = traceMetadataList.Items[1].(*lutils.TraceMetadata)
 		}
-
-	}
-
-	leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
-		return r.CreateOrUpdate(obj, owner, cb)
-	}, OperatorShortName, instance.GetName(), instance.GetNamespace(), traceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, true, true)
-	if err != nil && !kerrors.IsNotFound(err) {
-		return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, err
 	}
 
 	//Pod is expected to be from the same namespace as the CR instance
 	podNamespace := instance.Namespace
 	podName := instance.Spec.PodName
 
-	if !thisInstanceIsLeader {
-		err := fmt.Errorf("Trace could not be applied. Pod '" + podName + "' is already configured by OpenLibertyTrace instance '" + leaderName + "'.")
-		reqLogger.Error(err, "Trace was denied for instance '"+instance.GetName()+"'; Trace instance '"+leaderName+"' is already managing pod '"+podName+"' in namespace '"+podNamespace+"'")
-		return r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, false)
-	}
-
 	prevPodName := instance.GetStatus().GetOperatedResource().GetOperatedResourceName()
 	prevTraceEnabled := instance.GetStatus().GetCondition(openlibertyv1.OperationStatusConditionTypeEnabled).Status
 	podChanged := prevPodName != podName
 
-	// read whether or not the prevPod is being managed by another OpenLibertyTrace leader instance
-	oldPodLeaderName := ""
-	if prevPodTraceMetadata != nil {
-		prevPodLeaderName, _, _, err := tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
+	isPrevPodTraceDisabled := false
+	// if pod changed then disable prevPod (if possible)
+	if podChanged && prevTraceEnabled == corev1.ConditionTrue && traceMetadata != nil && prevPodTraceMetadata != nil && traceMetadata.Name != prevPodTraceMetadata.Name {
+		_, thisInstanceIsLeader, _, err := tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
 			return r.CreateOrUpdate(obj, owner, cb)
-		}, OperatorShortName, instance.GetName(), instance.GetNamespace(), prevPodTraceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, false, true)
+		}, OperatorShortName, instance.GetName(), instance.GetNamespace(), prevPodTraceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, true, true)
 		if err != nil && !kerrors.IsNotFound(err) {
-			return reconcile.Result{}, err
+			return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, err
 		}
-		if prevPodLeaderName != leaderName { // don't set oldPodLeaderName when this instance is managing prevPod
-			oldPodLeaderName = prevPodLeaderName
+		if thisInstanceIsLeader {
+			r.disableTraceOnPrevPod(reqLogger, prevPodName, podNamespace)
+			isPrevPodTraceDisabled = true
 		}
 	}
 
@@ -141,15 +128,27 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	isInstanceMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
 	if isInstanceMarkedToBeDeleted {
 		if lutils.Contains(instance.GetFinalizers(), traceFinalizer) {
-			// Run finalization logic for traceFinalizer. If the finalization logic fails, don't remove the
-			// finalizer so that we can retry during the next reconciliation.
-			if err := r.finalizeOpenLibertyTrace(reqLogger, instance, prevTraceEnabled, prevPodName, podNamespace, oldPodLeaderName); err != nil {
-				return reconcile.Result{}, err
+			// if this instance is the prevPod leader, then disable prevPod based on isPrevPodTraceDisabled and remove owner ref
+			if prevTraceEnabled == corev1.ConditionTrue && prevPodTraceMetadata != nil {
+				_, thisInstanceIsLeader, _, err := tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
+					return r.CreateOrUpdate(obj, owner, cb)
+				}, OperatorShortName, instance.GetName(), instance.GetNamespace(), prevPodTraceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, false, true)
+				if err != nil && !kerrors.IsNotFound(err) {
+					return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, err
+				}
+
+				if thisInstanceIsLeader {
+					// Run finalization logic for traceFinalizer. If the finalization logic fails, don't remove the
+					// finalizer so that we can retry during the next reconciliation.
+					if err := r.finalizeOpenLibertyTrace(reqLogger, instance, isPrevPodTraceDisabled, prevPodName, podNamespace); err != nil {
+						return reconcile.Result{}, err
+					}
+				}
 			}
 
 			// Remove traceFinalizer. Once all finalizers have been removed, the object will be deleted.
 			instance.SetFinalizers(lutils.Remove(instance.GetFinalizers(), traceFinalizer))
-			err := r.Client.Update(context.TODO(), instance)
+			err = r.Client.Update(context.TODO(), instance)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
@@ -164,13 +163,20 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 		}
 	}
 
-	//If pod name changed, then stop tracing on previous pod (if trace was enabled on it) i.f.f. prevPod is not being managed by another OpenLibertyTrace leader instance
-	if oldPodLeaderName == "" {
-		if podChanged && (prevTraceEnabled == corev1.ConditionTrue) {
-			r.disableTraceOnPrevPod(reqLogger, prevPodName, podNamespace)
-		}
+	// exit if this instance is not the leader of podName
+	leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
+		return r.CreateOrUpdate(obj, owner, cb)
+	}, OperatorShortName, instance.GetName(), instance.GetNamespace(), prevPodTraceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, true, true)
+	if err != nil && !kerrors.IsNotFound(err) {
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, err
+	}
+	if !thisInstanceIsLeader {
+		err := fmt.Errorf("Trace could not be applied. Pod '" + podName + "' is already configured by OpenLibertyTrace instance '" + leaderName + "'.")
+		reqLogger.Error(err, "Trace was denied for instance '"+instance.GetName()+"'; Trace instance '"+leaderName+"' is already managing pod '"+podName+"' in namespace '"+podNamespace+"'")
+		return r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, false)
 	}
 
+	// run day-2 operation
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: podName, Namespace: podNamespace}, &corev1.Pod{})
 	if err != nil && kerrors.IsNotFound(err) {
 		//Pod is not found. Return and don't requeue
@@ -331,9 +337,8 @@ func (r *ReconcileOpenLibertyTrace) GetClient() client.Client {
 	return r.Client
 }
 
-func (r *ReconcileOpenLibertyTrace) finalizeOpenLibertyTrace(reqLogger logr.Logger, olt *openlibertyv1.OpenLibertyTrace, prevTraceEnabled corev1.ConditionStatus, prevPodName string, podNamespace string, oldPodLeaderName string) error {
-	// only disable trace on prevPod if it is not being managed by another OpenLibertyTrace leader instance
-	if oldPodLeaderName == "" && prevTraceEnabled == corev1.ConditionTrue {
+func (r *ReconcileOpenLibertyTrace) finalizeOpenLibertyTrace(reqLogger logr.Logger, olt *openlibertyv1.OpenLibertyTrace, isPrevPodTraceDisabled bool, prevPodName, podNamespace string) error {
+	if !isPrevPodTraceDisabled {
 		r.disableTraceOnPrevPod(reqLogger, prevPodName, podNamespace)
 	}
 	tree.RemoveLeaderTrackerReference(r.GetClient(),
