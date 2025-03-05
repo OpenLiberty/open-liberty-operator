@@ -1,20 +1,21 @@
 tree:
-  v10_2_2: test
+  v1_4_2:
+    name: "*"
   v10_3_3:
-    a: b # 0
+    a: "*" # 0
   v10_4_1:
     a:
       b: 
         c: true # 0
         e:
-          - true # 2
+          - "*" # 2
           - false # 3
         d: true # 1
     j: fizz # 4 (this element appears only in v10_4_1, but is deprecated in all other versions because no replace command exists)
   v10_4_20:
     a:
       b:
-        e: foo # 2
+        e: "*" # 2
         c: true # 0
         d: false # 1
       f:
@@ -25,7 +26,7 @@ tree:
     a:
       b:
         d: false # 2
-        b: true # 0
+        b: "*" # 0
         e: foo # 3
         c: true # 1
       f:
@@ -34,18 +35,18 @@ tree:
           i: bar # 4
 replace:
   v10_3_3:
-    "v10_2_2.test": "v10_3_3.a.b"
+    "v1_4_2.name.*": "v10_3_3.a.*"
   v10_4_1:
-    "v10_3_3.a.b": "v10_4_1.a.b.e.true"
+    "v10_3_3.a.*": "v10_4_1.a.b.e.*"
   v10_4_20:
     "v10_4_1.a.b.c.true": "v10_4_20.a.b.c.true"
     "v10_4_1.a.b.d.true": "v10_4_20.a.b.d.false"
-    "v10_4_1.a.b.e.true": "v10_4_20.a.b.e.foo"
+    "v10_4_1.a.b.e.*": "v10_4_20.a.b.e.*"
     "v10_4_1.a.b.e.false": "v10_4_20.a.f.g.i.bar"
   v10_4_500:
     "v10_4_20.a.b.d.false": "v10_4_500.a.b.d.false"
     "v10_4_20.a.b.c.true": "v10_4_500.a.b.c.true"
-    "v10_4_20.a.b.e.foo": "v10_4_500.a.b.b.true"
+    "v10_4_20.a.b.e.*": "v10_4_500.a.b.b.*"
     "v10_4_20.a.f.g.i.bar": "v10_4_500.a.f.g.i.bar"
     "v10_4_20.a.f.h.element": "v10_4_500.a.f.h.element"
       

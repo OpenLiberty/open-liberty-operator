@@ -130,7 +130,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 
 	// Second, initialize the LTPA leader tracker
 	latestOperandVersion := "v10_4_1"
-	fileName := getControllerFolder() + "/tests/decision-tree-complex.yaml"
+	fileName := getControllerFolder() + "/tests/ltpa-decision-tree-complex.yaml"
 	treeMap, replaceMap, err := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, &fileName)
 	tests = []Test{
 		{"parse decision tree complex", nil, err},
@@ -166,7 +166,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	// Thirdly, create an LTPA Secret based upon a path in decision-tree-complex.yaml
+	// Thirdly, create an LTPA Secret based upon a path in ltpa-decision-tree-complex.yaml
 	complexSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "olo-managed-ltpa-ab215",
@@ -302,7 +302,7 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 
 	// Using the LTPA Decision Tree (complex) at version v10_4_1
 	latestOperandVersion := "v10_4_1"
-	fileName := getControllerFolder() + "/tests/decision-tree-complex.yaml"
+	fileName := getControllerFolder() + "/tests/ltpa-decision-tree-complex.yaml"
 	treeMap, replaceMap, err := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, &fileName)
 	tests := []Test{
 		{"parse decision tree complex", nil, err},
@@ -311,7 +311,7 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	// Firstly, Before initializing the leader tracker, create two LTPA Secrets based upon paths in decision-tree-complex.yaml
+	// Firstly, Before initializing the leader tracker, create two LTPA Secrets based upon paths in ltpa-decision-tree-complex.yaml
 	ltpaRootName := "olo-managed-ltpa"
 	complexSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -379,7 +379,7 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T) {
 	instance := createOpenLibertyApp(name, namespace, spec)
 	r := createReconcilerFromOpenLibertyApp(instance)
 
-	fileName := getControllerFolder() + "/tests/decision-tree-complex.yaml"
+	fileName := getControllerFolder() + "/tests/ltpa-decision-tree-complex.yaml"
 	treeMap, replaceMap, err := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, &fileName)
 	tests := []Test{
 		{"parse decision tree complex", nil, err},
@@ -388,7 +388,7 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	// Firstly, Before initializing the leader tracker, create two LTPA Secrets based upon paths in decision-tree-complex.yaml
+	// Firstly, Before initializing the leader tracker, create two LTPA Secrets based upon paths in ltpa-decision-tree-complex.yaml
 	latestOperandVersion := "v10_4_1"
 	ltpaRootName := "olo-managed-ltpa"
 	complexSecret := &corev1.Secret{
@@ -458,7 +458,7 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngr
 	instance := createOpenLibertyApp(name, namespace, spec)
 	r := createReconcilerFromOpenLibertyApp(instance)
 
-	fileName := getControllerFolder() + "/tests/decision-tree-complex.yaml"
+	fileName := getControllerFolder() + "/tests/ltpa-decision-tree-complex.yaml"
 	treeMap, replaceMap, err := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, &fileName)
 	tests := []Test{
 		{"parse decision tree complex", nil, err},
@@ -467,7 +467,7 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngr
 		t.Fatalf("%v", err)
 	}
 
-	// Firstly, Before initializing the leader tracker, create two LTPA Secrets based upon paths in decision-tree-complex.yaml
+	// Firstly, Before initializing the leader tracker, create two LTPA Secrets based upon paths in ltpa-decision-tree-complex.yaml
 	latestOperandVersion := "v10_4_1"
 	ltpaRootName := "olo-managed-ltpa"
 	complexSecret := &corev1.Secret{

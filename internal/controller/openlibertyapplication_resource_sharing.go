@@ -18,7 +18,7 @@ import (
 
 type OpenLibertyApplicationResourceSharingFactory struct {
 	resourcesFunc         func() (lutils.LeaderTrackerMetadataList, error)
-	leaderTrackersFunc    func() ([]*unstructured.UnstructuredList, []string, error)
+	leaderTrackersFunc    func(assetsFolder *string) ([]*unstructured.UnstructuredList, []string, error)
 	createOrUpdateFunc    func(obj client.Object, owner metav1.Object, cb func() error) error
 	deleteResourcesFunc   func(obj client.Object) error
 	leaderTrackerNameFunc func(map[string]interface{}) (string, error)
@@ -28,7 +28,7 @@ func (rsf *OpenLibertyApplicationResourceSharingFactory) Resources() func() (lut
 	return rsf.resourcesFunc
 }
 
-func (rsf *OpenLibertyApplicationResourceSharingFactory) LeaderTrackers() func() ([]*unstructured.UnstructuredList, []string, error) {
+func (rsf *OpenLibertyApplicationResourceSharingFactory) LeaderTrackers() func(*string) ([]*unstructured.UnstructuredList, []string, error) {
 	return rsf.leaderTrackersFunc
 }
 
@@ -49,8 +49,8 @@ func (r *ReconcileOpenLiberty) createResourceSharingFactory(instance *olv1.OpenL
 		resourcesFunc: func() (lutils.LeaderTrackerMetadataList, error) {
 			return r.OpenLibertyApplicationSharedResourceGenerator(instance, treeMap, latestOperandVersion, leaderTrackerType)
 		},
-		leaderTrackersFunc: func() ([]*unstructured.UnstructuredList, []string, error) {
-			return r.OpenLibertyApplicationLeaderTrackerGenerator(instance, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, nil)
+		leaderTrackersFunc: func(assetsFolder *string) ([]*unstructured.UnstructuredList, []string, error) {
+			return r.OpenLibertyApplicationLeaderTrackerGenerator(instance, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, assetsFolder)
 		},
 		createOrUpdateFunc: func(obj client.Object, owner metav1.Object, cb func() error) error {
 			return r.CreateOrUpdate(obj, owner, cb)
