@@ -69,13 +69,11 @@ func (r *ReconcileOpenLibertyTrace) reconcileResourceTrackingState(instance *olv
 		return nil, err
 	}
 
-	// TODO: use helper after test
 	latestOperandVersion, err := tree.GetLatestOperandVersion(treeMap, "")
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("LATEST OPERAND VERSION: %s\n", latestOperandVersion)
-	// latestOperandVersion := "v1_4_2"
+
 	rsf := r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, leaderTrackerType)
 	return tree.ReconcileResourceTrackingState(instance.GetNamespace(), OperatorShortName, leaderTrackerType, r.GetClient(), rsf, treeMap, replaceMap, latestOperandVersion)
 }
@@ -106,7 +104,6 @@ func (r *ReconcileOpenLibertyTrace) OpenLibertyTraceLeaderTrackerGenerator(insta
 	} else {
 		return nil, nil, fmt.Errorf("a valid leaderTrackerType was not specified for createNewLeaderTrackerList")
 	}
-	fmt.Printf("--> %d\n", len(resourcesMatrix[0].Items))
 	return resourcesMatrix, resourcesRootNameList, nil
 }
 
@@ -132,7 +129,6 @@ func (r *ReconcileOpenLibertyTrace) GetTraceResources(instance *olv1.OpenLiberty
 		defaultUpdatedPathIndex := ""
 		// path is hardcoded to start replaceMap translation at "v1_4_2.name.*"
 		if path, err := tree.ReplacePath("v1_4_2.name.*", latestOperandVersion, treeMap, replaceMap); err == nil {
-			fmt.Printf("REPLACED PATH with %s (%s)\n", path, latestOperandVersion)
 			defaultUpdatedPathIndex = strings.Split(path, ".")[0] + "." + strconv.FormatInt(int64(tree.GetLeafIndex(treeMap, path)), 10)
 		}
 		if defaultUpdatedPathIndex != "" {
