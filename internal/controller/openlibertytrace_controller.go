@@ -164,9 +164,13 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	}
 
 	// exit if this instance is not the leader of podName
+	currentPodTraceMetadata := traceMetadata
+	if prevPodTraceMetadata != nil {
+		currentPodTraceMetadata = prevPodTraceMetadata
+	}
 	leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
 		return r.CreateOrUpdate(obj, owner, cb)
-	}, OperatorShortName, instance.GetName(), instance.GetNamespace(), prevPodTraceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, true, true)
+	}, OperatorShortName, instance.GetName(), instance.GetNamespace(), currentPodTraceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, true, true)
 	if err != nil && !kerrors.IsNotFound(err) {
 		return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, err
 	}
