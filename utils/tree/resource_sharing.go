@@ -1,7 +1,6 @@
 package tree
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -181,13 +180,10 @@ func CreateNewLeaderTrackerList(rsf ResourceSharingFactory, treeMap map[string]i
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("ok here: %d\n", len(resourcesMatrix[0].Items))
 	leaderTracker := make([]lutils.LeaderTracker, 0)
 	for i, resourcesList := range resourcesMatrix {
-		fmt.Printf("iter: %d\n", i)
 		UpdateLeaderTrackersFromUnstructuredList(rsf, &leaderTracker, resourcesList, treeMap, replaceMap, latestOperandVersion, resourcesRootNameList[i])
 	}
-	fmt.Printf("ok here now: %d\n", len(leaderTracker))
 	return &leaderTracker, nil
 }
 
