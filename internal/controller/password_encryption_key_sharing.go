@@ -51,7 +51,7 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(instance *olv1.Ope
 				} else {
 					// non-leaders should yield for the password encryption leader to mirror the encryption key's state
 					if !r.encryptionKeySecretMirrored(instance, passwordEncryptionMetadata) {
-						return "", "", "", fmt.Errorf("Waiting for OpenLibertyApplication instance '" + leaderName + "' to mirror the shared Password Encryption Key Secret for the namespace '" + instance.Namespace + "'.")
+						return "", "", "", fmt.Errorf("Waiting for OpenLibertyApplication instance '%s' to mirror the shared Password Encryption Key Secret for the namespace '%s'.", leaderName, instance.Namespace)
 					}
 				}
 				return "", encryptionSecret.Name, string(encryptionSecret.Data["lastRotation"]), nil
