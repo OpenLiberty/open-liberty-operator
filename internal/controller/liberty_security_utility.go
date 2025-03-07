@@ -3,12 +3,14 @@ package controller
 import (
 	"fmt"
 	"os/exec"
+
+	"github.com/OpenLiberty/open-liberty-operator/utils"
 )
 
-const SECURITY_UTILITY_BINARY = "opt/ol/wlp/bin/securityUtility"
+const SECURITY_UTILITY_BINARY = "liberty/bin/securityUtility"
 const SECURITY_UTILITY_ENCODE = "encode"
 const SECURITY_UTILITY_CREATE_LTPA_KEYS = "createLTPAKeys"
-const SECURITY_UTILITY_OUTPUT_FOLDER = "opt/ol/wlp/output"
+const SECURITY_UTILITY_OUTPUT_FOLDER = "liberty/output"
 
 func encode(password string, passwordKey *string) ([]byte, error) {
 	params := []string{}
@@ -22,7 +24,7 @@ func encode(password string, passwordKey *string) ([]byte, error) {
 }
 
 func createLTPAKeys(password string, passwordKey *string) ([]byte, error) {
-	tmpFileName := fmt.Sprintf("ltpa-keys-%s.keys", password)
+	tmpFileName := fmt.Sprintf("ltpa-keys-%s.keys", utils.GetRandomAlphanumeric(15))
 	tmpFilePath := fmt.Sprintf("%s/%s", SECURITY_UTILITY_OUTPUT_FOLDER, tmpFileName)
 
 	// delete possible colliding file

@@ -1194,7 +1194,7 @@ spec:
                   seccompProfile:
                     type: RuntimeDefault
                 volumeMounts:
-                - mountPath: /opt/ol/wlp/output
+                - mountPath: /liberty/output
                   name: scratch
                   subPath: create-ltpa-keys
               securityContext:

@@ -18,11 +18,13 @@ RUN if [ -z "${GO_VERSION_ARG}" ]; then \
     fi; \
     rm -rf /usr/local/go; \
     curl -L --output - "https://golang.org/dl/go${GO_VERSION}.linux-${GO_PLATFORM}.tar.gz" | tar -xz -C /usr/local/; \
-    mkdir -p opt/ol; \
-    curl -L -o opt/ol/wlp.zip "https://repo1.maven.org/maven2/io/openliberty/openliberty-kernel/${LIBERTY_VERSION}/openliberty-kernel-${LIBERTY_VERSION}.zip"; \
-    unzip opt/ol/wlp.zip -d opt/ol; \
-    rm -f opt/ol/wlp.zip; \
-    mkdir -p opt/ol/wlp/output;
+    mkdir -p liberty; \
+    curl -L -o liberty.zip "https://repo1.maven.org/maven2/io/openliberty/openliberty-kernel/${LIBERTY_VERSION}/openliberty-kernel-${LIBERTY_VERSION}.zip"; \
+    unzip liberty.zip -d liberty; \
+    mv -f ./liberty/wlp/* ./liberty \
+    rmdir ./liberty/wlp \
+    rm -f liberty.zip; \
+    mkdir -p liberty/output;
 
 
 # cache deps before building and copying source so that we don't need to re-download as much
@@ -40,7 +42,7 @@ RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -ldflags="-s -w" -a -o mana
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM registry.access.redhat.com/ubi8/openjdk-11:latest
+FROM icr.io/appcafe/ibm-semeru-runtimes:open-21-jre-ubi-minimal
 
 ARG USER_ID=65532
 ARG GROUP_ID=65532
@@ -70,7 +72,7 @@ COPY --chown=${USER_ID}:${GROUP_ID} LICENSE /licenses/
 WORKDIR /
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/manager .
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/internal/controller/assets/ /internal/controller/assets
-COPY --from=builder --chown=${USER_ID}:0 /workspace/opt/ol/wlp/ /opt/ol/wlp
+COPY --from=builder --chown=${USER_ID}:0 /workspace/liberty /liberty
 
 
 ENTRYPOINT ["/manager"]

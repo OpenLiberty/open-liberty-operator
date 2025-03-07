@@ -239,15 +239,17 @@ run: manifests generate fmt vet install-secutil ## Run a controller against the 
 
 .PHONY: install-secutil
 install-secutil:
-ifneq (found,$(shell test -e ./opt/ol/wlp/bin/securityUtility && echo -n found))
-	@mkdir -p ./opt/ol/
-	@wget -O ./opt/ol/wlp.zip https://repo1.maven.org/maven2/io/openliberty/openliberty-kernel/$(LIBERTY_VERSION)/openliberty-kernel-$(LIBERTY_VERSION).zip
-	@unzip -d ./opt/ol/ ./opt/ol/wlp.zip
-	@rm ./opt/ol/wlp.zip
-	@mkdir -p ./opt/ol/wlp/output
+ifneq (found,$(shell test -e ./liberty/bin/securityUtility && echo -n found))
+	@mkdir -p ./liberty
+	@wget -O ./liberty.zip https://repo1.maven.org/maven2/io/openliberty/openliberty-kernel/$(LIBERTY_VERSION)/openliberty-kernel-$(LIBERTY_VERSION).zip
+	@unzip -d ./liberty ./liberty.zip
+	@mv -f ./liberty/wlp/* ./liberty
+	@rmdir ./liberty/wlp
+	@rm ./liberty.zip
+	@mkdir -p ./liberty/output
 	@echo "Liberty securityUtility has been installed!"
 else
-	@mkdir -p ./opt/ol/wlp/output
+	@mkdir -p ./liberty/output
 	@echo "Liberty securityUtility is already installed!"
 endif 
 

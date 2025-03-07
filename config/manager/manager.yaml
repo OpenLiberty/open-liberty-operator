@@ -92,7 +92,7 @@ spec:
             memory: 128Mi
         volumeMounts:
           - name: scratch
-            mountPath: /opt/ol/wlp/output
+            mountPath: /liberty/output
             subPath: create-ltpa-keys
       volumes:
         - name: scratch
