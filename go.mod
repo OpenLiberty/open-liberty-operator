@@ -1,6 +1,6 @@
 module github.com/OpenLiberty/open-liberty-operator
 
-go 1.23
+go 1.24
 
 require (
 	github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20250304022538-6a9b340f7de9
@@ -61,7 +61,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/exp v0.0.0-20231226003508-02704c960a9b // indirect
 	golang.org/x/net v0.33.0 // indirect
-	golang.org/x/oauth2 v0.21.0 // indirect
+	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/term v0.27.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
