@@ -6,57 +6,57 @@ resources:
 namespace: olo-watched-ns
 
 # Labels to add to all resources and selectors.
-commonLabels:
-  app.kubernetes.io/instance: open-liberty-operator
-  app.kubernetes.io/name: open-liberty-operator
+labels:
+- includeSelectors: true
+  pairs:
+    app.kubernetes.io/instance: open-liberty-operator
+    app.kubernetes.io/name: open-liberty-operator
 
 patches:
 - path: patches/delete-service-account.yaml
   target:
     kind: ServiceAccount
-
-patchesJson6902:
-  - target:
-      kind: RoleBinding
-      name: manager-rolebinding
-    patch: |-
-      - op: replace
-        path: /metadata/name
-        value: olo-watched-rolebinding
-      - op: replace
-        path: /roleRef/name
-        value: olo-watched-role
-  - target:
-      kind: RoleBinding
-      name: leader-election-rolebinding
-    patch: |-
-      - op: replace
-        path: /metadata/name
-        value: olo-leader-election-watched-rolebinding
-      - op: replace
-        path: /roleRef/name
-        value: olo-leader-election-watched-role
-  - target:
-      kind: RoleBinding
-      name: .*
-    patch: |-
-      - op: replace
-        path: /subjects/0/namespace
-        value: olo-ns
-      - op: replace
-        path: /subjects/0/name
-        value: olo-controller-manager
-  - target:
-      kind: Role
-      name: leader-election-role
-    patch: |-
-      - op: replace
-        path: /metadata/name
-        value: olo-leader-election-watched-role
-  - target:
-      kind: Role
-      name: manager-role
-    patch: |-
-      - op: replace
-        path: /metadata/name
-        value: olo-watched-role
+- target:
+    kind: RoleBinding
+    name: manager-rolebinding
+  patch: |-
+    - op: replace
+      path: /metadata/name
+      value: olo-watched-rolebinding
+    - op: replace
+      path: /roleRef/name
+      value: olo-watched-role
+- target:
+    kind: RoleBinding
+    name: leader-election-rolebinding
+  patch: |-
+    - op: replace
+      path: /metadata/name
+      value: olo-leader-election-watched-rolebinding
+    - op: replace
+      path: /roleRef/name
+      value: olo-leader-election-watched-role
+- target:
+    kind: RoleBinding
+    name: .*
+  patch: |-
+    - op: replace
+      path: /subjects/0/namespace
+      value: olo-ns
+    - op: replace
+      path: /subjects/0/name
+      value: olo-controller-manager
+- target:
+    kind: Role
+    name: leader-election-role
+  patch: |-
+    - op: replace
+      path: /metadata/name
+      value: olo-leader-election-watched-role
+- target:
+    kind: Role
+    name: manager-role
+  patch: |-
+    - op: replace
+      path: /metadata/name
+      value: olo-watched-role
