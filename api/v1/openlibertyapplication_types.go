@@ -474,6 +474,9 @@ type StatusCondition struct {
 	Message            string                 `json:"message,omitempty"`
 	Status             corev1.ConditionStatus `json:"status,omitempty"`
 	Type               StatusConditionType    `json:"type,omitempty"`
+
+	// The count of the number of reconciles the condition status type has not changed.
+	UnchangedConditionCount *int32 `json:"unchangedConditionCount,omitempty"`
 }
 
 // Defines the type of status condition.
@@ -974,10 +977,6 @@ func (s *OpenLibertyApplicationStatus) SetReconcileInterval(interval *int32) {
 	s.ReconcileInterval = interval
 }
 
-func (s *OpenLibertyApplicationStatus) UnsetReconcileInterval() {
-	s.ReconcileInterval = nil
-}
-
 // GetMinReplicas returns minimum replicas
 func (a *OpenLibertyApplicationAutoScaling) GetMinReplicas() *int32 {
 	return a.MinReplicas
@@ -1351,19 +1350,6 @@ func (c *StatusCondition) SetLastTransitionTime(t *metav1.Time) {
 	c.LastTransitionTime = t
 }
 
-// GetLatestTransitionTime returns latest time of status change
-func (s *OpenLibertyApplicationStatus) GetLatestTransitionTime() *metav1.Time {
-	var latestTime *metav1.Time
-	for i := range s.Conditions {
-		t := s.Conditions[i].GetLastTransitionTime()
-		// If latestTime is not set or condition's time is before latestTime
-		if latestTime == nil || latestTime.Before(t) {
-			latestTime = t
-		}
-	}
-	return latestTime
-}
-
 // GetMessage returns condition's message
 func (c *StatusCondition) GetMessage() string {
 	return c.Message
@@ -1440,7 +1426,7 @@ func (s *OpenLibertyApplicationStatus) SetCondition(c common.StatusCondition) {
 		}
 	}
 
-	if condition.GetStatus() != c.GetStatus() || condition.GetMessage() != c.GetMessage() || condition.GetReason() != c.GetReason() {
+	if condition.GetStatus() != c.GetStatus() || condition.GetMessage() != c.GetMessage() {
 		condition.SetLastTransitionTime(&metav1.Time{Time: time.Now()})
 	}
 
@@ -1448,6 +1434,7 @@ func (s *OpenLibertyApplicationStatus) SetCondition(c common.StatusCondition) {
 	condition.SetMessage(c.GetMessage())
 	condition.SetStatus(c.GetStatus())
 	condition.SetType(c.GetType())
+	condition.SetUnchangedConditionCount(c.GetUnchangedConditionCount())
 	if !found {
 		s.Conditions = append(s.Conditions, *condition)
 	}
@@ -1465,6 +1452,24 @@ func (s *OpenLibertyApplicationStatus) UnsetCondition(c common.StatusCondition) 
 				s.Conditions = append(s.Conditions[:i], s.Conditions[i+1])
 			}
 			return
+		}
+	}
+}
+
+func (sc *StatusCondition) GetUnchangedConditionCount() *int32 {
+	return sc.UnchangedConditionCount
+}
+
+func (sc *StatusCondition) SetUnchangedConditionCount(count *int32) {
+	sc.UnchangedConditionCount = count
+}
+
+func (s *OpenLibertyApplicationStatus) UnsetUnchangedConditionCount(conditionType common.StatusConditionType) {
+	// Reset unchanged count for other status conditions
+	var emptyCount *int32
+	for i := range s.Conditions {
+		if s.Conditions[i].GetType() != conditionType && s.Conditions[i].GetUnchangedConditionCount() != nil {
+			s.Conditions[i].SetUnchangedConditionCount(emptyCount)
 		}
 	}
 }
