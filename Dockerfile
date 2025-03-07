@@ -21,8 +21,8 @@ RUN if [ -z "${GO_VERSION_ARG}" ]; then \
     mkdir -p liberty; \
     curl -L -o liberty.zip "https://repo1.maven.org/maven2/io/openliberty/openliberty-kernel/${LIBERTY_VERSION}/openliberty-kernel-${LIBERTY_VERSION}.zip"; \
     unzip liberty.zip -d liberty; \
-    mv -f ./liberty/wlp/* ./liberty \
-    rmdir ./liberty/wlp \
+    mv -f liberty/wlp/* liberty; \
+    rmdir liberty/wlp; \
     rm -f liberty.zip; \
     mkdir -p liberty/output;
 
