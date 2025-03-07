@@ -44,8 +44,8 @@ RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -ldflags="-s -w" -a -o mana
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM icr.io/appcafe/ibm-semeru-runtimes:open-21-jre-ubi-minimal
 
-ARG USER_ID=1001
-ARG GROUP_ID=1001
+ARG USER_ID=65532
+ARG GROUP_ID=65532
 
 ARG VERSION_LABEL=1.4.2
 ARG RELEASE_LABEL=XX
@@ -72,8 +72,8 @@ COPY --chown=${USER_ID}:${GROUP_ID} LICENSE /licenses/
 WORKDIR /
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/manager .
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/internal/controller/assets/ /internal/controller/assets
-COPY --from=builder --chown=${USER_ID}:0 /workspace/liberty /liberty
+COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/liberty /liberty
 
-USER ${USER_ID}:${GROUP_ID}
+USER ${USER_ID}
 
 ENTRYPOINT ["/manager"]
