@@ -2,8 +2,9 @@
 FROM registry.access.redhat.com/ubi8-minimal:latest as builder
 ARG GO_PLATFORM=amd64
 ARG GO_VERSION_ARG
+ARG LIBERTY_VERSION=25.0.0.2
 ENV PATH=$PATH:/usr/local/go/bin
-RUN microdnf install tar gzip
+RUN microdnf install tar gzip unzip
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -16,7 +17,14 @@ RUN if [ -z "${GO_VERSION_ARG}" ]; then \
       GO_VERSION=${GO_VERSION_ARG}; \
     fi; \
     rm -rf /usr/local/go; \
-    curl -L --output - "https://golang.org/dl/go${GO_VERSION}.linux-${GO_PLATFORM}.tar.gz" | tar -xz -C /usr/local/
+    curl -L --output - "https://golang.org/dl/go${GO_VERSION}.linux-${GO_PLATFORM}.tar.gz" | tar -xz -C /usr/local/; \
+    mkdir -p liberty; \
+    curl -L -o liberty.zip "https://repo1.maven.org/maven2/io/openliberty/openliberty-kernel/${LIBERTY_VERSION}/openliberty-kernel-${LIBERTY_VERSION}.zip"; \
+    unzip liberty.zip -d liberty; \
+    mv -f liberty/wlp/* liberty; \
+    rmdir liberty/wlp; \
+    rm -f liberty.zip; \
+    mkdir -p liberty/output;
 
 
 # cache deps before building and copying source so that we don't need to re-download as much
@@ -34,10 +42,10 @@ RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -ldflags="-s -w" -a -o mana
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+FROM icr.io/appcafe/ibm-semeru-runtimes:open-21-jre-ubi-minimal
 
-ARG USER_ID=65532
-ARG GROUP_ID=65532
+ARG USER_ID=1001
+ARG GROUP_ID=1001
 
 ARG VERSION_LABEL=1.4.2
 ARG RELEASE_LABEL=XX
@@ -64,6 +72,7 @@ COPY --chown=${USER_ID}:${GROUP_ID} LICENSE /licenses/
 WORKDIR /
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/manager .
 COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /workspace/internal/controller/assets/ /internal/controller/assets
+COPY --from=builder --chown=${USER_ID}:0 /workspace/liberty /liberty
 
 USER ${USER_ID}:${GROUP_ID}
 

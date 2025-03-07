@@ -364,6 +364,10 @@ spec:
           runAsNonRoot: true
           seccompProfile:
             type: RuntimeDefault
+        volumeMounts:
+        - mountPath: /liberty/output
+          name: scratch
+          subPath: create-ltpa-keys
       hostIPC: false
       hostNetwork: false
       hostPID: false
@@ -373,3 +377,6 @@ spec:
           type: RuntimeDefault
       serviceAccountName: olo-controller-manager
       terminationGracePeriodSeconds: 10
+      volumes:
+      - emptyDir: {}
+        name: scratch

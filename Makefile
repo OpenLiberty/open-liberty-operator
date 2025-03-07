@@ -5,6 +5,7 @@
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
 VERSION ?= 1.4.2
 OPERATOR_SDK_RELEASE_VERSION ?= v1.37.0
+LIBERTY_VERSION ?= 25.0.0.2
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "preview,fast,stable")
@@ -233,8 +234,24 @@ unit-test: ## Run unit tests
 	go test -v -mod=vendor -tags=unit github.com/OpenLiberty/open-liberty-operator/...
 
 .PHONY: run
-run: manifests generate fmt vet ## Run a controller against the configured Kubernetes cluster in ~/.kube/config from your host.
+run: manifests generate fmt vet install-secutil ## Run a controller against the configured Kubernetes cluster in ~/.kube/config from your host.
 	go run ./cmd/main.go
+
+.PHONY: install-secutil
+install-secutil:
+ifneq (found,$(shell test -e ./liberty/bin/securityUtility && echo -n found))
+	@mkdir -p ./liberty
+	@wget -O ./liberty.zip https://repo1.maven.org/maven2/io/openliberty/openliberty-kernel/$(LIBERTY_VERSION)/openliberty-kernel-$(LIBERTY_VERSION).zip
+	@unzip -d ./liberty ./liberty.zip
+	@mv -f ./liberty/wlp/* ./liberty
+	@rmdir ./liberty/wlp
+	@rm ./liberty.zip
+	@mkdir -p ./liberty/output
+	@echo "Liberty securityUtility has been installed!"
+else
+	@mkdir -p ./liberty/output
+	@echo "Liberty securityUtility is already installed!"
+endif 
 
 ##@ Deployment
 

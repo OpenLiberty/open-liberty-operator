@@ -99,7 +99,7 @@ func ValidateMaps(treeMap map[string]interface{}, replaceMap map[string]map[stri
 	for version := range treeMap {
 		_, err := GetPathFromLeafIndex(treeMap, version, 0)
 		if err != nil {
-			return fmt.Errorf("could not validate maps: version " + version + " in .tree does not have a single terminating leaf")
+			return fmt.Errorf("could not validate maps: version '%s' in .tree does not have a single terminating leaf", version)
 		}
 	}
 
@@ -135,7 +135,7 @@ func CanTraverseTree(treeMap map[string]interface{}, path string, allowSubPaths 
 	}
 	dotLoc := strings.LastIndex(path, ".")
 	if dotLoc < 0 || dotLoc+1 >= n {
-		return "", fmt.Errorf("the path '" + path + "' is not a valid key-value pair")
+		return "", fmt.Errorf("the path '%s' is not a valid key-value pair", path)
 	}
 	pathKey := path[:dotLoc]
 	pathValue := path[dotLoc+1:]
@@ -143,7 +143,7 @@ func CanTraverseTree(treeMap map[string]interface{}, path string, allowSubPaths 
 		if _, found := treeMap[pathKey]; found {
 			return "", nil
 		}
-		return "", fmt.Errorf("key '" + path + "' does not exist in .tree")
+		return "", fmt.Errorf("key '%s' does not exist in .tree", path)
 	}
 	// pathKey must contain a ".", so j >= 2
 	paths := strings.Split(pathKey, ".")
@@ -154,7 +154,7 @@ func CanTraverseTree(treeMap map[string]interface{}, path string, allowSubPaths 
 	for i < j-1 {
 		nextMap, found := currMap[paths[i]]
 		if !found {
-			return currPathString, fmt.Errorf("while traversing path '" + pathKey + "' the element '" + paths[i] + "' could not be found in .tree")
+			return currPathString, fmt.Errorf("while traversing path '%s' the element '%s' could not be found in .tree", pathKey, paths[i])
 		}
 		currPathString += paths[i] + "."
 		if castedNextMap, isMap := castMap(nextMap); isMap {
@@ -180,16 +180,16 @@ func CanTraverseTree(treeMap map[string]interface{}, path string, allowSubPaths 
 					}
 					return getCastedListElement(castedList, currPathString[:len(currPathString)-1], element)
 				}
-				return currPathString, fmt.Errorf("while traversing path '" + currPathString + "' the last element was not a boolean, string or list")
+				return currPathString, fmt.Errorf("while traversing path '%s' the last element was not a boolean, string or list", currPathString)
 			}
-			return currPathString, fmt.Errorf("while traversing path '" + pathKey + "' the element '" + paths[i] + "' did not extend to another map[string]interface{} in .tree")
+			return currPathString, fmt.Errorf("while traversing path '%s' the element '%s' did not extend to another map[string]interface{} in .tree", pathKey, paths[i])
 		}
 		i += 1
 	}
 	// i == j-1 (last map element)
 	mapLastElement, found := currMap[paths[i]]
 	if !found {
-		return currPathString, fmt.Errorf("while traversing path '" + pathKey + "' the last element could not be found in .tree")
+		return currPathString, fmt.Errorf("while traversing path '%s' the last element could not be found in .tree", pathKey)
 	}
 	currPathString += paths[i]
 	// bool check
@@ -197,14 +197,14 @@ func CanTraverseTree(treeMap map[string]interface{}, path string, allowSubPaths 
 		if pathValue == "true" && castedBool || pathValue == "false" && !castedBool {
 			return currPathString + "." + strconv.FormatBool(castedBool), nil
 		}
-		return currPathString, fmt.Errorf("while traversing path '" + pathKey + "' the last element in .tree expected a bool but the path last element was not a matching boolean")
+		return currPathString, fmt.Errorf("while traversing path '%s' the last element in .tree expected a bool but the path last element was not a matching boolean", pathKey)
 	}
 	// string check
 	if castedString, isString := castString(mapLastElement); isString {
 		if isString && castedString == pathValue {
 			return currPathString + "." + castedString, nil
 		}
-		return currPathString, fmt.Errorf("while traversing path '" + pathKey + "' the last element in .tree expected a string but the path last element was not a matching string")
+		return currPathString, fmt.Errorf("while traversing path '%s' the last element in .tree expected a string but the path last element was not a matching string", pathKey)
 	}
 	// list check
 	if castedList, isList := castList(mapLastElement); isList {
@@ -212,9 +212,9 @@ func CanTraverseTree(treeMap map[string]interface{}, path string, allowSubPaths 
 	}
 	// map check (the last element is not a constant, it is a map)
 	if _, isMap := castMap(mapLastElement); isMap {
-		return currPathString, fmt.Errorf("while traversing path '" + pathKey + "' the correspond path value '" + pathValue + "' was expected to terminate at a constant value, but received a map element")
+		return currPathString, fmt.Errorf("while traversing path '%s' the correspond path value '%s' was expected to terminate at a constant value, but received a map element", pathKey, pathValue)
 	}
-	return currPathString, fmt.Errorf("while traversing path '" + pathKey + "' the last element in .tree could not be casted")
+	return currPathString, fmt.Errorf("while traversing path '%s' the last element in .tree could not be casted", pathKey)
 }
 
 func getCastedListElement(castedList []interface{}, currPathString string, element string) (string, error) {
@@ -248,25 +248,25 @@ func getCastedListElement(castedList []interface{}, currPathString string, eleme
 		}
 		if checkBooleanTrue {
 			if !hasBooleanTrue {
-				return currPathString, fmt.Errorf("while traversing path '" + currPathString + "' the last element was supposed to be a true boolean, but .tree.*.[] has none")
+				return currPathString, fmt.Errorf("while traversing path '%s' the last element was supposed to be a true boolean, but .tree.*.[] has none", currPathString)
 			}
 			return currPathString + ".true", nil
 		}
 		if checkBooleanFalse {
 			if !hasBooleanFalse {
-				return currPathString, fmt.Errorf("while traversing path '" + currPathString + "' the last element was supposed to be a false boolean, but .tree.*.[] has none")
+				return currPathString, fmt.Errorf("while traversing path '%s' the last element was supposed to be a false boolean, but .tree.*.[] has none", currPathString)
 			}
 			return currPathString + ".false", nil
 		}
 		if checkStringEquals {
 			if !hasStringEquals {
-				return currPathString, fmt.Errorf("while traversing path '" + currPathString + "' the last element '" + element + "' was supposed to be present, but .tree.*.[] has none")
+				return currPathString, fmt.Errorf("while traversing path '%s' the last element '%s' was supposed to be present, but .tree.*.[] has none", currPathString, element)
 			}
 			return currPathString + "." + element, nil
 		}
-		return currPathString, fmt.Errorf("while traversing path '" + currPathString + "' the last element did not match to a boolean, string or list")
+		return currPathString, fmt.Errorf("while traversing path '%s' the last element did not match to a boolean, string or list", currPathString)
 	}
-	return currPathString, fmt.Errorf("while traversing path '" + currPathString + "' the last element was not specified")
+	return currPathString, fmt.Errorf("while traversing path '%s' the last element was not specified", currPathString)
 }
 
 type TreeNode struct {
@@ -359,7 +359,7 @@ func GetPathFromLeafIndex(treeMap map[string]interface{}, version string, index 
 			}
 		}
 	}
-	return "", fmt.Errorf("could not find leaf index " + fmt.Sprint(index) + " in treeMap")
+	return "", fmt.Errorf("could not find leaf index %d in treeMap", index)
 }
 
 // returns sorted keys from value if it is a map, else returns an empty string array
@@ -469,10 +469,10 @@ func GetLabelFromDecisionPath(operandVersionString string, pathOptions []string,
 	no := len(pathOptions)
 	nc := len(pathChoices)
 	if no == 0 || nc == 0 {
-		return "", fmt.Errorf("expected decision tree path lists to be non-empty but got arrays of length " + fmt.Sprint(no) + " and " + fmt.Sprint(nc))
+		return "", fmt.Errorf("expected decision tree path lists to be non-empty but got arrays of length %d and %d", no, nc)
 	}
 	if no != nc {
-		return "", fmt.Errorf("expected decision tree path list to be the same length but got arrays of length " + fmt.Sprint(no) + " and " + fmt.Sprint(nc))
+		return "", fmt.Errorf("expected decision tree path list to be the same length but got arrays of length %d and %d", no, nc)
 	}
 	label := operandVersionString + "."
 	n := len(pathOptions)
@@ -486,20 +486,39 @@ func GetLabelFromDecisionPath(operandVersionString string, pathOptions []string,
 }
 
 func ParseDecisionTree(leaderTrackerType string, fileName *string) (map[string]interface{}, map[string]map[string]string, error) {
-	var tree []byte
-	var err error
-	// Allow specifying custom file for testing
+	// get file name
+	treeFileName := ""
 	if fileName != nil {
-		tree, err = os.ReadFile(*fileName)
+		treeFileName = *fileName
+	} else {
+		treeFileName = fmt.Sprintf("internal/controller/assets/%s-decision-tree.yaml", leaderTrackerType)
+	}
+
+	// get last modified time
+	lastModifiedTime := int64(-1)
+	if fileName != nil {
+		file, err := os.Stat(treeFileName)
 		if err != nil {
 			return nil, nil, err
 		}
-	} else {
-		tree, err = os.ReadFile("internal/controller/assets/" + leaderTrackerType + "-decision-tree.yaml")
-		if err != nil {
-			return nil, nil, err
+		lastModifiedTime = file.ModTime().Unix()
+	}
+	if lastModifiedTime != -1 {
+		// check the in-memory cache to see if a cached decision tree already exists
+		cachedTreeMap, cachedReplaceMap := TreeCache.Maps(leaderTrackerType, treeFileName, lastModifiedTime)
+		if cachedTreeMap != nil && cachedReplaceMap != nil {
+			return cachedTreeMap, cachedReplaceMap, nil
 		}
 	}
+
+	// read the tree
+	var tree []byte
+	var err error
+	tree, err = os.ReadFile(treeFileName)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	ltpaDecisionTreeYAML := make(map[string]interface{})
 	err = yaml.Unmarshal(tree, ltpaDecisionTreeYAML)
 	if err != nil {
@@ -518,6 +537,11 @@ func ParseDecisionTree(leaderTrackerType string, fileName *string) (map[string]i
 
 	if err := ValidateMaps(treeMap, replaceMap); err != nil {
 		return nil, nil, err
+	}
+
+	// save the tree to cache
+	if lastModifiedTime != -1 {
+		TreeCache.SetDecisionTree(leaderTrackerType, treeMap, replaceMap, treeFileName, lastModifiedTime)
 	}
 
 	return treeMap, replaceMap, nil

@@ -90,6 +90,13 @@ spec:
           requests:
             cpu: 200m
             memory: 128Mi
+        volumeMounts:
+          - name: scratch
+            mountPath: /liberty/output
+            subPath: create-ltpa-keys
+      volumes:
+        - name: scratch
+          emptyDir: {}
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
       affinity:
