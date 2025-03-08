@@ -44,8 +44,8 @@ RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -ldflags="-s -w" -a -o mana
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM icr.io/appcafe/ibm-semeru-runtimes:open-21-jre-ubi-minimal
 
-ARG USER_ID=1001
-ARG GROUP_ID=1001
+ARG USER_ID=65532
+ARG GROUP_ID=65532
 
 ARG VERSION_LABEL=1.4.2
 ARG RELEASE_LABEL=XX
