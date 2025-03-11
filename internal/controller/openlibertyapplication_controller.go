@@ -158,6 +158,8 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
+	baseRSF := r.createResourceSharingFactoryBase()
+
 	// Check if the OpenLibertyApplication instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
 	isInstanceMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
@@ -165,7 +167,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		if lutils.Contains(instance.GetFinalizers(), applicationFinalizer) {
 			// Run finalization logic for applicationFinalizer. If the finalization logic fails, don't remove the
 			// finalizer so that we can retry during the next reconciliation.
-			if err := r.finalizeOpenLibertyApplication(reqLogger, instance, instance.Name+"-serviceability", instance.Namespace); err != nil {
+			if err := r.finalizeOpenLibertyApplication(reqLogger, instance, baseRSF, instance.Name+"-serviceability", instance.Namespace); err != nil {
 				return reconcile.Result{}, err
 			}
 
@@ -254,25 +256,30 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// Reconciles the shared LTPA state for the instance namespace
 	var ltpaMetadataList *lutils.LTPAMetadataList
 	var ltpaKeysMetadata, ltpaConfigMetadata *lutils.LTPAMetadata
+	var ltpaRSF tree.ResourceSharingFactory
 	if r.isLTPAKeySharingEnabled(instance) {
-		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, LTPA_RESOURCE_SHARING_FILE_NAME)
+		rsf, leaderMetadataList, err := r.reconcileResourceTrackingState(instance, LTPA_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
+		ltpaRSF = rsf
 		ltpaMetadataList = leaderMetadataList.(*lutils.LTPAMetadataList)
 		if ltpaMetadataList != nil && len(ltpaMetadataList.Items) == 2 {
 			ltpaKeysMetadata = ltpaMetadataList.Items[0].(*lutils.LTPAMetadata)
 			ltpaConfigMetadata = ltpaMetadataList.Items[1].(*lutils.LTPAMetadata)
 		}
 	}
+
 	// Reconciles the shared password encryption key state for the instance namespace only if the shared key already exists
 	var passwordEncryptionMetadataList *lutils.PasswordEncryptionMetadataList
 	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{}
+	var passwordEncryptionRSF tree.ResourceSharingFactory
 	if r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata) {
-		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
+		rsf, leaderMetadataList, err := r.reconcileResourceTrackingState(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
+		passwordEncryptionRSF = rsf
 		passwordEncryptionMetadataList = leaderMetadataList.(*lutils.PasswordEncryptionMetadataList)
 		if passwordEncryptionMetadataList != nil && len(passwordEncryptionMetadataList.Items) == 1 {
 			passwordEncryptionMetadata = passwordEncryptionMetadataList.Items[0].(*lutils.PasswordEncryptionMetadata)
@@ -480,7 +487,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	// Manage the shared password encryption key Secret if it exists
-	message, encryptionSecretName, passwordEncryptionKeyLastRotation, err := r.reconcilePasswordEncryptionKey(instance, passwordEncryptionMetadata)
+	message, encryptionSecretName, passwordEncryptionKeyLastRotation, err := r.reconcilePasswordEncryptionKey(passwordEncryptionRSF, baseRSF, instance, passwordEncryptionMetadata)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -501,7 +508,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	// Using the LTPA keys and config metadata, create and manage the shared LTPA Liberty server XML if the feature is enabled
-	message, ltpaXMLSecretName, err := r.reconcileLTPAConfig(instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
+	message, ltpaXMLSecretName, err := r.reconcileLTPAConfig(ltpaRSF, baseRSF, instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -970,27 +977,9 @@ func getMonitoringEnabledLabelName(ba common.BaseComponent) string {
 	return "monitor." + ba.GetGroupName() + "/enabled"
 }
 
-func (r *ReconcileOpenLiberty) finalizeOpenLibertyApplication(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, pvcName string, pvcNamespace string) error {
-	tree.RemoveLeaderTrackerReference(r.GetClient(),
-		func(obj client.Object, owner metav1.Object, cb func() error) error {
-			return r.CreateOrUpdate(obj, owner, cb)
-		},
-		func(obj client.Object) error {
-			return r.DeleteResource(obj)
-		},
-		func() bool {
-			return false
-		}, olapp.GetName(), olapp.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME)
-	tree.RemoveLeaderTrackerReference(r.GetClient(),
-		func(obj client.Object, owner metav1.Object, cb func() error) error {
-			return r.CreateOrUpdate(obj, owner, cb)
-		},
-		func(obj client.Object) error {
-			return r.DeleteResource(obj)
-		},
-		func() bool {
-			return false
-		}, olapp.GetName(), olapp.GetNamespace(), OperatorShortName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
+func (r *ReconcileOpenLiberty) finalizeOpenLibertyApplication(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, baseRSF tree.ResourceSharingFactoryBase, pvcName string, pvcNamespace string) error {
+	tree.RemoveLeaderTrackerReference(baseRSF, olapp.GetName(), olapp.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME)
+	tree.RemoveLeaderTrackerReference(baseRSF, olapp.GetName(), olapp.GetNamespace(), OperatorShortName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 	r.deletePVC(reqLogger, pvcName, pvcNamespace)
 	return nil
 }

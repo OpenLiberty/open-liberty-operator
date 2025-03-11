@@ -14,7 +14,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -82,7 +81,7 @@ func TestTraceLeaderTrackerComplex(t *testing.T) {
 	// load leader tracker
 	assetsFolder := getAssetsFolder()
 	rsf := r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME)
-	err := tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)
+	err := tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)
 	tests := []Test{
 		{"initialize Trace leader tracker", nil, err},
 	}
@@ -118,13 +117,11 @@ func TestTraceLeaderTrackerComplex(t *testing.T) {
 	}
 
 	// Mock the process where the reconciler checks the OpenLibertyTrace (itself), storing itself into the leader tracker
-	leaderName, isLeader, pathIndex, err := tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
-		return r.CreateOrUpdate(obj, owner, cb)
-	}, OperatorShortName, complexTrace.GetName(), complexTrace.GetNamespace(), &lutils.TraceMetadata{
+	leaderName, isLeader, pathIndex, err := tree.ReconcileLeader(rsf, OperatorShortName, complexTrace.GetName(), complexTrace.GetNamespace(), &lutils.TraceMetadata{
 		Path:      latestOperandVersion + ".a.b.e.true",
 		PathIndex: latestOperandVersion + ".2",
 		Name:      "test-pod",
-	}, TRACE_RESOURCE_SHARING_FILE_NAME, true, false)
+	}, TRACE_RESOURCE_SHARING_FILE_NAME, true)
 	tests = []Test{
 		{"update leader tracker based on path index 2 of complex decision tree - error", nil, err},
 		{"update leader tracker based on path index 2 of complex decision tree - path index", pathIndex, latestOperandVersion + ".2"},
@@ -165,13 +162,11 @@ func TestTraceLeaderTrackerComplex(t *testing.T) {
 	}
 
 	// Mock the process where the operator saves the Trace CR, storing it into the leader tracker
-	tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
-		return r.CreateOrUpdate(obj, owner, cb)
-	}, OperatorShortName, complexTraceTwo.GetName(), complexTraceTwo.GetNamespace(), &lutils.TraceMetadata{
+	tree.ReconcileLeader(rsf, OperatorShortName, complexTraceTwo.GetName(), complexTraceTwo.GetNamespace(), &lutils.TraceMetadata{
 		Path:      latestOperandVersion + ".a.b.d.true",
 		PathIndex: latestOperandVersion + ".1",
 		Name:      "test-pod-2",
-	}, TRACE_RESOURCE_SHARING_FILE_NAME, true, false)
+	}, TRACE_RESOURCE_SHARING_FILE_NAME, true)
 
 	// Check the Trace leader tracker was updated
 	leaderTracker, _, err = lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME, r.GetClient())
@@ -193,36 +188,10 @@ func TestTraceLeaderTrackerComplex(t *testing.T) {
 	}
 
 	// remove the Trace leader
-	removeErr1 := tree.RemoveLeaderTrackerReference(r.GetClient(),
-		func(obj client.Object, owner metav1.Object, cb func() error) error {
-			return r.CreateOrUpdate(obj, owner, cb)
-		},
-		func(obj client.Object) error {
-			return r.DeleteResource(obj)
-		},
-		func() bool {
-			return false
-		}, complexTrace.GetName(), complexTrace.GetNamespace(), OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME)
-	removeErr2 := tree.RemoveLeaderTrackerReference(r.GetClient(),
-		func(obj client.Object, owner metav1.Object, cb func() error) error {
-			return r.CreateOrUpdate(obj, owner, cb)
-		},
-		func(obj client.Object) error {
-			return r.DeleteResource(obj)
-		},
-		func() bool {
-			return false
-		}, complexTraceTwo.GetName(), complexTraceTwo.GetNamespace(), OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME)
-	removeLeaderErr1 := tree.RemoveLeader(func(obj client.Object, owner metav1.Object, cb func() error) error {
-		return r.CreateOrUpdate(obj, owner, cb)
-	}, func(obj client.Object) error {
-		return r.DeleteResource(obj)
-	}, true, complexTrace.GetName(), leaderTracker, leaderTrackers)
-	removeLeaderErr2 := tree.RemoveLeader(func(obj client.Object, owner metav1.Object, cb func() error) error {
-		return r.CreateOrUpdate(obj, owner, cb)
-	}, func(obj client.Object) error {
-		return r.DeleteResource(obj)
-	}, true, complexTraceTwo.GetName(), leaderTracker, leaderTrackers)
+	removeErr1 := tree.RemoveLeaderTrackerReference(rsf, complexTrace.GetName(), complexTrace.GetNamespace(), OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME)
+	removeErr2 := tree.RemoveLeaderTrackerReference(rsf, complexTraceTwo.GetName(), complexTraceTwo.GetNamespace(), OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME)
+	removeLeaderErr1 := tree.RemoveLeader(complexTrace.GetName(), rsf, leaderTracker, leaderTrackers)
+	removeLeaderErr2 := tree.RemoveLeader(complexTraceTwo.GetName(), rsf, leaderTracker, leaderTrackers)
 	_, leaderTrackers, leaderTrackerErr := lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	var nilLeaderTrackers *[]lutils.LeaderTracker
 	tests = []Test{
@@ -265,7 +234,7 @@ func TestTraceLeaderTrackerManagesOnePod(t *testing.T) {
 	rsf := r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME)
 	rsf.SetCleanupUnusedResources(func() bool { return false }) // prevent removal if owner is empty because this test won't elect leaders
 	tests = []Test{
-		{"initialize Trace leader tracker error", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+		{"initialize Trace leader tracker error", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -328,7 +297,7 @@ func TestTraceLeaderTrackerManagesTwoPods(t *testing.T) {
 	rsf := r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME)
 	rsf.SetCleanupUnusedResources(func() bool { return false }) // prevent removal if owner is empty because this test won't elect leaders
 	tests = []Test{
-		{"initialize Trace leader tracker error", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+		{"initialize Trace leader tracker error", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -390,7 +359,7 @@ func TestTraceLeaderTrackerManagesOnePodWithUpgrade(t *testing.T) {
 	rsf := r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME)
 	rsf.SetCleanupUnusedResources(func() bool { return false }) // prevent removal if owner is empty because this test won't elect leaders
 	tests = []Test{
-		{"initialize Trace leader tracker error", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+		{"initialize Trace leader tracker error", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -452,7 +421,7 @@ func TestReconcileLeaderTrackerComplexWhenTraceExists(t *testing.T) {
 	rsf := r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME)
 	rsf.SetCleanupUnusedResources(func() bool { return false }) // prevent removal if owner is empty because this test won't elect leaders
 	tests = []Test{
-		{"initialize Trace leader tracker error", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+		{"initialize Trace leader tracker error", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -513,7 +482,7 @@ func TestReconcileLeaderTrackerWhenTraceExistWithUpgrade(t *testing.T) {
 	rsf := r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME)
 	rsf.SetCleanupUnusedResources(func() bool { return false }) // prevent removal if owner is empty because this test won't elect leaders
 	tests := []Test{
-		{"reconcileLeaderTracker at version v10_4_20", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+		{"reconcileLeaderTracker at version v10_4_20", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -582,7 +551,7 @@ func TestReconcileLeaderTrackerWhenTraceExistsWithMultipleUpgradesAndDowngrades(
 	rsf := r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME)
 	rsf.SetCleanupUnusedResources(func() bool { return false }) // prevent removal if owner is empty because this test won't elect leaders
 	tests = []Test{
-		{"reconcileLeaderTracker at version v10_4_500", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+		{"reconcileLeaderTracker at version v10_4_500", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -628,7 +597,7 @@ func TestReconcileLeaderTrackerWhenTraceExistsWithMultipleUpgradesAndDowngrades(
 	latestOperandVersion = "v10_3_3"
 	rsf = r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME)
 	tests = []Test{
-		{"downgrade Trace Leader Tracker from v10_4_500 to v10_3_3", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+		{"downgrade Trace Leader Tracker from v10_4_500 to v10_3_3", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -636,7 +605,7 @@ func TestReconcileLeaderTrackerWhenTraceExistsWithMultipleUpgradesAndDowngrades(
 
 	rsf = r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME)
 	rsf.SetCleanupUnusedResources(func() bool { return false }) // prevent removal if owner is empty because this test won't elect leaders
-	tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)
+	tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)
 
 	leaderTracker, leaderTrackers, err = lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	leader1 = lutils.LeaderTracker{
@@ -707,7 +676,7 @@ func TestReconcileLeaderTrackerWhenTraceExistsWithWildcardUpgrade(t *testing.T) 
 	rsf := r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME)
 	rsf.SetCleanupUnusedResources(func() bool { return false }) // prevent removal if owner is empty because this test won't elect leaders
 	tests = []Test{
-		{"reconcileLeaderTracker at version v10_4_3", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+		{"reconcileLeaderTracker at version v10_4_3", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -775,7 +744,7 @@ func TestReconcileLeaderTrackerWhenTraceExistsWithMultipleWildcardUpgradesAndDow
 	rsf := r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME)
 	rsf.SetCleanupUnusedResources(func() bool { return false }) // prevent removal if owner is empty because this test won't elect leaders
 	tests = []Test{
-		{"reconcileLeaderTracker at version v10_4_500", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+		{"reconcileLeaderTracker at version v10_4_500", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -821,7 +790,7 @@ func TestReconcileLeaderTrackerWhenTraceExistsWithMultipleWildcardUpgradesAndDow
 	latestOperandVersion = "v10_4_3"
 	rsf = r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME)
 	tests = []Test{
-		{"downgrade Trace Leader Tracker from v10_4_500 to v10_4_3", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+		{"downgrade Trace Leader Tracker from v10_4_500 to v10_4_3", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -829,7 +798,7 @@ func TestReconcileLeaderTrackerWhenTraceExistsWithMultipleWildcardUpgradesAndDow
 
 	rsf = r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME)
 	rsf.SetCleanupUnusedResources(func() bool { return false }) // prevent removal if owner is empty because this test won't elect leaders
-	tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, r.GetClient(), rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)
+	tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, TRACE_RESOURCE_SHARING_FILE_NAME, &assetsFolder)
 
 	leaderTracker, leaderTrackers, err = lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	leader1 = lutils.LeaderTracker{
