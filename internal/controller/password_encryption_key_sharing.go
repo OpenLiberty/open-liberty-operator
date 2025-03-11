@@ -69,6 +69,9 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(instance *olv1.Ope
 			},
 			func(obj client.Object) error {
 				return r.DeleteResource(obj)
+			},
+			func() bool {
+				return false
 			}, instance.GetName(), instance.GetNamespace(), OperatorShortName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
 			return "Failed to remove leader tracking reference to the password encryption key", "", "", err
