@@ -2,7 +2,6 @@ package controller
 
 import (
 	"fmt"
-	"strings"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
@@ -39,11 +38,6 @@ func (r *ReconcileOpenLibertyTrace) reconcileTraceMetadata(instance *olv1.OpenLi
 			return metadataList, err
 		}
 
-		metadataPath := validSubPath
-		if strings.HasSuffix(validSubPath, ".*") { // ending with .* indicates terminating at a wildcard leaf node, so substitute it for the wildcard entry in labelString
-			metadataPath = labelString
-		}
-
 		// retrieve the Trace leader tracker to re-use an existing name or to create a new metadata.Name
 		leaderTracker, _, err := lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 		if err != nil {
@@ -59,7 +53,7 @@ func (r *ReconcileOpenLibertyTrace) reconcileTraceMetadata(instance *olv1.OpenLi
 		pathIndex := tree.GetLeafIndex(treeMap, validSubPath)
 		versionedPathIndex := fmt.Sprintf("%s.%d", latestOperandVersion, pathIndex)
 		if n := len(pathChoices); n > 0 {
-			metadata.Path = metadataPath
+			metadata.Path = validSubPath
 			metadata.PathIndex = versionedPathIndex
 			metadata.Name = pathChoices[n-1] // at least for v1_4_2, pathChoices[n-1] will be the wildcard entry * representing the name
 			metadataList.Items = append(metadataList.Items, metadata)

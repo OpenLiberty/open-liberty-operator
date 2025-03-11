@@ -99,6 +99,9 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 			prevPodTraceMetadata = traceMetadataList.Items[1].(*lutils.TraceMetadata)
 		}
 	}
+	if traceMetadata == nil {
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, fmt.Errorf("the OpenLibertyTrace controller could not be initialized correctly")
+	}
 
 	//Pod is expected to be from the same namespace as the CR instance
 	podNamespace := instance.Namespace
@@ -128,22 +131,10 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	isInstanceMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
 	if isInstanceMarkedToBeDeleted {
 		if lutils.Contains(instance.GetFinalizers(), traceFinalizer) {
-			// if this instance is the prevPod leader, then disable prevPod based on isPrevPodTraceDisabled and remove owner ref
-			if prevTraceEnabled == corev1.ConditionTrue && prevPodTraceMetadata != nil {
-				_, thisInstanceIsLeader, _, err := tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
-					return r.CreateOrUpdate(obj, owner, cb)
-				}, OperatorShortName, instance.GetName(), instance.GetNamespace(), prevPodTraceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, false, true)
-				if err != nil && !kerrors.IsNotFound(err) {
-					return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, err
-				}
-
-				if thisInstanceIsLeader {
-					// Run finalization logic for traceFinalizer. If the finalization logic fails, don't remove the
-					// finalizer so that we can retry during the next reconciliation.
-					if err := r.finalizeOpenLibertyTrace(reqLogger, instance, isPrevPodTraceDisabled, prevPodName, podNamespace); err != nil {
-						return reconcile.Result{}, err
-					}
-				}
+			// Run finalization logic for traceFinalizer. If the finalization logic fails, don't remove the
+			// finalizer so that we can retry during the next reconciliation.
+			if err := r.finalizeOpenLibertyTrace(reqLogger, instance, prevTraceEnabled != corev1.ConditionTrue || isPrevPodTraceDisabled, prevPodName, podNamespace); err != nil {
+				return reconcile.Result{}, err
 			}
 
 			// Remove traceFinalizer. Once all finalizers have been removed, the object will be deleted.
@@ -164,13 +155,9 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	}
 
 	// exit if this instance is not the leader of podName
-	currentPodTraceMetadata := traceMetadata
-	if prevPodTraceMetadata != nil {
-		currentPodTraceMetadata = prevPodTraceMetadata
-	}
 	leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
 		return r.CreateOrUpdate(obj, owner, cb)
-	}, OperatorShortName, instance.GetName(), instance.GetNamespace(), currentPodTraceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, true, true)
+	}, OperatorShortName, instance.GetName(), instance.GetNamespace(), traceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, true, true)
 	if err != nil && !kerrors.IsNotFound(err) {
 		return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, err
 	}
@@ -351,6 +338,8 @@ func (r *ReconcileOpenLibertyTrace) finalizeOpenLibertyTrace(reqLogger logr.Logg
 		},
 		func(obj client.Object) error {
 			return r.DeleteResource(obj)
+		}, func() bool {
+			return true
 		}, olt.GetName(), olt.GetNamespace(), OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME)
 	return nil
 }

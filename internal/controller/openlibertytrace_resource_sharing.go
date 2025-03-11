@@ -15,11 +15,12 @@ import (
 )
 
 type OpenLibertyTraceResourceSharingFactory struct {
-	resourcesFunc         func() (lutils.LeaderTrackerMetadataList, error)
-	leaderTrackersFunc    func(assetsFolder *string) ([]*unstructured.UnstructuredList, []string, error)
-	createOrUpdateFunc    func(obj client.Object, owner metav1.Object, cb func() error) error
-	deleteResourcesFunc   func(obj client.Object) error
-	leaderTrackerNameFunc func(map[string]interface{}) (string, error)
+	resourcesFunc              func() (lutils.LeaderTrackerMetadataList, error)
+	leaderTrackersFunc         func(assetsFolder *string) ([]*unstructured.UnstructuredList, []string, error)
+	createOrUpdateFunc         func(obj client.Object, owner metav1.Object, cb func() error) error
+	deleteResourcesFunc        func(obj client.Object) error
+	leaderTrackerNameFunc      func(map[string]interface{}) (string, error)
+	cleanupUnusedResourcesFunc func() bool
 }
 
 func (rsf *OpenLibertyTraceResourceSharingFactory) Resources() func() (lutils.LeaderTrackerMetadataList, error) {
@@ -42,6 +43,14 @@ func (rsf *OpenLibertyTraceResourceSharingFactory) LeaderTrackerName() func(map[
 	return rsf.leaderTrackerNameFunc
 }
 
+func (rsf *OpenLibertyTraceResourceSharingFactory) CleanupUnusedResources() func() bool {
+	return rsf.cleanupUnusedResourcesFunc
+}
+
+func (rsf *OpenLibertyTraceResourceSharingFactory) SetCleanupUnusedResources(fn func() bool) {
+	rsf.cleanupUnusedResourcesFunc = fn
+}
+
 func (r *ReconcileOpenLibertyTrace) createResourceSharingFactory(instance *olv1.OpenLibertyTrace, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, leaderTrackerType string) tree.ResourceSharingFactory {
 	return &OpenLibertyTraceResourceSharingFactory{
 		resourcesFunc: func() (lutils.LeaderTrackerMetadataList, error) {
@@ -59,6 +68,9 @@ func (r *ReconcileOpenLibertyTrace) createResourceSharingFactory(instance *olv1.
 		leaderTrackerNameFunc: func(obj map[string]interface{}) (string, error) {
 			nameString, _, err := unstructured.NestedString(obj, "spec", "podName") // the Trace CR will use .spec.podName as the leaderTracker key identifier
 			return nameString, err
+		},
+		cleanupUnusedResourcesFunc: func() bool {
+			return true
 		},
 	}
 }
