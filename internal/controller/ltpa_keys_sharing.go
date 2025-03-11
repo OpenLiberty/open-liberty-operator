@@ -193,6 +193,9 @@ func (r *ReconcileOpenLiberty) reconcileLTPAKeys(instance *olv1.OpenLibertyAppli
 			},
 			func(obj client.Object) error {
 				return r.DeleteResource(obj)
+			},
+			func() bool {
+				return false
 			}, instance.GetName(), instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
 			return "Failed to remove leader tracking reference to the LTPA keys", ltpaSecretName, ltpaKeysLastRotation, err
@@ -217,6 +220,9 @@ func (r *ReconcileOpenLiberty) reconcileLTPAConfig(instance *olv1.OpenLibertyApp
 			},
 			func(obj client.Object) error {
 				return r.DeleteResource(obj)
+			},
+			func() bool {
+				return false
 			}, instance.GetName(), instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
 			return "Failed to remove leader tracking reference to the LTPA config", "", err
