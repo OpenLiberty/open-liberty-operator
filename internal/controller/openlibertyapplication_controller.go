@@ -977,6 +977,9 @@ func (r *ReconcileOpenLiberty) finalizeOpenLibertyApplication(reqLogger logr.Log
 		},
 		func(obj client.Object) error {
 			return r.DeleteResource(obj)
+		},
+		func() bool {
+			return false
 		}, olapp.GetName(), olapp.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME)
 	tree.RemoveLeaderTrackerReference(r.GetClient(),
 		func(obj client.Object, owner metav1.Object, cb func() error) error {
@@ -984,6 +987,9 @@ func (r *ReconcileOpenLiberty) finalizeOpenLibertyApplication(reqLogger logr.Log
 		},
 		func(obj client.Object) error {
 			return r.DeleteResource(obj)
+		},
+		func() bool {
+			return false
 		}, olapp.GetName(), olapp.GetNamespace(), OperatorShortName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 	r.deletePVC(reqLogger, pvcName, pvcNamespace)
 	return nil

@@ -17,11 +17,12 @@ import (
 )
 
 type OpenLibertyApplicationResourceSharingFactory struct {
-	resourcesFunc         func() (lutils.LeaderTrackerMetadataList, error)
-	leaderTrackersFunc    func(assetsFolder *string) ([]*unstructured.UnstructuredList, []string, error)
-	createOrUpdateFunc    func(obj client.Object, owner metav1.Object, cb func() error) error
-	deleteResourcesFunc   func(obj client.Object) error
-	leaderTrackerNameFunc func(map[string]interface{}) (string, error)
+	resourcesFunc              func() (lutils.LeaderTrackerMetadataList, error)
+	leaderTrackersFunc         func(assetsFolder *string) ([]*unstructured.UnstructuredList, []string, error)
+	createOrUpdateFunc         func(obj client.Object, owner metav1.Object, cb func() error) error
+	deleteResourcesFunc        func(obj client.Object) error
+	leaderTrackerNameFunc      func(map[string]interface{}) (string, error)
+	cleanupUnusedResourcesFunc func() bool
 }
 
 func (rsf *OpenLibertyApplicationResourceSharingFactory) Resources() func() (lutils.LeaderTrackerMetadataList, error) {
@@ -44,6 +45,14 @@ func (rsf *OpenLibertyApplicationResourceSharingFactory) LeaderTrackerName() fun
 	return rsf.leaderTrackerNameFunc
 }
 
+func (rsf *OpenLibertyApplicationResourceSharingFactory) CleanupUnusedResources() func() bool {
+	return rsf.cleanupUnusedResourcesFunc
+}
+
+func (rsf *OpenLibertyApplicationResourceSharingFactory) SetCleanupUnusedResources(fn func() bool) {
+	rsf.cleanupUnusedResourcesFunc = fn
+}
+
 func (r *ReconcileOpenLiberty) createResourceSharingFactory(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, leaderTrackerType string) tree.ResourceSharingFactory {
 	return &OpenLibertyApplicationResourceSharingFactory{
 		resourcesFunc: func() (lutils.LeaderTrackerMetadataList, error) {
@@ -61,6 +70,9 @@ func (r *ReconcileOpenLiberty) createResourceSharingFactory(instance *olv1.OpenL
 		leaderTrackerNameFunc: func(obj map[string]interface{}) (string, error) {
 			nameString, _, err := unstructured.NestedString(obj, "metadata", "name") // the LTPA and Password Encryption Secret will both use their .metadata.name as the leaderTracker key identifier
 			return nameString, err
+		},
+		cleanupUnusedResourcesFunc: func() bool {
+			return false
 		},
 	}
 }
