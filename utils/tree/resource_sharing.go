@@ -12,27 +12,32 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type ResourceSharingFactory interface {
-	Resources() func() (lutils.LeaderTrackerMetadataList, error)
-	LeaderTrackers() func(assetsFolder *string) ([]*unstructured.UnstructuredList, []string, error)
+type ResourceSharingFactoryBase interface {
+	Client() func() client.Client
 	CreateOrUpdate() func(obj client.Object, owner metav1.Object, cb func() error) error
 	DeleteResources() func(obj client.Object) error
-	LeaderTrackerName() func(map[string]interface{}) (string, error)
 	CleanupUnusedResources() func() bool
 	SetCleanupUnusedResources(fn func() bool)
 }
 
+type ResourceSharingFactory interface {
+	ResourceSharingFactoryBase
+	Resources() func() (lutils.LeaderTrackerMetadataList, error)
+	LeaderTrackers() func(assetsFolder *string) ([]*unstructured.UnstructuredList, []string, error)
+	LeaderTrackerName() func(map[string]interface{}) (string, error)
+}
+
 // If shouldElectNewLeader is set to true, the OpenLibertyApplication instance will be set and returned as the resource leader
 // Otherwise, returns the current shared resource leader
-func ReconcileLeader(client client.Client, createOrUpdateCallback func(client.Object, metav1.Object, func() error) error, operatorShortName, name, namespace string, leaderMetadata lutils.LeaderTrackerMetadata, leaderTrackerType string, shouldElectNewLeader bool, removeUnusedResources bool) (string, bool, string, error) {
-	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(namespace, operatorShortName, leaderTrackerType, client)
+func ReconcileLeader(rsf ResourceSharingFactory, operatorShortName, name, namespace string, leaderMetadata lutils.LeaderTrackerMetadata, leaderTrackerType string, shouldElectNewLeader bool) (string, bool, string, error) {
+	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(namespace, operatorShortName, leaderTrackerType, rsf.Client()())
 	if err != nil {
 		return "", false, "", err
 	}
-	return ReconcileLeaderWithState(name, createOrUpdateCallback, leaderTracker, leaderTrackers, leaderMetadata, shouldElectNewLeader, removeUnusedResources)
+	return ReconcileLeaderWithState(name, rsf, leaderTracker, leaderTrackers, leaderMetadata, shouldElectNewLeader)
 }
 
-func ReconcileLeaderWithState(name string, createOrUpdateCallback func(client.Object, metav1.Object, func() error) error, leaderTracker *corev1.Secret, leaderTrackers *[]lutils.LeaderTracker, leaderMetadata lutils.LeaderTrackerMetadata, shouldElectNewLeader bool, removeUnusedResources bool) (string, bool, string, error) {
+func ReconcileLeaderWithState(name string, rsf ResourceSharingFactory, leaderTracker *corev1.Secret, leaderTrackers *[]lutils.LeaderTracker, leaderMetadata lutils.LeaderTrackerMetadata, shouldElectNewLeader bool) (string, bool, string, error) {
 	initialLeaderIndex := -1
 	for i, tracker := range *leaderTrackers {
 		if tracker.Name == leaderMetadata.GetName() {
@@ -60,7 +65,7 @@ func ReconcileLeaderWithState(name string, createOrUpdateCallback func(client.Ob
 		// append it to the list of leaders
 		*leaderTrackers = append(*leaderTrackers, newLeader)
 		// save the tracker state
-		if err := SaveLeaderTracker(createOrUpdateCallback, leaderTracker, leaderTrackers, removeUnusedResources); err != nil {
+		if err := SaveLeaderTracker(rsf, leaderTracker, leaderTrackers); err != nil {
 			return "", false, "", err
 		}
 		return name, true, leaderMetadata.GetPathIndex(), nil
@@ -91,7 +96,7 @@ func ReconcileLeaderWithState(name string, createOrUpdateCallback func(client.Ob
 			(*leaderTrackers)[initialLeaderIndex].SetOwner(currentOwner)
 		}
 		// save this new owner list
-		if err := SaveLeaderTracker(createOrUpdateCallback, leaderTracker, leaderTrackers, removeUnusedResources); err != nil {
+		if err := SaveLeaderTracker(rsf, leaderTracker, leaderTrackers); err != nil {
 			return "", false, "", err
 		}
 		return currentOwner, currentOwner == name, (*leaderTrackers)[initialLeaderIndex].PathIndex, nil
@@ -111,15 +116,15 @@ func ReconcileLeaderWithState(name string, createOrUpdateCallback func(client.Ob
 	}
 
 	// save this new owner list
-	if err := SaveLeaderTracker(createOrUpdateCallback, leaderTracker, leaderTrackers, removeUnusedResources); err != nil {
+	if err := SaveLeaderTracker(rsf, leaderTracker, leaderTrackers); err != nil {
 		return "", false, "", err
 	}
 	return name, true, pathIndex, nil
 }
 
-func SaveLeaderTracker(createOrUpdateCallback func(client.Object, metav1.Object, func() error) error, leaderTracker *corev1.Secret, trackerList *[]lutils.LeaderTracker, removeUnusedResources bool) error {
+func SaveLeaderTracker(rsf ResourceSharingFactoryBase, leaderTracker *corev1.Secret, trackerList *[]lutils.LeaderTracker) error {
 	// remove unused resources if applicable
-	if removeUnusedResources {
+	if rsf.CleanupUnusedResources()() {
 		unusedIndices := []int{}
 		for i := range *trackerList {
 			if (*trackerList)[i].Owner == "" {
@@ -139,19 +144,18 @@ func SaveLeaderTracker(createOrUpdateCallback func(client.Object, metav1.Object,
 			trackerList = &trackerListTmp
 		}
 	}
-	return createOrUpdateCallback(leaderTracker, nil, func() error {
+	return rsf.CreateOrUpdate()(leaderTracker, nil, func() error {
 		lutils.CustomizeLeaderTracker(leaderTracker, trackerList)
 		return nil
 	})
 }
 
 // Validates the resource decision tree YAML and generates the leader tracking state (Secret) for maintaining multiple shared resources
-func ReconcileResourceTrackingState(namespace, operatorShortName, leaderTrackerType string,
-	client client.Client, rsf ResourceSharingFactory,
+func ReconcileResourceTrackingState(namespace, operatorShortName, leaderTrackerType string, rsf ResourceSharingFactory,
 	treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string) (lutils.LeaderTrackerMetadataList, error) {
 
 	// persist or create a Secret to store the shared resources' state
-	err := ReconcileLeaderTracker(namespace, operatorShortName, client, rsf, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, nil)
+	err := ReconcileLeaderTracker(namespace, operatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -159,8 +163,8 @@ func ReconcileResourceTrackingState(namespace, operatorShortName, leaderTrackerT
 }
 
 // Reconciles the latest LeaderTracker state to be used by the operator
-func ReconcileLeaderTracker(namespace string, operatorShortName string, client client.Client, rsf ResourceSharingFactory, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, leaderTrackerType string, assetsFolder *string) error {
-	leaderTracker, _, err := lutils.GetLeaderTracker(namespace, operatorShortName, leaderTrackerType, client)
+func ReconcileLeaderTracker(namespace string, operatorShortName string, rsf ResourceSharingFactory, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, leaderTrackerType string, assetsFolder *string) error {
+	leaderTracker, _, err := lutils.GetLeaderTracker(namespace, operatorShortName, leaderTrackerType, rsf.Client()())
 	// If the Leader Tracker is missing, create from scratch
 	if err != nil && kerrors.IsNotFound(err) {
 		leaderTracker.Labels[lutils.LeaderVersionLabel] = latestOperandVersion
@@ -169,7 +173,7 @@ func ReconcileLeaderTracker(namespace string, operatorShortName string, client c
 		if err != nil {
 			return err
 		}
-		return SaveLeaderTracker(rsf.CreateOrUpdate(), leaderTracker, leaderTrackers, rsf.CleanupUnusedResources()())
+		return SaveLeaderTracker(rsf, leaderTracker, leaderTrackers)
 	} else if err != nil {
 		return err
 	}
@@ -195,10 +199,11 @@ func CreateNewLeaderTrackerList(rsf ResourceSharingFactory, treeMap map[string]i
 }
 
 // Removes the instance as leader if instance is the leader and if no leaders are being tracked then delete the leader tracking Secret
-func RemoveLeader(createOrUpdateCallback func(client.Object, metav1.Object, func() error) error, deleteResourceCallback func(obj client.Object) error, cleanupUnusedResources bool, name string, leaderTracker *corev1.Secret, leaderTrackers *[]lutils.LeaderTracker) error {
+func RemoveLeader(name string, rsf ResourceSharingFactoryBase, leaderTracker *corev1.Secret, leaderTrackers *[]lutils.LeaderTracker) error {
 	changeDetected := false
 	noOwners := true
 	unusedIndices := []int{}
+	cleanupUnusedResources := rsf.CleanupUnusedResources()()
 	// If the instance is being tracked, remove it
 	for i := range *leaderTrackers {
 		if (*leaderTrackers)[i].ClearOwnerIfMatching(name) {
@@ -211,7 +216,7 @@ func RemoveLeader(createOrUpdateCallback func(client.Object, metav1.Object, func
 		}
 	}
 	if noOwners {
-		if err := deleteResourceCallback(leaderTracker); err != nil {
+		if err := rsf.DeleteResources()(leaderTracker); err != nil {
 			return err
 		}
 	} else {
@@ -219,7 +224,7 @@ func RemoveLeader(createOrUpdateCallback func(client.Object, metav1.Object, func
 			changeDetected = true
 		}
 		if changeDetected {
-			if err := SaveLeaderTracker(createOrUpdateCallback, leaderTracker, leaderTrackers, cleanupUnusedResources); err != nil {
+			if err := SaveLeaderTracker(rsf, leaderTracker, leaderTrackers); err != nil {
 				return err
 			}
 		}
@@ -291,17 +296,13 @@ func UpdateLeaderTrackersFromUnstructuredList(rsf ResourceSharingFactory, leader
 	return nil
 }
 
-func RemoveLeaderTrackerReference(client client.Client,
-	createOrUpdateCallback func(client.Object, metav1.Object, func() error) error,
-	deleteResourceCallback func(obj client.Object) error,
-	clearUnusedTrackersCallback func() bool,
-	name, namespace, operatorShortName, resourceSharingFileName string) error {
-	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(namespace, operatorShortName, resourceSharingFileName, client)
+func RemoveLeaderTrackerReference(rsf ResourceSharingFactoryBase, name, namespace, operatorShortName, resourceSharingFileName string) error {
+	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(namespace, operatorShortName, resourceSharingFileName, rsf.Client()())
 	if err != nil {
 		if kerrors.IsNotFound(err) {
 			return nil
 		}
 		return err
 	}
-	return RemoveLeader(createOrUpdateCallback, deleteResourceCallback, clearUnusedTrackersCallback(), name, leaderTracker, leaderTrackers)
+	return RemoveLeader(name, rsf, leaderTracker, leaderTrackers)
 }

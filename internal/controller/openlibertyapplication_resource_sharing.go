@@ -23,6 +23,7 @@ type OpenLibertyApplicationResourceSharingFactory struct {
 	deleteResourcesFunc        func(obj client.Object) error
 	leaderTrackerNameFunc      func(map[string]interface{}) (string, error)
 	cleanupUnusedResourcesFunc func() bool
+	clientFunc                 func() client.Client
 }
 
 func (rsf *OpenLibertyApplicationResourceSharingFactory) Resources() func() (lutils.LeaderTrackerMetadataList, error) {
@@ -53,6 +54,27 @@ func (rsf *OpenLibertyApplicationResourceSharingFactory) SetCleanupUnusedResourc
 	rsf.cleanupUnusedResourcesFunc = fn
 }
 
+func (rsf *OpenLibertyApplicationResourceSharingFactory) Client() func() client.Client {
+	return rsf.clientFunc
+}
+
+func (r *ReconcileOpenLiberty) createResourceSharingFactoryBase() tree.ResourceSharingFactoryBase {
+	return &OpenLibertyApplicationResourceSharingFactory{
+		createOrUpdateFunc: func(obj client.Object, owner metav1.Object, cb func() error) error {
+			return r.CreateOrUpdate(obj, owner, cb)
+		},
+		deleteResourcesFunc: func(obj client.Object) error {
+			return r.DeleteResource(obj)
+		},
+		cleanupUnusedResourcesFunc: func() bool {
+			return false
+		},
+		clientFunc: func() client.Client {
+			return r.GetClient()
+		},
+	}
+}
+
 func (r *ReconcileOpenLiberty) createResourceSharingFactory(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, leaderTrackerType string) tree.ResourceSharingFactory {
 	return &OpenLibertyApplicationResourceSharingFactory{
 		resourcesFunc: func() (lutils.LeaderTrackerMetadataList, error) {
@@ -74,21 +96,24 @@ func (r *ReconcileOpenLiberty) createResourceSharingFactory(instance *olv1.OpenL
 		cleanupUnusedResourcesFunc: func() bool {
 			return false
 		},
+		clientFunc: func() client.Client {
+			return r.GetClient()
+		},
 	}
 }
 
-func (r *ReconcileOpenLiberty) reconcileResourceTrackingState(instance *olv1.OpenLibertyApplication, leaderTrackerType string) (lutils.LeaderTrackerMetadataList, error) {
+func (r *ReconcileOpenLiberty) reconcileResourceTrackingState(instance *olv1.OpenLibertyApplication, leaderTrackerType string) (tree.ResourceSharingFactory, lutils.LeaderTrackerMetadataList, error) {
 	treeMap, replaceMap, err := tree.ParseDecisionTree(leaderTrackerType, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-
 	latestOperandVersion, err := tree.GetLatestOperandVersion(treeMap, "")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	rsf := r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, leaderTrackerType)
-	return tree.ReconcileResourceTrackingState(instance.GetNamespace(), OperatorShortName, leaderTrackerType, r.GetClient(), rsf, treeMap, replaceMap, latestOperandVersion)
+	trackerMetadataList, err := tree.ReconcileResourceTrackingState(instance.GetNamespace(), OperatorShortName, leaderTrackerType, rsf, treeMap, replaceMap, latestOperandVersion)
+	return rsf, trackerMetadataList, err
 }
 
 func (r *ReconcileOpenLiberty) OpenLibertyApplicationSharedResourceGenerator(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, latestOperandVersion, leaderTrackerType string) (lutils.LeaderTrackerMetadataList, error) {
