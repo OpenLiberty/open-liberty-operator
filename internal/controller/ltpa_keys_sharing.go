@@ -14,7 +14,6 @@ import (
 	tree "github.com/OpenLiberty/open-liberty-operator/utils/tree"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -187,16 +186,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAKeys(instance *olv1.OpenLibertyAppli
 			return "Failed to generate the shared LTPA keys Secret", ltpaSecretName, ltpaKeysLastRotation, err
 		}
 	} else {
-		err := tree.RemoveLeaderTrackerReference(r.GetClient(),
-			func(obj client.Object, owner metav1.Object, cb func() error) error {
-				return r.CreateOrUpdate(obj, owner, cb)
-			},
-			func(obj client.Object) error {
-				return r.DeleteResource(obj)
-			},
-			func() bool {
-				return false
-			}, instance.GetName(), instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME)
+		err := tree.RemoveLeaderTrackerReference(baseRSF, instance.GetName(), instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
 			return "Failed to remove leader tracking reference to the LTPA keys", ltpaSecretName, ltpaKeysLastRotation, err
 		}
@@ -205,25 +195,16 @@ func (r *ReconcileOpenLiberty) reconcileLTPAKeys(instance *olv1.OpenLibertyAppli
 }
 
 // Create or use an existing LTPA Secret identified by LTPA metadata for the OpenLibertyApplication instance
-func (r *ReconcileOpenLiberty) reconcileLTPAConfig(instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, ltpaKeysLastRotation string, lastKeyRelatedRotation string) (string, string, error) {
+func (r *ReconcileOpenLiberty) reconcileLTPAConfig(rsf tree.ResourceSharingFactory, baseRSF tree.ResourceSharingFactoryBase, instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, ltpaKeysLastRotation string, lastKeyRelatedRotation string) (string, string, error) {
 	var err error
 	var ltpaXMLSecretName string
 	if r.isLTPAKeySharingEnabled(instance) {
-		ltpaXMLSecretName, err = r.generateLTPAConfig(instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
+		ltpaXMLSecretName, err = r.generateLTPAConfig(rsf, instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
 		if err != nil {
 			return "Failed to generate the shared LTPA config Secret", ltpaXMLSecretName, err
 		}
 	} else {
-		err := tree.RemoveLeaderTrackerReference(r.GetClient(),
-			func(obj client.Object, owner metav1.Object, cb func() error) error {
-				return r.CreateOrUpdate(obj, owner, cb)
-			},
-			func(obj client.Object) error {
-				return r.DeleteResource(obj)
-			},
-			func() bool {
-				return false
-			}, instance.GetName(), instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME)
+		err := tree.RemoveLeaderTrackerReference(baseRSF, instance.GetName(), instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
 			return "Failed to remove leader tracking reference to the LTPA config", "", err
 		}
@@ -256,9 +237,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 	// If the LTPA Secret does not exist, run the Kubernetes Job to generate the shared ltpa.keys file and Secret
 	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaSecret.Name, Namespace: ltpaSecret.Namespace}, ltpaSecret)
 	if err != nil && kerrors.IsNotFound(err) {
-		leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
-			return r.CreateOrUpdate(obj, owner, cb)
-		}, OperatorShortName, instance.GetName(), instance.GetNamespace(), ltpaMetadata, LTPA_RESOURCE_SHARING_FILE_NAME, true, false)
+		leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(rsf, OperatorShortName, instance.GetName(), instance.GetNamespace(), ltpaMetadata, LTPA_RESOURCE_SHARING_FILE_NAME, true)
 		if err != nil {
 			return "", "", leaderName, err
 		}
@@ -317,7 +296,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 }
 
 // Generates the LTPA keys file and returns the name of the Secret storing its metadata
-func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, ltpaKeysLastRotation string, lastKeyRelatedRotation string) (string, error) {
+func (r *ReconcileOpenLiberty) generateLTPAConfig(rsf tree.ResourceSharingFactory, instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, ltpaKeysLastRotation string, lastKeyRelatedRotation string) (string, error) {
 	ltpaXMLSecret := &corev1.Secret{}
 	ltpaXMLSecretRootName := OperatorShortName + lutils.LTPAServerXMLSuffix
 	ltpaXMLSecret.Name = ltpaXMLSecretRootName + ltpaConfigMetadata.Name
@@ -340,9 +319,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 		if !kerrors.IsNotFound(err) {
 			return ltpaXMLSecret.Name, err
 		}
-		leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
-			return r.CreateOrUpdate(obj, owner, cb)
-		}, OperatorShortName, instance.GetName(), instance.GetNamespace(), ltpaConfigMetadata, LTPA_RESOURCE_SHARING_FILE_NAME, false, false) // false, since this function should not elect leader for LTPA keys generation
+		leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(rsf, OperatorShortName, instance.GetName(), instance.GetNamespace(), ltpaConfigMetadata, LTPA_RESOURCE_SHARING_FILE_NAME, false) // false, since this function should not elect leader for LTPA keys generation
 		if err != nil {
 			return ltpaXMLSecret.Name, err
 		}
@@ -354,9 +331,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 	}
 
 	// LTPA config leader starts here
-	leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
-		return r.CreateOrUpdate(obj, owner, cb)
-	}, OperatorShortName, instance.GetName(), instance.GetNamespace(), ltpaConfigMetadata, LTPA_RESOURCE_SHARING_FILE_NAME, true, false)
+	leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(rsf, OperatorShortName, instance.GetName(), instance.GetNamespace(), ltpaConfigMetadata, LTPA_RESOURCE_SHARING_FILE_NAME, true)
 	if err != nil {
 		return ltpaXMLSecret.Name, err
 	}
@@ -400,9 +375,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 	// If the LTPA password Secret does not exist, run the Kubernetes Job to generate the LTPA password Secret
 	err = r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaConfigSecret.Name, Namespace: ltpaConfigSecret.Namespace}, ltpaConfigSecret)
 	if err != nil && kerrors.IsNotFound(err) {
-		leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
-			return r.CreateOrUpdate(obj, owner, cb)
-		}, OperatorShortName, instance.GetName(), instance.GetNamespace(), ltpaConfigMetadata, LTPA_RESOURCE_SHARING_FILE_NAME, true, false)
+		leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(rsf, OperatorShortName, instance.GetName(), instance.GetNamespace(), ltpaConfigMetadata, LTPA_RESOURCE_SHARING_FILE_NAME, true)
 		if err != nil {
 			return ltpaXMLSecret.Name, err
 		}

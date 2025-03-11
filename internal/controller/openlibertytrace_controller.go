@@ -84,7 +84,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	// Reconciles the shared Trace state for the instance namespace
 	var traceMetadataList *lutils.TraceMetadataList
 	var traceMetadata, prevPodTraceMetadata *lutils.TraceMetadata
-	leaderMetadataList, err := r.reconcileResourceTrackingState(instance, TRACE_RESOURCE_SHARING_FILE_NAME)
+	rsf, leaderMetadataList, err := r.reconcileResourceTrackingState(instance, TRACE_RESOURCE_SHARING_FILE_NAME)
 
 	if err != nil {
 		return reconcile.Result{}, err
@@ -114,9 +114,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	isPrevPodTraceDisabled := false
 	// if pod changed then disable prevPod (if possible)
 	if podChanged && prevTraceEnabled == corev1.ConditionTrue && traceMetadata != nil && prevPodTraceMetadata != nil && traceMetadata.Name != prevPodTraceMetadata.Name {
-		_, thisInstanceIsLeader, _, err := tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
-			return r.CreateOrUpdate(obj, owner, cb)
-		}, OperatorShortName, instance.GetName(), instance.GetNamespace(), prevPodTraceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, true, true)
+		_, thisInstanceIsLeader, _, err := tree.ReconcileLeader(rsf, OperatorShortName, instance.GetName(), instance.GetNamespace(), prevPodTraceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, true)
 		if err != nil && !kerrors.IsNotFound(err) {
 			return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, err
 		}
@@ -133,7 +131,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 		if lutils.Contains(instance.GetFinalizers(), traceFinalizer) {
 			// Run finalization logic for traceFinalizer. If the finalization logic fails, don't remove the
 			// finalizer so that we can retry during the next reconciliation.
-			if err := r.finalizeOpenLibertyTrace(reqLogger, instance, prevTraceEnabled != corev1.ConditionTrue || isPrevPodTraceDisabled, prevPodName, podNamespace); err != nil {
+			if err := r.finalizeOpenLibertyTrace(reqLogger, instance, rsf, prevTraceEnabled != corev1.ConditionTrue || isPrevPodTraceDisabled, prevPodName, podNamespace); err != nil {
 				return reconcile.Result{}, err
 			}
 
@@ -155,9 +153,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	}
 
 	// exit if this instance is not the leader of podName
-	leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(r.GetClient(), func(obj client.Object, owner metav1.Object, cb func() error) error {
-		return r.CreateOrUpdate(obj, owner, cb)
-	}, OperatorShortName, instance.GetName(), instance.GetNamespace(), traceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, true, true)
+	leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(rsf, OperatorShortName, instance.GetName(), instance.GetNamespace(), traceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, true)
 	if err != nil && !kerrors.IsNotFound(err) {
 		return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, err
 	}
@@ -328,19 +324,11 @@ func (r *ReconcileOpenLibertyTrace) GetClient() client.Client {
 	return r.Client
 }
 
-func (r *ReconcileOpenLibertyTrace) finalizeOpenLibertyTrace(reqLogger logr.Logger, olt *openlibertyv1.OpenLibertyTrace, isPrevPodTraceDisabled bool, prevPodName, podNamespace string) error {
+func (r *ReconcileOpenLibertyTrace) finalizeOpenLibertyTrace(reqLogger logr.Logger, olt *openlibertyv1.OpenLibertyTrace, rsf tree.ResourceSharingFactory, isPrevPodTraceDisabled bool, prevPodName, podNamespace string) error {
 	if !isPrevPodTraceDisabled {
 		r.disableTraceOnPrevPod(reqLogger, prevPodName, podNamespace)
 	}
-	tree.RemoveLeaderTrackerReference(r.GetClient(),
-		func(obj client.Object, owner metav1.Object, cb func() error) error {
-			return r.CreateOrUpdate(obj, owner, cb)
-		},
-		func(obj client.Object) error {
-			return r.DeleteResource(obj)
-		}, func() bool {
-			return true
-		}, olt.GetName(), olt.GetNamespace(), OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME)
+	tree.RemoveLeaderTrackerReference(rsf, olt.GetName(), olt.GetNamespace(), OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME)
 	return nil
 }
 
