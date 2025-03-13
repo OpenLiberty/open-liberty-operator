@@ -23,7 +23,7 @@ func init() {
 	lutils.LeaderTrackerMutexes.Store(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, &sync.Mutex{})
 }
 
-func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (string, string, string, error) {
+func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(rsf tree.ResourceSharingFactory, baseRSF tree.ResourceSharingFactoryBase, instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (string, string, string, error) {
 	if r.isPasswordEncryptionKeySharingEnabled(instance) {
 		leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(rsf, OperatorShortName, instance.GetName(), instance.GetNamespace(), passwordEncryptionMetadata, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, true)
 		if err != nil && !kerrors.IsNotFound(err) {
@@ -96,7 +96,7 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionMetadata(treeMap map[s
 		// Uncomment code below to extend to multiple password encryption keys per namespace. See ltpa_keys_sharing.go for an example.
 
 		// // retrieve the password encryption leader tracker to re-use an existing name or to create a new metadata.Name
-		// leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+		// leaderTracker, _, err := lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 		// if err != nil {
 		// 	return metadataList, err
 		// }

@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -212,7 +211,7 @@ func CustomizeLeaderTracker(leaderTracker *corev1.Secret, trackerList *[]LeaderT
 	// leaderTracker.Data[ResourceSubleasesKey] = []byte(subleases)
 }
 
-func GetLeaderTracker(instance *olv1.OpenLibertyApplication, operatorShortName string, leaderTrackerType string, client client.Client) (*corev1.Secret, *[]LeaderTracker, error) {
+func GetLeaderTracker(namespace string, operatorShortName string, leaderTrackerType string, client client.Client) (*corev1.Secret, *[]LeaderTracker, error) {
 	leaderMutex, mutexFound := LeaderTrackerMutexes.Load(leaderTrackerType)
 	if !mutexFound {
 		return nil, nil, fmt.Errorf("Could not retrieve %s leader tracker's mutex when attempting to get. Exiting.", leaderTrackerType)
