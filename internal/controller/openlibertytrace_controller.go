@@ -158,8 +158,8 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 		return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, err
 	}
 	if !thisInstanceIsLeader {
-		err := fmt.Errorf("Trace could not be applied. Pod '" + podName + "' is already configured by OpenLibertyTrace instance '" + leaderName + "'.")
-		reqLogger.Error(err, "Trace was denied for instance '"+instance.GetName()+"'; Trace instance '"+leaderName+"' is already managing pod '"+podName+"' in namespace '"+podNamespace+"'")
+		err := fmt.Errorf("Trace could not be applied. Pod '%s' is already configured by OpenLibertyTrace instance '%s'.", podName, leaderName)
+		reqLogger.Error(err, "Trace was denied for instance '%s'; Trace instance '%s' is already managing pod '%s' in namespace '%s'", instance.GetName(), leaderName, podName, podNamespace)
 		return r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, false)
 	}
 
@@ -167,7 +167,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: podName, Namespace: podNamespace}, &corev1.Pod{})
 	if err != nil && kerrors.IsNotFound(err) {
 		//Pod is not found. Return and don't requeue
-		reqLogger.Error(err, "Pod "+podName+" was not found in namespace "+podNamespace)
+		reqLogger.Error(err, "Pod '%s' was not found in namespace '%s'", podName, podNamespace)
 		return r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
 	}
 
@@ -176,10 +176,10 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 		if !podChanged && prevTraceEnabled == corev1.ConditionTrue {
 			_, err = lutils.ExecuteCommandInContainer(r.RestConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "rm -f " + traceConfigFile})
 			if err != nil {
-				reqLogger.Error(err, "Encountered error while disabling trace for pod "+podName+" in namespace "+podNamespace)
+				reqLogger.Error(err, "Encountered error while disabling trace for pod '%s' in namespace ", podName, podNamespace)
 				return r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionTrue, podName, podChanged)
 			}
-			reqLogger.Info("Disabled trace for pod " + podName + " in namespace " + podNamespace)
+			reqLogger.Info("Disabled trace for pod '%s' in namespace '%s'", podName, podNamespace)
 		}
 		r.UpdateStatus(nil, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
 	} else {
