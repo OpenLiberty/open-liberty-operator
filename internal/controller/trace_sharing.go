@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"sync"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
@@ -9,6 +10,10 @@ import (
 )
 
 const TRACE_RESOURCE_SHARING_FILE_NAME = "trace"
+
+func init() {
+	lutils.LeaderTrackerMutexes.Store(TRACE_RESOURCE_SHARING_FILE_NAME, &sync.Mutex{})
+}
 
 func (r *ReconcileOpenLibertyTrace) reconcileTraceMetadata(instance *olv1.OpenLibertyTrace, treeMap map[string]interface{}, latestOperandVersion string, assetsFolder *string) (lutils.LeaderTrackerMetadataList, error) {
 	metadataList := &lutils.TraceMetadataList{}

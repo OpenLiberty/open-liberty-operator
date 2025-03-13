@@ -267,9 +267,9 @@ func TestLTPALeaderTracker(t *testing.T) {
 	}
 
 	// Lastly, remove the LTPA leader
-	err1 = r.RemoveLeaderTrackerReference(instance, LTPA_RESOURCE_SHARING_FILE_NAME)
-	err2 = r.RemoveLeader(instance, leaderTracker, leaderTrackers, LTPA_RESOURCE_SHARING_FILE_NAME)
-	_, leaderTrackers, leaderTrackerErr := lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	err1 = tree.RemoveLeaderTrackerReference(rsf, instance.GetName(), instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME)
+	err2 = tree.RemoveLeader(instance.GetName(), rsf, leaderTracker, leaderTrackers)
+	_, leaderTrackers, leaderTrackerErr := lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	var nilLeaderTrackers *[]lutils.LeaderTracker
 	tests = []Test{
 		{"remove LTPA - deleteLTPAKeysResource errors", nil, err1},
