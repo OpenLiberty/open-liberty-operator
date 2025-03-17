@@ -1,6 +1,6 @@
 module github.com/OpenLiberty/open-liberty-operator
 
-go 1.24
+go 1.24.1
 
 require (
 	github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20250502192232-9e8e8d1ebd27
