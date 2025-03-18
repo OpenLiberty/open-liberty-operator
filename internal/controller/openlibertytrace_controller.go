@@ -176,7 +176,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 		if !podChanged && prevTraceEnabled == corev1.ConditionTrue {
 			_, err = lutils.ExecuteCommandInContainer(r.RestConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "rm -f " + traceConfigFile})
 			if err != nil {
-				reqLogger.Error(err, "Encountered error while disabling trace for pod '%s' in namespace ", podName, podNamespace)
+				reqLogger.Error(err, "Encountered error while disabling trace for pod '%s' in namespace '%s'", podName, podNamespace)
 				return r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionTrue, podName, podChanged)
 			}
 			reqLogger.Info("Disabled trace for pod '%s' in namespace '%s'", podName, podNamespace)
