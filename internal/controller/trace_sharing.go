@@ -60,7 +60,7 @@ func (r *ReconcileOpenLibertyTrace) reconcileTraceMetadata(instance *olv1.OpenLi
 		if n := len(pathChoices); n > 0 {
 			metadata.Path = validSubPath
 			metadata.PathIndex = versionedPathIndex
-			metadata.Name = pathChoices[n-1] // at least for v1_4_2, pathChoices[n-1] will be the wildcard entry * representing the name
+			metadata.Name = pathChoices[n-1] // for v1_4_2, pathChoices[n-1] will be the wildcard entry * representing the name
 			metadataList.Items = append(metadataList.Items, metadata)
 		}
 	}
@@ -76,12 +76,14 @@ func (r *ReconcileOpenLibertyTrace) getTracePathOptionsAndChoices(instance *olv1
 		pathOptionsList = append(pathOptionsList, pathOptions)
 		pathChoicesList = append(pathChoicesList, pathChoices)
 
-		prevPodName := instance.GetStatus().GetOperatedResource().GetOperatedResourceName()
-		if instance.Spec.PodName != prevPodName && prevPodName != "" {
-			pathOptions := []string{"name"}
-			pathChoices := []string{prevPodName}
-			pathOptionsList = append(pathOptionsList, pathOptions)
-			pathChoicesList = append(pathChoicesList, pathChoices)
+		if instance.GetStatus() != nil && instance.GetStatus().GetOperatedResource() != nil {
+			prevPodName := instance.GetStatus().GetOperatedResource().GetOperatedResourceName()
+			if instance.Spec.PodName != prevPodName && prevPodName != "" {
+				pathOptions := []string{"name"}
+				pathChoices := []string{prevPodName}
+				pathOptionsList = append(pathOptionsList, pathOptions)
+				pathChoicesList = append(pathChoicesList, pathChoices)
+			}
 		}
 	}
 	return pathOptionsList, pathChoicesList
