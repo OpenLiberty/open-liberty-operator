@@ -496,14 +496,13 @@ func ParseDecisionTree(leaderTrackerType string, fileName *string) (map[string]i
 
 	// get last modified time
 	lastModifiedTime := int64(-1)
-	if fileName != nil {
+	if treeFileName != "" {
 		file, err := os.Stat(treeFileName)
 		if err != nil {
 			return nil, nil, err
 		}
 		lastModifiedTime = file.ModTime().Unix()
-	}
-	if lastModifiedTime != -1 {
+
 		// check the in-memory cache to see if a cached decision tree already exists
 		cachedTreeMap, cachedReplaceMap := TreeCache.Maps(leaderTrackerType, treeFileName, lastModifiedTime)
 		if cachedTreeMap != nil && cachedReplaceMap != nil {
