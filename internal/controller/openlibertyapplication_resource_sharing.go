@@ -25,20 +25,40 @@ func (rsf *OpenLibertyApplicationResourceSharingFactory) Resources() func() (lut
 	return rsf.resourcesFunc
 }
 
+func (rsf *OpenLibertyApplicationResourceSharingFactory) SetResources(fn func() (lutils.LeaderTrackerMetadataList, error)) {
+	rsf.resourcesFunc = fn
+}
+
 func (rsf *OpenLibertyApplicationResourceSharingFactory) LeaderTrackers() func(*string) ([]*unstructured.UnstructuredList, []string, error) {
 	return rsf.leaderTrackersFunc
+}
+
+func (rsf *OpenLibertyApplicationResourceSharingFactory) SetLeaderTrackers(fn func(*string) ([]*unstructured.UnstructuredList, []string, error)) {
+	rsf.leaderTrackersFunc = fn
 }
 
 func (rsf *OpenLibertyApplicationResourceSharingFactory) CreateOrUpdate() func(obj client.Object, owner metav1.Object, cb func() error) error {
 	return rsf.createOrUpdateFunc
 }
 
+func (rsf *OpenLibertyApplicationResourceSharingFactory) SetCreateOrUpdate(fn func(obj client.Object, owner metav1.Object, cb func() error) error) {
+	rsf.createOrUpdateFunc = fn
+}
+
 func (rsf *OpenLibertyApplicationResourceSharingFactory) DeleteResources() func(obj client.Object) error {
 	return rsf.deleteResourcesFunc
 }
 
+func (rsf *OpenLibertyApplicationResourceSharingFactory) SetDeleteResources(fn func(obj client.Object) error) {
+	rsf.deleteResourcesFunc = fn
+}
+
 func (rsf *OpenLibertyApplicationResourceSharingFactory) LeaderTrackerName() func(map[string]interface{}) (string, error) {
 	return rsf.leaderTrackerNameFunc
+}
+
+func (rsf *OpenLibertyApplicationResourceSharingFactory) SetLeaderTrackerName(fn func(map[string]interface{}) (string, error)) {
+	rsf.leaderTrackerNameFunc = fn
 }
 
 func (rsf *OpenLibertyApplicationResourceSharingFactory) CleanupUnusedResources() func() bool {
@@ -53,48 +73,43 @@ func (rsf *OpenLibertyApplicationResourceSharingFactory) Client() func() client.
 	return rsf.clientFunc
 }
 
+func (rsf *OpenLibertyApplicationResourceSharingFactory) SetClient(fn func() client.Client) {
+	rsf.clientFunc = fn
+}
+
 func (r *ReconcileOpenLiberty) createResourceSharingFactoryBase() tree.ResourceSharingFactoryBase {
-	return &OpenLibertyApplicationResourceSharingFactory{
-		createOrUpdateFunc: func(obj client.Object, owner metav1.Object, cb func() error) error {
-			return r.CreateOrUpdate(obj, owner, cb)
-		},
-		deleteResourcesFunc: func(obj client.Object) error {
-			return r.DeleteResource(obj)
-		},
-		cleanupUnusedResourcesFunc: func() bool {
-			return false
-		},
-		clientFunc: func() client.Client {
-			return r.GetClient()
-		},
-	}
+	rsf := &OpenLibertyApplicationResourceSharingFactory{}
+	rsf.SetCreateOrUpdate(func(obj client.Object, owner metav1.Object, cb func() error) error {
+		return r.CreateOrUpdate(obj, owner, cb)
+	})
+	rsf.SetDeleteResources(func(obj client.Object) error {
+		return r.DeleteResource(obj)
+	})
+	rsf.SetCleanupUnusedResources(func() bool {
+		return false
+	})
+	rsf.SetClient(func() client.Client {
+		return r.GetClient()
+	})
+	return rsf
 }
 
 func (r *ReconcileOpenLiberty) createResourceSharingFactory(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, leaderTrackerType string) tree.ResourceSharingFactory {
-	return &OpenLibertyApplicationResourceSharingFactory{
-		resourcesFunc: func() (lutils.LeaderTrackerMetadataList, error) {
-			return r.OpenLibertyApplicationSharedResourceGenerator(instance, treeMap, latestOperandVersion, leaderTrackerType)
-		},
-		leaderTrackersFunc: func(assetsFolder *string) ([]*unstructured.UnstructuredList, []string, error) {
-			return r.OpenLibertyApplicationLeaderTrackerGenerator(instance, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, assetsFolder)
-		},
-		createOrUpdateFunc: func(obj client.Object, owner metav1.Object, cb func() error) error {
-			return r.CreateOrUpdate(obj, owner, cb)
-		},
-		deleteResourcesFunc: func(obj client.Object) error {
-			return r.DeleteResource(obj)
-		},
-		leaderTrackerNameFunc: func(obj map[string]interface{}) (string, error) {
-			nameString, _, err := unstructured.NestedString(obj, "metadata", "name") // the LTPA and Password Encryption Secret will both use their .metadata.name as the leaderTracker key identifier
-			return nameString, err
-		},
-		cleanupUnusedResourcesFunc: func() bool {
-			return false
-		},
-		clientFunc: func() client.Client {
-			return r.GetClient()
-		},
-	}
+	var rsf *OpenLibertyApplicationResourceSharingFactory
+	rsfb := r.createResourceSharingFactoryBase()
+	rsf = rsfb.(*OpenLibertyApplicationResourceSharingFactory)
+	rsf.SetLeaderTrackers(func(assetsFolder *string) ([]*unstructured.UnstructuredList, []string, error) {
+		return r.OpenLibertyApplicationLeaderTrackerGenerator(instance, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, assetsFolder)
+	})
+	rsf.SetLeaderTrackerName(func(obj map[string]interface{}) (string, error) {
+		nameString, _, err := unstructured.NestedString(obj, "metadata", "name") // the LTPA and Password Encryption Secret will both use their .metadata.name as the leaderTracker key identifier
+		return nameString, err
+	})
+	rsf.SetResources(func() (lutils.LeaderTrackerMetadataList, error) {
+		return r.OpenLibertyApplicationSharedResourceGenerator(instance, treeMap, latestOperandVersion, leaderTrackerType)
+	})
+	return rsf
+
 }
 
 func (r *ReconcileOpenLiberty) reconcileResourceTrackingState(instance *olv1.OpenLibertyApplication, leaderTrackerType string) (tree.ResourceSharingFactory, lutils.LeaderTrackerMetadataList, error) {

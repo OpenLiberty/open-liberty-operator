@@ -12,22 +12,35 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// Base interface for resource sharing
 type ResourceSharingFactoryBase interface {
 	Client() func() client.Client
+	SetClient(fn func() client.Client)
+
 	CreateOrUpdate() func(obj client.Object, owner metav1.Object, cb func() error) error
+	SetCreateOrUpdate(fn func(obj client.Object, owner metav1.Object, cb func() error) error)
+
 	DeleteResources() func(obj client.Object) error
+	SetDeleteResources(fn func(obj client.Object) error)
+
 	CleanupUnusedResources() func() bool
 	SetCleanupUnusedResources(fn func() bool)
 }
 
+// Interface for resource sharing
 type ResourceSharingFactory interface {
 	ResourceSharingFactoryBase
 	Resources() func() (lutils.LeaderTrackerMetadataList, error)
+	SetResources(fn func() (lutils.LeaderTrackerMetadataList, error))
+
 	LeaderTrackers() func(assetsFolder *string) ([]*unstructured.UnstructuredList, []string, error)
+	SetLeaderTrackers(fn func(assetsFolder *string) ([]*unstructured.UnstructuredList, []string, error))
+
 	LeaderTrackerName() func(map[string]interface{}) (string, error)
+	SetLeaderTrackerName(fn func(map[string]interface{}) (string, error))
 }
 
-// If shouldElectNewLeader is set to true, the OpenLibertyApplication instance will be set and returned as the resource leader
+// If shouldElectNewLeader is set to true, this instance will be set and returned as the resource leader
 // Otherwise, returns the current shared resource leader
 func ReconcileLeader(rsf ResourceSharingFactory, operatorShortName, name, namespace string, leaderMetadata lutils.LeaderTrackerMetadata, leaderTrackerType string, shouldElectNewLeader bool) (string, bool, string, error) {
 	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(namespace, operatorShortName, leaderTrackerType, rsf.Client()())

@@ -485,6 +485,7 @@ func GetLabelFromDecisionPath(operandVersionString string, pathOptions []string,
 	return label, nil
 }
 
+// Loads the resource sharing decision tree for the leaderTrackerType (i.e. "trace" or "ltpa") from the filesystem or directly from in-memory cache.
 func ParseDecisionTree(leaderTrackerType string, fileName *string) (map[string]interface{}, map[string]map[string]string, error) {
 	// get file name
 	treeFileName := ""
@@ -546,6 +547,11 @@ func ParseDecisionTree(leaderTrackerType string, fileName *string) (map[string]i
 	return treeMap, replaceMap, nil
 }
 
+// For each version key in the treeMap this function finds the largest operand version that is no larger than maxVersion
+//
+// Example:
+// Suppose you are running v1_4_2 of the operator, then maxVersion = "v1_4_2" with treeMap keys ["v1_3_3", "v1_4_0", "v1_4_2", "v1_4_3"].
+// This function would return "v1_4_2", because that is the largest operand version within the treeMap keys that is no larger than maxVersion.
 func getLatestTreeMapOperandVersion(treeMap map[string]interface{}, maxVersion string) (string, error) {
 	maxTreeVersion := "v0_0_0"
 	for version := range treeMap {
@@ -562,6 +568,7 @@ func getLatestTreeMapOperandVersion(treeMap map[string]interface{}, maxVersion s
 	return maxTreeVersion, nil
 }
 
+// Returns the latest treeMap operand version using currentOperandVersion (and falls back to using OperandVersion if currentOperandVersion is an empty string)
 func GetLatestOperandVersion(treeMap map[string]interface{}, currentOperandVersion string) (string, error) {
 	operandVersionString := ""
 	if len(currentOperandVersion) == 0 {
