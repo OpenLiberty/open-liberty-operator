@@ -9,6 +9,7 @@ import (
 
 	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
+	"github.com/OpenLiberty/open-liberty-operator/utils/leader"
 	tree "github.com/OpenLiberty/open-liberty-operator/utils/tree"
 	oputils "github.com/application-stacks/runtime-component-operator/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -106,7 +107,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	r := createReconcilerFromOpenLibertyApp(instance)
 
 	// First, get the LTPA leader tracker which is not initialized
-	leaderTracker, _, err := lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	leaderTracker, _, err := leader.GetLeaderTracker(instance.GetNamespace(), OperatorName, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	leaderTrackerName := "olo-managed-leader-tracking-" + LTPA_RESOURCE_SHARING_FILE_NAME
 	emptyLeaderTracker := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -140,7 +141,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 
 	assetsFolder := getAssetsFolder()
 	rsf := r.createResourceSharingFactory(instance, treeMap, replaceMap, "v10_4_1", LTPA_RESOURCE_SHARING_FILE_NAME)
-	err = tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)
+	err = tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorName, OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)
 	tests = []Test{
 		{"initialize LTPA leader tracker", nil, err},
 	}
@@ -148,17 +149,17 @@ func TestLTPALeaderTracker(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	leaderTracker, _, err = lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	leaderTracker, _, err = leader.GetLeaderTracker(instance.GetNamespace(), OperatorName, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData := map[string][]byte{}
-	expectedLeaderTrackerData[lutils.ResourcesKey] = []byte("")
-	expectedLeaderTrackerData[lutils.ResourceOwnersKey] = []byte("")
-	expectedLeaderTrackerData[lutils.ResourcePathsKey] = []byte("")
-	expectedLeaderTrackerData[lutils.ResourcePathIndicesKey] = []byte("")
+	expectedLeaderTrackerData[leader.ResourcesKey] = []byte("")
+	expectedLeaderTrackerData[leader.ResourceOwnersKey] = []byte("")
+	expectedLeaderTrackerData[leader.ResourcePathsKey] = []byte("")
+	expectedLeaderTrackerData[leader.ResourcePathIndicesKey] = []byte("")
 	tests = []Test{
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
 		{"get LTPA leader tracker data", expectedLeaderTrackerData, leaderTracker.Data},
-		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[leader.GetLeaderVersionLabel(lutils.LibertyURI)]},
 		{"get LTPA leader tracker error", nil, err},
 	}
 	if err := verifyTests(tests); err != nil {
@@ -171,7 +172,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 			Name:      "olo-managed-ltpa-ab215",
 			Namespace: namespace,
 			Labels: map[string]string{
-				lutils.ResourcePathIndexLabel: latestOperandVersion + ".2", // choosing path index 2 under tree v10_4_1 (i.e. v10_4_1.a.b.e.true)
+				leader.GetResourcePathIndexLabel(lutils.LibertyURI): latestOperandVersion + ".2", // choosing path index 2 under tree v10_4_1 (i.e. v10_4_1.a.b.e.true)
 			},
 		},
 		Data: map[string][]byte{}, // create empty data
@@ -186,7 +187,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 	}
 
 	// Mock the process where the operator saves the LTPA Secret, storing it into the leader tracker
-	leaderName, isLeader, pathIndex, err := tree.ReconcileLeader(rsf, OperatorShortName, instance.GetName(), instance.GetNamespace(), &lutils.LTPAMetadata{
+	leaderName, isLeader, pathIndex, err := tree.ReconcileLeader(rsf, OperatorName, OperatorShortName, instance.GetName(), instance.GetNamespace(), &leader.LTPAMetadata{
 		Path:      latestOperandVersion + ".a.b.e.true",
 		PathIndex: latestOperandVersion + ".2",
 		Name:      "-ab215",
@@ -202,18 +203,18 @@ func TestLTPALeaderTracker(t *testing.T) {
 	}
 
 	// Fourth, check that the leader tracker received the new LTPA state
-	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	leaderTracker, leaderTrackers, err := leader.GetLeaderTracker(instance.GetNamespace(), OperatorName, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData = map[string][]byte{
-		lutils.ResourcesKey:           []byte("-ab215"),
-		lutils.ResourceOwnersKey:      []byte(name),
-		lutils.ResourcePathsKey:       []byte(latestOperandVersion + ".a.b.e.true"),
-		lutils.ResourcePathIndicesKey: []byte(latestOperandVersion + ".2"),
+		leader.ResourcesKey:           []byte("-ab215"),
+		leader.ResourceOwnersKey:      []byte(name),
+		leader.ResourcePathsKey:       []byte(latestOperandVersion + ".a.b.e.true"),
+		leader.ResourcePathIndicesKey: []byte(latestOperandVersion + ".2"),
 	}
 	tests = []Test{
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
 		{"get LTPA leader tracker data", expectedLeaderTrackerData, leaderTracker.Data},
-		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[leader.GetLeaderVersionLabel(lutils.LibertyURI)]},
 		{"get LTPA leader tracker error", nil, err},
 	}
 	if err := verifyTests(tests); err != nil {
@@ -226,7 +227,7 @@ func TestLTPALeaderTracker(t *testing.T) {
 			Name:      "olo-managed-ltpa-cd123",
 			Namespace: namespace,
 			Labels: map[string]string{
-				lutils.ResourcePathIndexLabel: latestOperandVersion + ".1",
+				leader.GetResourcePathIndexLabel(lutils.LibertyURI): latestOperandVersion + ".1",
 			},
 		},
 		Data: map[string][]byte{}, // create empty data
@@ -241,25 +242,25 @@ func TestLTPALeaderTracker(t *testing.T) {
 	}
 
 	// Mock the process where the operator saves the LTPA Secret, storing it into the leader tracker
-	tree.ReconcileLeader(rsf, OperatorShortName, instance.GetName(), instance.GetNamespace(), &lutils.LTPAMetadata{
+	tree.ReconcileLeader(rsf, OperatorName, OperatorShortName, instance.GetName(), instance.GetNamespace(), &leader.LTPAMetadata{
 		Path:      latestOperandVersion + ".a.b.d.true",
 		PathIndex: latestOperandVersion + ".1",
 		Name:      "-cd123",
 	}, LTPA_RESOURCE_SHARING_FILE_NAME, true)
 
 	// Sixth, check that the LTPA leader tracker was updated
-	leaderTracker, _, err = lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	leaderTracker, _, err = leader.GetLeaderTracker(instance.GetNamespace(), OperatorName, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData = map[string][]byte{
-		lutils.ResourcesKey:           []byte("-ab215,-cd123"),
-		lutils.ResourceOwnersKey:      []byte(fmt.Sprintf("%s,%s", instance.Name, instance.Name)),
-		lutils.ResourcePathsKey:       []byte(fmt.Sprintf("%s.a.b.e.true,%s.a.b.d.true", latestOperandVersion, latestOperandVersion)),
-		lutils.ResourcePathIndicesKey: []byte(fmt.Sprintf("%s.2,%s.1", latestOperandVersion, latestOperandVersion)),
+		leader.ResourcesKey:           []byte("-ab215,-cd123"),
+		leader.ResourceOwnersKey:      []byte(fmt.Sprintf("%s,%s", instance.Name, instance.Name)),
+		leader.ResourcePathsKey:       []byte(fmt.Sprintf("%s.a.b.e.true,%s.a.b.d.true", latestOperandVersion, latestOperandVersion)),
+		leader.ResourcePathIndicesKey: []byte(fmt.Sprintf("%s.2,%s.1", latestOperandVersion, latestOperandVersion)),
 	}
 	tests = []Test{
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
 		{"get LTPA leader tracker data", expectedLeaderTrackerData, leaderTracker.Data},
-		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[leader.GetLeaderVersionLabel(lutils.LibertyURI)]},
 		{"get LTPA leader tracker error", nil, err},
 	}
 	if err := verifyTests(tests); err != nil {
@@ -267,10 +268,10 @@ func TestLTPALeaderTracker(t *testing.T) {
 	}
 
 	// Lastly, remove the LTPA leader
-	err1 = tree.RemoveLeaderTrackerReference(rsf, instance.GetName(), instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME)
+	err1 = tree.RemoveLeaderTrackerReference(rsf, instance.GetName(), instance.GetNamespace(), OperatorName, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME)
 	err2 = tree.RemoveLeader(instance.GetName(), rsf, leaderTracker, leaderTrackers)
-	_, leaderTrackers, leaderTrackerErr := lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
-	var nilLeaderTrackers *[]lutils.LeaderTracker
+	_, leaderTrackers, leaderTrackerErr := leader.GetLeaderTracker(instance.GetNamespace(), OperatorName, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	var nilLeaderTrackers *[]leader.LeaderTracker
 	tests = []Test{
 		{"remove LTPA - deleteLTPAKeysResource errors", nil, err1},
 		{"remove LTPA - RemoveLeader errors", nil, err2},
@@ -313,8 +314,8 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 			Name:      ltpaRootName + "-b12g1", // random lower alphanumeric suffix of length 5
 			Namespace: namespace,
 			Labels: map[string]string{
-				lutils.ResourcePathIndexLabel: latestOperandVersion + ".2", // choosing path index 2 under tree v10_4_1 (i.e. v10_4_1.a.b.e.true)
-				"app.kubernetes.io/name":      ltpaRootName,
+				leader.GetResourcePathIndexLabel(lutils.LibertyURI): latestOperandVersion + ".2", // choosing path index 2 under tree v10_4_1 (i.e. v10_4_1.a.b.e.true)
+				"app.kubernetes.io/name":                            ltpaRootName,
 			},
 		},
 		Data: map[string][]byte{}, // create empty data
@@ -324,8 +325,8 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 			Name:      ltpaRootName + "-bazc1", // random lower alphanumeric suffix of length 5
 			Namespace: namespace,
 			Labels: map[string]string{
-				lutils.ResourcePathIndexLabel: latestOperandVersion + ".3", // choosing path index 3 under tree v10_4_1 (i.e. v10_4_1.a.b.e.false)
-				"app.kubernetes.io/name":      ltpaRootName,
+				leader.GetResourcePathIndexLabel(lutils.LibertyURI): latestOperandVersion + ".3", // choosing path index 3 under tree v10_4_1 (i.e. v10_4_1.a.b.e.false)
+				"app.kubernetes.io/name":                            ltpaRootName,
 			},
 		},
 		Data: map[string][]byte{}, // create empty data
@@ -342,26 +343,26 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExist(t *testing.T) {
 	assetsFolder := getAssetsFolder()
 	rsf := r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME)
 	tests = []Test{
-		{"initialize LTPA leader tracker error", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+		{"initialize LTPA leader tracker error", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorName, OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	// Lastly, check that the LTPA leader tracker processes the two LTPA Secrets created
-	leaderTracker, _, err := lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	leaderTracker, _, err := leader.GetLeaderTracker(instance.GetNamespace(), OperatorName, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData := map[string][]byte{
-		lutils.ResourcesKey:           []byte("-b12g1,-bazc1"),
-		lutils.ResourceOwnersKey:      []byte(","), // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
-		lutils.ResourcePathsKey:       []byte("v10_4_1.a.b.e.true,v10_4_1.a.b.e.false"),
-		lutils.ResourcePathIndicesKey: []byte("v10_4_1.2,v10_4_1.3"),
+		leader.ResourcesKey:           []byte("-b12g1,-bazc1"),
+		leader.ResourceOwnersKey:      []byte(","), // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
+		leader.ResourcePathsKey:       []byte("v10_4_1.a.b.e.true,v10_4_1.a.b.e.false"),
+		leader.ResourcePathIndicesKey: []byte("v10_4_1.2,v10_4_1.3"),
 	}
 	tests = []Test{
 		{"get LTPA leader tracker error", nil, err},
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
 		{"get LTPA leader tracker data", expectedLeaderTrackerData, leaderTracker.Data},
-		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[leader.GetLeaderVersionLabel(lutils.LibertyURI)]},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -391,8 +392,8 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T) {
 			Name:      ltpaRootName + "-b12g1", // random lower alphanumeric suffix of length 5
 			Namespace: namespace,
 			Labels: map[string]string{
-				lutils.ResourcePathIndexLabel: latestOperandVersion + ".2", // choosing path index 2 under tree v10_4_1 (i.e. v10_4_1.a.b.e.true)
-				"app.kubernetes.io/name":      ltpaRootName,
+				leader.GetResourcePathIndexLabel(lutils.LibertyURI): latestOperandVersion + ".2", // choosing path index 2 under tree v10_4_1 (i.e. v10_4_1.a.b.e.true)
+				"app.kubernetes.io/name":                            ltpaRootName,
 			},
 		},
 		Data: map[string][]byte{}, // create empty data
@@ -402,8 +403,8 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T) {
 			Name:      ltpaRootName + "-bazc1", // random lower alphanumeric suffix of length 5
 			Namespace: namespace,
 			Labels: map[string]string{
-				lutils.ResourcePathIndexLabel: latestOperandVersion + ".3", // choosing path index 3 under tree v10_4_1 (i.e. v10_4_1.a.b.e.false)
-				"app.kubernetes.io/name":      ltpaRootName,
+				leader.GetResourcePathIndexLabel(lutils.LibertyURI): latestOperandVersion + ".3", // choosing path index 3 under tree v10_4_1 (i.e. v10_4_1.a.b.e.false)
+				"app.kubernetes.io/name":                            ltpaRootName,
 			},
 		},
 		Data: map[string][]byte{}, // create empty data
@@ -421,25 +422,25 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithUpgrade(t *testing.T) {
 	assetsFolder := getAssetsFolder()
 	rsf := r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME)
 	tests = []Test{
-		{"reconcileLeaderTracker at version v10_4_20", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+		{"reconcileLeaderTracker at version v10_4_20", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorName, OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	// Lastly, check that the LTPA leader tracker upgraded the two LTPA Secrets created
-	leaderTracker, _, err := lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	leaderTracker, _, err := leader.GetLeaderTracker(instance.GetNamespace(), OperatorName, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData := map[string][]byte{
-		lutils.ResourcesKey:           []byte("-b12g1,-bazc1"),
-		lutils.ResourceOwnersKey:      []byte(","),                                       // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
-		lutils.ResourcePathsKey:       []byte("v10_4_20.a.b.e.foo,v10_4_20.a.f.g.i.bar"), // These paths have been upgraded to v10_4_20 based on replaceMap
-		lutils.ResourcePathIndicesKey: []byte("v10_4_20.2,v10_4_20.3"),                   // These path indices have been upgraded to v10_4_20 based on replaceMap
+		leader.ResourcesKey:           []byte("-b12g1,-bazc1"),
+		leader.ResourceOwnersKey:      []byte(","),                                       // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
+		leader.ResourcePathsKey:       []byte("v10_4_20.a.b.e.foo,v10_4_20.a.f.g.i.bar"), // These paths have been upgraded to v10_4_20 based on replaceMap
+		leader.ResourcePathIndicesKey: []byte("v10_4_20.2,v10_4_20.3"),                   // These path indices have been upgraded to v10_4_20 based on replaceMap
 	}
 	tests = []Test{
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
 		{"get LTPA leader tracker data", expectedLeaderTrackerData, leaderTracker.Data},
-		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[leader.GetLeaderVersionLabel(lutils.LibertyURI)]},
 		{"get LTPA leader tracker error", nil, err},
 	}
 	if err := verifyTests(tests); err != nil {
@@ -470,8 +471,8 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngr
 			Name:      ltpaRootName + "-b12g1", // random lower alphanumeric suffix of length 5
 			Namespace: namespace,
 			Labels: map[string]string{
-				lutils.ResourcePathIndexLabel: "v10_4_1.2", // choosing path index 2 under tree v10_4_1 (i.e. v10_4_1.a.b.e.true)
-				"app.kubernetes.io/name":      ltpaRootName,
+				leader.GetResourcePathIndexLabel(lutils.LibertyURI): "v10_4_1.2", // choosing path index 2 under tree v10_4_1 (i.e. v10_4_1.a.b.e.true)
+				"app.kubernetes.io/name":                            ltpaRootName,
 			},
 		},
 		Data: map[string][]byte{}, // create empty data
@@ -481,8 +482,8 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngr
 			Name:      ltpaRootName + "-bazc1", // random lower alphanumeric suffix of length 5
 			Namespace: namespace,
 			Labels: map[string]string{
-				lutils.ResourcePathIndexLabel: "v10_4_1.3", // choosing path index 3 under tree v10_4_1 (i.e. v10_4_1.a.b.e.false)
-				"app.kubernetes.io/name":      ltpaRootName,
+				leader.GetResourcePathIndexLabel(lutils.LibertyURI): "v10_4_1.3", // choosing path index 3 under tree v10_4_1 (i.e. v10_4_1.a.b.e.false)
+				"app.kubernetes.io/name":                            ltpaRootName,
 			},
 		},
 		Data: map[string][]byte{}, // create empty data
@@ -492,8 +493,8 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngr
 			Name:      ltpaRootName + "-ccccc", // random lower alphanumeric suffix of length 5
 			Namespace: namespace,
 			Labels: map[string]string{
-				lutils.ResourcePathIndexLabel: "v10_4_1.4", // choosing path index 4 under tree v10_4_1 (i.e. v10_4_1.j.fizz)
-				"app.kubernetes.io/name":      ltpaRootName,
+				leader.GetResourcePathIndexLabel(lutils.LibertyURI): "v10_4_1.4", // choosing path index 4 under tree v10_4_1 (i.e. v10_4_1.j.fizz)
+				"app.kubernetes.io/name":                            ltpaRootName,
 			},
 		},
 		Data: map[string][]byte{}, // create empty data
@@ -512,25 +513,25 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngr
 	assetsFolder := getAssetsFolder()
 	rsf := r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME)
 	tests = []Test{
-		{"reconcileLeaderTracker at version v10_4_500", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+		{"reconcileLeaderTracker at version v10_4_500", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorName, OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	// Thirdly, check that the LTPA leader tracker upgraded the two LTPA Secrets created
-	leaderTracker, _, err := lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	leaderTracker, _, err := leader.GetLeaderTracker(instance.GetNamespace(), OperatorName, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData := map[string][]byte{
-		lutils.ResourcesKey:           []byte("-b12g1,-bazc1,-ccccc"),
-		lutils.ResourceOwnersKey:      []byte(",,"),                                                        // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
-		lutils.ResourcePathsKey:       []byte("v10_4_500.a.b.b.true,v10_4_500.a.f.g.i.bar,v10_4_1.j.fizz"), // These paths have been upgraded to v10_4_500 based on replaceMap
-		lutils.ResourcePathIndicesKey: []byte("v10_4_500.0,v10_4_500.4,v10_4_1.4"),                         // These path indices have been upgraded to v10_4_500 based on replaceMap
+		leader.ResourcesKey:           []byte("-b12g1,-bazc1,-ccccc"),
+		leader.ResourceOwnersKey:      []byte(",,"),                                                        // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
+		leader.ResourcePathsKey:       []byte("v10_4_500.a.b.b.true,v10_4_500.a.f.g.i.bar,v10_4_1.j.fizz"), // These paths have been upgraded to v10_4_500 based on replaceMap
+		leader.ResourcePathIndicesKey: []byte("v10_4_500.0,v10_4_500.4,v10_4_1.4"),                         // These path indices have been upgraded to v10_4_500 based on replaceMap
 	}
 	tests = []Test{
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
 		{"get LTPA leader tracker data", expectedLeaderTrackerData, leaderTracker.Data},
-		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[leader.GetLeaderVersionLabel(lutils.LibertyURI)]},
 		{"get LTPA leader tracker error", nil, err},
 	}
 	if err := verifyTests(tests); err != nil {
@@ -541,28 +542,28 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngr
 	latestOperandVersion = "v10_3_3"
 	rsf = r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME)
 	tests = []Test{
-		{"Downgrade LTPA Leader Tracker from v10_4_500 to v10_3_3", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
+		{"Downgrade LTPA Leader Tracker from v10_4_500 to v10_3_3", nil, tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorName, OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	rsf = r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME)
-	tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)
+	tree.ReconcileLeaderTracker(instance.GetNamespace(), OperatorName, OperatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder)
 
-	leaderTracker, _, err = lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+	leaderTracker, _, err = leader.GetLeaderTracker(instance.GetNamespace(), OperatorName, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 	expectedLeaderTrackerData = map[string][]byte{
-		lutils.ResourcesKey:           []byte("-b12g1,-bazc1,-ccccc"),
-		lutils.ResourceOwnersKey:      []byte(",,"),                                             // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
-		lutils.ResourcePathsKey:       []byte("v10_3_3.a.b,v10_4_1.a.b.e.false,v10_4_1.j.fizz"), // v10_4_1 has no path to v10_3_3 so it is kept to be reference for a future upgrade
-		lutils.ResourcePathIndicesKey: []byte("v10_3_3.0,v10_4_1.3,v10_4_1.4"),                  // These path indices have been upgraded to v10_4_500 based on replaceMap
+		leader.ResourcesKey:           []byte("-b12g1,-bazc1,-ccccc"),
+		leader.ResourceOwnersKey:      []byte(",,"),                                             // no owners associated with the LTPA Secrets because this decision tree (only for test) is not registered to use with the operator
+		leader.ResourcePathsKey:       []byte("v10_3_3.a.b,v10_4_1.a.b.e.false,v10_4_1.j.fizz"), // v10_4_1 has no path to v10_3_3 so it is kept to be reference for a future upgrade
+		leader.ResourcePathIndicesKey: []byte("v10_3_3.0,v10_4_1.3,v10_4_1.4"),                  // These path indices have been upgraded to v10_4_500 based on replaceMap
 	}
 	tests = []Test{
 		{"get LTPA leader tracker error", nil, err},
 		{"get LTPA leader tracker name", "olo-managed-leader-tracking-ltpa", leaderTracker.Name},
 		{"get LTPA leader tracker namespace", namespace, leaderTracker.Namespace},
 		{"get LTPA leader tracker data", expectedLeaderTrackerData, leaderTracker.Data},
-		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[lutils.LeaderVersionLabel]},
+		{"get LTPA leader tracker label", latestOperandVersion, leaderTracker.Labels[leader.GetLeaderVersionLabel(lutils.LibertyURI)]},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)

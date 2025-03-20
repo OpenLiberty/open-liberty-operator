@@ -10,6 +10,7 @@ import (
 	"github.com/go-logr/logr"
 
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
+	"github.com/OpenLiberty/open-liberty-operator/utils/leader"
 	tree "github.com/OpenLiberty/open-liberty-operator/utils/tree"
 	oputils "github.com/application-stacks/runtime-component-operator/utils"
 
@@ -254,8 +255,8 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	// Reconciles the shared LTPA state for the instance namespace
-	var ltpaMetadataList *lutils.LTPAMetadataList
-	var ltpaKeysMetadata, ltpaConfigMetadata *lutils.LTPAMetadata
+	var ltpaMetadataList *leader.LTPAMetadataList
+	var ltpaKeysMetadata, ltpaConfigMetadata *leader.LTPAMetadata
 	var ltpaRSF tree.ResourceSharingFactory
 	if r.isLTPAKeySharingEnabled(instance) {
 		rsf, leaderMetadataList, err := r.reconcileResourceTrackingState(instance, LTPA_RESOURCE_SHARING_FILE_NAME)
@@ -263,16 +264,16 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
 		ltpaRSF = rsf
-		ltpaMetadataList = leaderMetadataList.(*lutils.LTPAMetadataList)
+		ltpaMetadataList = leaderMetadataList.(*leader.LTPAMetadataList)
 		if ltpaMetadataList != nil && len(ltpaMetadataList.Items) == 2 {
-			ltpaKeysMetadata = ltpaMetadataList.Items[0].(*lutils.LTPAMetadata)
-			ltpaConfigMetadata = ltpaMetadataList.Items[1].(*lutils.LTPAMetadata)
+			ltpaKeysMetadata = ltpaMetadataList.Items[0].(*leader.LTPAMetadata)
+			ltpaConfigMetadata = ltpaMetadataList.Items[1].(*leader.LTPAMetadata)
 		}
 	}
 
 	// Reconciles the shared password encryption key state for the instance namespace only if the shared key already exists
-	var passwordEncryptionMetadataList *lutils.PasswordEncryptionMetadataList
-	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{}
+	var passwordEncryptionMetadataList *leader.PasswordEncryptionMetadataList
+	passwordEncryptionMetadata := &leader.PasswordEncryptionMetadata{}
 	var passwordEncryptionRSF tree.ResourceSharingFactory
 	if r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata) {
 		rsf, leaderMetadataList, err := r.reconcileResourceTrackingState(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
@@ -280,9 +281,9 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
 		passwordEncryptionRSF = rsf
-		passwordEncryptionMetadataList = leaderMetadataList.(*lutils.PasswordEncryptionMetadataList)
+		passwordEncryptionMetadataList = leaderMetadataList.(*leader.PasswordEncryptionMetadataList)
 		if passwordEncryptionMetadataList != nil && len(passwordEncryptionMetadataList.Items) == 1 {
-			passwordEncryptionMetadata = passwordEncryptionMetadataList.Items[0].(*lutils.PasswordEncryptionMetadata)
+			passwordEncryptionMetadata = passwordEncryptionMetadataList.Items[0].(*leader.PasswordEncryptionMetadata)
 		}
 	} else if r.isPasswordEncryptionKeySharingEnabled(instance) {
 		// error if the password encryption key sharing is enabled but the Secret is not found
@@ -580,12 +581,12 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 					return err
 				}
 				lutils.AddPodTemplateSpecAnnotation(&statefulSet.Spec.Template, lastRotationAnnotation)
-				if instance.Status.GetReferences()[lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)] != encryptionSecretName {
-					instance.Status.SetReference(lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME), encryptionSecretName)
+				if instance.Status.GetReferences()[leader.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)] != encryptionSecretName {
+					instance.Status.SetReference(leader.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME), encryptionSecretName)
 				}
 			} else {
-				lutils.RemovePodTemplateSpecAnnotationByKey(&statefulSet.Spec.Template, lutils.GetLastRotationLabelKey(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME))
-				lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME))
+				lutils.RemovePodTemplateSpecAnnotationByKey(&statefulSet.Spec.Template, leader.GetLastRotationLabelKey(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, lutils.LibertyURI))
+				lutils.RemoveMapElementByKey(instance.Status.GetReferences(), leader.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME))
 			}
 
 			if r.isLTPAKeySharingEnabled(instance) && len(ltpaSecretName) > 0 {
@@ -602,12 +603,12 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 					return err
 				}
 				lutils.AddPodTemplateSpecAnnotation(&statefulSet.Spec.Template, configLastRotationAnnotation)
-				if instance.Status.GetReferences()[lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME)] != ltpaSecretName {
-					instance.Status.SetReference(lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME), ltpaSecretName)
+				if instance.Status.GetReferences()[leader.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME)] != ltpaSecretName {
+					instance.Status.SetReference(leader.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME), ltpaSecretName)
 				}
 			} else {
-				lutils.RemovePodTemplateSpecAnnotationByKey(&statefulSet.Spec.Template, lutils.GetLastRotationLabelKey(LTPA_RESOURCE_SHARING_FILE_NAME))
-				lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME))
+				lutils.RemovePodTemplateSpecAnnotationByKey(&statefulSet.Spec.Template, leader.GetLastRotationLabelKey(LTPA_RESOURCE_SHARING_FILE_NAME, lutils.LibertyURI))
+				lutils.RemoveMapElementByKey(instance.Status.GetReferences(), leader.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME))
 			}
 			return nil
 		})
@@ -676,12 +677,12 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 					return err
 				}
 				lutils.AddPodTemplateSpecAnnotation(&deploy.Spec.Template, lastRotationAnnotation)
-				if instance.Status.GetReferences()[lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)] != encryptionSecretName {
-					instance.Status.SetReference(lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME), encryptionSecretName)
+				if instance.Status.GetReferences()[leader.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)] != encryptionSecretName {
+					instance.Status.SetReference(leader.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME), encryptionSecretName)
 				}
 			} else {
-				lutils.RemovePodTemplateSpecAnnotationByKey(&deploy.Spec.Template, lutils.GetLastRotationLabelKey(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME))
-				lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME))
+				lutils.RemovePodTemplateSpecAnnotationByKey(&deploy.Spec.Template, leader.GetLastRotationLabelKey(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, lutils.LibertyURI))
+				lutils.RemoveMapElementByKey(instance.Status.GetReferences(), leader.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME))
 			}
 
 			if r.isLTPAKeySharingEnabled(instance) && len(ltpaSecretName) > 0 {
@@ -698,12 +699,12 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 					return err
 				}
 				lutils.AddPodTemplateSpecAnnotation(&deploy.Spec.Template, configLastRotationAnnotation)
-				if instance.Status.GetReferences()[lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME)] != ltpaSecretName {
-					instance.Status.SetReference(lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME), ltpaSecretName)
+				if instance.Status.GetReferences()[leader.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME)] != ltpaSecretName {
+					instance.Status.SetReference(leader.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME), ltpaSecretName)
 				}
 			} else {
-				lutils.RemovePodTemplateSpecAnnotationByKey(&deploy.Spec.Template, lutils.GetLastRotationLabelKey(LTPA_RESOURCE_SHARING_FILE_NAME))
-				lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME))
+				lutils.RemovePodTemplateSpecAnnotationByKey(&deploy.Spec.Template, leader.GetLastRotationLabelKey(LTPA_RESOURCE_SHARING_FILE_NAME, lutils.LibertyURI))
+				lutils.RemoveMapElementByKey(instance.Status.GetReferences(), leader.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME))
 			}
 			return nil
 		})
@@ -978,8 +979,8 @@ func getMonitoringEnabledLabelName(ba common.BaseComponent) string {
 }
 
 func (r *ReconcileOpenLiberty) finalizeOpenLibertyApplication(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, baseRSF tree.ResourceSharingFactoryBase, pvcName string, pvcNamespace string) error {
-	tree.RemoveLeaderTrackerReference(baseRSF, olapp.GetName(), olapp.GetNamespace(), OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME)
-	tree.RemoveLeaderTrackerReference(baseRSF, olapp.GetName(), olapp.GetNamespace(), OperatorShortName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
+	tree.RemoveLeaderTrackerReference(baseRSF, olapp.GetName(), olapp.GetNamespace(), OperatorName, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME)
+	tree.RemoveLeaderTrackerReference(baseRSF, olapp.GetName(), olapp.GetNamespace(), OperatorName, OperatorShortName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 	r.deletePVC(reqLogger, pvcName, pvcNamespace)
 	return nil
 }

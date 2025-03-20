@@ -1,4 +1,4 @@
-package utils
+package leader
 
 import (
 	"context"
@@ -30,18 +30,154 @@ const ResourcePathIndicesKey = "pathIndices"
 
 // const ResourceSubleasesKey = "subleases"
 
-const LibertyURI = "openlibertyapplications.apps.openliberty.io"
-const LeaderVersionLabel = LibertyURI + "/leader-version"
-const ResourcePathIndexLabel = LibertyURI + "/resource-path-index"
-
 const ResourceSuffixLength = 5
 
-func GetLastRotationLabelKey(sharedResourceName string) string {
-	return LibertyURI + "/" + sharedResourceName + "-last-rotation"
+func GetLeaderVersionLabel(libertyURI string) string {
+	return libertyURI + "/leader-version"
+}
+
+func GetResourcePathIndexLabel(libertyURI string) string {
+	return libertyURI + "/resource-path-index"
+}
+
+func GetLastRotationLabelKey(sharedResourceName string, libertyURI string) string {
+	return libertyURI + "/" + sharedResourceName + "-last-rotation"
 }
 
 func GetTrackedResourceName(sharedResourceName string) string {
 	return kebabToCamelCase(sharedResourceName) + "TrackedResourceName"
+}
+
+func kebabToCamelCase(inputString string) string {
+	i := 0
+	n := len(inputString)
+	outputString := ""
+	for i < n && string(inputString[i]) == "-" {
+		i += 1
+	}
+	for i < n {
+		ch := string(inputString[i])
+		if ch == "-" {
+			if i < n-1 {
+				outputString += strings.ToUpper(string(inputString[i+1]))
+			}
+			i += 2
+		} else {
+			outputString += ch
+			i += 1
+		}
+	}
+	return outputString
+}
+
+type LTPAMetadata struct {
+	Kind       string
+	APIVersion string
+	Name       string
+	Path       string
+	PathIndex  string
+}
+
+func (m LTPAMetadata) GetName() string {
+	return m.Name
+}
+func (m LTPAMetadata) GetPath() string {
+	return m.Path
+}
+func (m LTPAMetadata) GetPathIndex() string {
+	return m.PathIndex
+}
+func (m LTPAMetadata) GetKind() string {
+	return m.Kind
+}
+func (m LTPAMetadata) GetAPIVersion() string {
+	return m.APIVersion
+}
+
+type LTPAMetadataList struct {
+	Items []LeaderTrackerMetadata
+}
+
+func (ml LTPAMetadataList) GetItems() []LeaderTrackerMetadata {
+	return ml.Items
+}
+
+type PasswordEncryptionMetadata struct {
+	Kind       string
+	APIVersion string
+	Name       string
+	Path       string
+	PathIndex  string
+}
+
+func (m PasswordEncryptionMetadata) GetName() string {
+	return m.Name
+}
+func (m PasswordEncryptionMetadata) GetPath() string {
+	return m.Path
+}
+func (m PasswordEncryptionMetadata) GetPathIndex() string {
+	return m.PathIndex
+}
+func (m PasswordEncryptionMetadata) GetKind() string {
+	return m.Kind
+}
+func (m PasswordEncryptionMetadata) GetAPIVersion() string {
+	return m.APIVersion
+}
+
+type PasswordEncryptionMetadataList struct {
+	Items []LeaderTrackerMetadata
+}
+
+func (ml PasswordEncryptionMetadataList) GetItems() []LeaderTrackerMetadata {
+	return ml.Items
+}
+
+type LTPAConfig struct {
+	Metadata                    *LTPAMetadata
+	SecretName                  string
+	SecretInstanceName          string
+	ConfigSecretName            string
+	ConfigSecretInstanceName    string
+	ServiceAccountName          string
+	JobRequestConfigMapName     string
+	ConfigMapName               string
+	FileName                    string
+	EncryptionKeySecretName     string
+	EncryptionKeySharingEnabled bool // true or false
+}
+
+type TraceMetadata struct {
+	Kind       string
+	APIVersion string
+	Name       string
+	Path       string
+	PathIndex  string
+}
+
+func (m TraceMetadata) GetName() string {
+	return m.Name
+}
+func (m TraceMetadata) GetPath() string {
+	return m.Path
+}
+func (m TraceMetadata) GetPathIndex() string {
+	return m.PathIndex
+}
+func (m TraceMetadata) GetKind() string {
+	return m.Kind
+}
+func (m TraceMetadata) GetAPIVersion() string {
+	return m.APIVersion
+}
+
+type TraceMetadataList struct {
+	Items []LeaderTrackerMetadata
+}
+
+func (ml TraceMetadataList) GetItems() []LeaderTrackerMetadata {
+	return ml.Items
 }
 
 type LeaderTracker struct {
@@ -211,7 +347,7 @@ func CustomizeLeaderTracker(leaderTracker *corev1.Secret, trackerList *[]LeaderT
 	// leaderTracker.Data[ResourceSubleasesKey] = []byte(subleases)
 }
 
-func GetLeaderTracker(namespace string, operatorShortName string, leaderTrackerType string, client client.Client) (*corev1.Secret, *[]LeaderTracker, error) {
+func GetLeaderTracker(namespace string, operatorName, operatorShortName string, leaderTrackerType string, client client.Client) (*corev1.Secret, *[]LeaderTracker, error) {
 	leaderMutex, mutexFound := LeaderTrackerMutexes.Load(leaderTrackerType)
 	if !mutexFound {
 		return nil, nil, fmt.Errorf("Could not retrieve %s leader tracker's mutex when attempting to get. Exiting.", leaderTrackerType)
@@ -222,7 +358,7 @@ func GetLeaderTracker(namespace string, operatorShortName string, leaderTrackerT
 	leaderTracker := &corev1.Secret{}
 	leaderTracker.Name = operatorShortName + "-managed-leader-tracking-" + leaderTrackerType
 	leaderTracker.Namespace = namespace
-	leaderTracker.Labels = GetRequiredLabels(leaderTracker.Name, "")
+	leaderTracker.Labels = GetRequiredLabels(leaderTracker.Name, "", operatorName)
 	if err := client.Get(context.TODO(), types.NamespacedName{Name: leaderTracker.Name, Namespace: leaderTracker.Namespace}, leaderTracker); err != nil {
 		// return a default leaderTracker
 		return leaderTracker, nil, err
@@ -352,4 +488,56 @@ func parseUnstructuredResourceName(leaderTrackerType string, nameStr string, arg
 		}
 	}
 	return nameStr, nil
+}
+
+// returns the index of the contained value in stringList or else -1
+func CommaSeparatedStringContains(stringList string, value string) int {
+	if strings.Contains(stringList, ",") {
+		for i, label := range strings.Split(stringList, ",") {
+			if value == label {
+				return i
+			}
+		}
+	} else if stringList == value {
+		return 0
+	}
+	return -1
+}
+
+func GetCommaSeparatedArray(stringList string) []string {
+	if strings.Contains(stringList, ",") {
+		return strings.Split(stringList, ",")
+	}
+	return []string{stringList}
+}
+
+func GetCommaSeparatedString(stringList string, index int) (string, error) {
+	if stringList == "" {
+		return "", fmt.Errorf("there is no element")
+	}
+	if strings.Contains(stringList, ",") {
+		for i, val := range strings.Split(stringList, ",") {
+			if index == i {
+				return val, nil
+			}
+		}
+	} else {
+		if index == 0 {
+			return stringList, nil
+		}
+		return "", fmt.Errorf("cannot index string list with only one element")
+	}
+	return "", fmt.Errorf("element not found")
+}
+
+func GetRequiredLabels(name string, instance string, operatorName string) map[string]string {
+	requiredLabels := make(map[string]string)
+	requiredLabels["app.kubernetes.io/name"] = name
+	if instance != "" {
+		requiredLabels["app.kubernetes.io/instance"] = instance
+	} else {
+		requiredLabels["app.kubernetes.io/instance"] = name
+	}
+	requiredLabels["app.kubernetes.io/managed-by"] = operatorName
+	return requiredLabels
 }

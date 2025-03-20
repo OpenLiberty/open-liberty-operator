@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
-	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
+	"github.com/OpenLiberty/open-liberty-operator/utils/leader"
 	tree "github.com/OpenLiberty/open-liberty-operator/utils/tree"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -12,7 +12,7 @@ import (
 )
 
 type OpenLibertyApplicationResourceSharingFactory struct {
-	resourcesFunc              func() (lutils.LeaderTrackerMetadataList, error)
+	resourcesFunc              func() (leader.LeaderTrackerMetadataList, error)
 	leaderTrackersFunc         func(assetsFolder *string) ([]*unstructured.UnstructuredList, []string, error)
 	createOrUpdateFunc         func(obj client.Object, owner metav1.Object, cb func() error) error
 	deleteResourcesFunc        func(obj client.Object) error
@@ -21,11 +21,11 @@ type OpenLibertyApplicationResourceSharingFactory struct {
 	clientFunc                 func() client.Client
 }
 
-func (rsf *OpenLibertyApplicationResourceSharingFactory) Resources() func() (lutils.LeaderTrackerMetadataList, error) {
+func (rsf *OpenLibertyApplicationResourceSharingFactory) Resources() func() (leader.LeaderTrackerMetadataList, error) {
 	return rsf.resourcesFunc
 }
 
-func (rsf *OpenLibertyApplicationResourceSharingFactory) SetResources(fn func() (lutils.LeaderTrackerMetadataList, error)) {
+func (rsf *OpenLibertyApplicationResourceSharingFactory) SetResources(fn func() (leader.LeaderTrackerMetadataList, error)) {
 	rsf.resourcesFunc = fn
 }
 
@@ -105,14 +105,14 @@ func (r *ReconcileOpenLiberty) createResourceSharingFactory(instance *olv1.OpenL
 		nameString, _, err := unstructured.NestedString(obj, "metadata", "name") // the LTPA and Password Encryption Secret will both use their .metadata.name as the leaderTracker key identifier
 		return nameString, err
 	})
-	rsf.SetResources(func() (lutils.LeaderTrackerMetadataList, error) {
+	rsf.SetResources(func() (leader.LeaderTrackerMetadataList, error) {
 		return r.OpenLibertyApplicationSharedResourceGenerator(instance, treeMap, latestOperandVersion, leaderTrackerType)
 	})
 	return rsf
 
 }
 
-func (r *ReconcileOpenLiberty) reconcileResourceTrackingState(instance *olv1.OpenLibertyApplication, leaderTrackerType string) (tree.ResourceSharingFactory, lutils.LeaderTrackerMetadataList, error) {
+func (r *ReconcileOpenLiberty) reconcileResourceTrackingState(instance *olv1.OpenLibertyApplication, leaderTrackerType string) (tree.ResourceSharingFactory, leader.LeaderTrackerMetadataList, error) {
 	treeMap, replaceMap, err := tree.ParseDecisionTree(leaderTrackerType, nil)
 	if err != nil {
 		return nil, nil, err
@@ -122,11 +122,11 @@ func (r *ReconcileOpenLiberty) reconcileResourceTrackingState(instance *olv1.Ope
 		return nil, nil, err
 	}
 	rsf := r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, leaderTrackerType)
-	trackerMetadataList, err := tree.ReconcileResourceTrackingState(instance.GetNamespace(), OperatorShortName, leaderTrackerType, rsf, treeMap, replaceMap, latestOperandVersion)
+	trackerMetadataList, err := tree.ReconcileResourceTrackingState(instance.GetNamespace(), OperatorName, OperatorShortName, leaderTrackerType, rsf, treeMap, replaceMap, latestOperandVersion)
 	return rsf, trackerMetadataList, err
 }
 
-func (r *ReconcileOpenLiberty) OpenLibertyApplicationSharedResourceGenerator(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, latestOperandVersion, leaderTrackerType string) (lutils.LeaderTrackerMetadataList, error) {
+func (r *ReconcileOpenLiberty) OpenLibertyApplicationSharedResourceGenerator(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, latestOperandVersion, leaderTrackerType string) (leader.LeaderTrackerMetadataList, error) {
 	// return the metadata specific to the operator version, instance configuration, and shared resource being reconciled
 	if leaderTrackerType == LTPA_RESOURCE_SHARING_FILE_NAME {
 		ltpaMetadataList, err := r.reconcileLTPAMetadata(instance, treeMap, latestOperandVersion, nil)
