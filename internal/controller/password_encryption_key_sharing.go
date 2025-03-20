@@ -9,6 +9,7 @@ import (
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
+	"github.com/OpenLiberty/open-liberty-operator/utils/leader"
 	tree "github.com/OpenLiberty/open-liberty-operator/utils/tree"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -20,12 +21,12 @@ import (
 const PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME = "password-encryption"
 
 func init() {
-	lutils.LeaderTrackerMutexes.Store(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, &sync.Mutex{})
+	leader.LeaderTrackerMutexes.Store(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, &sync.Mutex{})
 }
 
-func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(rsf tree.ResourceSharingFactory, baseRSF tree.ResourceSharingFactoryBase, instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (string, string, string, error) {
+func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(rsf tree.ResourceSharingFactory, baseRSF tree.ResourceSharingFactoryBase, instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *leader.PasswordEncryptionMetadata) (string, string, string, error) {
 	if r.isPasswordEncryptionKeySharingEnabled(instance) {
-		leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(rsf, OperatorShortName, instance.GetName(), instance.GetNamespace(), passwordEncryptionMetadata, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, true)
+		leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(rsf, OperatorName, OperatorShortName, instance.GetName(), instance.GetNamespace(), passwordEncryptionMetadata, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, true)
 		if err != nil && !kerrors.IsNotFound(err) {
 			return "", "", "", err
 		}
@@ -60,7 +61,7 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(rsf tree.ResourceS
 			return "Failed to get the password encryption key Secret", "", "", err
 		}
 	} else {
-		err := tree.RemoveLeaderTrackerReference(baseRSF, instance.GetName(), instance.GetNamespace(), OperatorShortName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
+		err := tree.RemoveLeaderTrackerReference(baseRSF, instance.GetName(), instance.GetNamespace(), OperatorName, OperatorShortName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
 			return "Failed to remove leader tracking reference to the password encryption key", "", "", err
 		}
@@ -68,13 +69,13 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(rsf tree.ResourceS
 	return "", "", "", nil
 }
 
-func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionMetadata(treeMap map[string]interface{}, latestOperandVersion string) (lutils.LeaderTrackerMetadataList, error) {
-	metadataList := &lutils.PasswordEncryptionMetadataList{}
-	metadataList.Items = []lutils.LeaderTrackerMetadata{}
+func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionMetadata(treeMap map[string]interface{}, latestOperandVersion string) (leader.LeaderTrackerMetadataList, error) {
+	metadataList := &leader.PasswordEncryptionMetadataList{}
+	metadataList.Items = []leader.LeaderTrackerMetadata{}
 
 	pathOptionsList, pathChoicesList := r.getPasswordEncryptionPathOptionsAndChoices(latestOperandVersion)
 	for i := range pathOptionsList {
-		metadata := &lutils.PasswordEncryptionMetadata{}
+		metadata := &leader.PasswordEncryptionMetadata{}
 		pathOptions := pathOptionsList[i]
 		pathChoices := pathChoicesList[i]
 
@@ -96,12 +97,12 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionMetadata(treeMap map[s
 		// Uncomment code below to extend to multiple password encryption keys per namespace. See ltpa_keys_sharing.go for an example.
 
 		// // retrieve the password encryption leader tracker to re-use an existing name or to create a new metadata.Name
-		// leaderTracker, _, err := lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+		// leaderTracker, _, err := leader.GetLeaderTracker(instance.GetNamespace(), OperatorName, OperatorShortName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 		// if err != nil {
 		// 	return metadataList, err
 		// }
 		// // if the leaderTracker is on a mismatched version, wait for a subsequent reconcile loop to re-create the leader tracker
-		// if leaderTracker.Labels[lutils.LeaderVersionLabel] != latestOperandVersion {
+		// if leaderTracker.Labels[leader.GetLeaderVersionLabel(lutils.LibertyURI)] != latestOperandVersion {
 		// 	return metadataList, fmt.Errorf("waiting for the Leader Tracker to be updated")
 		// }
 
@@ -132,7 +133,7 @@ func (r *ReconcileOpenLiberty) getPasswordEncryptionMetadataName() string {
 	// NOTE: there is only one possible password encryption key per namespace which corresponds to one shared resource name from password-encryption-signature.yaml
 	// If you would like to have more than one password encryption key in a single namespace, use ltpa-signature.yaml as a template
 	//
-	// _, sharedResourceName, err := lutils.CreateUnstructuredResourceFromSignature(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, OperatorShortName, "")
+	// _, sharedResourceName, err := leader.CreateUnstructuredResourceFromSignature(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, OperatorShortName, "")
 	// if err != nil {
 	// 	return "", err
 	// }
@@ -144,7 +145,7 @@ func (r *ReconcileOpenLiberty) isPasswordEncryptionKeySharingEnabled(instance *o
 	return instance.GetManagePasswordEncryption() != nil && *instance.GetManagePasswordEncryption()
 }
 
-func (r *ReconcileOpenLiberty) isUsingPasswordEncryptionKeySharing(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) bool {
+func (r *ReconcileOpenLiberty) isUsingPasswordEncryptionKeySharing(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *leader.PasswordEncryptionMetadata) bool {
 	if r.isPasswordEncryptionKeySharingEnabled(instance) {
 		_, err := r.hasUserEncryptionKeySecret(instance, passwordEncryptionMetadata)
 		return err == nil
@@ -152,7 +153,7 @@ func (r *ReconcileOpenLiberty) isUsingPasswordEncryptionKeySharing(instance *olv
 	return false
 }
 
-func (r *ReconcileOpenLiberty) getInternalPasswordEncryptionKeyState(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (string, string, bool, error) {
+func (r *ReconcileOpenLiberty) getInternalPasswordEncryptionKeyState(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *leader.PasswordEncryptionMetadata) (string, string, bool, error) {
 	if !r.isPasswordEncryptionKeySharingEnabled(instance) {
 		return "", "", false, nil
 	}
@@ -176,16 +177,16 @@ func (r *ReconcileOpenLiberty) getInternalPasswordEncryptionKeyState(instance *o
 }
 
 // Returns the Secret that contains the password encryption key used internally by the operator
-func (r *ReconcileOpenLiberty) hasInternalEncryptionKeySecret(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (*corev1.Secret, error) {
+func (r *ReconcileOpenLiberty) hasInternalEncryptionKeySecret(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *leader.PasswordEncryptionMetadata) (*corev1.Secret, error) {
 	return r.getSecret(instance, lutils.LocalPasswordEncryptionKeyRootName+passwordEncryptionMetadata.Name+"-internal")
 }
 
 // Returns the Secret that contains the password encryption key provided by the user
-func (r *ReconcileOpenLiberty) hasUserEncryptionKeySecret(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (*corev1.Secret, error) {
+func (r *ReconcileOpenLiberty) hasUserEncryptionKeySecret(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *leader.PasswordEncryptionMetadata) (*corev1.Secret, error) {
 	return r.getSecret(instance, lutils.PasswordEncryptionKeyRootName+passwordEncryptionMetadata.Name)
 }
 
-func (r *ReconcileOpenLiberty) encryptionKeySecretMirrored(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) bool {
+func (r *ReconcileOpenLiberty) encryptionKeySecretMirrored(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *leader.PasswordEncryptionMetadata) bool {
 	userEncryptionSecret, err := r.hasUserEncryptionKeySecret(instance, passwordEncryptionMetadata)
 	if err != nil {
 		return false
@@ -199,7 +200,7 @@ func (r *ReconcileOpenLiberty) encryptionKeySecretMirrored(instance *olv1.OpenLi
 	return userPasswordEncryptionKey != "" && internalPasswordEncryptionKey == userPasswordEncryptionKey
 }
 
-func (r *ReconcileOpenLiberty) mirrorEncryptionKeySecretState(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) error {
+func (r *ReconcileOpenLiberty) mirrorEncryptionKeySecretState(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *leader.PasswordEncryptionMetadata) error {
 	userEncryptionSecret, userEncryptionSecretErr := r.hasUserEncryptionKeySecret(instance, passwordEncryptionMetadata)
 	// Error if there was an issue getting the userEncryptionSecret
 	if userEncryptionSecretErr != nil && !kerrors.IsNotFound(userEncryptionSecretErr) {
@@ -242,7 +243,7 @@ func (r *ReconcileOpenLiberty) mirrorEncryptionKeySecretState(instance *olv1.Ope
 }
 
 // Deletes the mirrored encryption key secret if the initial encryption key secret no longer exists
-func (r *ReconcileOpenLiberty) deleteMirroredEncryptionKeySecret(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) error {
+func (r *ReconcileOpenLiberty) deleteMirroredEncryptionKeySecret(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *leader.PasswordEncryptionMetadata) error {
 	_, userEncryptionSecretErr := r.hasUserEncryptionKeySecret(instance, passwordEncryptionMetadata)
 	// Error if there was an issue getting the userEncryptionSecret
 	if userEncryptionSecretErr != nil && !kerrors.IsNotFound(userEncryptionSecretErr) {
@@ -266,13 +267,13 @@ func (r *ReconcileOpenLiberty) getSecret(instance *olv1.OpenLibertyApplication, 
 	secret := &corev1.Secret{}
 	secret.Name = secretName
 	secret.Namespace = instance.GetNamespace()
-	secret.Labels = lutils.GetRequiredLabels(secret.Name, "")
+	secret.Labels = leader.GetRequiredLabels(secret.Name, "", OperatorName)
 	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secret.Name, Namespace: secret.Namespace}, secret)
 	return secret, err
 }
 
 // Creates the Liberty XML to mount the password encryption keys Secret into the application pods
-func (r *ReconcileOpenLiberty) createPasswordEncryptionKeyLibertyConfig(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, encryptionKey string) error {
+func (r *ReconcileOpenLiberty) createPasswordEncryptionKeyLibertyConfig(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *leader.PasswordEncryptionMetadata, encryptionKey string) error {
 	if len(encryptionKey) == 0 {
 		return fmt.Errorf("a password encryption key was not specified")
 	}
@@ -284,7 +285,7 @@ func (r *ReconcileOpenLiberty) createPasswordEncryptionKeyLibertyConfig(instance
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      encryptionXMLSecretName,
 			Namespace: instance.GetNamespace(),
-			Labels:    lutils.GetRequiredLabels(encryptionXMLSecretName, ""),
+			Labels:    leader.GetRequiredLabels(encryptionXMLSecretName, "", OperatorName),
 		},
 	}
 	if err := r.CreateOrUpdate(encryptionXMLSecret, nil, func() error {
@@ -300,7 +301,7 @@ func (r *ReconcileOpenLiberty) createPasswordEncryptionKeyLibertyConfig(instance
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      mountingXMLSecretName,
 			Namespace: instance.GetNamespace(),
-			Labels:    lutils.GetRequiredLabels(mountingXMLSecretName, ""),
+			Labels:    leader.GetRequiredLabels(mountingXMLSecretName, "", OperatorName),
 		},
 	}
 	if err := r.CreateOrUpdate(mountingXMLSecret, nil, func() error {
@@ -315,11 +316,11 @@ func (r *ReconcileOpenLiberty) createPasswordEncryptionKeyLibertyConfig(instance
 
 // Tracks existing password encryption resources by populating a LeaderTracker array used to initialize the LeaderTracker
 func (r *ReconcileOpenLiberty) GetPasswordEncryptionResources(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, assetsFolder *string) (*unstructured.UnstructuredList, string, error) {
-	passwordEncryptionResources, _, err := lutils.CreateUnstructuredResourceListFromSignature(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, assetsFolder, "") // TODO: replace prefix "" to specify operator precedence such as with prefix "olo-"
+	passwordEncryptionResources, _, err := leader.CreateUnstructuredResourceListFromSignature(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, assetsFolder, "") // TODO: replace prefix "" to specify operator precedence such as with prefix "olo-"
 	if err != nil {
 		return nil, "", err
 	}
-	passwordEncryptionResource, passwordEncryptionResourceName, err := lutils.CreateUnstructuredResourceFromSignature(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, assetsFolder, "", "") // TODO: replace prefix "" to specify operator precedence such as with prefix "olo-"
+	passwordEncryptionResource, passwordEncryptionResourceName, err := leader.CreateUnstructuredResourceFromSignature(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, assetsFolder, "", "") // TODO: replace prefix "" to specify operator precedence such as with prefix "olo-"
 	if err != nil {
 		return nil, "", err
 	}

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
+	"github.com/OpenLiberty/open-liberty-operator/utils/leader"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,8 +31,8 @@ type ResourceSharingFactoryBase interface {
 // Interface for resource sharing
 type ResourceSharingFactory interface {
 	ResourceSharingFactoryBase
-	Resources() func() (lutils.LeaderTrackerMetadataList, error)
-	SetResources(fn func() (lutils.LeaderTrackerMetadataList, error))
+	Resources() func() (leader.LeaderTrackerMetadataList, error)
+	SetResources(fn func() (leader.LeaderTrackerMetadataList, error))
 
 	LeaderTrackers() func(assetsFolder *string) ([]*unstructured.UnstructuredList, []string, error)
 	SetLeaderTrackers(fn func(assetsFolder *string) ([]*unstructured.UnstructuredList, []string, error))
@@ -42,15 +43,15 @@ type ResourceSharingFactory interface {
 
 // If shouldElectNewLeader is set to true, this instance will be set and returned as the resource leader
 // Otherwise, returns the current shared resource leader
-func ReconcileLeader(rsf ResourceSharingFactory, operatorShortName, name, namespace string, leaderMetadata lutils.LeaderTrackerMetadata, leaderTrackerType string, shouldElectNewLeader bool) (string, bool, string, error) {
-	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(namespace, operatorShortName, leaderTrackerType, rsf.Client()())
+func ReconcileLeader(rsf ResourceSharingFactory, operatorName, operatorShortName, name, namespace string, leaderMetadata leader.LeaderTrackerMetadata, leaderTrackerType string, shouldElectNewLeader bool) (string, bool, string, error) {
+	leaderTracker, leaderTrackers, err := leader.GetLeaderTracker(namespace, operatorName, operatorShortName, leaderTrackerType, rsf.Client()())
 	if err != nil {
 		return "", false, "", err
 	}
 	return ReconcileLeaderWithState(name, rsf, leaderTracker, leaderTrackers, leaderMetadata, shouldElectNewLeader)
 }
 
-func ReconcileLeaderWithState(name string, rsf ResourceSharingFactory, leaderTracker *corev1.Secret, leaderTrackers *[]lutils.LeaderTracker, leaderMetadata lutils.LeaderTrackerMetadata, shouldElectNewLeader bool) (string, bool, string, error) {
+func ReconcileLeaderWithState(name string, rsf ResourceSharingFactory, leaderTracker *corev1.Secret, leaderTrackers *[]leader.LeaderTracker, leaderMetadata leader.LeaderTrackerMetadata, shouldElectNewLeader bool) (string, bool, string, error) {
 	initialLeaderIndex := -1
 	for i, tracker := range *leaderTrackers {
 		if tracker.Name == leaderMetadata.GetName() {
@@ -68,7 +69,7 @@ func ReconcileLeaderWithState(name string, rsf ResourceSharingFactory, leaderTra
 			(*leaderTrackers)[i].ClearOwnerIfMatchingAndSharesLastPathParent(name, leaderMetadata.GetPath())
 		}
 		// make instance.Name the new leader
-		newLeader := lutils.LeaderTracker{
+		newLeader := leader.LeaderTracker{
 			Name:      leaderMetadata.GetName(),
 			Owner:     name,
 			PathIndex: leaderMetadata.GetPathIndex(),
@@ -135,7 +136,7 @@ func ReconcileLeaderWithState(name string, rsf ResourceSharingFactory, leaderTra
 	return name, true, pathIndex, nil
 }
 
-func SaveLeaderTracker(rsf ResourceSharingFactoryBase, leaderTracker *corev1.Secret, trackerList *[]lutils.LeaderTracker) error {
+func SaveLeaderTracker(rsf ResourceSharingFactoryBase, leaderTracker *corev1.Secret, trackerList *[]leader.LeaderTracker) error {
 	// remove unused resources if applicable
 	if rsf.CleanupUnusedResources()() {
 		unusedIndices := []int{}
@@ -146,7 +147,7 @@ func SaveLeaderTracker(rsf ResourceSharingFactoryBase, leaderTracker *corev1.Sec
 		}
 		for i := len(unusedIndices) - 1; i >= 0; i-- {
 			ind := unusedIndices[i]
-			trackerListTmp := make([]lutils.LeaderTracker, 0)
+			trackerListTmp := make([]leader.LeaderTracker, 0)
 			if ind == 0 {
 				trackerListTmp = (*trackerList)[1:]
 			} else if ind == len(*trackerList)-1 {
@@ -158,17 +159,17 @@ func SaveLeaderTracker(rsf ResourceSharingFactoryBase, leaderTracker *corev1.Sec
 		}
 	}
 	return rsf.CreateOrUpdate()(leaderTracker, nil, func() error {
-		lutils.CustomizeLeaderTracker(leaderTracker, trackerList)
+		leader.CustomizeLeaderTracker(leaderTracker, trackerList)
 		return nil
 	})
 }
 
 // Validates the resource decision tree YAML and generates the leader tracking state (Secret) for maintaining multiple shared resources
-func ReconcileResourceTrackingState(namespace, operatorShortName, leaderTrackerType string, rsf ResourceSharingFactory,
-	treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string) (lutils.LeaderTrackerMetadataList, error) {
+func ReconcileResourceTrackingState(namespace, operatorName, operatorShortName, leaderTrackerType string, rsf ResourceSharingFactory,
+	treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string) (leader.LeaderTrackerMetadataList, error) {
 
 	// persist or create a Secret to store the shared resources' state
-	err := ReconcileLeaderTracker(namespace, operatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, nil)
+	err := ReconcileLeaderTracker(namespace, operatorName, operatorShortName, rsf, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -176,11 +177,11 @@ func ReconcileResourceTrackingState(namespace, operatorShortName, leaderTrackerT
 }
 
 // Reconciles the latest LeaderTracker state to be used by the operator
-func ReconcileLeaderTracker(namespace string, operatorShortName string, rsf ResourceSharingFactory, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, leaderTrackerType string, assetsFolder *string) error {
-	leaderTracker, _, err := lutils.GetLeaderTracker(namespace, operatorShortName, leaderTrackerType, rsf.Client()())
+func ReconcileLeaderTracker(namespace string, operatorName string, operatorShortName string, rsf ResourceSharingFactory, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, leaderTrackerType string, assetsFolder *string) error {
+	leaderTracker, _, err := leader.GetLeaderTracker(namespace, operatorName, operatorShortName, leaderTrackerType, rsf.Client()())
 	// If the Leader Tracker is missing, create from scratch
 	if err != nil && kerrors.IsNotFound(err) {
-		leaderTracker.Labels[lutils.LeaderVersionLabel] = latestOperandVersion
+		leaderTracker.Labels[leader.GetLeaderVersionLabel(lutils.LibertyURI)] = latestOperandVersion
 		leaderTracker.ResourceVersion = ""
 		leaderTrackers, err := CreateNewLeaderTrackerList(rsf, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, assetsFolder)
 		if err != nil {
@@ -191,7 +192,7 @@ func ReconcileLeaderTracker(namespace string, operatorShortName string, rsf Reso
 		return err
 	}
 	// If the Leader Tracker is outdated, delete it so that it gets recreated in another reconcile
-	if leaderTracker.Labels[lutils.LeaderVersionLabel] != latestOperandVersion {
+	if leaderTracker.Labels[leader.GetLeaderVersionLabel(lutils.LibertyURI)] != latestOperandVersion {
 		if err := rsf.DeleteResources()(leaderTracker); err != nil {
 			return err
 		}
@@ -199,12 +200,12 @@ func ReconcileLeaderTracker(namespace string, operatorShortName string, rsf Reso
 	return nil
 }
 
-func CreateNewLeaderTrackerList(rsf ResourceSharingFactory, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, leaderTrackerType string, assetsFolder *string) (*[]lutils.LeaderTracker, error) {
+func CreateNewLeaderTrackerList(rsf ResourceSharingFactory, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, leaderTrackerType string, assetsFolder *string) (*[]leader.LeaderTracker, error) {
 	resourcesMatrix, resourcesRootNameList, err := rsf.LeaderTrackers()(assetsFolder)
 	if err != nil {
 		return nil, err
 	}
-	leaderTracker := make([]lutils.LeaderTracker, 0)
+	leaderTracker := make([]leader.LeaderTracker, 0)
 	for i, resourcesList := range resourcesMatrix {
 		UpdateLeaderTrackersFromUnstructuredList(rsf, &leaderTracker, resourcesList, treeMap, replaceMap, latestOperandVersion, resourcesRootNameList[i])
 	}
@@ -212,7 +213,7 @@ func CreateNewLeaderTrackerList(rsf ResourceSharingFactory, treeMap map[string]i
 }
 
 // Removes the instance as leader if instance is the leader and if no leaders are being tracked then delete the leader tracking Secret
-func RemoveLeader(name string, rsf ResourceSharingFactoryBase, leaderTracker *corev1.Secret, leaderTrackers *[]lutils.LeaderTracker) error {
+func RemoveLeader(name string, rsf ResourceSharingFactoryBase, leaderTracker *corev1.Secret, leaderTrackers *[]leader.LeaderTracker) error {
 	changeDetected := false
 	noOwners := true
 	unusedIndices := []int{}
@@ -245,13 +246,13 @@ func RemoveLeader(name string, rsf ResourceSharingFactoryBase, leaderTracker *co
 	return nil
 }
 
-func UpdateLeaderTrackersFromUnstructuredList(rsf ResourceSharingFactory, leaderTrackers *[]lutils.LeaderTracker, resourceList *unstructured.UnstructuredList, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, resourceRootName string) error {
+func UpdateLeaderTrackersFromUnstructuredList(rsf ResourceSharingFactory, leaderTrackers *[]leader.LeaderTracker, resourceList *unstructured.UnstructuredList, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, resourceRootName string) error {
 	for i, resource := range resourceList.Items {
 		labelsMap, _, err := unstructured.NestedMap(resource.Object, "metadata", "labels")
 		if err != nil {
 			return err
 		}
-		if pathIndexInterface, found := labelsMap[lutils.ResourcePathIndexLabel]; found {
+		if pathIndexInterface, found := labelsMap[leader.GetResourcePathIndexLabel(lutils.LibertyURI)]; found {
 			pathIndex := pathIndexInterface.(string)
 			// Skip this resource if path index does not contain a period separating delimeter
 			if !strings.Contains(pathIndex, ".") {
@@ -262,7 +263,7 @@ func UpdateLeaderTrackersFromUnstructuredList(rsf ResourceSharingFactory, leader
 			if len(labelVersionArray) != 2 {
 				continue
 			}
-			leader := lutils.LeaderTracker{
+			leaderTracker := leader.LeaderTracker{
 				PathIndex: pathIndex,
 			}
 			indexIntVal, _ := strconv.ParseInt(labelVersionArray[1], 10, 64)
@@ -274,15 +275,15 @@ func UpdateLeaderTrackersFromUnstructuredList(rsf ResourceSharingFactory, leader
 				// won't halt the operator when the ReplacePath validation is performed
 				if path, err := ReplacePath(path, latestOperandVersion, treeMap, replaceMap); err == nil {
 					newPathIndex := strings.Split(path, ".")[0] + "." + strconv.FormatInt(int64(GetLeafIndex(treeMap, path)), 10)
-					leader.PathIndex = newPathIndex
-					leader.Path = path
+					leaderTracker.PathIndex = newPathIndex
+					leaderTracker.Path = path
 					// the path may have changed so the path index reference needs to be updated directly in the resource
 					if err := rsf.CreateOrUpdate()(&resourceList.Items[i], nil, func() error {
 						labelsMap, _, err := unstructured.NestedMap(resourceList.Items[i].Object, "metadata", "labels")
 						if err != nil {
 							return err
 						}
-						labelsMap[lutils.ResourcePathIndexLabel] = newPathIndex
+						labelsMap[leader.GetResourcePathIndexLabel(lutils.LibertyURI)] = newPathIndex
 						if err := unstructured.SetNestedMap(resourceList.Items[i].Object, labelsMap, "metadata", "labels"); err != nil {
 							return err
 						}
@@ -292,7 +293,7 @@ func UpdateLeaderTrackersFromUnstructuredList(rsf ResourceSharingFactory, leader
 					}
 				}
 			} else if pathErr == nil { // only update the path metadata if this operator's decision tree structure recognizes the resource
-				leader.Path = path
+				leaderTracker.Path = path
 			} else {
 				// A valid decision tree path could not be found, so it will not be used by the operator and this resource will not be tracked
 				continue
@@ -301,16 +302,16 @@ func UpdateLeaderTrackersFromUnstructuredList(rsf ResourceSharingFactory, leader
 			if err != nil {
 				return err
 			}
-			leader.Name = nameString[len(resourceRootName):]
-			leader.EvictOwner()
-			lutils.InsertIntoSortedLeaderTrackers(leaderTrackers, &leader)
+			leaderTracker.Name = nameString[len(resourceRootName):]
+			leaderTracker.EvictOwner()
+			leader.InsertIntoSortedLeaderTrackers(leaderTrackers, &leaderTracker)
 		}
 	}
 	return nil
 }
 
-func RemoveLeaderTrackerReference(rsf ResourceSharingFactoryBase, name, namespace, operatorShortName, resourceSharingFileName string) error {
-	leaderTracker, leaderTrackers, err := lutils.GetLeaderTracker(namespace, operatorShortName, resourceSharingFileName, rsf.Client()())
+func RemoveLeaderTrackerReference(rsf ResourceSharingFactoryBase, name, namespace, operatorName, operatorShortName, resourceSharingFileName string) error {
+	leaderTracker, leaderTrackers, err := leader.GetLeaderTracker(namespace, operatorName, operatorShortName, resourceSharingFileName, rsf.Client()())
 	if err != nil {
 		if kerrors.IsNotFound(err) {
 			return nil

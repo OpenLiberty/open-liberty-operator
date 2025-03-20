@@ -8,6 +8,7 @@ import (
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
+	"github.com/OpenLiberty/open-liberty-operator/utils/leader"
 	tree "github.com/OpenLiberty/open-liberty-operator/utils/tree"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -15,7 +16,7 @@ import (
 )
 
 type OpenLibertyTraceResourceSharingFactory struct {
-	resourcesFunc              func() (lutils.LeaderTrackerMetadataList, error)
+	resourcesFunc              func() (leader.LeaderTrackerMetadataList, error)
 	leaderTrackersFunc         func(assetsFolder *string) ([]*unstructured.UnstructuredList, []string, error)
 	createOrUpdateFunc         func(obj client.Object, owner metav1.Object, cb func() error) error
 	deleteResourcesFunc        func(obj client.Object) error
@@ -24,11 +25,11 @@ type OpenLibertyTraceResourceSharingFactory struct {
 	clientFunc                 func() client.Client
 }
 
-func (rsf *OpenLibertyTraceResourceSharingFactory) Resources() func() (lutils.LeaderTrackerMetadataList, error) {
+func (rsf *OpenLibertyTraceResourceSharingFactory) Resources() func() (leader.LeaderTrackerMetadataList, error) {
 	return rsf.resourcesFunc
 }
 
-func (rsf *OpenLibertyTraceResourceSharingFactory) SetResources(fn func() (lutils.LeaderTrackerMetadataList, error)) {
+func (rsf *OpenLibertyTraceResourceSharingFactory) SetResources(fn func() (leader.LeaderTrackerMetadataList, error)) {
 	rsf.resourcesFunc = fn
 }
 
@@ -108,13 +109,13 @@ func (r *ReconcileOpenLibertyTrace) createResourceSharingFactory(instance *olv1.
 		nameString, _, err := unstructured.NestedString(obj, "spec", "podName") // the Trace CR will use .spec.podName as the leaderTracker key identifier
 		return nameString, err
 	})
-	rsf.SetResources(func() (lutils.LeaderTrackerMetadataList, error) {
+	rsf.SetResources(func() (leader.LeaderTrackerMetadataList, error) {
 		return r.OpenLibertyTraceSharedResourceGenerator(instance, treeMap, latestOperandVersion, leaderTrackerType)
 	})
 	return rsf
 }
 
-func (r *ReconcileOpenLibertyTrace) reconcileResourceTrackingState(instance *olv1.OpenLibertyTrace, leaderTrackerType string) (tree.ResourceSharingFactory, lutils.LeaderTrackerMetadataList, error) {
+func (r *ReconcileOpenLibertyTrace) reconcileResourceTrackingState(instance *olv1.OpenLibertyTrace, leaderTrackerType string) (tree.ResourceSharingFactory, leader.LeaderTrackerMetadataList, error) {
 	treeMap, replaceMap, err := tree.ParseDecisionTree(leaderTrackerType, nil)
 	if err != nil {
 		return nil, nil, err
@@ -126,11 +127,11 @@ func (r *ReconcileOpenLibertyTrace) reconcileResourceTrackingState(instance *olv
 	}
 
 	rsf := r.createResourceSharingFactory(instance, treeMap, replaceMap, latestOperandVersion, leaderTrackerType)
-	trackerMetadataList, err := tree.ReconcileResourceTrackingState(instance.GetNamespace(), OperatorShortName, leaderTrackerType, rsf, treeMap, replaceMap, latestOperandVersion)
+	trackerMetadataList, err := tree.ReconcileResourceTrackingState(instance.GetNamespace(), OperatorName, OperatorShortName, leaderTrackerType, rsf, treeMap, replaceMap, latestOperandVersion)
 	return rsf, trackerMetadataList, err
 }
 
-func (r *ReconcileOpenLibertyTrace) OpenLibertyTraceSharedResourceGenerator(instance *olv1.OpenLibertyTrace, treeMap map[string]interface{}, latestOperandVersion, leaderTrackerType string) (lutils.LeaderTrackerMetadataList, error) {
+func (r *ReconcileOpenLibertyTrace) OpenLibertyTraceSharedResourceGenerator(instance *olv1.OpenLibertyTrace, treeMap map[string]interface{}, latestOperandVersion, leaderTrackerType string) (leader.LeaderTrackerMetadataList, error) {
 	// return the metadata specific to the operator version, instance configuration, and shared resource being reconciled
 	if leaderTrackerType == TRACE_RESOURCE_SHARING_FILE_NAME {
 		traceMetadataList, err := r.reconcileTraceMetadata(instance, treeMap, latestOperandVersion, nil)
@@ -161,7 +162,7 @@ func (r *ReconcileOpenLibertyTrace) OpenLibertyTraceLeaderTrackerGenerator(insta
 
 // Search the instance's namespace for existing Trace CRs
 func (r *ReconcileOpenLibertyTrace) GetTraceResources(instance *olv1.OpenLibertyTrace, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, assetsFolder *string, fileName string) (*unstructured.UnstructuredList, string, error) {
-	traceResourceList, _, err := lutils.CreateUnstructuredResourceListFromSignature(fileName, assetsFolder)
+	traceResourceList, _, err := leader.CreateUnstructuredResourceListFromSignature(fileName, assetsFolder)
 	if err != nil {
 		return nil, "", err
 	}
@@ -173,7 +174,7 @@ func (r *ReconcileOpenLibertyTrace) GetTraceResources(instance *olv1.OpenLiberty
 	for i := range len(traceResourceList.Items) {
 		labelsMap, _, _ := unstructured.NestedMap(traceResourceList.Items[i].Object, "metadata", "labels")
 		if labelsMap != nil {
-			if _, found := labelsMap[lutils.ResourcePathIndexLabel]; found {
+			if _, found := labelsMap[leader.GetResourcePathIndexLabel(lutils.LibertyURI)]; found {
 				continue // skip if resource tracking label exists
 			}
 		}
@@ -185,12 +186,12 @@ func (r *ReconcileOpenLibertyTrace) GetTraceResources(instance *olv1.OpenLiberty
 		}
 		if defaultUpdatedPathIndex != "" {
 			if err := r.CreateOrUpdate(&traceResourceList.Items[i], nil, func() error {
-				// add the ResourcePathIndexLabel
+				// add the GetResourcePathIndexLabel(lutils.LibertyURI)
 				labelsMap, _, _ := unstructured.NestedMap(traceResourceList.Items[i].Object, "metadata", "labels")
 				if labelsMap == nil {
 					labelsMap = make(map[string]interface{})
 				}
-				labelsMap[lutils.ResourcePathIndexLabel] = defaultUpdatedPathIndex
+				labelsMap[leader.GetResourcePathIndexLabel(lutils.LibertyURI)] = defaultUpdatedPathIndex
 				if err := unstructured.SetNestedMap(traceResourceList.Items[i].Object, labelsMap, "metadata", "labels"); err != nil {
 					return err
 				}
