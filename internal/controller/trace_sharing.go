@@ -6,24 +6,25 @@ import (
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
+	"github.com/OpenLiberty/open-liberty-operator/utils/leader"
 	tree "github.com/OpenLiberty/open-liberty-operator/utils/tree"
 )
 
 const TRACE_RESOURCE_SHARING_FILE_NAME = "trace"
 
 func init() {
-	lutils.LeaderTrackerMutexes.Store(TRACE_RESOURCE_SHARING_FILE_NAME, &sync.Mutex{})
+	leader.LeaderTrackerMutexes.Store(TRACE_RESOURCE_SHARING_FILE_NAME, &sync.Mutex{})
 }
 
-func (r *ReconcileOpenLibertyTrace) reconcileTraceMetadata(instance *olv1.OpenLibertyTrace, treeMap map[string]interface{}, latestOperandVersion string, assetsFolder *string) (lutils.LeaderTrackerMetadataList, error) {
-	metadataList := &lutils.TraceMetadataList{}
-	metadataList.Items = []lutils.LeaderTrackerMetadata{}
+func (r *ReconcileOpenLibertyTrace) reconcileTraceMetadata(instance *olv1.OpenLibertyTrace, treeMap map[string]interface{}, latestOperandVersion string, assetsFolder *string) (leader.LeaderTrackerMetadataList, error) {
+	metadataList := &leader.TraceMetadataList{}
+	metadataList.Items = []leader.LeaderTrackerMetadata{}
 
 	// During runtime, the OpenLibertyApplication instance will decide what Trace related resources to track by populating arrays of pathOptions and pathChoices
 	pathOptionsList, pathChoicesList := r.getTracePathOptionsAndChoices(instance, latestOperandVersion)
 
 	for i := range pathOptionsList {
-		metadata := &lutils.TraceMetadata{}
+		metadata := &leader.TraceMetadata{}
 		pathOptions := pathOptionsList[i]
 		pathChoices := pathChoicesList[i]
 
@@ -44,13 +45,13 @@ func (r *ReconcileOpenLibertyTrace) reconcileTraceMetadata(instance *olv1.OpenLi
 		}
 
 		// retrieve the Trace leader tracker to re-use an existing name or to create a new metadata.Name
-		leaderTracker, _, err := lutils.GetLeaderTracker(instance.GetNamespace(), OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME, r.GetClient())
+		leaderTracker, _, err := leader.GetLeaderTracker(instance.GetNamespace(), OperatorName, OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME, r.GetClient())
 		if err != nil {
 			return metadataList, err
 		}
 
 		// if the leaderTracker is on a mismatched version, wait for a subsequent reconcile loop to re-create the leader tracker
-		if leaderTracker.Labels[lutils.LeaderVersionLabel] != latestOperandVersion {
+		if leaderTracker.Labels[leader.GetLeaderVersionLabel(lutils.LibertyURI)] != latestOperandVersion {
 			return metadataList, fmt.Errorf("waiting for the Leader Tracker to be updated")
 		}
 

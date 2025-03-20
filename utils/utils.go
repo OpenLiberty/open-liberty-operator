@@ -12,6 +12,7 @@ import (
 	"math/rand/v2"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
+	"github.com/OpenLiberty/open-liberty-operator/utils/leader"
 	rcoutils "github.com/application-stacks/runtime-component-operator/utils"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
@@ -36,6 +37,7 @@ var log = logf.Log.WithName("openliberty_utils")
 const serviceabilityMountPath = "/serviceability"
 const ssoEnvVarPrefix = "SEC_SSO_"
 const OperandVersion = "1.4.2"
+const LibertyURI = "openlibertyapplications.apps.openliberty.io"
 
 // LTPA constants
 const LTPAServerXMLSuffix = "-managed-ltpa-server-xml"
@@ -55,116 +57,6 @@ const PasswordEncryptionKeyRootName = "wlp-password-encryption-key"
 const LocalPasswordEncryptionKeyRootName = "olo-wlp-password-encryption-key"
 const EncryptionKeyXMLFileName = "encryptionKey.xml"
 const EncryptionKeyMountXMLFileName = "encryptionKeyMount.xml"
-
-type LTPAMetadata struct {
-	Kind       string
-	APIVersion string
-	Name       string
-	Path       string
-	PathIndex  string
-}
-
-func (m LTPAMetadata) GetName() string {
-	return m.Name
-}
-func (m LTPAMetadata) GetPath() string {
-	return m.Path
-}
-func (m LTPAMetadata) GetPathIndex() string {
-	return m.PathIndex
-}
-func (m LTPAMetadata) GetKind() string {
-	return m.Kind
-}
-func (m LTPAMetadata) GetAPIVersion() string {
-	return m.APIVersion
-}
-
-type LTPAMetadataList struct {
-	Items []LeaderTrackerMetadata
-}
-
-func (ml LTPAMetadataList) GetItems() []LeaderTrackerMetadata {
-	return ml.Items
-}
-
-type PasswordEncryptionMetadata struct {
-	Kind       string
-	APIVersion string
-	Name       string
-	Path       string
-	PathIndex  string
-}
-
-func (m PasswordEncryptionMetadata) GetName() string {
-	return m.Name
-}
-func (m PasswordEncryptionMetadata) GetPath() string {
-	return m.Path
-}
-func (m PasswordEncryptionMetadata) GetPathIndex() string {
-	return m.PathIndex
-}
-func (m PasswordEncryptionMetadata) GetKind() string {
-	return m.Kind
-}
-func (m PasswordEncryptionMetadata) GetAPIVersion() string {
-	return m.APIVersion
-}
-
-type PasswordEncryptionMetadataList struct {
-	Items []LeaderTrackerMetadata
-}
-
-func (ml PasswordEncryptionMetadataList) GetItems() []LeaderTrackerMetadata {
-	return ml.Items
-}
-
-type LTPAConfig struct {
-	Metadata                    *LTPAMetadata
-	SecretName                  string
-	SecretInstanceName          string
-	ConfigSecretName            string
-	ConfigSecretInstanceName    string
-	ServiceAccountName          string
-	JobRequestConfigMapName     string
-	ConfigMapName               string
-	FileName                    string
-	EncryptionKeySecretName     string
-	EncryptionKeySharingEnabled bool // true or false
-}
-
-type TraceMetadata struct {
-	Kind       string
-	APIVersion string
-	Name       string
-	Path       string
-	PathIndex  string
-}
-
-func (m TraceMetadata) GetName() string {
-	return m.Name
-}
-func (m TraceMetadata) GetPath() string {
-	return m.Path
-}
-func (m TraceMetadata) GetPathIndex() string {
-	return m.PathIndex
-}
-func (m TraceMetadata) GetKind() string {
-	return m.Kind
-}
-func (m TraceMetadata) GetAPIVersion() string {
-	return m.APIVersion
-}
-
-type TraceMetadataList struct {
-	Items []LeaderTrackerMetadata
-}
-
-func (ml TraceMetadataList) GetItems() []LeaderTrackerMetadata {
-	return ml.Items
-}
 
 // Validate if the OpenLibertyApplication is valid
 func Validate(olapp *olv1.OpenLibertyApplication) (bool, error) {
@@ -277,7 +169,7 @@ func GetSecretLastRotationLabel(la *olv1.OpenLibertyApplication, client client.C
 	if err != nil {
 		return nil, errors.Wrapf(err, "Secret %q was not found in namespace %q", secretName, la.GetNamespace())
 	}
-	labelKey := GetLastRotationLabelKey(sharedResourceName)
+	labelKey := leader.GetLastRotationLabelKey(sharedResourceName, LibertyURI)
 	lastRotationLabel, found := secret.Labels[labelKey]
 	if !found {
 		return nil, fmt.Errorf("Secret %q does not have label key %q", secretName, labelKey)
@@ -294,7 +186,7 @@ func GetSecretLastRotationAsLabelMap(la *olv1.OpenLibertyApplication, client cli
 		return nil, errors.Wrapf(err, "Secret %q was not found in namespace %q", secretName, la.GetNamespace())
 	}
 	return map[string]string{
-		GetLastRotationLabelKey(sharedResourceName): string(secret.Data["lastRotation"]),
+		leader.GetLastRotationLabelKey(sharedResourceName, LibertyURI): string(secret.Data["lastRotation"]),
 	}, nil
 }
 
@@ -735,7 +627,7 @@ func isVolumeFound(pts *corev1.PodTemplateSpec, name string) bool {
 	return false
 }
 
-func ConfigurePasswordEncryption(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string, passwordEncryptionMetadata *PasswordEncryptionMetadata) {
+func ConfigurePasswordEncryption(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, operatorShortName string, passwordEncryptionMetadata *leader.PasswordEncryptionMetadata) {
 	// Mount a volume /output/liberty-operator/encryptionKey.xml to store the Liberty Password Encryption Key
 	MountSecretAsVolume(pts, operatorShortName+ManagedEncryptionServerXML+passwordEncryptionMetadata.Name, CreateVolumeMount(SecureMountPath, EncryptionKeyXMLFileName))
 
@@ -841,46 +733,12 @@ func parseMountName(fileName string) string {
 	return mountName
 }
 
-func kebabToCamelCase(inputString string) string {
-	i := 0
-	n := len(inputString)
-	outputString := ""
-	for i < n && string(inputString[i]) == "-" {
-		i += 1
-	}
-	for i < n {
-		ch := string(inputString[i])
-		if ch == "-" {
-			if i < n-1 {
-				outputString += strings.ToUpper(string(inputString[i+1]))
-			}
-			i += 2
-		} else {
-			outputString += ch
-			i += 1
-		}
-	}
-	return outputString
-}
-
 func CreateVolumeMount(mountPath string, fileName string) corev1.VolumeMount {
 	return corev1.VolumeMount{
 		Name:      parseMountName(fileName),
 		MountPath: mountPath + "/" + fileName,
 		SubPath:   fileName,
 	}
-}
-
-func GetRequiredLabels(name string, instance string) map[string]string {
-	requiredLabels := make(map[string]string)
-	requiredLabels["app.kubernetes.io/name"] = name
-	if instance != "" {
-		requiredLabels["app.kubernetes.io/instance"] = instance
-	} else {
-		requiredLabels["app.kubernetes.io/instance"] = name
-	}
-	requiredLabels["app.kubernetes.io/managed-by"] = "open-liberty-operator"
-	return requiredLabels
 }
 
 func IsOperandVersionString(version string) bool {
@@ -932,13 +790,6 @@ func GetOperandVersionString() (string, error) {
 	return finalVersion, nil
 }
 
-func GetCommaSeparatedArray(stringList string) []string {
-	if strings.Contains(stringList, ",") {
-		return strings.Split(stringList, ",")
-	}
-	return []string{stringList}
-}
-
 var letterNums = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 var letterNums2 = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890")
 
@@ -967,39 +818,6 @@ func IsLowerAlphanumericSuffix(suffix string) bool {
 		}
 	}
 	return true
-}
-
-func GetCommaSeparatedString(stringList string, index int) (string, error) {
-	if stringList == "" {
-		return "", fmt.Errorf("there is no element")
-	}
-	if strings.Contains(stringList, ",") {
-		for i, val := range strings.Split(stringList, ",") {
-			if index == i {
-				return val, nil
-			}
-		}
-	} else {
-		if index == 0 {
-			return stringList, nil
-		}
-		return "", fmt.Errorf("cannot index string list with only one element")
-	}
-	return "", fmt.Errorf("element not found")
-}
-
-// returns the index of the contained value in stringList or else -1
-func CommaSeparatedStringContains(stringList string, value string) int {
-	if strings.Contains(stringList, ",") {
-		for i, label := range strings.Split(stringList, ",") {
-			if value == label {
-				return i
-			}
-		}
-	} else if stringList == value {
-		return 0
-	}
-	return -1
 }
 
 func IsValidOperandVersion(version string) bool {

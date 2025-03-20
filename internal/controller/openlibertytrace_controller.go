@@ -8,6 +8,7 @@ import (
 	"time"
 
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
+	"github.com/OpenLiberty/open-liberty-operator/utils/leader"
 	tree "github.com/OpenLiberty/open-liberty-operator/utils/tree"
 	oputils "github.com/application-stacks/runtime-component-operator/utils"
 	"github.com/go-logr/logr"
@@ -82,21 +83,21 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	instance.Initialize()
 
 	// Reconciles the shared Trace state for the instance namespace
-	var traceMetadataList *lutils.TraceMetadataList
-	var traceMetadata, prevPodTraceMetadata *lutils.TraceMetadata
+	var traceMetadataList *leader.TraceMetadataList
+	var traceMetadata, prevPodTraceMetadata *leader.TraceMetadata
 	rsf, leaderMetadataList, err := r.reconcileResourceTrackingState(instance, TRACE_RESOURCE_SHARING_FILE_NAME)
 
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	traceMetadataList = leaderMetadataList.(*lutils.TraceMetadataList)
+	traceMetadataList = leaderMetadataList.(*leader.TraceMetadataList)
 	if traceMetadataList != nil {
 		numTraceItems := len(traceMetadataList.Items)
 		if numTraceItems >= 1 {
-			traceMetadata = traceMetadataList.Items[0].(*lutils.TraceMetadata)
+			traceMetadata = traceMetadataList.Items[0].(*leader.TraceMetadata)
 		}
 		if numTraceItems >= 2 {
-			prevPodTraceMetadata = traceMetadataList.Items[1].(*lutils.TraceMetadata)
+			prevPodTraceMetadata = traceMetadataList.Items[1].(*leader.TraceMetadata)
 		}
 	}
 	if traceMetadata == nil {
@@ -114,7 +115,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	isPrevPodTraceDisabled := false
 	// if pod changed then disable prevPod (if possible)
 	if podChanged && prevTraceEnabled == corev1.ConditionTrue && traceMetadata != nil && prevPodTraceMetadata != nil && traceMetadata.Name != prevPodTraceMetadata.Name {
-		_, thisInstanceIsLeader, _, err := tree.ReconcileLeader(rsf, OperatorShortName, instance.GetName(), instance.GetNamespace(), prevPodTraceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, true)
+		_, thisInstanceIsLeader, _, err := tree.ReconcileLeader(rsf, OperatorName, OperatorShortName, instance.GetName(), instance.GetNamespace(), prevPodTraceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, true)
 		if err != nil && !kerrors.IsNotFound(err) {
 			return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, err
 		}
@@ -153,7 +154,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	}
 
 	// exit if this instance is not the leader of podName
-	leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(rsf, OperatorShortName, instance.GetName(), instance.GetNamespace(), traceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, true)
+	leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(rsf, OperatorName, OperatorShortName, instance.GetName(), instance.GetNamespace(), traceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, true)
 	if err != nil && !kerrors.IsNotFound(err) {
 		return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, err
 	}
@@ -328,7 +329,7 @@ func (r *ReconcileOpenLibertyTrace) finalizeOpenLibertyTrace(reqLogger logr.Logg
 	if !isPrevPodTraceDisabled {
 		r.disableTraceOnPrevPod(reqLogger, prevPodName, podNamespace)
 	}
-	tree.RemoveLeaderTrackerReference(rsf, olt.GetName(), olt.GetNamespace(), OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME)
+	tree.RemoveLeaderTrackerReference(rsf, olt.GetName(), olt.GetNamespace(), OperatorName, OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME)
 	return nil
 }
 
