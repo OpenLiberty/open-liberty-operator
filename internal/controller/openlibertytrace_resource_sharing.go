@@ -23,6 +23,7 @@ type OpenLibertyTraceResourceSharingFactory struct {
 	leaderTrackerNameFunc      func(map[string]interface{}) (string, error)
 	cleanupUnusedResourcesFunc func() bool
 	clientFunc                 func() client.Client
+	libertyURI                 string
 }
 
 func (rsf *OpenLibertyTraceResourceSharingFactory) Resources() func() (leader.LeaderTrackerMetadataList, error) {
@@ -81,6 +82,14 @@ func (rsf *OpenLibertyTraceResourceSharingFactory) SetClient(fn func() client.Cl
 	rsf.clientFunc = fn
 }
 
+func (rsf *OpenLibertyTraceResourceSharingFactory) LibertyURI() string {
+	return rsf.libertyURI
+}
+
+func (rsf *OpenLibertyTraceResourceSharingFactory) SetLibertyURI(uri string) {
+	rsf.libertyURI = uri
+}
+
 func (r *ReconcileOpenLibertyTrace) createResourceSharingFactoryBase() tree.ResourceSharingFactoryBase {
 	rsf := &OpenLibertyTraceResourceSharingFactory{}
 	rsf.SetCreateOrUpdate(func(obj client.Object, owner metav1.Object, cb func() error) error {
@@ -95,6 +104,7 @@ func (r *ReconcileOpenLibertyTrace) createResourceSharingFactoryBase() tree.Reso
 	rsf.SetClient(func() client.Client {
 		return r.GetClient()
 	})
+	rsf.SetLibertyURI(lutils.LibertyURI)
 	return rsf
 }
 
