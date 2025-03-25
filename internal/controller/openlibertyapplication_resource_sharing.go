@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
+	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
 	"github.com/OpenLiberty/open-liberty-operator/utils/leader"
 	tree "github.com/OpenLiberty/open-liberty-operator/utils/tree"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,6 +20,7 @@ type OpenLibertyApplicationResourceSharingFactory struct {
 	leaderTrackerNameFunc      func(map[string]interface{}) (string, error)
 	cleanupUnusedResourcesFunc func() bool
 	clientFunc                 func() client.Client
+	libertyURI                 string
 }
 
 func (rsf *OpenLibertyApplicationResourceSharingFactory) Resources() func() (leader.LeaderTrackerMetadataList, error) {
@@ -77,6 +79,14 @@ func (rsf *OpenLibertyApplicationResourceSharingFactory) SetClient(fn func() cli
 	rsf.clientFunc = fn
 }
 
+func (rsf *OpenLibertyApplicationResourceSharingFactory) LibertyURI() string {
+	return rsf.libertyURI
+}
+
+func (rsf *OpenLibertyApplicationResourceSharingFactory) SetLibertyURI(uri string) {
+	rsf.libertyURI = uri
+}
+
 func (r *ReconcileOpenLiberty) createResourceSharingFactoryBase() tree.ResourceSharingFactoryBase {
 	rsf := &OpenLibertyApplicationResourceSharingFactory{}
 	rsf.SetCreateOrUpdate(func(obj client.Object, owner metav1.Object, cb func() error) error {
@@ -91,6 +101,7 @@ func (r *ReconcileOpenLiberty) createResourceSharingFactoryBase() tree.ResourceS
 	rsf.SetClient(func() client.Client {
 		return r.GetClient()
 	})
+	rsf.SetLibertyURI(lutils.LibertyURI)
 	return rsf
 }
 

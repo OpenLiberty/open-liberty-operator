@@ -4,7 +4,6 @@ import (
 	"strconv"
 	"strings"
 
-	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
 	"github.com/OpenLiberty/open-liberty-operator/utils/leader"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,6 +25,9 @@ type ResourceSharingFactoryBase interface {
 
 	CleanupUnusedResources() func() bool
 	SetCleanupUnusedResources(fn func() bool)
+
+	LibertyURI() string
+	SetLibertyURI(uri string)
 }
 
 // Interface for resource sharing
@@ -181,7 +183,7 @@ func ReconcileLeaderTracker(namespace string, operatorName string, operatorShort
 	leaderTracker, _, err := leader.GetLeaderTracker(namespace, operatorName, operatorShortName, leaderTrackerType, rsf.Client()())
 	// If the Leader Tracker is missing, create from scratch
 	if err != nil && kerrors.IsNotFound(err) {
-		leaderTracker.Labels[leader.GetLeaderVersionLabel(lutils.LibertyURI)] = latestOperandVersion
+		leaderTracker.Labels[leader.GetLeaderVersionLabel(rsf.LibertyURI())] = latestOperandVersion
 		leaderTracker.ResourceVersion = ""
 		leaderTrackers, err := CreateNewLeaderTrackerList(rsf, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, assetsFolder)
 		if err != nil {
@@ -192,7 +194,7 @@ func ReconcileLeaderTracker(namespace string, operatorName string, operatorShort
 		return err
 	}
 	// If the Leader Tracker is outdated, delete it so that it gets recreated in another reconcile
-	if leaderTracker.Labels[leader.GetLeaderVersionLabel(lutils.LibertyURI)] != latestOperandVersion {
+	if leaderTracker.Labels[leader.GetLeaderVersionLabel(rsf.LibertyURI())] != latestOperandVersion {
 		if err := rsf.DeleteResources()(leaderTracker); err != nil {
 			return err
 		}
@@ -252,7 +254,7 @@ func UpdateLeaderTrackersFromUnstructuredList(rsf ResourceSharingFactory, leader
 		if err != nil {
 			return err
 		}
-		if pathIndexInterface, found := labelsMap[leader.GetResourcePathIndexLabel(lutils.LibertyURI)]; found {
+		if pathIndexInterface, found := labelsMap[leader.GetResourcePathIndexLabel(rsf.LibertyURI())]; found {
 			pathIndex := pathIndexInterface.(string)
 			// Skip this resource if path index does not contain a period separating delimeter
 			if !strings.Contains(pathIndex, ".") {
@@ -283,7 +285,7 @@ func UpdateLeaderTrackersFromUnstructuredList(rsf ResourceSharingFactory, leader
 						if err != nil {
 							return err
 						}
-						labelsMap[leader.GetResourcePathIndexLabel(lutils.LibertyURI)] = newPathIndex
+						labelsMap[leader.GetResourcePathIndexLabel(rsf.LibertyURI())] = newPathIndex
 						if err := unstructured.SetNestedMap(resourceList.Items[i].Object, labelsMap, "metadata", "labels"); err != nil {
 							return err
 						}
