@@ -440,7 +440,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 			ltpaConfigSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaConfigMetadata.PathIndex
 			ltpaConfigSecret.Data = make(map[string][]byte)
 			if passwordEncryptionKey != "" && encryptionSecretLastRotation != "" {
-				ltpaConfigSecret.Data["encryptionSecretLastRotation"] = []byte(encryptionSecretLastRotation)
+				ltpaConfigSecret.Data["encryptionKeyLastRotation"] = []byte(encryptionSecretLastRotation)
 			}
 			ltpaConfigSecret.Data["lastRotation"] = []byte(ltpaSecret.Data["lastRotation"])
 			ltpaConfigSecret.Data["password"] = encodedPassword
@@ -485,7 +485,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 			return ltpaXMLSecret.Name, fmt.Errorf("the internal encryption key secret does not contain field 'lastRotation'")
 		}
 
-		if encryptionKeyLastRotation, found := ltpaConfigSecret.Data["encryptionSecretLastRotation"]; found {
+		if encryptionKeyLastRotation, found := ltpaConfigSecret.Data["encryptionKeyLastRotation"]; found {
 			if string(encryptionKeyLastRotation) != string(lastRotation) {
 				err := r.DeleteResource(ltpaConfigSecret)
 				if err != nil {
@@ -523,7 +523,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 			return fmt.Errorf("failed to convert last rotation time from string to integer")
 		}
 		latestRotationTime = lastRotationTime
-		if encryptionKeyLastRotation, found := ltpaConfigSecret.Data["encryptionSecretLastRotation"]; found {
+		if encryptionKeyLastRotation, found := ltpaConfigSecret.Data["encryptionKeyLastRotation"]; found {
 			encryptionKeyLastRotationTime, err := strconv.Atoi(string(encryptionKeyLastRotation))
 			if err != nil {
 				return fmt.Errorf("failed to convert encryption key last rotation time from string to integer")
