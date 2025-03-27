@@ -307,6 +307,7 @@ An application administrator can view the status of an application that is deplo
 * link:#status-types-for-status-condition[Status types for `.status.condition`]
 * link:#viewing-status-with-the-cli[Viewing status with the CLI]
 * link:#viewing-status-with-the-red-hat-openshift-console[Viewing status with the Red Hat OpenShift console]
+* link:#viewing-reconciliation-frequency-in-the-status[Viewing reconciliation frequency in the status]
 
 ==== Status types for `.status.condition` [[status-types-for-status-condition]]
 The status types for the `.status.condition` parameter in the `OpenLibertyApplication` CR are `Ready`, `ResourcesReady`, `Reconciled`.
@@ -390,11 +391,14 @@ If the `.status.conditions.type` Ready type does not have a status of `True`, se
 The value of the `.status.versions.reconciled` parameter is the version of the operand that is deployed into the cluster after the reconcile loop completes.
 
 ==== Viewing reconciliation frequency in the status [[viewing-reconciliation-frequency-in-the-status]]
-The operator controller periodically runs reconciliation to match the current state to the wanted state so that the managed resources remain functional. Open Liberty operator allows for increasing the reconciliation interval to reduce the controller's workload when status remains unchanged. The reconciliation frequency can be configured with the link:#operator-configmap[Operator ConfigMap] settings.
 
-The value of the `.status.conditions.unchangedConditionCount` parameter represents the number of reconciliation cycles during which the condition status type remains unchanged. Each time this value becomes an even number, the reconciliation interval increases according to the configurations in the `ConfigMap`. The reconciliation interval increase feature is enabled by default but can be disabled if needed.
+The operator controller periodically runs reconciliation to match the current state to the wanted state so that the managed resources remain functional. Open Liberty operator allows for increasing the reconciliation interval to reduce the controller's workload when status remains unchanged. The reconciliation frequency can be configured with the link:#operator-configmap[Operator ConfigMap] settings. The reconciliation interval increase feature is enabled by default but can be disabled.
 
-The `.status.reconcileInterval` parameter represents the current reconciliation interval of the instance. The parameter increases by the increase percentage, which is specified in the `ConfigMap`, based on the current interval. The calculation uses the base reconciliation interval, the increase percentage, and the count of unchanged status conditions, with the increases compounding over time. The maximum reconciliation interval is _240_ seconds for repeated failures and _120_ seconds for repeated successful status conditions.
+The reconciliation interval increases according to the configurations in the `ConfigMap`. The calculation uses the real-time reconciliation interval, minimum reconciliation interval and the increase percentage. By default, the maximum reconciliation interval is _240_ seconds for repeated failures and _120_ seconds for repeated successful status conditions. The maximum intervals can be configured through the `ConfigMap`.
+
+The `.status.reconcileInterval` parameter represents the current reconciliation interval of the instance. The `.status.reconcileInterval` parameter is hidden in the OpenLibertyApplication CR by default. To display the `.status.reconcileInterval` parameter, set the `showReconcileInterval` value to _true_ in the `ConfigMap`.
+
+
 
 
 === Operator ConfigMap [[operator-configmap]]
@@ -413,12 +417,15 @@ metadata:
   name: open-liberty-operator
   namespace: test-namespace
 data:
-  certManagerCACertDuration: 8766h
   certManagerCertDuration: 2160h
-  defaultHostname: ""
   operatorLogLevel: info
-  reconcileIntervalIncreasePercentage: "100"
-  reconcileIntervalMinimum: "5"
+  reconcileIntervalFailureMaximum: '240'
+  reconcileIntervalIncreasePercentage: '50'
+  reconcileIntervalSuccessMaximum: '120'
+  defaultHostname: ''
+  showReconcileInterval: 'false'
+  reconcileIntervalMinimum: '5'
+  certManagerCACertDuration: 8766h
 ----
 
 And here is the set of descriptions corresponding to each configurable field.
@@ -430,8 +437,11 @@ And here is the set of descriptions corresponding to each configurable field.
 | `certManagerCertDuration`   | The cert-manager issued service certificate's duration before expiry in link:++https://pkg.go.dev/time#ParseDuration++[Go time.Duration] string format. The default value is 2160h (90 days). To learn more about this field see link:#generating-certificates-with-certificate-manager[Generating certificates with certificate manager].
 | `defaultHostname`   | The default hostname for the OpenLibertyApplication Route or Ingress URL when .spec.expose is set to true. To learn more about this field see link:#expose-applications-externally[Expose applications externally (`.spec.expose`, `.spec.createKnativeService`, `.spec.route`)].
 | `operatorLogLevel` | The log level for the Liberty operator. The default value is `info`, other options are `warning`, `fine`, `finer`, `finest`. The log level can be dynamically modified and takes effect immediately.
-| `reconcileIntervalMinimum` | The default value of the base reconciliation interval in seconds is _5_. The operator runs the reconciliation loop every reconciliation interval seconds for each instance. If an instance's status conditions remain unchanged for 2 consecutive reconciliation loops, the reconciliation interval increases to reduce the reconciliation frequency. The interval increases based on the base reconciliation interval and specified increase percentage. For more information on the operator's reconciliation frequency, see link:#viewing-reconciliation-frequency-in-the-status[Viewing reconciliation frequency in the status].
-| `reconcileIntervalIncreasePercentage` | When the reconciliation interval increases, the increase is calculated as a specified percentage of the current interval. To disable the reconciliation interval increase, set the value to _0_.
+| `reconcileIntervalMinimum` | The default value of the minimum reconciliation interval in seconds is _5_. The operator runs the reconciliation loop every reconciliation interval seconds for each instance. If an instance's status conditions remain unchanged, the reconciliation interval increases to reduce the reconciliation frequency. The interval increases based on the base reconciliation interval and specified increase percentage. For more information on the operator's reconciliation frequency, see link:#viewing-reconciliation-frequency-in-the-status[Viewing reconciliation frequency in the status].
+| `reconcileIntervalIncreasePercentage` | When the reconciliation interval increases, the increase is calculated as a specified percentage of the current interval. The default value is _50_. To disable the reconciliation interval increase, set the value to _0_.
+| `reconcileIntervalFailureMaximum` | The maximum reconciliation interval value in seconds for repeated failures in the status. The default value is _240_.
+| `reconcileIntervalSuccessMaximum` | The maximum reconciliation interval in seconds for repeated successful `Reconciled` and `Ready` status. The default value is _120_.
+| `showReconcileInterval` |	The boolean parameter that determines whether `reconcileInterval` field is visible in the status of the OpenLibertyApplication CR. The default value is _false_.
 |===
 
 === Operator configuration examples [[operator-configuration-examples]]
