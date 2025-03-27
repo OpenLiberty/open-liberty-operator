@@ -5,7 +5,7 @@
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
 VERSION ?= 1.4.2
 OPERATOR_SDK_RELEASE_VERSION ?= v1.37.0
-LIBERTY_VERSION ?= 25.0.0.2
+LIBERTY_VERSION ?= 25.0.0.1
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "preview,fast,stable")
