@@ -11,7 +11,7 @@ metadata:
             "name": "openliberty-app-sample"
           },
           "spec": {
-            "applicationImage": "icr.io/appcafe/open-liberty/samples/getting-started@sha256:724994d67734dde70f478e6d92167f383374edb45defed3f6cf62b056d8c5cea",
+            "applicationImage": "icr.io/appcafe/open-liberty/samples/getting-started@sha256:4d527962b6866e27f47f8f3f31f2a4c0fd7c657e9baa91126466387ad56fe923",
             "expose": true,
             "manageTLS": true,
             "replicas": 1,
@@ -53,7 +53,7 @@ metadata:
             "name": "openliberty-app-sample"
           },
           "spec": {
-            "applicationImage": "icr.io/appcafe/open-liberty/samples/getting-started@sha256:724994d67734dde70f478e6d92167f383374edb45defed3f6cf62b056d8c5cea",
+            "applicationImage": "icr.io/appcafe/open-liberty/samples/getting-started@sha256:4d527962b6866e27f47f8f3f31f2a4c0fd7c657e9baa91126466387ad56fe923",
             "expose": true,
             "replicas": 1,
             "service": {
@@ -92,7 +92,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2025-03-04T03:37:27Z"
+    createdAt: "2025-03-28T20:03:56Z"
     description: Deploy and manage containerized Liberty applications
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "true"
@@ -1151,7 +1151,7 @@ spec:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
                 - name: RELATED_IMAGE_LIBERTY_SAMPLE_APP
-                  value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:724994d67734dde70f478e6d92167f383374edb45defed3f6cf62b056d8c5cea
+                  value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:4d527962b6866e27f47f8f3f31f2a4c0fd7c657e9baa91126466387ad56fe923
                 - name: RELATED_IMAGE_OPEN_LIBERTY_OPERATOR
                   value: icr.io/appcafe/open-liberty-operator:daily
                 image: icr.io/appcafe/open-liberty-operator:daily
@@ -1465,7 +1465,7 @@ spec:
   provider:
     name: IBM
   relatedImages:
-  - image: icr.io/appcafe/open-liberty/samples/getting-started@sha256:724994d67734dde70f478e6d92167f383374edb45defed3f6cf62b056d8c5cea
+  - image: icr.io/appcafe/open-liberty/samples/getting-started@sha256:4d527962b6866e27f47f8f3f31f2a4c0fd7c657e9baa91126466387ad56fe923
     name: liberty-sample-app
   - image: icr.io/appcafe/open-liberty-operator:daily
     name: open-liberty-operator
