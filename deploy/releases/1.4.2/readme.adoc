@@ -1,16 +1,16 @@
 = Open Liberty Operator v1.4.2
 
-**Important**: Are you **upgrading from version 0.8.x or below**? If so, before the upgrade, make sure to review the documentation on link:++https://ibm.biz/olo-upgrade-v1++[behavioural changes] that could impact your applications.
+**Important**: Are you **upgrading from version 0.8.x or below**? If so, before the upgrade, review the documentation on link:++https://ibm.biz/olo-upgrade-v1++[behavioural changes] that could impact your applications.
 
 == Supported Environments
 
-The Open Liberty Operator is is available for the following CPU architectures:
+The Open Liberty Operator is available for the following CPU architectures:
 
 - Linux&reg; x86_64 (amd64)
 - Linux&reg; on IBM&reg; Z (s390x)
 - Linux&reg; on Power&reg; (ppc64le)
 
-Red Hat OpenShift 4.14 or higher is supported. The operator is also supported on Kubernetes environments with v1.25 or higher.
+Red Hat OpenShift 4.14 or higher is supported. The operator is also supported on Kubernetes environments with v1.27 or higher.
 
 == Installation
 
@@ -18,7 +18,7 @@ Red Hat OpenShift 4.14 or higher is supported. The operator is also supported on
 
 Open Liberty Operator is available from Red Hat's Certified OpenShift Operators catalog. 
 
-To install using the integrated OperatorHub in OpenShift UI, select `Operators` from the navigation panel, then select `OperatorHub` and then search for `Open Liberty`. Click on the tile with `Open Liberty` to install the Operator. Select the channel `v1.4` and install.
+To install using the integrated OperatorHub in OpenShift UI, select `Operators` from the navigation panel, then select `OperatorHub` and then search for `Open Liberty`. Click on the tile with `Open Liberty` to install the Operator. Select channel `v1.4` and install it.
 
 To install using the `oc` CLI, use the following `Subscription`. Replace `<install_namespace>` with the namespace you want to install the Operator to:
 
