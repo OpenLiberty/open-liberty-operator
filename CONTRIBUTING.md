@@ -1,8 +1,6 @@
 # Contributing to the Open Liberty Operator
 
-There are multiple ways to contribute: report bugs, request features, fix bugs, contribute code, improve documentation, etc. You must follow the established process and guidelines.
-
-We welcome your contributions!
+There are multiple ways to contribute: report bugs, request features, fix bugs, contribute code, improve documentation, etc. You must follow the established process and guidelines. We welcome your contributions!
 
 - [Raising issues](#Raising-Issues)
 - [Legal](#Legal)
