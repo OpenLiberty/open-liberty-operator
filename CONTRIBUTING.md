@@ -1,6 +1,6 @@
 # Contributing to the Open Liberty Operator
 
-There are multiple ways to contribute: report bugs, fix bugs, contribute code, improve documentation, etc. You must follow the established process and guidelines.
+There are multiple ways to contribute: report bugs, request features, fix bugs, contribute code, improve documentation, etc. You must follow the established process and guidelines.
 
 We welcome your contributions!
 
@@ -10,7 +10,7 @@ We welcome your contributions!
 
 ## Raising Issues
 
-Please raise any bug reports on the [Open Liberty Operator project repository's GitHub issue tracker](https://github.com/OpenLiberty/open-liberty-operator/issues). Search the list to see if your issue has already been raised.
+Please raise any bug reports or feature requests on the [Open Liberty Operator project repository's GitHub issue tracker](https://github.com/OpenLiberty/open-liberty-operator/issues). Search the list to see if your issue has already been raised.
 
 A good bug report is one that makes it easy for everyone to understand what you were trying to do and what went wrong. Please provide as much context as possible so we can try to recreate the issue.
 
