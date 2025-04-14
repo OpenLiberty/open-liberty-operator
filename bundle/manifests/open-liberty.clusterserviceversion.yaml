@@ -92,7 +92,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2025-03-28T20:03:56Z"
+    createdAt: "2025-04-14T19:19:06Z"
     description: Deploy and manage containerized Liberty applications
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "true"
@@ -605,6 +605,11 @@ spec:
         path: semeruCloudCompiler.resources
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
+      - description: The service port on the Semeru Cloud Compiler. Defaults to 38600.
+        displayName: Port
+        path: semeruCloudCompiler.port
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
       - description: Determines whether the access token that is provided in the request
           is used for authentication.
         displayName: Access Token Required

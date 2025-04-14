@@ -276,11 +276,12 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 	limitsMemory := getQuantityFromLimitsOrDefault(instanceResources, corev1.ResourceMemory, "1200Mi")
 	limitsCPU := getQuantityFromLimitsOrDefault(instanceResources, corev1.ResourceCPU, "2000m")
 
+	portNumber := *semeruCloudCompiler.GetPort()
 	// Liveness probe
 	livenessProbe := corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			TCPSocket: &corev1.TCPSocketAction{
-				Port: intstr.FromInt(38400),
+				Port: intstr.FromInt32(portNumber),
 			},
 		},
 		InitialDelaySeconds: 10,
@@ -291,7 +292,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 	readinessProbe := corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			TCPSocket: &corev1.TCPSocketAction{
-				Port: intstr.FromInt(38400),
+				Port: intstr.FromInt32(portNumber),
 			},
 		},
 		InitialDelaySeconds: 5,
@@ -338,7 +339,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 					Command:         []string{"jitserver"},
 					Ports: []corev1.ContainerPort{
 						{
-							ContainerPort: 38400,
+							ContainerPort: portNumber,
 							Protocol:      corev1.ProtocolTCP,
 						},
 					},
@@ -411,7 +412,10 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 }
 
 func reconcileSemeruService(svc *corev1.Service, ola *openlibertyv1.OpenLibertyApplication) {
-	var port int32 = 38400
+	var port int32 = 38600
+	if ola.GetSemeruCloudCompiler() != nil {
+		port = *ola.GetSemeruCloudCompiler().GetPort()
+	}
 	var timeout int32 = 86400
 	svc.Labels = getLabels(ola)
 	svc.Spec.Selector = getSelectors(ola)
