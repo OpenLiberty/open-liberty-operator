@@ -358,7 +358,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 						{Name: "OPENJ9_JAVA_OPTIONS", Value: "-XX:+JITServerLogConnections" +
 							" -XX:+JITServerShareROMClasses" +
 							" -XX:+JITServerHealthProbes" +
-							" -XX:JITServerHealthProbePort=" + strconv.FormatInt(int64(portNumber), 10) +
+							fmt.Sprintf(" -XX:JITServerHealthProbePort=%d", portNumber) +
 							" -XX:JITServerSSLKey=/etc/x509/certs/tls.key" +
 							" -XX:JITServerSSLCert=/etc/x509/certs/tls.crt"},
 					},
