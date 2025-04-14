@@ -277,6 +277,10 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 	limitsCPU := getQuantityFromLimitsOrDefault(instanceResources, corev1.ResourceCPU, "2000m")
 
 	portNumber := *semeruCloudCompiler.GetPort()
+	var healthProbesFlag = ""
+	if portNumber != 38400 {
+		healthProbesFlag = " -XX:+JITServerHealthProbes" + fmt.Sprintf(" -XX:JITServerHealthProbePort=%d", portNumber)
+	}
 
 	// Liveness probe
 	livenessProbe := corev1.Probe{
@@ -357,8 +361,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 					Env: []corev1.EnvVar{
 						{Name: "OPENJ9_JAVA_OPTIONS", Value: "-XX:+JITServerLogConnections" +
 							" -XX:+JITServerShareROMClasses" +
-							" -XX:+JITServerHealthProbes" +
-							fmt.Sprintf(" -XX:JITServerHealthProbePort=%d", portNumber) +
+							healthProbesFlag +
 							" -XX:JITServerSSLKey=/etc/x509/certs/tls.key" +
 							" -XX:JITServerSSLCert=/etc/x509/certs/tls.crt"},
 					},
