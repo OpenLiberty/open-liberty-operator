@@ -566,6 +566,11 @@ spec:
         path: probes.startupCheckInterval
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The service port on the Semeru Cloud Compiler. Defaults to 38600.
+        displayName: Port
+        path: semeruCloudCompiler.port
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
       - description: Determines whether the access token that is provided in the request
           is used for authentication.
         displayName: Access Token Required
