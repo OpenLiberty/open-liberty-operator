@@ -255,6 +255,7 @@ func (r *ReconcileOpenLiberty) deleteCompletedSemeruInstances(ola *openlibertyv1
 }
 
 func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.OpenLibertyApplication, deploy *appsv1.Deployment) {
+	var port int32 = 38400
 	deploy.Labels = getLabels(ola)
 	deploy.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
 
@@ -278,7 +279,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 
 	portNumber := *semeruCloudCompiler.GetPort()
 	var healthProbesFlag = ""
-	if portNumber != 38400 {
+	if portNumber != port {
 		healthProbesFlag = " -XX:+JITServerHealthProbes" + fmt.Sprintf(" -XX:JITServerHealthProbePort=%d", portNumber)
 	}
 
@@ -306,6 +307,20 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 
 	semeruPodMatchLabels := map[string]string{
 		"app.kubernetes.io/instance": getSemeruCompilerNameWithGeneration(ola),
+	}
+	containerPorts := []corev1.ContainerPort{
+		{
+			ContainerPort: port,
+			Protocol:      corev1.ProtocolTCP,
+		},
+	}
+	if portNumber != port {
+		containerPorts[0].Name = fmt.Sprintf("%d-tcp", port)
+		containerPorts = append(containerPorts, corev1.ContainerPort{
+			Name:          fmt.Sprintf("%d-tcp", portNumber),
+			ContainerPort: portNumber,
+			Protocol:      corev1.ProtocolTCP,
+		})
 	}
 	deploy.Spec.Template = corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
@@ -342,12 +357,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 					Image:           ola.Status.GetImageReference(),
 					ImagePullPolicy: *ola.GetPullPolicy(),
 					Command:         []string{"jitserver"},
-					Ports: []corev1.ContainerPort{
-						{
-							ContainerPort: portNumber,
-							Protocol:      corev1.ProtocolTCP,
-						},
-					},
+					Ports:           containerPorts,
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceMemory: requestsMemory,
