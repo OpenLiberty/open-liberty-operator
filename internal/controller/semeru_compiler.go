@@ -278,10 +278,6 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 	limitsCPU := getQuantityFromLimitsOrDefault(instanceResources, corev1.ResourceCPU, "2000m")
 
 	portNumber := *semeruCloudCompiler.GetPort()
-	var healthProbesFlag = ""
-	if portNumber != port {
-		healthProbesFlag = " -XX:+JITServerHealthProbes" + fmt.Sprintf(" -XX:JITServerHealthProbePort=%d", portNumber)
-	}
 
 	// Liveness probe
 	livenessProbe := corev1.Probe{
@@ -314,7 +310,10 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 			Protocol:      corev1.ProtocolTCP,
 		},
 	}
+
+	healthProbesFlag := ""
 	if portNumber != port {
+		healthProbesFlag = " -XX:+JITServerHealthProbes" + fmt.Sprintf(" -XX:JITServerHealthProbePort=%d", portNumber)
 		containerPorts[0].Name = fmt.Sprintf("%d-tcp", port)
 		containerPorts = append(containerPorts, corev1.ContainerPort{
 			Name:          fmt.Sprintf("%d-tcp", portNumber),
