@@ -418,20 +418,29 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 }
 
 func reconcileSemeruService(svc *corev1.Service, ola *openlibertyv1.OpenLibertyApplication) {
-	var port int32 = 38600
-	if ola.GetSemeruCloudCompiler() != nil {
-		port = *ola.GetSemeruCloudCompiler().GetPort()
-	}
+	var port int32 = 38400
 	var timeout int32 = 86400
 	svc.Labels = getLabels(ola)
 	svc.Spec.Selector = getSelectors(ola)
 	utils.CustomizeServiceAnnotations(svc)
-	if len(svc.Spec.Ports) == 0 {
+	numPorts := len(svc.Spec.Ports)
+	if numPorts == 0 {
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{})
 	}
+
 	svc.Spec.Ports[0].Protocol = corev1.ProtocolTCP
 	svc.Spec.Ports[0].Port = port
 	svc.Spec.Ports[0].TargetPort = intstr.FromInt(int(port))
+	portNumber := *ola.GetSemeruCloudCompiler().GetPort()
+	if portNumber != port {
+		numPorts = len(svc.Spec.Ports)
+		if numPorts == 1 {
+			svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{})
+		}
+		svc.Spec.Ports[1].Protocol = corev1.ProtocolTCP
+		svc.Spec.Ports[1].Port = portNumber
+		svc.Spec.Ports[1].TargetPort = intstr.FromInt(int(portNumber))
+	}
 	svc.Spec.SessionAffinity = corev1.ServiceAffinityClientIP
 	svc.Spec.SessionAffinityConfig = &corev1.SessionAffinityConfig{
 		ClientIP: &corev1.ClientIPConfig{
