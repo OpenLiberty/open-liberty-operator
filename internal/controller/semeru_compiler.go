@@ -428,6 +428,7 @@ func reconcileSemeruService(svc *corev1.Service, ola *openlibertyv1.OpenLibertyA
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{})
 	}
 
+	svc.Spec.Ports[0].Name = fmt.Sprintf("%d-tcp", port)
 	svc.Spec.Ports[0].Protocol = corev1.ProtocolTCP
 	svc.Spec.Ports[0].Port = port
 	svc.Spec.Ports[0].TargetPort = intstr.FromInt(int(port))
@@ -437,6 +438,7 @@ func reconcileSemeruService(svc *corev1.Service, ola *openlibertyv1.OpenLibertyA
 		if numPorts == 1 {
 			svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{})
 		}
+		svc.Spec.Ports[1].Name = fmt.Sprintf("%d-tcp", portNumber)
 		svc.Spec.Ports[1].Protocol = corev1.ProtocolTCP
 		svc.Spec.Ports[1].Port = portNumber
 		svc.Spec.Ports[1].TargetPort = intstr.FromInt(int(portNumber))
