@@ -304,12 +304,11 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 	semeruPodMatchLabels := map[string]string{
 		"app.kubernetes.io/instance": getSemeruCompilerNameWithGeneration(ola),
 	}
-	containerPorts := []corev1.ContainerPort{
-		{
-			ContainerPort: port,
-			Protocol:      corev1.ProtocolTCP,
-		},
-	}
+	containerPorts := make([]corev1.ContainerPort, 0)
+	containerPorts = append(containerPorts, corev1.ContainerPort{
+		ContainerPort: port,
+		Protocol:      corev1.ProtocolTCP,
+	})
 
 	healthProbesFlag := ""
 	if portNumber != port {
