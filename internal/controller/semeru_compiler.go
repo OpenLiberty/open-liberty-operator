@@ -589,18 +589,12 @@ func getSemeruCertVolume(ola *openlibertyv1.OpenLibertyApplication) *corev1.Volu
 
 func (r *ReconcileOpenLiberty) getSemeruJavaOptions(instance *openlibertyv1.OpenLibertyApplication) []string {
 	if r.isSemeruEnabled(instance) {
-		portNumber := *instance.GetSemeruCloudCompiler().GetPort()
 		certificateLocation := "/etc/x509/semeru-certs/ca.crt"
 		if instance.Status.SemeruCompiler != nil && strings.HasSuffix(instance.Status.SemeruCompiler.TLSSecretName, "-ocp") {
 			certificateLocation = "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
 		}
 		jitServerAddress := instance.Status.SemeruCompiler.ServiceHostname
-		var jitServerOptions string
-		if portNumber == 38400 {
-			jitServerOptions = fmt.Sprintf("-XX:+UseJITServer -XX:+JITServerLogConnections -XX:JITServerAddress=%v -XX:JITServerSSLRootCerts=%v", jitServerAddress, certificateLocation)
-		} else {
-			jitServerOptions = fmt.Sprintf("-XX:+UseJITServer -XX:+JITServerLogConnections -XX:JITServerAddress=%v -XX:JITServerSSLRootCerts=%v -XX:+JITServerHealthProbes -XX:JITServerHealthProbePort=%d", jitServerAddress, certificateLocation, portNumber)
-		}
+		jitServerOptions := fmt.Sprintf("-XX:+UseJITServer -XX:+JITServerLogConnections -XX:JITServerAddress=%v -XX:JITServerSSLRootCerts=%v", jitServerAddress, certificateLocation)
 
 		args := []string{
 			"/bin/bash",
