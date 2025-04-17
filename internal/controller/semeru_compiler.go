@@ -278,12 +278,12 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 	limitsCPU := getQuantityFromLimitsOrDefault(instanceResources, corev1.ResourceCPU, "2000m")
 
 	portNumber := *semeruCloudCompiler.GetPort()
-	portIntOrStr := intstr.FromString(fmt.Sprintf("%d-tcp", portNumber))
-	// if portNumber == port {
-	// 	portIntOrStr = intstr.FromInt32(portNumber)
-	// } else {
-	// 	portIntOrStr = intstr.FromString(fmt.Sprintf("%d-tcp", portNumber))
-	// }
+	var portIntOrStr intstr.IntOrString
+	if portNumber == port {
+		portIntOrStr = intstr.FromInt32(portNumber)
+	} else {
+		portIntOrStr = intstr.FromString(fmt.Sprintf("%d-tcp", portNumber))
+	}
 	// Liveness probe
 	livenessProbe := corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
