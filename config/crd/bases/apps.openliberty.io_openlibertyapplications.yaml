@@ -5175,7 +5175,7 @@ spec:
                     description: Enable the Semeru Cloud Compiler. Defaults to false.
                     type: boolean
                   port:
-                    description: The service port on the Semeru Cloud Compiler. Defaults
+                    description: The health port for the Semeru Cloud Compiler. Defaults
                       to 38600.
                     format: int32
                     type: integer

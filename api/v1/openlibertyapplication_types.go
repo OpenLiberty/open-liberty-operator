@@ -482,7 +482,7 @@ type OpenLibertyApplicationSemeruCloudCompiler struct {
 	// Resource requests and limits for the Semeru Cloud Compiler. The CPU defaults to 100m with a limit of 2000m. The memory defaults to 800Mi, with a limit of 1200Mi.
 	// +operator-sdk:csv:customresourcedefinitions:order=54,type=spec,displayName="Resource Requirements",xDescriptors="urn:alm:descriptor:com.tectonic.ui:resourceRequirements"
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
-	// The service port on the Semeru Cloud Compiler. Defaults to 38600.
+	// The health port for the Semeru Cloud Compiler. Defaults to 38600.
 	// +operator-sdk:csv:customresourcedefinitions:order=55,type=spec,displayName="Port",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
 	Port *int32 `json:"port,omitempty"`
 }
