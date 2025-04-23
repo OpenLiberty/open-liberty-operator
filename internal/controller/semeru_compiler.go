@@ -277,12 +277,12 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 	limitsMemory := getQuantityFromLimitsOrDefault(instanceResources, corev1.ResourceMemory, "1200Mi")
 	limitsCPU := getQuantityFromLimitsOrDefault(instanceResources, corev1.ResourceCPU, "2000m")
 
-	portNumber := port
+	healthPort := port
 	if semeruCloudCompiler.GetHealth() != nil {
-		portNumber = *semeruCloudCompiler.GetHealth().GetPort()
+		healthPort = *semeruCloudCompiler.GetHealth().GetPort()
 	}
 	var portIntOrStr intstr.IntOrString
-	if portNumber == port {
+	if healthPort == port {
 		portIntOrStr = intstr.FromInt32(port)
 	} else {
 		portIntOrStr = intstr.FromString(fmt.Sprintf("%d-tcp", port))
@@ -319,12 +319,12 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 	})
 
 	healthProbesFlag := ""
-	if portNumber != port {
-		healthProbesFlag = " -XX:+JITServerHealthProbes" + fmt.Sprintf(" -XX:JITServerHealthProbePort=%d", portNumber)
+	if healthPort != port {
+		healthProbesFlag = " -XX:+JITServerHealthProbes" + fmt.Sprintf(" -XX:JITServerHealthProbePort=%d", healthPort)
 		containerPorts[0].Name = fmt.Sprintf("%d-tcp", port)
 		containerPorts = append(containerPorts, corev1.ContainerPort{
-			Name:          fmt.Sprintf("%d-tcp", portNumber),
-			ContainerPort: portNumber,
+			Name:          fmt.Sprintf("%d-tcp", healthPort),
+			ContainerPort: healthPort,
 			Protocol:      corev1.ProtocolTCP,
 		})
 	}
@@ -447,21 +447,21 @@ func reconcileSemeruService(svc *corev1.Service, ola *openlibertyv1.OpenLibertyA
 	svc.Spec.Ports[0].Protocol = corev1.ProtocolTCP
 	svc.Spec.Ports[0].Port = port
 	svc.Spec.Ports[0].TargetPort = intstr.FromInt(int(port))
-	portNumber := port
+	healthPort := port
 	if ola.GetSemeruCloudCompiler().GetHealth() != nil {
-		portNumber = *ola.GetSemeruCloudCompiler().GetHealth().GetPort()
+		healthPort = *ola.GetSemeruCloudCompiler().GetHealth().GetPort()
 	}
-	if portNumber != port {
+	if healthPort != port {
 		numPorts = len(svc.Spec.Ports)
 		if numPorts == 1 {
 			svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{})
 		}
 		svc.Spec.Ports[0].Name = fmt.Sprintf("%d-tcp", port)
 		svc.Spec.Ports[0].TargetPort = intstr.FromString(fmt.Sprintf("%d-tcp", port))
-		svc.Spec.Ports[1].Name = fmt.Sprintf("%d-tcp", portNumber)
+		svc.Spec.Ports[1].Name = fmt.Sprintf("%d-tcp", healthPort)
 		svc.Spec.Ports[1].Protocol = corev1.ProtocolTCP
-		svc.Spec.Ports[1].Port = portNumber
-		svc.Spec.Ports[1].TargetPort = intstr.FromString(fmt.Sprintf("%d-tcp", portNumber))
+		svc.Spec.Ports[1].Port = healthPort
+		svc.Spec.Ports[1].TargetPort = intstr.FromString(fmt.Sprintf("%d-tcp", healthPort))
 	}
 	svc.Spec.SessionAffinity = corev1.ServiceAffinityClientIP
 	svc.Spec.SessionAffinityConfig = &corev1.SessionAffinityConfig{
