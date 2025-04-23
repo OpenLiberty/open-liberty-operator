@@ -606,7 +606,7 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
       - description: The health settings for the Semeru Cloud Compiler.
-        displayName: Serviceability
+        displayName: Health
         path: semeruCloudCompiler.health
       - description: The health port for the Semeru Cloud Compiler. Defaults to 38600.
         displayName: Port
