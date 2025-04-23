@@ -256,6 +256,7 @@ func (r *ReconcileOpenLiberty) deleteCompletedSemeruInstances(ola *openlibertyv1
 
 func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.OpenLibertyApplication, deploy *appsv1.Deployment) {
 	var port int32 = 38400
+	var healthPort int32 = 38600
 	deploy.Labels = getLabels(ola)
 	deploy.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
 
@@ -277,7 +278,6 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 	limitsMemory := getQuantityFromLimitsOrDefault(instanceResources, corev1.ResourceMemory, "1200Mi")
 	limitsCPU := getQuantityFromLimitsOrDefault(instanceResources, corev1.ResourceCPU, "2000m")
 
-	healthPort := port
 	if semeruCloudCompiler.GetHealth() != nil {
 		healthPort = *semeruCloudCompiler.GetHealth().GetPort()
 	}
