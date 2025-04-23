@@ -277,7 +277,10 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 	limitsMemory := getQuantityFromLimitsOrDefault(instanceResources, corev1.ResourceMemory, "1200Mi")
 	limitsCPU := getQuantityFromLimitsOrDefault(instanceResources, corev1.ResourceCPU, "2000m")
 
-	portNumber := *semeruCloudCompiler.GetPort()
+	portNumber := port
+	if semeruCloudCompiler.GetHealth() != nil {
+		portNumber = *semeruCloudCompiler.GetHealth().GetPort()
+	}
 	var portIntOrStr intstr.IntOrString
 	if portNumber == port {
 		portIntOrStr = intstr.FromInt32(port)
@@ -444,7 +447,10 @@ func reconcileSemeruService(svc *corev1.Service, ola *openlibertyv1.OpenLibertyA
 	svc.Spec.Ports[0].Protocol = corev1.ProtocolTCP
 	svc.Spec.Ports[0].Port = port
 	svc.Spec.Ports[0].TargetPort = intstr.FromInt(int(port))
-	portNumber := *ola.GetSemeruCloudCompiler().GetPort()
+	portNumber := port
+	if ola.GetSemeruCloudCompiler().GetHealth() != nil {
+		portNumber = *ola.GetSemeruCloudCompiler().GetHealth().GetPort()
+	}
 	if portNumber != port {
 		numPorts = len(svc.Spec.Ports)
 		if numPorts == 1 {

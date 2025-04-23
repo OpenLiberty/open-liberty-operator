@@ -5178,11 +5178,15 @@ spec:
                   enable:
                     description: Enable the Semeru Cloud Compiler. Defaults to false.
                     type: boolean
-                  port:
-                    description: The health port for the Semeru Cloud Compiler. Defaults
-                      to 38600.
-                    format: int32
-                    type: integer
+                  health:
+                    description: The health settings for the Semeru Cloud Compiler.
+                    properties:
+                      port:
+                        description: The health port for the Semeru Cloud Compiler.
+                          Defaults to 38600.
+                        format: int32
+                        type: integer
+                    type: object
                   replicas:
                     description: Number of desired pods for the Semeru Cloud Compiler.
                       Defaults to 1.

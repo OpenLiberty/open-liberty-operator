@@ -667,9 +667,12 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
       - description: The service port on the Semeru Cloud Compiler. Defaults to 38600.
+      - description: The health settings for the Semeru Cloud Compiler.
+        displayName: Serviceability
+        path: semeruCloudCompiler.health
       - description: The health port for the Semeru Cloud Compiler. Defaults to 38600.
         displayName: Port
-        path: semeruCloudCompiler.port
+        path: semeruCloudCompiler.health.port
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:number
       - description: Determines whether the access token that is provided in the request
