@@ -435,6 +435,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 
 func reconcileSemeruService(svc *corev1.Service, ola *openlibertyv1.OpenLibertyApplication) {
 	var port int32 = 38400
+	var healthPort int32 = 38600
 	var timeout int32 = 86400
 	svc.Labels = getLabels(ola)
 	svc.Spec.Selector = getSelectors(ola)
@@ -447,7 +448,6 @@ func reconcileSemeruService(svc *corev1.Service, ola *openlibertyv1.OpenLibertyA
 	svc.Spec.Ports[0].Protocol = corev1.ProtocolTCP
 	svc.Spec.Ports[0].Port = port
 	svc.Spec.Ports[0].TargetPort = intstr.FromInt(int(port))
-	healthPort := port
 	if ola.GetSemeruCloudCompiler().GetHealth() != nil {
 		healthPort = *ola.GetSemeruCloudCompiler().GetHealth().GetPort()
 	}
