@@ -668,7 +668,7 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:text
       - description: The service port on the Semeru Cloud Compiler. Defaults to 38600.
       - description: The health settings for the Semeru Cloud Compiler.
-        displayName: Serviceability
+        displayName: Health
         path: semeruCloudCompiler.health
       - description: The health port for the Semeru Cloud Compiler. Defaults to 38600.
         displayName: Port

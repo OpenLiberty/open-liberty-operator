@@ -483,7 +483,7 @@ type OpenLibertyApplicationSemeruCloudCompiler struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=54,type=spec,displayName="Resource Requirements",xDescriptors="urn:alm:descriptor:com.tectonic.ui:resourceRequirements"
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 	// The health settings for the Semeru Cloud Compiler.
-	// +operator-sdk:csv:customresourcedefinitions:order=55,type=spec,displayName="Serviceability"
+	// +operator-sdk:csv:customresourcedefinitions:order=55,type=spec,displayName="Health"
 	Health *OpenLibertyApplicationSemeruCloudCompilerHealth `json:"health,omitempty"`
 }
 
