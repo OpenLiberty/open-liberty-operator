@@ -48,11 +48,47 @@ const (
 	StatusReferenceSemeruInstancesCompleted = "semeruInstancesCompleted"
 )
 
-// Create the Deployment and Service objects for a Semeru Compiler used by an Open Liberty Application
-func (r *ReconcileOpenLiberty) reconcileSemeruCompiler(ola *openlibertyv1.OpenLibertyApplication) (error, string, bool) {
-	compilerMeta := metav1.ObjectMeta{
+func getCompilerMeta(ola *openlibertyv1.OpenLibertyApplication) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
 		Name:      getSemeruCompilerNameWithGeneration(ola),
 		Namespace: ola.GetNamespace(),
+	}
+}
+
+func (r *ReconcileOpenLiberty) upgradeSemeruPorts(inputMeta metav1.ObjectMeta, ola *openlibertyv1.OpenLibertyApplication) metav1.ObjectMeta {
+	var healthPort int32 = 38600
+	if ola.GetSemeruCloudCompiler().GetHealth() != nil {
+		healthPort = *ola.GetSemeruCloudCompiler().GetHealth().GetPort()
+	}
+	semeruDeployment := &appsv1.Deployment{ObjectMeta: inputMeta}
+	if r.GetClient().Get(context.TODO(), types.NamespacedName{Name: semeruDeployment.Name, Namespace: semeruDeployment.Namespace}, semeruDeployment) == nil {
+		containsHealthPort := false
+		for _, container := range semeruDeployment.Spec.Template.Spec.Containers {
+			for _, port := range container.Ports {
+				if port.ContainerPort == healthPort {
+					containsHealthPort = true
+					break
+				}
+			}
+			if containsHealthPort {
+				break
+			}
+		}
+		if !containsHealthPort {
+			createNewSemeruGeneration(ola) // update generation
+			return getCompilerMeta(ola)    // adjust compilerMeta to reference the new generation
+		}
+	}
+	return inputMeta
+}
+
+// Create the Deployment and Service objects for a Semeru Compiler used by an Open Liberty Application
+func (r *ReconcileOpenLiberty) reconcileSemeruCompiler(ola *openlibertyv1.OpenLibertyApplication) (error, string, bool) {
+	compilerMeta := getCompilerMeta(ola)
+
+	// check for any diffs that require generation changes
+	if r.isSemeruEnabled(ola) {
+		compilerMeta = r.upgradeSemeruPorts(compilerMeta, ola)
 	}
 
 	currentGeneration := getGeneration(ola)
