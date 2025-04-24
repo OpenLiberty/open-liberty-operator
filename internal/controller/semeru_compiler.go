@@ -46,6 +46,7 @@ const (
 	SemeruGenerationLabelNameSuffix         = "/semeru-compiler-generation"
 	StatusReferenceSemeruGeneration         = "semeruGeneration"
 	StatusReferenceSemeruInstancesCompleted = "semeruInstancesCompleted"
+	SemeruContainerName                     = "compiler"
 )
 
 func getCompilerMeta(ola *openlibertyv1.OpenLibertyApplication) metav1.ObjectMeta {
@@ -53,6 +54,15 @@ func getCompilerMeta(ola *openlibertyv1.OpenLibertyApplication) metav1.ObjectMet
 		Name:      getSemeruCompilerNameWithGeneration(ola),
 		Namespace: ola.GetNamespace(),
 	}
+}
+
+func getSemeruDeploymentContainer(deploy *appsv1.Deployment) (corev1.Container, error) {
+	for _, container := range deploy.Spec.Template.Spec.Containers {
+		if container.Name == SemeruContainerName {
+			return container, nil
+		}
+	}
+	return corev1.Container{}, fmt.Errorf("could not find the Semeru Deployment container")
 }
 
 // Returns true if the semeru health port configuration has changed otherwise false
@@ -63,15 +73,17 @@ func (r *ReconcileOpenLiberty) upgradeSemeruHealthPorts(inputMeta metav1.ObjectM
 	}
 	semeruDeployment := &appsv1.Deployment{ObjectMeta: inputMeta}
 	if r.GetClient().Get(context.TODO(), types.NamespacedName{Name: semeruDeployment.Name, Namespace: semeruDeployment.Namespace}, semeruDeployment) == nil {
+		container, err := getSemeruDeploymentContainer(semeruDeployment)
+		if err != nil {
+			return false
+		}
+		if healthPort == 38400 && len(container.Ports) > 1 {
+			return true
+		}
 		containsHealthPort := false
-		for _, container := range semeruDeployment.Spec.Template.Spec.Containers {
-			for _, port := range container.Ports {
-				if port.ContainerPort == healthPort {
-					containsHealthPort = true
-				}
-			}
-			if containsHealthPort {
-				break
+		for _, port := range container.Ports {
+			if port.ContainerPort == healthPort {
+				containsHealthPort = true
 			}
 		}
 		if !containsHealthPort {
@@ -398,7 +410,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 			},
 			Containers: []corev1.Container{
 				{
-					Name:            "compiler",
+					Name:            SemeruContainerName,
 					Image:           ola.Status.GetImageReference(),
 					ImagePullPolicy: *ola.GetPullPolicy(),
 					Command:         []string{"jitserver"},
