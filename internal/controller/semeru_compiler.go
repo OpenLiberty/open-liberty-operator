@@ -55,7 +55,8 @@ func getCompilerMeta(ola *openlibertyv1.OpenLibertyApplication) metav1.ObjectMet
 	}
 }
 
-func (r *ReconcileOpenLiberty) upgradeSemeruPorts(inputMeta metav1.ObjectMeta, ola *openlibertyv1.OpenLibertyApplication) metav1.ObjectMeta {
+// Returns true if the semeru health port configuration has changed otherwise false
+func (r *ReconcileOpenLiberty) upgradeSemeruHealthPorts(inputMeta metav1.ObjectMeta, ola *openlibertyv1.OpenLibertyApplication) bool {
 	var healthPort int32 = 38600
 	if ola.GetSemeruCloudCompiler().GetHealth() != nil {
 		healthPort = *ola.GetSemeruCloudCompiler().GetHealth().GetPort()
@@ -67,7 +68,6 @@ func (r *ReconcileOpenLiberty) upgradeSemeruPorts(inputMeta metav1.ObjectMeta, o
 			for _, port := range container.Ports {
 				if port.ContainerPort == healthPort {
 					containsHealthPort = true
-					break
 				}
 			}
 			if containsHealthPort {
@@ -75,11 +75,10 @@ func (r *ReconcileOpenLiberty) upgradeSemeruPorts(inputMeta metav1.ObjectMeta, o
 			}
 		}
 		if !containsHealthPort {
-			createNewSemeruGeneration(ola) // update generation
-			return getCompilerMeta(ola)    // adjust compilerMeta to reference the new generation
+			return true
 		}
 	}
-	return inputMeta
+	return false
 }
 
 // Create the Deployment and Service objects for a Semeru Compiler used by an Open Liberty Application
@@ -88,7 +87,11 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCompiler(ola *openlibertyv1.OpenLi
 
 	// check for any diffs that require generation changes
 	if r.isSemeruEnabled(ola) {
-		compilerMeta = r.upgradeSemeruPorts(compilerMeta, ola)
+		upgradeRequired := r.upgradeSemeruHealthPorts(compilerMeta, ola)
+		if upgradeRequired {
+			createNewSemeruGeneration(ola)      // update generation
+			compilerMeta = getCompilerMeta(ola) // adjust compilerMeta to reference the new generation
+		}
 	}
 
 	currentGeneration := getGeneration(ola)
