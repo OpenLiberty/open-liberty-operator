@@ -336,7 +336,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 	if healthPort == port {
 		portIntOrStr = intstr.FromInt32(port)
 	} else {
-		portIntOrStr = intstr.FromString(fmt.Sprintf("%d-tcp", port))
+		portIntOrStr = intstr.FromString(fmt.Sprintf("%d-tcp", healthPort))
 	}
 	// Liveness probe
 	livenessProbe := corev1.Probe{
