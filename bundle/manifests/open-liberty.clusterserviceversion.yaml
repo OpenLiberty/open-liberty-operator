@@ -92,7 +92,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2025-03-28T20:03:56Z"
+    createdAt: "2025-05-02T21:11:52Z"
     description: Deploy and manage containerized Liberty applications
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "true"
@@ -101,7 +101,7 @@ metadata:
     features.operators.openshift.io/token-auth-aws: "false"
     features.operators.openshift.io/token-auth-azure: "false"
     features.operators.openshift.io/token-auth-gcp: "false"
-    olm.skipRange: '>=0.8.0 <1.4.2'
+    olm.skipRange: '>=0.8.0 <1.4.3'
     operators.operatorframework.io/builder: operator-sdk-v1.37.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/OpenLiberty/open-liberty-operator
@@ -111,7 +111,7 @@ metadata:
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
     operatorframework.io/os.linux: supported
-  name: open-liberty.v1.4.2
+  name: open-liberty.v1.4.3
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -1469,4 +1469,4 @@ spec:
     name: liberty-sample-app
   - image: icr.io/appcafe/open-liberty-operator:daily
     name: open-liberty-operator
-  version: 1.4.2
+  version: 1.4.3
