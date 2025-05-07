@@ -1,0 +1,10 @@
+tree:
+  v1_4_2:
+    name: "*"
+  v10_4_3:
+    type:
+      aname: other
+      name: "*"
+replace:
+  v10_4_3:
+    "v1_4_2.name.*":  "v10_4_3.type.name.*"

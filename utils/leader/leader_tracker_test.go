@@ -1,9 +1,10 @@
-package utils
+package leader
 
 import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -11,12 +12,47 @@ import (
 	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
+
+var (
+	name                    = "app"
+	namespace               = "leader-test"
+	appImage                = "my-image"
+	consoleFormat           = "json"
+	replicas          int32 = 3
+	clusterType             = corev1.ServiceTypeClusterIP
+	operatorName            = "open-liberty-operator"
+	operatorShortName       = "olo"
+)
+
+type Test struct {
+	test     string
+	expected interface{}
+	actual   interface{}
+}
+
+func verifyTests(tests []Test) error {
+	for _, tt := range tests {
+		if !reflect.DeepEqual(tt.actual, tt.expected) {
+			return fmt.Errorf("%s test expected: (%v) actual: (%v)", tt.test, tt.expected, tt.actual)
+		}
+	}
+	return nil
+}
+
+func createOpenLibertyApp(n, ns string, spec openlibertyv1.OpenLibertyApplicationSpec) *openlibertyv1.OpenLibertyApplication {
+	app := &openlibertyv1.OpenLibertyApplication{
+		ObjectMeta: metav1.ObjectMeta{Name: n, Namespace: ns},
+		Spec:       spec,
+	}
+	return app
+}
 
 func TestCustomizeLeaderTrackerNil(t *testing.T) {
 	leaderTracker := &corev1.Secret{}
@@ -317,7 +353,7 @@ func TestGetLeaderTrackerWithoutSecret(t *testing.T) {
 	cl := fakeclient.NewFakeClient(objs...)
 
 	var referenceLeaderTrackers *[]LeaderTracker
-	leaderTrackerSecret, leaderTrackers, err := GetLeaderTracker(instance, "olo", "ltpa", cl)
+	leaderTrackerSecret, leaderTrackers, err := GetLeaderTracker(instance.GetNamespace(), operatorName, operatorShortName, "ltpa", cl)
 	tests := []Test{
 		{"get leader tracker without secret - secret name matches", "olo-managed-leader-tracking-ltpa", leaderTrackerSecret.Name},
 		{"get leader tracker without secret - leaderTrackers is nil", referenceLeaderTrackers, leaderTrackers},
@@ -345,7 +381,7 @@ func TestGetLeaderTrackerWithEmptySecret(t *testing.T) {
 	emptySecret.Namespace = namespace
 	createEmptySecretErr := cl.Create(context.TODO(), emptySecret)
 
-	_, leaderTrackers, err := GetLeaderTracker(instance, "olo", "ltpa", cl)
+	_, leaderTrackers, err := GetLeaderTracker(instance.GetNamespace(), operatorName, operatorShortName, "ltpa", cl)
 	tests := []Test{
 		{"get leader tracker with empty secret - create empty secret without error", nil, createEmptySecretErr},
 		{"get leader tracker with empty secret - no error", nil, err},
@@ -380,7 +416,7 @@ func TestGetLeaderTrackerWithOneSecretEntry(t *testing.T) {
 	// oneSecret.Data[ResourceSubleasesKey] = []byte(mockLeaderTracker.Sublease)
 	createOneSecretErr := cl.Create(context.TODO(), oneSecret)
 
-	_, leaderTrackers, err := GetLeaderTracker(instance, "olo", "ltpa", cl)
+	_, leaderTrackers, err := GetLeaderTracker(instance.GetNamespace(), operatorName, operatorShortName, "ltpa", cl)
 	tests := []Test{
 		{"get leader tracker with one secret entry - create secret without error", nil, createOneSecretErr},
 		{"get leader tracker with one secret entry - no error", nil, err},
@@ -418,7 +454,7 @@ func TestGetLeaderTrackerWithOneSecretEntryWithMissingKey(t *testing.T) {
 	oneSecret.Data[ResourcePathIndicesKey] = []byte(mockLeaderTracker.PathIndex)
 	// oneSecret.Data[ResourcePathsKey] = []byte(mockLeaderTracker.Path) // remove path key
 	createOneSecretErr := cl.Create(context.TODO(), oneSecret)
-	_, leaderTrackers, err := GetLeaderTracker(instance, "olo", "ltpa", cl)
+	_, leaderTrackers, err := GetLeaderTracker(instance.GetNamespace(), operatorName, operatorShortName, "ltpa", cl)
 
 	// GetLeaderTracker should delete the secret
 	checkOneSecret := &corev1.Secret{}
@@ -461,7 +497,7 @@ func TestGetLeaderTrackerWithTwoSecretEntries(t *testing.T) {
 	twoSecret.Data[ResourcePathsKey] = []byte(fmt.Sprintf("%s,%s", mock1LeaderTracker.Path, mock2LeaderTracker.Path))
 	// twoSecret.Data[ResourceSubleasesKey] = []byte(fmt.Sprintf("%s,%s", mock1LeaderTracker.Sublease, mock2LeaderTracker.Sublease))
 	createTwoSecretErr := cl.Create(context.TODO(), twoSecret)
-	_, leaderTrackers, err := GetLeaderTracker(instance, "olo", "ltpa", cl)
+	_, leaderTrackers, err := GetLeaderTracker(instance.GetNamespace(), operatorName, operatorShortName, "ltpa", cl)
 
 	tests := []Test{
 		{"get leader tracker with two secret entries - create secret without error", nil, createTwoSecretErr},
@@ -505,7 +541,7 @@ func TestGetLeaderTrackerWithTwoSecretEntriesAndMissingEntry(t *testing.T) {
 	twoSecret.Data[ResourcePathIndicesKey] = []byte(fmt.Sprintf("%s,%s", mock1LeaderTracker.PathIndex, mock2LeaderTracker.PathIndex))
 	// twoSecret.Data[ResourcePathsKey] = []byte(fmt.Sprintf("%s,%s", mock1LeaderTracker.Path, mock2LeaderTracker.Path)) // missing mock2LeaderTracker.Sublease
 	createTwoSecretErr := cl.Create(context.TODO(), twoSecret)
-	_, leaderTrackers, err := GetLeaderTracker(instance, "olo", "ltpa", cl)
+	_, leaderTrackers, err := GetLeaderTracker(instance.GetNamespace(), operatorName, operatorShortName, "ltpa", cl)
 
 	// GetLeaderTracker should delete the secret
 	checkTwoSecret := &corev1.Secret{}
@@ -564,7 +600,7 @@ func Test_getUnstructuredResourceSignatureWithMissingSignature(t *testing.T) {
 
 func TestCreateUnstructuredResourceFromSignature(t *testing.T) {
 	testsFolder := getTestsFolder()
-	unstructuredLibertyApp, unstructuredLibertyAppName, err := CreateUnstructuredResourceFromSignature("olo", &testsFolder, "olo")
+	unstructuredLibertyApp, unstructuredLibertyAppName, err := CreateUnstructuredResourceFromSignature(operatorShortName, &testsFolder, operatorShortName)
 	tests := []Test{
 		{"create unstructured resource from signature - no error", nil, err},
 		{"create unstructured resource from signature - liberty app kind ", "OpenLibertyApplication", unstructuredLibertyApp.GetKind()},
@@ -578,7 +614,7 @@ func TestCreateUnstructuredResourceFromSignature(t *testing.T) {
 
 func TestCreateUnstructuredResourceFromSignatureWithInvalidSignature(t *testing.T) {
 	testsFolder := getTestsFolder()
-	unstructuredLibertyApp, unstructuredLibertyAppName, err := CreateUnstructuredResourceFromSignature("invalid-olo", &testsFolder, "olo")
+	unstructuredLibertyApp, unstructuredLibertyAppName, err := CreateUnstructuredResourceFromSignature("invalid-olo", &testsFolder, operatorShortName)
 	var nilUnstructuredLibertyApp *unstructured.Unstructured
 	tests := []Test{
 		{"create unstructured resource from signature, invalid YAML - has error", false, err == nil},
@@ -590,7 +626,7 @@ func TestCreateUnstructuredResourceFromSignatureWithInvalidSignature(t *testing.
 	}
 
 	// check when more arguments are provided than replacement tokens in olo-signature.yaml
-	unstructuredLibertyApp, unstructuredLibertyAppName, err = CreateUnstructuredResourceFromSignature("olo", &testsFolder, "olo", "one", "two", "three", "four")
+	unstructuredLibertyApp, unstructuredLibertyAppName, err = CreateUnstructuredResourceFromSignature(operatorShortName, &testsFolder, operatorShortName, "one", "two", "three", "four")
 	tests = []Test{
 		{"create unstructured resource from signature, invalid name replacement 1 - has error", false, err == nil},
 		{"create unstructured resource from signature, invalid name replacement 1 - liberty app is nil", nilUnstructuredLibertyApp, unstructuredLibertyApp},
@@ -614,7 +650,7 @@ func TestCreateUnstructuredResourceFromSignatureWithInvalidSignature(t *testing.
 
 func TestCreateUnstructuredResourceListFromSignature(t *testing.T) {
 	testsFolder := getTestsFolder()
-	unstructuredLibertyAppList, _, err := CreateUnstructuredResourceListFromSignature("olo", &testsFolder, "olo")
+	unstructuredLibertyAppList, _, err := CreateUnstructuredResourceListFromSignature(operatorShortName, &testsFolder, operatorShortName)
 	tests := []Test{
 		{"create unstructured resource list from signature - no error", nil, err},
 		{"create unstructured resource list from signature - liberty app list kind ", "OpenLibertyApplication", unstructuredLibertyAppList.GetKind()},
@@ -627,7 +663,7 @@ func TestCreateUnstructuredResourceListFromSignature(t *testing.T) {
 
 func TestCreateUnstructuredResourceListFromSignatureWithInvalidSignature(t *testing.T) {
 	testsFolder := getTestsFolder()
-	unstructuredLibertyAppList, _, err := CreateUnstructuredResourceListFromSignature("invalid-olo", &testsFolder, "olo")
+	unstructuredLibertyAppList, _, err := CreateUnstructuredResourceListFromSignature("invalid-olo", &testsFolder, operatorShortName)
 	var nilUnstructuredLibertyAppList *unstructured.UnstructuredList
 	tests := []Test{
 		{"create unstructured resource list from signature, invalid YAML - has error", false, err == nil},
@@ -665,20 +701,20 @@ func TestCreateUnstructuredResourceListFromSignatureWithUserError(t *testing.T) 
 	}
 }
 
-func getUtilsFolder() string {
+func getUtilsLeaderFolder() string {
 	cwd, err := os.Getwd()
-	if err != nil || !strings.HasSuffix(cwd, "/utils") {
-		return "utils"
+	if err != nil || !strings.HasSuffix(cwd, "/utils/leader") {
+		return "utils/leader"
 	}
 	return cwd
 }
 
 func getAssetsFolder() string {
-	return getUtilsFolder() + "/../internal/controller/assets"
+	return getUtilsLeaderFolder() + "/../../internal/controller/assets"
 }
 
 func getTestsFolder() string {
-	return getUtilsFolder() + "/../internal/controller/tests"
+	return getUtilsLeaderFolder() + "/../../internal/controller/tests"
 }
 
 func createMock1LeaderTracker() LeaderTracker {
@@ -698,6 +734,64 @@ func createMock2LeaderTracker() LeaderTracker {
 		Path:      "v1_0_0.hello.world",
 		PathIndex: "v1_0_0.1",
 		Sublease:  "0",
+	}
+}
+
+func Test_kebabToCamelCase(t *testing.T) {
+	tests := []Test{
+		{"single replace 1", "passwordEncryption", kebabToCamelCase("password-encryption")},
+		{"single replace 1, corner case 1", "passwordEncryption", kebabToCamelCase("-password-encryption")},
+		{"single replace 1, corner case 2", "passwordEncryption", kebabToCamelCase("-password-encryption-")},
+		{"single replace 1, corner case 3", "passWordEncryption", kebabToCamelCase("---pass-word-encryption")},
+		{"double replace 1", "passwordEncryptionKey", kebabToCamelCase("password-encryption-key")},
+		{"double replace 1", "passwordEncryptionKey", kebabToCamelCase("-password-encryption-key")},
+		{"single replace 2", "ltpa", kebabToCamelCase("ltpa")},
+		{"single replace 2, corner case 1", "ltpa1", kebabToCamelCase("ltpa-1")},
+		{"single replace 2, corner case 2", "ltpa.", kebabToCamelCase("ltpa-.")},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestGetCommaSeparatedString(t *testing.T) {
+	emptyString, emptyStringErr := GetCommaSeparatedString("", 0)
+	oneElement, oneElementErr := GetCommaSeparatedString("one", 0)
+	oneElementAOOB, oneElementAOOBErr := GetCommaSeparatedString("one", 1)
+	multiElement, multiElementErr := GetCommaSeparatedString("one,two,three,four,five", 3)
+	multiElementAOOB, multiElementAOOBErr := GetCommaSeparatedString("one,two,three,four,five", 5)
+	tests := []Test{
+		{"empty string", "", emptyString},
+		{"empty string errors", fmt.Errorf("there is no element"), emptyStringErr},
+		{"one element", "one", oneElement},
+		{"one element errors", nil, oneElementErr},
+		{"one element array out of bounds", "", oneElementAOOB},
+		{"one element array out of bounds error", fmt.Errorf("cannot index string list with only one element"), oneElementAOOBErr},
+		{"multi element", "four", multiElement},
+		{"multi element error", nil, multiElementErr},
+		{"multi element array out of bounds", "", multiElementAOOB},
+		{"multi element array out of bounds error", fmt.Errorf("element not found"), multiElementAOOBErr},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestCommaSeparatedStringContains(t *testing.T) {
+	match := CommaSeparatedStringContains("one,two,three,four", "three")
+	substringNonMatch := CommaSeparatedStringContains("one,two,three,four", "thre")
+	substringNonMatch2 := CommaSeparatedStringContains("one,two,three,four", "threee")
+	oneElementMatch := CommaSeparatedStringContains("one", "one")
+	noElementNonMatch := CommaSeparatedStringContains("", "one")
+	tests := []Test{
+		{"single match", 2, match},
+		{"substring should not match", -1, substringNonMatch},
+		{"substring 2 should not match", -1, substringNonMatch2},
+		{"one element match", 0, oneElementMatch},
+		{"no element non match", -1, noElementNonMatch},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
 	}
 }
 
