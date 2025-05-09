@@ -1857,18 +1857,51 @@ spec:
     - thread
 ----
 
-The dump file name is added to the `OpenLibertyDump` CR status and file is stored in the `serviceability` folder with a format such as `/serviceability/_namespace_/_pod_name_/_timestamp_.zip`
+The following example shows the status conditions and the dump file location of the `OpenLibertyDump` CR status. The file is stored in the `serviceability` folder with a format such as `/serviceability/namespace/pod_name/timestamp.zip`.
 
-Once the dump has started, the CR can not be re-used to take more dumps. A new CR needs to be created for each server dump.
+[source,yaml]
+----
+status:
+  conditions:
+    - lastUpdateTime: '2025-04-25T19:38:13Z'
+      status: 'True'
+      type: Started
+    - lastUpdateTime: '2025-04-25T19:38:15Z'
+      status: 'True'
+      type: Completed
+  dumpFile: /serviceability/my_namespace/my_pod_name/dump_2025.04.25_19.38.13_utc.zip
+----
 
-You can check the status of a dump operation using the `status` field inside the CR YAML. You can also run the command `oc get oldump -o wide` to see the status of all dump operations in the current namespace.
+After the dump operation is complete, you cannot reuse the CR for more dumps. Each server dump requires a new CR.
+
+You can check the status of a memory dump operation in the `status` field of the CR YAML. You can also run the following commands to see the status of all dump operations in the current namespace. `oldump` and `oldumps` are short names for `openlibertydump`, the singular name, and `openlibertydumps`, the plural name.
+
+With Red Hat® OpenShift® CLI (oc):
+[source,yaml]
+----
+oc get oldump -o wide
+----
+
+With Kubernetes CLI (kubectl):
+
+[source,yaml]
+----
+kubectl get oldump -o wide
+----
 
 Note:
 _System dump might not work on certain Kubernetes versions, such as OpenShift 4.x_
 
 === Request server traces [[day-2-trace]]
 
-You can request server traces, from an instance of Liberty server running inside a `Pod`, using Open Liberty Operator and `OpenLibertyTrace` custom resource (CR). To use this feature the `OpenLibertyApplication` must already have link:++#storage-for-serviceability++[storage for serviceability] configured. Also, the `OpenLibertyTrace` CR must be created in the same namespace as the `Pod` to operate on.
+You can request server traces from an instance of Liberty server running inside a `Pod`, using Open Liberty Operator and `OpenLibertyTrace` custom resource (CR). To use this feature the `OpenLibertyApplication` must already have link:++#storage-for-serviceability++[storage for serviceability] configured. Also, the `OpenLibertyTrace` CR must be created in the same namespace as the `Pod` to operate on.
+
+**Important**: _Liberty server must allow configuration dropins. The following configuration should not be set on the server. Otherwise, OpenLibertyTrace operation does not work on the server._
+
+[source,xml]
+----
+<config updateTrigger=“disabled”/>
+----
 
 The configurable fields are:
 
@@ -1901,9 +1934,22 @@ Generated trace files, along with _messages.log_ files, are stored in the `servi
 
 Once the trace has started, it can be stopped by setting the `.spec.disable` field to `true`. Deleting the CR will also stop the tracing. Changing the `podName` will first stop the tracing on the old Pod before enabling traces on the new Pod.
 
-You can check the status of a trace operation using the `status` field inside the CR YAML. You can also run the command `oc get oltrace -o wide` to see the status of all trace operations in the current namespace.
+You can check the status of a trace operation in the `status` field of the CR YAML. You can also run the following commands to see the status of all trace operations in the current namespace. `oltrace` and `oltraces` are short names for `openlibertytrace`, the singular name, and `openlibertytraces`, the plural name.
 
-**Important**: _Liberty server must allow configuration dropins. The following configuration should not be set on the server: `<config updateTrigger=“disabled”/>`. Otherwise, OpenLibertyTrace operation will not work on the server._
+With Red Hat® OpenShift® CLI (oc):
+[source,yaml]
+----
+oc get oltrace -o wide
+----
+
+With Kubernetes CLI (kubectl):
+
+[source,yaml]
+----
+kubectl get oltrace -o wide
+----
+
+
 
 Note:
 _The operator doesn't monitor the Pods. If the Pod is restarted or deleted after the trace is enabled, then the tracing wouldn't be automatically enabled when the Pod comes back up. In that case, the status of the trace operation may not correctly report whether the trace is enabled or not._
