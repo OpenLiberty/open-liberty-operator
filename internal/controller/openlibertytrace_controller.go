@@ -161,6 +161,16 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	if !thisInstanceIsLeader {
 		err := fmt.Errorf("Trace could not be applied. Pod '%s' is already configured by OpenLibertyTrace instance '%s'.", podName, leaderName)
 		reqLogger.Error(err, "Trace was denied for instance '%s'; Trace instance '%s' is already managing pod '%s' in namespace '%s'", instance.GetName(), leaderName, podName, podNamespace)
+		// Corner case: possible race condition where two OpenLibertyTraces can swap pointing to each other's Pod and one of them doesn't get the leader tracker update in time.
+		// The solution is to requeue to resolve the leader tracker references.
+		oltLeader := &openlibertyv1.OpenLibertyTrace{}
+		oltLeader.Name = leaderName
+		oltLeader.Namespace = instance.GetNamespace()
+		if err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: oltLeader.Name, Namespace: oltLeader.Namespace}, oltLeader); err == nil {
+			if oltLeader.Spec.PodName != podName { // the Trace CR will use .spec.podName as the leaderTracker key identifier, as implemented in createResourceSharingFactory()
+				return reconcile.Result{Requeue: true, RequeueAfter: 5 * time.Second}, fmt.Errorf("The trace leader is out of sync. Requeuing to recalibrate leader tracker references.")
+			}
+		}
 		return r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, false)
 	}
 
