@@ -1015,18 +1015,21 @@ spec:
 ----
 NOTE: If your Kubernetes cluster does not generate a user ID and `.spec.securityContext.runAsUser` is not specified, the user ID defaults to the value in the image metadata. If the image does not have a user ID specified either, you will have to assign a user ID through  `.spec.securityContext.runAsUser` to meet `.spec.securityContext.runAsNonRoot` requirement.
 
+The Open Liberty Operator sets the `securityContext` field to the RuntimeDefault seccomp profile. If your Kubernetes cluster uses custom security context constraints, `seccompProfiles` must be set to `runtime/default`.
+
 To use custom security context constraints with your Kubernetes cluster, add the following section.
 ----
 seccompProfiles:
   - runtime/default
 ----
-If the application requires seccomp to be disabled, the seccompProfile must be set to unconfined in both the security context constraints and the WebSphereLibertyApplication CR
+If the application requires seccomp to be disabled, the seccompProfile must be set to `unconfined` in both the security context constraints and the `OpenLibertyApplication` CR
+
 To disable seccompProfile, add the following section to the security context constraints.
 ----
 seccompProfiles:
   - unconfined
 ----
-To disable seccomp, add the following section to the WebSphereLibertyApplication CR.
+To disable seccomp, add the following section to the OpenLibertyApplication CR.
 ----
 spec:
   securityContext:
