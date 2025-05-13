@@ -1029,7 +1029,7 @@ To disable seccompProfile, add the following section to the security context con
 seccompProfiles:
   - unconfined
 ----
-To disable seccomp, add the following section to the OpenLibertyApplication CR.
+To disable seccomp, add the following section to the `OpenLibertyApplication` CR.
 ----
 spec:
   securityContext:
