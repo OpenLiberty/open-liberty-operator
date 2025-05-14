@@ -389,10 +389,19 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - displayName: Route
         path: route
+      - description: Setting to maintain session affinity. Must be ClientIP or None.
+          Defaults to None.
+        displayName: Session Affinity
+        path: service.sessionAffinity
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       - description: Configures the Semeru Cloud Compiler to handle Just-In-Time (JIT)
           compilation requests from the application.
         displayName: Semeru Cloud Compiler
         path: semeruCloudCompiler
+      - description: Configurations of session affinity.
+        displayName: Session Affinity Config
+        path: service.sessionAffinityConfig
       - description: Specifies the strategy to replace old deployment pods with new
           pods.
         displayName: Deployment Update Strategy
@@ -875,10 +884,19 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - displayName: Serviceability
         path: serviceability
+      - description: Setting to maintain session affinity. Must be ClientIP or None.
+          Defaults to None.
+        displayName: Session Affinity
+        path: service.sessionAffinity
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       - displayName: Single sign-on
         path: sso
       - displayName: Monitoring
         path: monitoring
+      - description: Configurations of session affinity.
+        displayName: Session Affinity Config
+        path: service.sessionAffinityConfig
       - description: An array of environment variables for the application container.
         displayName: Environment Variables
         path: env
