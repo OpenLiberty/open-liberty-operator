@@ -1036,7 +1036,7 @@ spec:
     seccompProfile:
       type: Unconfined
 ----
-For more information, see link:++https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container++[Set the security context for a Container]. For more information about security context parameters, see link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#securitycontext-v1-core++[SecurityContext v1 core].
+For more information, see link:++https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container++[Set the security context for a Container].
 
 [[persist-resources]]
 === Persist resources (`.spec.statefulSet` and `.spec.volumeMounts`) 
