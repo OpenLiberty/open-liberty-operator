@@ -67,15 +67,17 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `pullSecret` | If using a registry that requires authentication, the name of the secret containing credentials.
 | `initContainers` | The list of link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#container-v1-core++[Init Container] definitions.
 | `sidecarContainers` | The list of `sidecar` containers. These are additional containers to be added to the pods. Note: Sidecar containers should not be named `app`.
-| `service.bindable` | A boolean to toggle whether the operator expose the application as a bindable service. Defaults to `false`.
-| `service.port` | The port exposed by the container.
-| `service.targetPort` | The port that the operator assigns to containers inside pods. Defaults to the value of `service.port`.
-| `service.portName` | The name for the port exposed by the container.
-| `service.ports` | An array consisting of service ports.
-| `service.type` | The Kubernetes link:++https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types++[Service Type].
-| `service.nodePort` | Node proxies this port into your service. Please note once this port is set to a non-zero value it cannot be reset to zero.
 | `service.annotations` | Annotations to be added to the service.
+| `service.bindable` | A boolean to toggle whether the operator expose the application as a bindable service. Defaults to `false`.
 | `service.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be mounted in the pod. The following keys are valid in the secret: `ca.crt`, `tls.crt`, and `tls.key`.
+| `service.nodePort` | Node proxies this port into your service. Please note once this port is set to a non-zero value it cannot be reset to zero.
+| `service.port` | The port exposed by the container.
+| `service.ports` | An array consisting of service ports.
+| `service.portName` | The name for the port exposed by the container.
+| `service.sessionAffinity` | Setting to maintain session affinity. Must be `ClientIP` or `None`. Defaults to `None`.
+| `service.sessionAffinityConfig` | Configurations of session affinity.
+| `service.targetPort` | The port that the operator assigns to containers inside pods. Defaults to the value of `service.port`.
+| `service.type` | The Kubernetes link:++https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types++[Service Type].
 | `createKnativeService`   | A boolean to toggle the creation of Knative resources and usage of Knative serving.
 | `expose`   | A boolean that toggles the external exposure of this deployment via a Route or a Knative Route resource.
 | `deployment.updateStrategy`   | A field to specify the update strategy of the deployment. For more information, see link:++https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy++[updateStrategy]
