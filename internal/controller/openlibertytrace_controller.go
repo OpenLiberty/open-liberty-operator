@@ -163,7 +163,8 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 		reqLogger.Error(err, "Trace was denied for instance '%s'; Trace instance '%s' is already managing pod '%s' in namespace '%s'", instance.GetName(), leaderName, podName, podNamespace)
 		// Possible race condition where two OpenLibertyTraces can swap pointing to each other's Pod and one of them doesn't get the leader tracker update in time.
 		// Requeue to dynamically resolve the leader tracker references over time.
-		return reconcile.Result{Requeue: true, RequeueAfter: 5 * time.Second}, fmt.Errorf("The trace leader is out of sync. Requeuing to recalibrate leader tracker references.")
+		r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, fmt.Errorf("The trace leader is out of sync. Requeuing to recalibrate leader tracker references.")
 	}
 
 	// run day-2 operation
