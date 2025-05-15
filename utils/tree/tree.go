@@ -201,7 +201,7 @@ func CanTraverseTree(treeMap map[string]interface{}, path string, allowSubPaths 
 	}
 	// string check
 	if castedString, isString := castString(mapLastElement); isString {
-		if isString && castedString == pathValue {
+		if isString && (castedString == pathValue || castedString == "*") { // allow wildcard '*' as last string
 			return currPathString + "." + castedString, nil
 		}
 		return currPathString, fmt.Errorf("while traversing path '%s' the last element in .tree expected a string but the path last element was not a matching string", pathKey)
@@ -485,6 +485,7 @@ func GetLabelFromDecisionPath(operandVersionString string, pathOptions []string,
 	return label, nil
 }
 
+// Loads the resource sharing decision tree for the leaderTrackerType (i.e. "trace" or "ltpa") from the filesystem or directly from in-memory cache.
 func ParseDecisionTree(leaderTrackerType string, fileName *string) (map[string]interface{}, map[string]map[string]string, error) {
 	// get file name
 	treeFileName := ""
@@ -496,14 +497,13 @@ func ParseDecisionTree(leaderTrackerType string, fileName *string) (map[string]i
 
 	// get last modified time
 	lastModifiedTime := int64(-1)
-	if fileName != nil {
+	if treeFileName != "" {
 		file, err := os.Stat(treeFileName)
 		if err != nil {
 			return nil, nil, err
 		}
 		lastModifiedTime = file.ModTime().Unix()
-	}
-	if lastModifiedTime != -1 {
+
 		// check the in-memory cache to see if a cached decision tree already exists
 		cachedTreeMap, cachedReplaceMap := TreeCache.Maps(leaderTrackerType, treeFileName, lastModifiedTime)
 		if cachedTreeMap != nil && cachedReplaceMap != nil {
@@ -547,6 +547,11 @@ func ParseDecisionTree(leaderTrackerType string, fileName *string) (map[string]i
 	return treeMap, replaceMap, nil
 }
 
+// For each version key in the treeMap this function finds the largest operand version that is no larger than maxVersion
+//
+// Example:
+// Suppose you are running v1_4_2 of the operator, then maxVersion = "v1_4_2" with treeMap keys ["v1_3_3", "v1_4_0", "v1_4_2", "v1_4_3"].
+// This function would return "v1_4_2", because that is the largest operand version within the treeMap keys that is no larger than maxVersion.
 func getLatestTreeMapOperandVersion(treeMap map[string]interface{}, maxVersion string) (string, error) {
 	maxTreeVersion := "v0_0_0"
 	for version := range treeMap {
@@ -563,6 +568,7 @@ func getLatestTreeMapOperandVersion(treeMap map[string]interface{}, maxVersion s
 	return maxTreeVersion, nil
 }
 
+// Returns the latest treeMap operand version using currentOperandVersion (and falls back to using OperandVersion if currentOperandVersion is an empty string)
 func GetLatestOperandVersion(treeMap map[string]interface{}, currentOperandVersion string) (string, error) {
 	operandVersionString := ""
 	if len(currentOperandVersion) == 0 {
@@ -588,7 +594,7 @@ func ReplacePath(path string, targetVersion string, treeMap map[string]interface
 	currVersion := strings.Split(currPath, ".")[0]
 	sortedKeys := getSortedKeysFromReplaceMap(replaceMap)
 	if !lutils.IsValidOperandVersion(currVersion) || !lutils.IsValidOperandVersion(targetVersion) {
-		return "", fmt.Errorf("there was no valid upgrade path to migrate the LTPA Secret on path %s, this may occur when the LTPA decision tree was modified from the history of an older multi-LTPA Liberty operator, first delete the affected/outdated LTPA Secret(s) then delete the olo-managed-leader-tracking-ltpa ConfigMap to resolve the operator state", path)
+		return "", fmt.Errorf("there was no valid upgrade path to migrate the shared resource on path %s, this may occur when the decision tree was modified from the history of an older operator revision, first delete the affected/outdated resources then delete the olo-managed-leader-tracking-* Secret to resolve the operator state", path)
 	}
 	cmp := lutils.CompareOperandVersion(currVersion, targetVersion)
 	latestOperandVersion, _ := GetLatestOperandVersion(treeMap, targetVersion)

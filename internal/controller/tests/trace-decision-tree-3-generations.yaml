@@ -1,0 +1,21 @@
+tree:
+  v1_4_2:
+    name: "*"
+  v10_4_3:
+    type:
+      aname: other # 0
+      name: "*" # 1
+  v10_4_500:
+    type:
+      aes:
+        list:
+          - true # 0
+          - false # 1
+          - test # 2
+      xor: type # 4
+      name: "*" # 3
+replace:
+  v10_4_3:
+    "v1_4_2.name.*": "v10_4_3.type.name.*"
+  v10_4_500:
+    "v10_4_3.type.name.*": "v10_4_500.type.name.*"

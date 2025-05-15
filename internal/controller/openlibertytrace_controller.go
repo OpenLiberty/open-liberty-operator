@@ -2,26 +2,34 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"time"
 
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
+	"github.com/OpenLiberty/open-liberty-operator/utils/leader"
+	tree "github.com/OpenLiberty/open-liberty-operator/utils/tree"
 	oputils "github.com/application-stacks/runtime-component-operator/utils"
 	"github.com/go-logr/logr"
 
+	"reflect"
+
 	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -44,6 +52,7 @@ const serviceabilityDir = "/serviceability"
 
 // +kubebuilder:rbac:groups=apps.openliberty.io,resources=openlibertytraces;openlibertytraces/status;openlibertytraces/finalizers,verbs=get;list;watch;create;update;patch;delete,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=core,resources=pods;pods/exec,verbs=get;list;watch;create;update;patch;delete,namespace=open-liberty-operator
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete,namespace=open-liberty-operator
 
 // Reconcile reads that state of the cluster for an OpenLibertyTrace object and makes changes based on the state read
 // and what is in the OpenLibertyTrace.Spec
@@ -59,7 +68,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	instance := &openlibertyv1.OpenLibertyTrace{}
 	err := r.Client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if kerrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
@@ -73,6 +82,28 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 
 	instance.Initialize()
 
+	// Reconciles the shared Trace state for the instance namespace
+	var traceMetadataList *leader.TraceMetadataList
+	var traceMetadata, prevPodTraceMetadata *leader.TraceMetadata
+	rsf, leaderMetadataList, err := r.reconcileResourceTrackingState(instance, TRACE_RESOURCE_SHARING_FILE_NAME)
+
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	traceMetadataList = leaderMetadataList.(*leader.TraceMetadataList)
+	if traceMetadataList != nil {
+		numTraceItems := len(traceMetadataList.Items)
+		if numTraceItems >= 1 {
+			traceMetadata = traceMetadataList.Items[0].(*leader.TraceMetadata)
+		}
+		if numTraceItems >= 2 {
+			prevPodTraceMetadata = traceMetadataList.Items[1].(*leader.TraceMetadata)
+		}
+	}
+	if traceMetadata == nil {
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, fmt.Errorf("the OpenLibertyTrace controller could not be initialized correctly")
+	}
+
 	//Pod is expected to be from the same namespace as the CR instance
 	podNamespace := instance.Namespace
 	podName := instance.Spec.PodName
@@ -81,6 +112,19 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	prevTraceEnabled := instance.GetStatus().GetCondition(openlibertyv1.OperationStatusConditionTypeEnabled).Status
 	podChanged := prevPodName != podName
 
+	isPrevPodTraceDisabled := false
+	// if pod changed then disable prevPod (if possible)
+	if podChanged && prevTraceEnabled == corev1.ConditionTrue && traceMetadata != nil && prevPodTraceMetadata != nil && traceMetadata.Name != prevPodTraceMetadata.Name {
+		_, thisInstanceIsLeader, _, err := tree.ReconcileLeader(rsf, OperatorName, OperatorShortName, instance.GetName(), instance.GetNamespace(), prevPodTraceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, true)
+		if err != nil && !kerrors.IsNotFound(err) {
+			return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, err
+		}
+		if thisInstanceIsLeader {
+			r.disableTraceOnPrevPod(reqLogger, prevPodName, podNamespace)
+			isPrevPodTraceDisabled = true
+		}
+	}
+
 	// Check if the OpenLibertyTrace instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
 	isInstanceMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
@@ -88,13 +132,13 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 		if lutils.Contains(instance.GetFinalizers(), traceFinalizer) {
 			// Run finalization logic for traceFinalizer. If the finalization logic fails, don't remove the
 			// finalizer so that we can retry during the next reconciliation.
-			if err := r.finalizeOpenLibertyTrace(reqLogger, instance, prevTraceEnabled, prevPodName, podNamespace); err != nil {
+			if err := r.finalizeOpenLibertyTrace(reqLogger, instance, rsf, prevTraceEnabled != corev1.ConditionTrue || isPrevPodTraceDisabled, prevPodName, podNamespace); err != nil {
 				return reconcile.Result{}, err
 			}
 
 			// Remove traceFinalizer. Once all finalizers have been removed, the object will be deleted.
 			instance.SetFinalizers(lutils.Remove(instance.GetFinalizers(), traceFinalizer))
-			err := r.Client.Update(context.TODO(), instance)
+			err = r.Client.Update(context.TODO(), instance)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
@@ -109,15 +153,25 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 		}
 	}
 
-	//If pod name changed, then stop tracing on previous pod (if trace was enabled on it)
-	if podChanged && (prevTraceEnabled == corev1.ConditionTrue) {
-		r.disableTraceOnPrevPod(reqLogger, prevPodName, podNamespace)
+	// exit if this instance is not the leader of podName
+	leaderName, thisInstanceIsLeader, _, err := tree.ReconcileLeader(rsf, OperatorName, OperatorShortName, instance.GetName(), instance.GetNamespace(), traceMetadata, TRACE_RESOURCE_SHARING_FILE_NAME, true)
+	if err != nil && !kerrors.IsNotFound(err) {
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, err
+	}
+	if !thisInstanceIsLeader {
+		err := fmt.Errorf("Trace could not be applied. Pod '%s' is already configured by OpenLibertyTrace instance '%s'.", podName, leaderName)
+		reqLogger.Error(err, "Trace was denied for instance '%s'; Trace instance '%s' is already managing pod '%s' in namespace '%s'", instance.GetName(), leaderName, podName, podNamespace)
+		// Possible race condition where two OpenLibertyTraces can swap pointing to each other's Pod and one of them doesn't get the leader tracker update in time.
+		// Requeue to dynamically resolve the leader tracker references over time.
+		r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, fmt.Errorf("The trace leader is out of sync. Requeuing to recalibrate leader tracker references.")
 	}
 
+	// run day-2 operation
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: podName, Namespace: podNamespace}, &corev1.Pod{})
-	if err != nil && errors.IsNotFound(err) {
+	if err != nil && kerrors.IsNotFound(err) {
 		//Pod is not found. Return and don't requeue
-		reqLogger.Error(err, "Pod "+podName+" was not found in namespace "+podNamespace)
+		reqLogger.Error(err, "Pod '%s' was not found in namespace '%s'", podName, podNamespace)
 		return r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
 	}
 
@@ -126,10 +180,10 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 		if !podChanged && prevTraceEnabled == corev1.ConditionTrue {
 			_, err = lutils.ExecuteCommandInContainer(r.RestConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "rm -f " + traceConfigFile})
 			if err != nil {
-				reqLogger.Error(err, "Encountered error while disabling trace for pod "+podName+" in namespace "+podNamespace)
+				reqLogger.Error(err, "Encountered error while disabling trace for pod '%s' in namespace '%s'", podName, podNamespace)
 				return r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionTrue, podName, podChanged)
 			}
-			reqLogger.Info("Disabled trace for pod " + podName + " in namespace " + podNamespace)
+			reqLogger.Info("Disabled trace for pod '%s' in namespace '%s'", podName, podNamespace)
 		}
 		r.UpdateStatus(nil, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
 	} else {
@@ -209,7 +263,7 @@ func (r *ReconcileOpenLibertyTrace) UpdateStatus(issue error, conditionType open
 
 func (r *ReconcileOpenLibertyTrace) disableTraceOnPrevPod(reqLogger logr.Logger, prevPodName string, podNamespace string) {
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: prevPodName, Namespace: podNamespace}, &corev1.Pod{})
-	if err != nil && errors.IsNotFound(err) {
+	if err != nil && kerrors.IsNotFound(err) {
 		//Previous Pod is not found. No-op
 		reqLogger.Info("Previous pod " + prevPodName + " was not found in namespace " + podNamespace)
 	} else {
@@ -223,10 +277,62 @@ func (r *ReconcileOpenLibertyTrace) disableTraceOnPrevPod(reqLogger logr.Logger,
 	}
 }
 
-func (r *ReconcileOpenLibertyTrace) finalizeOpenLibertyTrace(reqLogger logr.Logger, olt *openlibertyv1.OpenLibertyTrace, prevTraceEnabled corev1.ConditionStatus, prevPodName string, podNamespace string) error {
-	if prevTraceEnabled == corev1.ConditionTrue {
+// CreateOrUpdate ...
+func (r *ReconcileOpenLibertyTrace) CreateOrUpdate(obj client.Object, owner metav1.Object, reconcile func() error) error {
+
+	if owner != nil {
+		controllerutil.SetControllerReference(owner, obj, r.Scheme)
+	}
+
+	result, err := controllerutil.CreateOrUpdate(context.TODO(), r.GetClient(), obj, reconcile)
+	if err != nil {
+		return err
+	}
+
+	var gvk schema.GroupVersionKind
+	gvk, err = apiutil.GVKForObject(obj, r.Scheme)
+	if err == nil {
+		r.Log.Info("Reconciled", "Kind", gvk.Kind, "Namespace", obj.GetNamespace(), "Name", obj.GetName(), "Status", result)
+	}
+
+	return err
+}
+
+// DeleteResource deletes kubernetes resource
+func (r *ReconcileOpenLibertyTrace) DeleteResource(obj client.Object) error {
+	err := r.GetClient().Delete(context.TODO(), obj)
+	if err != nil {
+		if !kerrors.IsNotFound(err) {
+			//log.Error(err, "Unable to delete object ", "object", obj)
+			return err
+		}
+		return nil
+	}
+
+	_, ok := obj.(metav1.Object)
+	if !ok {
+		err := fmt.Errorf("%T is not a metav1.Object", obj)
+		//log.Error(err, "Failed to convert into metav1.Object")
+		return err
+	}
+
+	_, err = apiutil.GVKForObject(obj, r.Scheme)
+	if err == nil {
+		//log.Info("Reconciled", "Kind", gvk.Kind, "Name", owner.GetName(), "Status", "deleted")
+	}
+	return nil
+}
+
+// GetClient returns client
+func (r *ReconcileOpenLibertyTrace) GetClient() client.Client {
+	return r.Client
+}
+
+func (r *ReconcileOpenLibertyTrace) finalizeOpenLibertyTrace(reqLogger logr.Logger, olt *openlibertyv1.OpenLibertyTrace, rsf tree.ResourceSharingFactory, isPrevPodTraceDisabled bool, prevPodName, podNamespace string) error {
+	if !isPrevPodTraceDisabled {
 		r.disableTraceOnPrevPod(reqLogger, prevPodName, podNamespace)
 	}
+	tree.RemoveLeaderTrackerReference(rsf, olt.GetName(), olt.GetNamespace(), OperatorName, OperatorShortName, TRACE_RESOURCE_SHARING_FILE_NAME)
 	return nil
 }
 
@@ -262,8 +368,8 @@ func (r *ReconcileOpenLibertyTrace) SetupWithManager(mgr ctrl.Manager) error {
 
 	pred := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			// Ignore updates to CR status in which case metadata.Generation does not change
-			return e.ObjectOld.GetGeneration() != e.ObjectNew.GetGeneration() && (isClusterWide || watchNamespacesMap[e.ObjectOld.GetNamespace()])
+			// Ignore updates to CR status in which case metadata.Generation does not change, unless labels were changed
+			return (e.ObjectOld.GetGeneration() != e.ObjectNew.GetGeneration() || !reflect.DeepEqual(e.ObjectOld.GetLabels(), e.ObjectNew.GetLabels())) && (isClusterWide || watchNamespacesMap[e.ObjectOld.GetNamespace()])
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
 			return isClusterWide || watchNamespacesMap[e.Object.GetNamespace()]

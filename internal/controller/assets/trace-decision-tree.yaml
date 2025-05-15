@@ -1,0 +1,7 @@
+# This file enables resource sharing for day-2 operation Trace CR instances that share the same name
+#
+# '*' wildcard will map to a list of strings generated from the leader tracker at runtime
+tree:
+  v1_4_2:
+    name: "*"
+replace: {}
