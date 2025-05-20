@@ -1,0 +1,66 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: open-liberty-operator-watch-all-namespaces
+  namespace: openshift-gitops
+spec:
+  sourceRepos:
+  - 'https://github.com/OpenLiberty/open-liberty-operator'
+  destinations:
+  - namespace: '!kube-*'
+    server: '*'
+  - namespace: '!openshift-[!o][!p][!e][!r][!a][!t][!o][!r][!s]*'
+    server: '*'
+  - namespace: '!openshift-apiserver'
+    server: '*'
+  - namespace: '!openshift-kni-infra'
+    server: '*'
+  - namespace: '!openshift-[a-z][a-z][a-z][a-z][a-z][a-z][a-z][a-z]'
+    server: '*'
+  - namespace: '!openshift-[a-z][a-z][a-z][a-z][a-z][a-z][a-z]'
+    server: '*'
+  - namespace: '!openshift-[a-z][a-z][a-z][a-z][a-z][a-z]'
+    server: '*'
+  - namespace: '!openshift-[a-z][a-z][a-z][a-z][a-z]'
+    server: '*'
+  - namespace: '!openshift-[a-z][a-z][a-z][a-z]'
+    server: '*'
+  - namespace: '!openshift-[a-z][a-z][a-z]'
+    server: '*'
+  - namespace: '!openshift-[a-z][a-z]'
+    server: '*'
+  - namespace: '!openshift-[a-z]'
+    server: '*'
+  - namespace: '*'
+    server: '*'
+  clusterResourceWhitelist:
+  - group: apiextensions.k8s.io
+    kind: CustomResourceDefinition
+  - group: rbac.authorization.k8s.io
+    kind: ClusterRole
+  - group: rbac.authorization.k8s.io
+    kind: ClusterRoleBinding
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: open-liberty-operator-watch-all-namespaces
+  namespace: openshift-gitops
+spec:
+  project: open-liberty-operator-watch-all-namespaces
+  source:
+    path: deploy/releases/1.4.3/kustomize/overlays/watch-all-namespaces
+    repoURL: 'https://github.com/OpenLiberty/open-liberty-operator'
+    targetRevision: HEAD
+    kustomize:
+      namespace: open-liberty
+  destination:
+    server: 'https://kubernetes.default.svc'
+  ignoreDifferences:
+  - group: ''
+    kind: ConfigMap
+    name: open-liberty-operator
+  syncPolicy:
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=true
