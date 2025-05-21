@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
-  name: open-liberty-operator-watch-all-namespaces
+  name: open-liberty-operator
   namespace: openshift-gitops
 spec:
   sourceRepos:
@@ -40,14 +40,16 @@ spec:
     kind: ClusterRole
   - group: rbac.authorization.k8s.io
     kind: ClusterRoleBinding
+  - group: ''
+    kind: Namespace
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: open-liberty-operator-watch-all-namespaces
+  name: open-liberty-operator
   namespace: openshift-gitops
 spec:
-  project: open-liberty-operator-watch-all-namespaces
+  project: open-liberty-operator
   source:
     path: deploy/releases/1.4.3/kustomize/overlays/watch-all-namespaces
     repoURL: 'https://github.com/OpenLiberty/open-liberty-operator'
@@ -55,6 +57,7 @@ spec:
     kustomize:
       namespace: open-liberty
   destination:
+    namespace: open-liberty
     server: 'https://kubernetes.default.svc'
   ignoreDifferences:
   - group: ''
