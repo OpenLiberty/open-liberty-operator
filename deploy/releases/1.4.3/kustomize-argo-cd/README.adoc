@@ -26,7 +26,7 @@ Red Hat® OpenShift® GitOps is based on the open source project link:++https://
 == Installing and watching own namespace
 
 === kustomize-olo-own-namespace.yaml
-This ArgoCD Application installs the operator into the 'open-liberty' namespace,
+This Argo CD Application installs the operator into the 'open-liberty' namespace,
 and the operator watches for Open Liberty custom resource instances only in its own namespace.
 To install, run: `kubectl apply -f kustomize-olo-own-namespace.yaml` and to uninstall, run: `kubectl delete -f kustomize-olo-own-namespace.yaml`
 
@@ -34,13 +34,13 @@ To install, run: `kubectl apply -f kustomize-olo-own-namespace.yaml` and to unin
 == Installing and watching another namespace
 
 === kustomize-olo-another-namespace.yaml
-These ArgoCD Applications install the operator into the namespace 'olo-ns', but configures it to
+These Argo CD Applications install the operator into the namespace 'olo-ns', but configures it to
 watch for Open Liberty custom resource instances in a different namespace called 'olo-watched-ns'. To install, run:  `kubectl apply -f kustomize-olo-another-namespace.yaml`
 
 == Installing and watching all namespaces
 
 === kustomize-olo-all-namespaces.yaml
-This ArgoCD Application installs the operator into the 'open-liberty' namespace,
+This Argo CD Application installs the operator into the 'open-liberty' namespace,
 but configures it to watch for Open Liberty custom resource instances in any namespaces.
 Compared to the OwnNamespace configuration, this Application requires additional ClusterRoles and ClusterRoleBindings.
 To install, run: `kubectl apply -f kustomize-olo-all-namespaces.yaml`
