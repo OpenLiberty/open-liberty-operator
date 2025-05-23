@@ -487,6 +487,11 @@ spec:
         path: networkPolicy.disable
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Enable file based health probes for Liberty. Defaults to false.
+        displayName: Enable File Based Probes
+        path: probes.enableFileBasedProbes
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Enable the Semeru Cloud Compiler. Defaults to false.
         displayName: Enable
         path: semeruCloudCompiler.enable

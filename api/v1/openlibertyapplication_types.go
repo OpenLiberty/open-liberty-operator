@@ -211,6 +211,10 @@ type OpenLibertyApplicationProbes struct {
 	// Probe to determine successful initialization. If specified, other probes are not executed until this completes successfully.
 	// +operator-sdk:csv:customresourcedefinitions:order=51,type=spec,displayName="Startup Probe"
 	Startup *corev1.Probe `json:"startup,omitempty"`
+
+	// Enable file based health probes for Liberty. Defaults to false.
+	// +operator-sdk:csv:customresourcedefinitions:order=52,type=spec,displayName="Enable File Based Probes",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	EnableFileBasedProbes *bool `json:"enableFileBasedProbes,omitempty"`
 }
 
 // Configure pods to run on particular Nodes.
@@ -728,17 +732,73 @@ func (cr *OpenLibertyApplication) GetProbes() common.BaseComponentProbes {
 
 // GetLivenessProbe returns liveness probe
 func (p *OpenLibertyApplicationProbes) GetLivenessProbe() *corev1.Probe {
+	if enableFileBasedProbes := p.GetEnableFileBasedProbes(); enableFileBasedProbes != nil && *enableFileBasedProbes {
+		return &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				Exec: &corev1.ExecAction{
+					Command: []string{
+						"/bin/sh",
+						"-c",
+						"livenessHealthCheck.sh -p 10",
+					},
+				},
+			},
+			FailureThreshold:    3,
+			InitialDelaySeconds: 0,
+			PeriodSeconds:       8,
+			TimeoutSeconds:      5,
+		}
+	}
 	return p.Liveness
 }
 
 // GetReadinessProbe returns readiness probe
 func (p *OpenLibertyApplicationProbes) GetReadinessProbe() *corev1.Probe {
+	if enableFileBasedProbes := p.GetEnableFileBasedProbes(); enableFileBasedProbes != nil && *enableFileBasedProbes {
+		return &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				Exec: &corev1.ExecAction{
+					Command: []string{
+						"/bin/sh",
+						"-c",
+						"readinessHealthCheck.sh -p 10",
+					},
+				},
+			},
+			FailureThreshold:    3,
+			InitialDelaySeconds: 0,
+			PeriodSeconds:       8,
+			TimeoutSeconds:      5,
+		}
+	}
 	return p.Readiness
 }
 
 // GetStartupProbe returns startup probe
 func (p *OpenLibertyApplicationProbes) GetStartupProbe() *corev1.Probe {
+	if enableFileBasedProbes := p.GetEnableFileBasedProbes(); enableFileBasedProbes != nil && *enableFileBasedProbes {
+		return &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				Exec: &corev1.ExecAction{
+					Command: []string{
+						"/bin/sh",
+						"-c",
+						"startupHealthCheck.sh -p 1",
+					},
+				},
+			},
+			FailureThreshold:    20,
+			InitialDelaySeconds: 0,
+			PeriodSeconds:       1,
+			TimeoutSeconds:      1,
+		}
+	}
 	return p.Startup
+}
+
+// GetEnableFileBasedProbes returns a pointer to the file based probe boolean
+func (p *OpenLibertyApplicationProbes) GetEnableFileBasedProbes() *bool {
+	return p.EnableFileBasedProbes
 }
 
 // GetDefaultLivenessProbe returns default values for liveness probe

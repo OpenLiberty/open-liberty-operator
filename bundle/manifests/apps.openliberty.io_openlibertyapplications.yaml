@@ -3395,6 +3395,10 @@ spec:
                 description: Define health checks on application container to determine
                   whether it is alive or ready to receive traffic
                 properties:
+                  enableFileBasedProbes:
+                    description: Enable file based health probes for Liberty. Defaults
+                      to false.
+                    type: boolean
                   liveness:
                     description: Periodic probe of container liveness. Container will
                       be restarted if the probe fails.

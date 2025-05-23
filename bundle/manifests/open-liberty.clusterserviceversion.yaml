@@ -92,7 +92,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2025-05-02T21:12:59Z"
+    createdAt: "2025-05-23T19:08:15Z"
     description: Deploy and manage containerized Liberty applications
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "true"
@@ -573,6 +573,11 @@ spec:
       - description: Disable the creation of the network policy. Defaults to false.
         displayName: Disable
         path: networkPolicy.disable
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Enable file based health probes for Liberty. Defaults to false.
+        displayName: Enable File Based Probes
+        path: probes.enableFileBasedProbes
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Enable the Semeru Cloud Compiler. Defaults to false.
