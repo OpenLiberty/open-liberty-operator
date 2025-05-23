@@ -732,6 +732,26 @@ func (cr *OpenLibertyApplication) GetProbes() common.BaseComponentProbes {
 
 // GetLivenessProbe returns liveness probe
 func (p *OpenLibertyApplicationProbes) GetLivenessProbe() *corev1.Probe {
+	return p.Liveness
+}
+
+// GetReadinessProbe returns readiness probe
+func (p *OpenLibertyApplicationProbes) GetReadinessProbe() *corev1.Probe {
+	return p.Readiness
+}
+
+// GetStartupProbe returns startup probe
+func (p *OpenLibertyApplicationProbes) GetStartupProbe() *corev1.Probe {
+	return p.Startup
+}
+
+// GetEnableFileBasedProbes returns a pointer to the file based probe boolean
+func (p *OpenLibertyApplicationProbes) GetEnableFileBasedProbes() *bool {
+	return p.EnableFileBasedProbes
+}
+
+// GetDefaultLivenessProbe returns default values for liveness probe
+func (p *OpenLibertyApplicationProbes) GetDefaultLivenessProbe(ba common.BaseComponent) *corev1.Probe {
 	if enableFileBasedProbes := p.GetEnableFileBasedProbes(); enableFileBasedProbes != nil && *enableFileBasedProbes {
 		return &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
@@ -749,11 +769,11 @@ func (p *OpenLibertyApplicationProbes) GetLivenessProbe() *corev1.Probe {
 			TimeoutSeconds:      5,
 		}
 	}
-	return p.Liveness
+	return common.GetDefaultMicroProfileLivenessProbe(ba)
 }
 
-// GetReadinessProbe returns readiness probe
-func (p *OpenLibertyApplicationProbes) GetReadinessProbe() *corev1.Probe {
+// GetDefaultReadinessProbe returns default values for readiness probe
+func (p *OpenLibertyApplicationProbes) GetDefaultReadinessProbe(ba common.BaseComponent) *corev1.Probe {
 	if enableFileBasedProbes := p.GetEnableFileBasedProbes(); enableFileBasedProbes != nil && *enableFileBasedProbes {
 		return &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
@@ -771,11 +791,11 @@ func (p *OpenLibertyApplicationProbes) GetReadinessProbe() *corev1.Probe {
 			TimeoutSeconds:      5,
 		}
 	}
-	return p.Readiness
+	return common.GetDefaultMicroProfileReadinessProbe(ba)
 }
 
-// GetStartupProbe returns startup probe
-func (p *OpenLibertyApplicationProbes) GetStartupProbe() *corev1.Probe {
+// GetDefaultStartupProbe returns default values for startup probe
+func (p *OpenLibertyApplicationProbes) GetDefaultStartupProbe(ba common.BaseComponent) *corev1.Probe {
 	if enableFileBasedProbes := p.GetEnableFileBasedProbes(); enableFileBasedProbes != nil && *enableFileBasedProbes {
 		return &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
@@ -793,26 +813,6 @@ func (p *OpenLibertyApplicationProbes) GetStartupProbe() *corev1.Probe {
 			TimeoutSeconds:      1,
 		}
 	}
-	return p.Startup
-}
-
-// GetEnableFileBasedProbes returns a pointer to the file based probe boolean
-func (p *OpenLibertyApplicationProbes) GetEnableFileBasedProbes() *bool {
-	return p.EnableFileBasedProbes
-}
-
-// GetDefaultLivenessProbe returns default values for liveness probe
-func (p *OpenLibertyApplicationProbes) GetDefaultLivenessProbe(ba common.BaseComponent) *corev1.Probe {
-	return common.GetDefaultMicroProfileLivenessProbe(ba)
-}
-
-// GetDefaultReadinessProbe returns default values for readiness probe
-func (p *OpenLibertyApplicationProbes) GetDefaultReadinessProbe(ba common.BaseComponent) *corev1.Probe {
-	return common.GetDefaultMicroProfileReadinessProbe(ba)
-}
-
-// GetDefaultStartupProbe returns default values for startup probe
-func (p *OpenLibertyApplicationProbes) GetDefaultStartupProbe(ba common.BaseComponent) *corev1.Probe {
 	return common.GetDefaultMicroProfileStartupProbe(ba)
 }
 
