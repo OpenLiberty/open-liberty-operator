@@ -446,7 +446,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		"app.kubernetes.io/name": OperatorName,
 	}
 	err = r.CreateOrUpdate(operatorEgressNetworkPolicy, instance, func() error {
-		r.customizeApiServerNetworkPolicy(ba, reqLogger, operatorEgressNetworkPolicy, operatorPodLabels)
+		r.customizeApiServerNetworkPolicy(nil, reqLogger, operatorEgressNetworkPolicy, operatorPodLabels)
 		return nil
 	})
 	if err != nil {
