@@ -437,36 +437,36 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			common.StatusConditionTypeReconciled, instance)
 	}
 
-	// Operator egress
-	operatorEgressNetworkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{
-		Name:      OperatorShortName + "-apiserver-egress-for-operator",
-		Namespace: ns,
-	}}
-	operatorPodLabels := map[string]string{
-		"app.kubernetes.io/name": OperatorName,
-	}
-	err = r.CreateOrUpdate(operatorEgressNetworkPolicy, instance, func() error {
-		r.customizeApiServerNetworkPolicy(nil, reqLogger, operatorEgressNetworkPolicy, operatorPodLabels)
-		return nil
-	})
-	if err != nil {
-		reqLogger.Error(err, "Failed to reconcile operator egress network policy")
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-	}
+	// // Operator egress
+	// operatorEgressNetworkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{
+	// 	Name:      OperatorShortName + "-apiserver-egress-for-operator",
+	// 	Namespace: ns,
+	// }}
+	// operatorPodLabels := map[string]string{
+	// 	"app.kubernetes.io/name": OperatorName,
+	// }
+	// err = r.CreateOrUpdate(operatorEgressNetworkPolicy, instance, func() error {
+	// 	r.customizeApiServerNetworkPolicy(nil, reqLogger, operatorEgressNetworkPolicy, operatorPodLabels)
+	// 	return nil
+	// })
+	// if err != nil {
+	// 	reqLogger.Error(err, "Failed to reconcile operator egress network policy")
+	// 	return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	// }
 
-	// Operator ingress
-	operatorIngressNetworkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{
-		Name:      OperatorShortName + "-monitoring-ingress-for-operator",
-		Namespace: ns,
-	}}
-	err = r.CreateOrUpdate(operatorIngressNetworkPolicy, instance, func() error {
-		oputils.CustomizeOperatorNetworkPolicy(operatorIngressNetworkPolicy, r.IsOpenShift(), OperatorName, operatorPodLabels)
-		return nil
-	})
-	if err != nil {
-		reqLogger.Error(err, "Failed to reconcile operator ingress network policy")
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-	}
+	// // Operator ingress
+	// operatorIngressNetworkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{
+	// 	Name:      OperatorShortName + "-monitoring-ingress-for-operator",
+	// 	Namespace: ns,
+	// }}
+	// err = r.CreateOrUpdate(operatorIngressNetworkPolicy, instance, func() error {
+	// 	oputils.CustomizeOperatorNetworkPolicy(operatorIngressNetworkPolicy, r.IsOpenShift(), OperatorName, operatorPodLabels)
+	// 	return nil
+	// })
+	// if err != nil {
+	// 	reqLogger.Error(err, "Failed to reconcile operator ingress network policy")
+	// 	return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	// }
 
 	// Instance egress
 	apiServerNetworkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{
