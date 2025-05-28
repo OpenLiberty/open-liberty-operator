@@ -440,6 +440,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// Operator egress
 	operatorEgressNetworkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{
 		Name:      OperatorShortName + "-apiserver-egress-for-operator",
+		Namespace: ns,
 	}}
 	operatorPodLabels := map[string]string{
 		"app.kubernetes.io/name": OperatorName,
@@ -456,7 +457,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// Operator ingress
 	operatorIngressNetworkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{
 		Name:      OperatorShortName + "-monitoring-ingress-for-operator",
-		Namespace: instance.Namespace,
+		Namespace: ns,
 	}}
 	err = r.CreateOrUpdate(operatorIngressNetworkPolicy, instance, func() error {
 		oputils.CustomizeOperatorNetworkPolicy(operatorIngressNetworkPolicy, r.IsOpenShift(), OperatorName, operatorPodLabels)
