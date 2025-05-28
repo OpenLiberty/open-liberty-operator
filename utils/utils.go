@@ -11,6 +11,8 @@ import (
 
 	"math/rand/v2"
 
+	networkingv1 "k8s.io/api/networking/v1"
+
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	rcoutils "github.com/application-stacks/runtime-component-operator/utils"
 	routev1 "github.com/openshift/api/route/v1"
@@ -19,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -849,6 +852,25 @@ func GetRequiredLabels(name string, instance string) map[string]string {
 	}
 	requiredLabels["app.kubernetes.io/managed-by"] = "open-liberty-operator"
 	return requiredLabels
+}
+
+func GetEndpointPortByName(endpointPorts *[]corev1.EndpointPort, name string) *corev1.EndpointPort {
+	if endpointPorts != nil {
+		for _, endpointPort := range *endpointPorts {
+			if endpointPort.Name == name {
+				return &endpointPort
+			}
+		}
+	}
+	return nil
+}
+
+func CreateNetworkPolicyPortFromEndpointPort(endpointPort *corev1.EndpointPort) networkingv1.NetworkPolicyPort {
+	port := networkingv1.NetworkPolicyPort{}
+	port.Protocol = &endpointPort.Protocol
+	var portNumber intstr.IntOrString = intstr.FromInt((int)(endpointPort.Port))
+	port.Port = &portNumber
+	return port
 }
 
 func IsOperandVersionString(version string) bool {
