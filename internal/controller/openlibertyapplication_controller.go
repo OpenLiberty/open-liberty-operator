@@ -454,23 +454,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
-	// Instance egress
-	apiServerNetworkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{
-		Name:      instance.Name + "-apiserver-egress",
-		Namespace: instance.Namespace,
-	}}
-	err = r.CreateOrUpdate(apiServerNetworkPolicy, instance, func() error {
-		r.customizeApiServerNetworkPolicy(ba, reqLogger, apiServerNetworkPolicy, map[string]string{
-			common.GetComponentNameLabel(ba): instance.Name,
-		})
-		return nil
-	})
-	if err != nil {
-		reqLogger.Error(err, "Failed to reconcile API server network policy")
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-	}
-
-	// Instance ingress
 	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: defaultMeta}
 	if np := instance.Spec.NetworkPolicy; np == nil || np != nil && !np.IsDisabled() {
 		err = r.CreateOrUpdate(networkPolicy, instance, func() error {
