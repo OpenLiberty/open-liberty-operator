@@ -457,7 +457,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// Instance egress
 	instanceEgressNetworkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{
 		Name:      instance.Name + "-apiserver-egress",
-		Namespace: ns,
+		Namespace: instance.Namespace,
 	}}
 	instancePodLabels := map[string]string{
 		"app.kubernetes.io/name": OperatorName,
