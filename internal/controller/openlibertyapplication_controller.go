@@ -459,11 +459,8 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		Name:      instance.Name + "-apiserver-egress",
 		Namespace: instance.Namespace,
 	}}
-	instancePodLabels := map[string]string{
-		"app.kubernetes.io/name": OperatorName,
-	}
 	err = r.CreateOrUpdate(instanceEgressNetworkPolicy, instance, func() error {
-		r.customizeApiServerNetworkPolicy(nil, reqLogger, instanceEgressNetworkPolicy, instancePodLabels)
+		r.customizeApiServerNetworkPolicy(nil, reqLogger, instanceEgressNetworkPolicy, instance.GetLabels())
 		return nil
 	})
 	if err != nil {
