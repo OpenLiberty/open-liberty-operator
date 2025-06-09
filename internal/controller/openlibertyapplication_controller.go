@@ -471,7 +471,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: defaultMeta}
 	if np := instance.Spec.NetworkPolicy; np == nil || np != nil && !np.IsDisabled() {
 		err = r.CreateOrUpdate(networkPolicy, instance, func() error {
-			oputils.CustomizeNetworkPolicy(networkPolicy, r.IsOpenShift(), instance)
+			oputils.CustomizeNetworkPolicy(networkPolicy, r.IsOpenShift(), r.getDNSEgressRule, r.getEndpoints, instance)
 			return nil
 		})
 		if err != nil {
@@ -1101,7 +1101,7 @@ func (r *ReconcileOpenLiberty) getEndpoints(serviceName string, namespace string
 	}
 }
 
-func (r *ReconcileOpenLiberty) getDNSEgressRule(reqLogger logr.Logger, endpointsName string, endpointsNamespace string) (bool, networkingv1.NetworkPolicyEgressRule) {
+func (r *ReconcileOpenLiberty) getDNSEgressRule(endpointsName string, endpointsNamespace string) (bool, networkingv1.NetworkPolicyEgressRule) {
 	dnsRule := networkingv1.NetworkPolicyEgressRule{}
 	if dnsEndpoints, err := r.getEndpoints(endpointsName, endpointsNamespace); err == nil {
 		if len(dnsEndpoints.Subsets) > 0 {
@@ -1119,12 +1119,10 @@ func (r *ReconcileOpenLiberty) getDNSEgressRule(reqLogger logr.Logger, endpoints
 			},
 		}
 		dnsRule.To = append(dnsRule.To, peer)
-		reqLogger.Info("Found endpoints for " + endpointsName + " service in the " + endpointsNamespace + " namespace")
 		return false, dnsRule
 	}
 	// use permissive rule
 	// egress:
 	//   - {}
-	reqLogger.Info("Failed to retrieve endpoints for " + endpointsName + " service in the " + endpointsNamespace + "  namespace. Using more permissive rule.")
 	return true, dnsRule
 }
