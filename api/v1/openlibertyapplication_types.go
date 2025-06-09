@@ -337,24 +337,28 @@ type OpenLibertyApplicationNetworkPolicy struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=54,type=spec,displayName="Disable Egress",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
 	DisableEgress *bool `json:"disableEgress,omitempty"`
 
+	// Bypasses deny all egress rules to allow API server and DNS access. Defaults to false.
+	// +operator-sdk:csv:customresourcedefinitions:order=55,type=spec,displayName="Bypass Deny All Egress",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	BypassDenyAllEgress *bool `json:"bypassDenyAllEgress,omitempty"`
+
 	// Deprecated. .spec.networkPolicy.fromNamespaceLabels should be used instead. If both are specified, .spec.networkPolicy.fromNamespaceLabels will override this.
-	// +operator-sdk:csv:customresourcedefinitions:order=55,type=spec,displayName="Namespace Labels",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	// +operator-sdk:csv:customresourcedefinitions:order=56,type=spec,displayName="Namespace Labels",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	NamespaceLabels *map[string]string `json:"namespaceLabels,omitempty"`
 
 	// Specify the labels of namespaces that incoming traffic is allowed from.
-	// +operator-sdk:csv:customresourcedefinitions:order=56,type=spec,displayName="From Namespace Labels",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	// +operator-sdk:csv:customresourcedefinitions:order=57,type=spec,displayName="From Namespace Labels",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	FromNamespaceLabels *map[string]string `json:"fromNamespaceLabels,omitempty"`
 
 	// Specify the labels of pod(s) that incoming traffic is allowed from.
-	// +operator-sdk:csv:customresourcedefinitions:order=57,type=spec,displayName="From Labels",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	// +operator-sdk:csv:customresourcedefinitions:order=58,type=spec,displayName="From Labels",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	FromLabels *map[string]string `json:"fromLabels,omitempty"`
 
 	// Specify the labels of namespaces that outgoing traffic is allowed to.
-	// +operator-sdk:csv:customresourcedefinitions:order=58,type=spec,displayName="To Namespace Labels",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	// +operator-sdk:csv:customresourcedefinitions:order=59,type=spec,displayName="To Namespace Labels",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	ToNamespaceLabels *map[string]string `json:"toNamespaceLabels,omitempty"`
 
 	// Specify the labels of pod(s) that outgoing traffic is allowed to.
-	// +operator-sdk:csv:customresourcedefinitions:order=59,type=spec,displayName="To Labels",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	// +operator-sdk:csv:customresourcedefinitions:order=60,type=spec,displayName="To Labels",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	ToLabels *map[string]string `json:"toLabels,omitempty"`
 }
 
@@ -1195,6 +1199,10 @@ func (np *OpenLibertyApplicationNetworkPolicy) IsIngressDisabled() bool {
 // IsEgressDisabled returns whether the network policy egress should be created or not
 func (np *OpenLibertyApplicationNetworkPolicy) IsEgressDisabled() bool {
 	return np.DisableEgress != nil && *np.DisableEgress
+}
+
+func (np *OpenLibertyApplicationNetworkPolicy) IsBypassingDenyAllEgress() bool {
+	return np.BypassDenyAllEgress != nil && *np.BypassDenyAllEgress
 }
 
 // GetLabels returns labels to be added on ServiceMonitor
