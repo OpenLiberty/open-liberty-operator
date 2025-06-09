@@ -1047,9 +1047,9 @@ func (r *ReconcileOpenLiberty) customizeApiServerNetworkPolicy(ba common.BaseCom
 	var usingPermissiveRule bool
 	// If allowed, add an Egress rule to access the OpenShift DNS or K8s CoreDNS. Otherwise, use a permissive cluster-wide Egress rule.
 	if r.IsOpenShift() {
-		usingPermissiveRule, dnsRule = r.getDNSEgressRule(reqLogger, "dns-default", "openshift-dns")
+		usingPermissiveRule, dnsRule = r.getDNSEgressRule("dns-default", "openshift-dns")
 	} else {
-		usingPermissiveRule, dnsRule = r.getDNSEgressRule(reqLogger, "kube-dns", "kube-system")
+		usingPermissiveRule, dnsRule = r.getDNSEgressRule("kube-dns", "kube-system")
 	}
 	apiServerNetworkPolicy.Spec.Egress = append(apiServerNetworkPolicy.Spec.Egress, dnsRule)
 
