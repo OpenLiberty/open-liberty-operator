@@ -57,6 +57,7 @@ const applicationFinalizer = "finalizer.openlibertyapplications.apps.openliberty
 // +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=get;list;watch;create;update;delete,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=apps,resources=deployments/finalizers;statefulsets,verbs=update,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=core,resources=services;secrets;serviceaccounts;configmaps;persistentvolumeclaims,verbs=get;list;watch;create;update;delete,namespace=open-liberty-operator
+// +kubebuilder:rbac:groups=core,resources=endpoints,verbs=get;list;watch,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;delete,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;watch;create;update;delete,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;delete,namespace=open-liberty-operator
@@ -438,7 +439,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: defaultMeta}
 	if np := instance.Spec.NetworkPolicy; np == nil || np != nil && !np.IsDisabled() {
 		err = r.CreateOrUpdate(networkPolicy, instance, func() error {
-			oputils.CustomizeNetworkPolicy(networkPolicy, r.IsOpenShift(), instance)
+			oputils.CustomizeNetworkPolicy(networkPolicy, r.IsOpenShift(), r.getDNSEgressRule, r.getEndpoints, instance)
 			return nil
 		})
 		if err != nil {
@@ -1002,4 +1003,39 @@ func (r *ReconcileOpenLiberty) deletePVC(reqLogger logr.Logger, pvcName string, 
 			}
 		}
 	}
+}
+
+func (r *ReconcileOpenLiberty) getEndpoints(serviceName string, namespace string) (*corev1.Endpoints, error) {
+	endpoints := &corev1.Endpoints{}
+	if err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: serviceName, Namespace: namespace}, endpoints); err != nil {
+		return nil, err
+	} else {
+		return endpoints, nil
+	}
+}
+
+func (r *ReconcileOpenLiberty) getDNSEgressRule(endpointsName string, endpointsNamespace string) (bool, networkingv1.NetworkPolicyEgressRule) {
+	dnsRule := networkingv1.NetworkPolicyEgressRule{}
+	if dnsEndpoints, err := r.getEndpoints(endpointsName, endpointsNamespace); err == nil {
+		if len(dnsEndpoints.Subsets) > 0 {
+			if endpointPort := lutils.GetEndpointPortByName(&dnsEndpoints.Subsets[0].Ports, "dns"); endpointPort != nil {
+				dnsRule.Ports = append(dnsRule.Ports, lutils.CreateNetworkPolicyPortFromEndpointPort(endpointPort))
+			}
+			if endpointPort := lutils.GetEndpointPortByName(&dnsEndpoints.Subsets[0].Ports, "dns-tcp"); endpointPort != nil {
+				dnsRule.Ports = append(dnsRule.Ports, lutils.CreateNetworkPolicyPortFromEndpointPort(endpointPort))
+			}
+		}
+		peer := networkingv1.NetworkPolicyPeer{}
+		peer.NamespaceSelector = &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"kubernetes.io/metadata.name": endpointsNamespace,
+			},
+		}
+		dnsRule.To = append(dnsRule.To, peer)
+		return false, dnsRule
+	}
+	// use permissive rule
+	// egress:
+	//   - {}
+	return true, dnsRule
 }
