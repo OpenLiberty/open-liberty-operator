@@ -26,7 +26,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -1004,61 +1003,6 @@ func (r *ReconcileOpenLiberty) deletePVC(reqLogger logr.Logger, pvcName string, 
 			}
 		}
 	}
-}
-
-func (r *ReconcileOpenLiberty) customizeApiServerNetworkPolicy(ba common.BaseComponent, reqLogger logr.Logger, apiServerNetworkPolicy *networkingv1.NetworkPolicy, podLabels map[string]string) {
-	apiServerNetworkPolicy.Spec.PodSelector = metav1.LabelSelector{
-		MatchLabels: podLabels,
-	}
-	apiServerNetworkPolicy.Spec.Egress = make([]networkingv1.NetworkPolicyEgressRule, 0)
-
-	var dnsRule networkingv1.NetworkPolicyEgressRule
-	var usingPermissiveRule bool
-	// If allowed, add an Egress rule to access the OpenShift DNS or K8s CoreDNS. Otherwise, use a permissive cluster-wide Egress rule.
-	if r.IsOpenShift() {
-		usingPermissiveRule, dnsRule = r.getDNSEgressRule("dns-default", "openshift-dns")
-	} else {
-		usingPermissiveRule, dnsRule = r.getDNSEgressRule("kube-dns", "kube-system")
-	}
-	apiServerNetworkPolicy.Spec.Egress = append(apiServerNetworkPolicy.Spec.Egress, dnsRule)
-
-	// If the DNS rule is a specific Egress rule also check if another Egress rule can be created for the API server.
-	// Otherwise, fallback to a permissive cluster-wide Egress rule.
-	if !usingPermissiveRule {
-		if apiServerEndpoints, err := r.getEndpoints("kubernetes", "default"); err == nil {
-			rule := networkingv1.NetworkPolicyEgressRule{}
-			// Define the port
-			port := networkingv1.NetworkPolicyPort{}
-			port.Protocol = &apiServerEndpoints.Subsets[0].Ports[0].Protocol
-			var portNumber intstr.IntOrString = intstr.FromInt((int)(apiServerEndpoints.Subsets[0].Ports[0].Port))
-			port.Port = &portNumber
-			rule.Ports = append(rule.Ports, port)
-
-			// Add the endpoint address as ipBlock entries
-			for _, endpoint := range apiServerEndpoints.Subsets {
-				for _, address := range endpoint.Addresses {
-					peer := networkingv1.NetworkPolicyPeer{}
-					ipBlock := networkingv1.IPBlock{}
-					ipBlock.CIDR = address.IP + "/32"
-
-					peer.IPBlock = &ipBlock
-					rule.To = append(rule.To, peer)
-				}
-			}
-			apiServerNetworkPolicy.Spec.Egress = append(apiServerNetworkPolicy.Spec.Egress, rule)
-			reqLogger.Info("Found endpoints for kubernetes service in the default namespace")
-		} else {
-			// The operator couldn't create a rule for the K8s API server so add a permissive Egress rule
-			rule := networkingv1.NetworkPolicyEgressRule{}
-			apiServerNetworkPolicy.Spec.Egress = append(apiServerNetworkPolicy.Spec.Egress, rule)
-			reqLogger.Info("Found endpoints for kubernetes service in the default namespace")
-		}
-	}
-	if ba != nil {
-		apiServerNetworkPolicy.Labels = ba.GetLabels()
-		apiServerNetworkPolicy.Annotations = oputils.MergeMaps(apiServerNetworkPolicy.Annotations, ba.GetAnnotations())
-	}
-	apiServerNetworkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeEgress}
 }
 
 func (r *ReconcileOpenLiberty) getEndpoints(serviceName string, namespace string) (*corev1.Endpoints, error) {
