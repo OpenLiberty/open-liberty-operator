@@ -232,14 +232,12 @@ type OpenLibertyApplicationService struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=17,type=spec,displayName="Bindable",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
 	Bindable *bool `json:"bindable,omitempty"`
 
-	// Setting to maintain session affinity. Must be ClientIP or None. Defaults to None.
-	// +operator-sdk:csv:customresourcedefinitions:order=18,type=spec,displayName="Session Affinity",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
-	SessionAffinity *v1.ServiceAffinity `json:"sessionAffinity,omitempty"`
-
-	// Configurations of session affinity.
-	// +operator-sdk:csv:customresourcedefinitions:order=19,type=spec
-	SessionAffinityConfig *corev1.SessionAffinityConfig `json:"sessionAffinityConfig,omitempty"`
+	// Configure service session affinity.
+	// +operator-sdk:csv:customresourcedefinitions:order=18,type=spec
+	SessionAffinity *OpenLibertyApplicationServiceSessionAffinity `json:"sessionAffinity,omitempty"`
 }
+
+type OpenLibertyApplicationServiceSessionAffinity struct{}
 
 // Defines the desired state and cycle of applications.
 type OpenLibertyApplicationDeployment struct {
@@ -872,13 +870,18 @@ func (s *OpenLibertyApplicationService) GetBindable() *bool {
 }
 
 // GetSessionAffinity returns the session affinity setting for the service
-func (s *OpenLibertyApplicationService) GetSessionAffinity() *v1.ServiceAffinity {
-	return s.SessionAffinity
+func (s *OpenLibertyApplicationService) GetSessionAffinity() common.BaseComponentServiceSessionAffinity {
+	return nil
 }
 
-// GetSessionAffinityConfig returns the session affinity configuration for the service
-func (s *OpenLibertyApplicationService) GetSessionAffinityConfig() *corev1.SessionAffinityConfig {
-	return s.SessionAffinityConfig
+// GetType returns the session affinity type for the service
+func (s *OpenLibertyApplicationServiceSessionAffinity) GetType() v1.ServiceAffinity {
+	return v1.ServiceAffinityNone
+}
+
+// GetConfig returns the session affinity configuration for the service
+func (s *OpenLibertyApplicationServiceSessionAffinity) GetConfig() *corev1.SessionAffinityConfig {
+	return nil
 }
 
 // GetLabels returns labels to be added on ServiceMonitor
