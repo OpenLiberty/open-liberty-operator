@@ -8,7 +8,6 @@ import (
 	prometheusv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -231,13 +230,7 @@ type OpenLibertyApplicationService struct {
 	// Expose the application as a bindable service. Defaults to false.
 	// +operator-sdk:csv:customresourcedefinitions:order=17,type=spec,displayName="Bindable",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
 	Bindable *bool `json:"bindable,omitempty"`
-
-	// Configure service session affinity.
-	// +operator-sdk:csv:customresourcedefinitions:order=18,type=spec
-	SessionAffinity *OpenLibertyApplicationServiceSessionAffinity `json:"sessionAffinity,omitempty"`
 }
-
-type OpenLibertyApplicationServiceSessionAffinity struct{}
 
 // Defines the desired state and cycle of applications.
 type OpenLibertyApplicationDeployment struct {
@@ -871,16 +864,6 @@ func (s *OpenLibertyApplicationService) GetBindable() *bool {
 
 // GetSessionAffinity returns the session affinity setting for the service
 func (s *OpenLibertyApplicationService) GetSessionAffinity() common.BaseComponentServiceSessionAffinity {
-	return nil
-}
-
-// GetType returns the session affinity type for the service
-func (s *OpenLibertyApplicationServiceSessionAffinity) GetType() v1.ServiceAffinity {
-	return v1.ServiceAffinityNone
-}
-
-// GetConfig returns the session affinity configuration for the service
-func (s *OpenLibertyApplicationServiceSessionAffinity) GetConfig() *corev1.SessionAffinityConfig {
 	return nil
 }
 

@@ -723,9 +723,6 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - displayName: Serviceability
         path: serviceability
-      - description: Configure service session affinity.
-        displayName: Session Affinity
-        path: service.sessionAffinity
       - displayName: Single sign-on
         path: sso
       - displayName: Monitoring
