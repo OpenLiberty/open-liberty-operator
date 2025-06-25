@@ -74,8 +74,6 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `service.port` | The port exposed by the container.
 | `service.ports` | An array consisting of service ports.
 | `service.portName` | The name for the port exposed by the container.
-| `service.sessionAffinity` | Setting to maintain session affinity. Must be `ClientIP` or `None`. Defaults to `None`.
-| `service.sessionAffinityConfig` | Configurations of session affinity.
 | `service.targetPort` | The port that the operator assigns to containers inside pods. Defaults to the value of `service.port`.
 | `service.type` | The Kubernetes link:++https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types++[Service Type].
 | `createKnativeService`   | A boolean to toggle the creation of Knative resources and usage of Knative serving.

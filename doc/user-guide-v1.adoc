@@ -216,8 +216,8 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `service.port` | The port exposed by the container.
 | `service.ports` | An array consisting of service ports.
 | `service.portName` | The name for the port exposed by the container.
-| `service.sessionAffinity` | Setting to maintain session affinity. Must be `ClientIP` or `None`. Defaults to `None`.
-| `service.sessionAffinityConfig` | Configurations of session affinity.
+| `service.sessionAffinity.type` | Setting to maintain session affinity. Must be `ClientIP` or `None`. Defaults to `None`.
+| `service.sessionAffinity.config` | Configurations of session affinity that represent a link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#sessionaffinityconfig-v1-core++[SessionAffinityConfig].
 | `service.targetPort` | The port that the operator assigns to containers inside pods. Defaults to the value of `service.port`.
 | `service.type` | The Kubernetes link:++https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types++[Service Type].
 | `serviceability` | Specifies serviceability-related operations, such as gathering server memory dumps and server traces. For examples, see link:#storage-for-serviceability[Storage for serviceability].
