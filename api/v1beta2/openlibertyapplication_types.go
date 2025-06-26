@@ -862,6 +862,11 @@ func (s *OpenLibertyApplicationService) GetBindable() *bool {
 	return s.Bindable
 }
 
+// GetSessionAffinity returns the session affinity setting for the service
+func (s *OpenLibertyApplicationService) GetSessionAffinity() common.BaseComponentServiceSessionAffinity {
+	return nil
+}
+
 // GetLabels returns labels to be added on ServiceMonitor
 func (m *OpenLibertyApplicationMonitoring) GetLabels() map[string]string {
 	return m.Labels
