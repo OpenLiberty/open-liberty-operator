@@ -6,8 +6,6 @@ import (
 	"os"
 	"strings"
 
-	networkingv1 "k8s.io/api/networking/v1"
-
 	"github.com/application-stacks/runtime-component-operator/common"
 	"github.com/go-logr/logr"
 
@@ -24,6 +22,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -116,12 +115,32 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		return reconcile.Result{}, err
 	}
 
-	if err = common.CheckValidValue(common.Config, common.OpConfigReconcileIntervalSeconds, OperatorName); err != nil {
+	if err = common.CheckValidValue(common.Config, common.OpConfigReconcileIntervalMinimum, OperatorName); err != nil {
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
 	if err = common.CheckValidValue(common.Config, common.OpConfigReconcileIntervalPercentage, OperatorName); err != nil {
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	}
+
+	if err = common.CheckValidValue(common.Config, common.OpConfigReconcileIntervalFailureMaximum, OperatorName); err != nil {
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	}
+
+	if err = common.CheckValidValue(common.Config, common.OpConfigReconcileIntervalSuccessMaximum, OperatorName); err != nil {
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	}
+
+	if instance.Status.Versions.Reconciled == "1.4.1" {
+		common.UpdateReconcileIntervalPercentage(common.Config, OperatorName)
+		err = r.CreateOrUpdate(configMap, instance, func() error {
+			oputils.UpdateConfigMap(configMap, common.OpConfigReconcileIntervalPercentage)
+			return nil
+		})
+		if err != nil {
+			reqLogger.Error(err, "Failed to reconcile ConfigMap")
+			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		}
 	}
 
 	isKnativeSupported, err := r.IsGroupVersionSupported(servingv1.SchemeGroupVersion.String(), "Service")
@@ -267,14 +286,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	if imageReferenceOld != instance.Status.ImageReference {
 		// Trigger a new Semeru Cloud Compiler generation
 		createNewSemeruGeneration(instance)
-
-		// If the shared LTPA keys was not generated from the last application image, restart the key generation process
-		if r.isLTPAKeySharingEnabled(instance) {
-			if err := r.restartLTPAKeysGeneration(instance, ltpaKeysMetadata); err != nil {
-				reqLogger.Error(err, "Error restarting the LTPA keys generation process")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
-		}
 
 		reqLogger.Info("Updating status.imageReference", "status.imageReference", instance.Status.ImageReference)
 		err = r.UpdateStatus(instance)
@@ -475,7 +486,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	// Create and manage the shared LTPA keys Secret if the feature is enabled
-	message, ltpaSecretName, ltpaKeysLastRotation, err := r.reconcileLTPAKeys(instance, ltpaKeysMetadata, ltpaConfigMetadata)
+	message, ltpaSecretName, ltpaKeysLastRotation, err := r.reconcileLTPAKeys(instance, ltpaKeysMetadata)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -908,37 +919,43 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 		},
 	}
 
-	b := ctrl.NewControllerManagedBy(mgr).For(&openlibertyv1.OpenLibertyApplication{}, builder.WithPredicates(pred)).
-		Owns(&corev1.Service{}, builder.WithPredicates(predSubResource)).
-		Owns(&corev1.Secret{}, builder.WithPredicates(predSubResource)).
-		Owns(&appsv1.Deployment{}, builder.WithPredicates(predSubResWithGenCheck)).
-		Owns(&appsv1.StatefulSet{}, builder.WithPredicates(predSubResWithGenCheck)).
-		Owns(&autoscalingv1.HorizontalPodAutoscaler{}, builder.WithPredicates(predSubResource))
+	b := ctrl.NewControllerManagedBy(mgr).For(&openlibertyv1.OpenLibertyApplication{}, builder.WithPredicates(pred))
 
-	ok, _ := r.IsGroupVersionSupported(routev1.SchemeGroupVersion.String(), "Route")
-	if ok {
-		b = b.Owns(&routev1.Route{}, builder.WithPredicates(predSubResource))
-	}
-	ok, _ = r.IsGroupVersionSupported(networkingv1.SchemeGroupVersion.String(), "Ingress")
-	if ok {
-		b = b.Owns(&networkingv1.Ingress{}, builder.WithPredicates(predSubResource))
-	}
-	ok, _ = r.IsGroupVersionSupported(servingv1.SchemeGroupVersion.String(), "Service")
-	if ok {
-		b = b.Owns(&servingv1.Service{}, builder.WithPredicates(predSubResource))
-	}
-	ok, _ = r.IsGroupVersionSupported(prometheusv1.SchemeGroupVersion.String(), "ServiceMonitor")
-	if ok {
-		b = b.Owns(&prometheusv1.ServiceMonitor{}, builder.WithPredicates(predSubResource))
-	}
-	ok, _ = r.IsGroupVersionSupported(imagev1.SchemeGroupVersion.String(), "ImageStream")
-	if ok {
-		b = b.Watches(&imagev1.ImageStream{}, &EnqueueRequestsForCustomIndexField{
-			Matcher: &ImageStreamMatcher{
-				Klient:          mgr.GetClient(),
-				WatchNamespaces: watchNamespaces,
-			},
-		})
+	if !oputils.GetOperatorDisableWatches() {
+		b = b.Owns(&corev1.Service{}, builder.WithPredicates(predSubResource)).
+			Owns(&corev1.Secret{}, builder.WithPredicates(predSubResource)).
+			Owns(&appsv1.Deployment{}, builder.WithPredicates(predSubResWithGenCheck)).
+			Owns(&appsv1.StatefulSet{}, builder.WithPredicates(predSubResWithGenCheck))
+
+		if oputils.GetOperatorWatchHPA() {
+			b = b.Owns(&autoscalingv1.HorizontalPodAutoscaler{}, builder.WithPredicates(predSubResource))
+		}
+
+		ok, _ := r.IsGroupVersionSupported(routev1.SchemeGroupVersion.String(), "Route")
+		if ok {
+			b = b.Owns(&routev1.Route{}, builder.WithPredicates(predSubResource))
+		}
+		ok, _ = r.IsGroupVersionSupported(networkingv1.SchemeGroupVersion.String(), "Ingress")
+		if ok {
+			b = b.Owns(&networkingv1.Ingress{}, builder.WithPredicates(predSubResource))
+		}
+		ok, _ = r.IsGroupVersionSupported(servingv1.SchemeGroupVersion.String(), "Service")
+		if ok {
+			b = b.Owns(&servingv1.Service{}, builder.WithPredicates(predSubResource))
+		}
+		ok, _ = r.IsGroupVersionSupported(prometheusv1.SchemeGroupVersion.String(), "ServiceMonitor")
+		if ok {
+			b = b.Owns(&prometheusv1.ServiceMonitor{}, builder.WithPredicates(predSubResource))
+		}
+		ok, _ = r.IsGroupVersionSupported(imagev1.SchemeGroupVersion.String(), "ImageStream")
+		if ok {
+			b = b.Watches(&imagev1.ImageStream{}, &EnqueueRequestsForCustomIndexField{
+				Matcher: &ImageStreamMatcher{
+					Klient:          mgr.GetClient(),
+					WatchNamespaces: watchNamespaces,
+				},
+			})
+		}
 	}
 
 	maxConcurrentReconciles := oputils.GetMaxConcurrentReconciles()

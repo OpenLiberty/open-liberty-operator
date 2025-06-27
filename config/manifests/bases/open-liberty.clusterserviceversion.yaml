@@ -15,7 +15,7 @@ metadata:
     features.operators.openshift.io/token-auth-aws: "false"
     features.operators.openshift.io/token-auth-azure: "false"
     features.operators.openshift.io/token-auth-gcp: "false"
-    olm.skipRange: '>=0.8.0 <1.4.1'
+    olm.skipRange: '>=0.8.0 <1.4.4'
     repository: https://github.com/OpenLiberty/open-liberty-operator
     support: IBM
   labels:
@@ -301,10 +301,19 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - displayName: Route
         path: route
+      - description: Configure service session affinity.
+        displayName: Session Affinity
+        path: service.sessionAffinity
       - description: Configures the Semeru Cloud Compiler to handle Just-In-Time (JIT)
           compilation requests from the application.
         displayName: Semeru Cloud Compiler
         path: semeruCloudCompiler
+      - description: Setting to maintain session affinity. Must be ClientIP or None.
+          Defaults to None.
+        displayName: Session Affinity Type
+        path: service.sessionAffinity.type
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       - description: Specifies the strategy to replace old deployment pods with new
           pods.
         displayName: Deployment Update Strategy
@@ -313,6 +322,9 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:updateStrategy
       - displayName: Network Policy
         path: networkPolicy
+      - description: Configurations of session affinity.
+        displayName: Config
+        path: service.sessionAffinity.config
       - displayName: Serviceability
         path: serviceability
       - displayName: Single Sign-On

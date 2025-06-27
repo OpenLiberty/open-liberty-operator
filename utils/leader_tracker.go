@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
@@ -15,6 +16,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+var LeaderTrackerMutexes *sync.Map
+
+func init() {
+	LeaderTrackerMutexes = &sync.Map{}
+}
 
 // Leader tracking constants
 const ResourcesKey = "names"
@@ -191,6 +198,13 @@ func CustomizeLeaderTracker(leaderTracker *corev1.Secret, trackerList *[]LeaderT
 }
 
 func GetLeaderTracker(instance *olv1.OpenLibertyApplication, operatorShortName string, leaderTrackerType string, client client.Client) (*corev1.Secret, *[]LeaderTracker, error) {
+	leaderMutex, mutexFound := LeaderTrackerMutexes.Load(leaderTrackerType)
+	if !mutexFound {
+		return nil, nil, fmt.Errorf("Could not retrieve %s leader tracker's mutex when attempting to get. Exiting.", leaderTrackerType)
+	}
+	leaderMutex.(*sync.Mutex).Lock()
+	defer leaderMutex.(*sync.Mutex).Unlock()
+
 	leaderTracker := &corev1.Secret{}
 	leaderTracker.Name = operatorShortName + "-managed-leader-tracking-" + leaderTrackerType
 	leaderTracker.Namespace = instance.GetNamespace()
@@ -275,7 +289,7 @@ func CreateUnstructuredResourceFromSignature(leaderTrackerType string, assetsFol
 	name, nameFound := resourceSignatureYAML["name"]
 	// rootName, rootNameFound := resourceSignatureYAML["rootName"]
 	if !apiVersionFound || !kindFound || !nameFound {
-		return nil, "", fmt.Errorf("the operator bundled the shared resource '" + leaderTrackerType + "' with an invalid signature")
+		return nil, "", fmt.Errorf("the operator bundled the shared resource '%s' with an invalid signature", leaderTrackerType)
 	}
 	sharedResource := &unstructured.Unstructured{}
 	sharedResource.SetKind(kind.(string))
@@ -296,7 +310,7 @@ func CreateUnstructuredResourceListFromSignature(leaderTrackerType string, asset
 	kind, kindFound := resourceSignatureYAML["kind"]
 	rootName := resourceSignatureYAML["rootName"]
 	if !apiVersionFound || !kindFound {
-		return nil, "", fmt.Errorf("the operator bundled the shared resource '" + leaderTrackerType + "' with an invalid signature")
+		return nil, "", fmt.Errorf("the operator bundled the shared resource '%s' with an invalid signature", leaderTrackerType)
 	}
 	sharedResourceList := &unstructured.UnstructuredList{}
 	sharedResourceList.SetKind(kind.(string))
@@ -321,7 +335,7 @@ func parseUnstructuredResourceName(leaderTrackerType string, nameStr string, arg
 		if strings.Contains(nameStr, replaceToken) {
 			nameStr = strings.ReplaceAll(nameStr, replaceToken, replacementString)
 		} else {
-			return "", fmt.Errorf("the operator bundled the shared resource '" + leaderTrackerType + "' with an invalid signature; parseUnstructuredResourceName len(args) does not match the number of replacement tokens in the provided signature")
+			return "", fmt.Errorf("the operator bundled the shared resource '%s' with an invalid signature; parseUnstructuredResourceName len(args) does not match the number of replacement tokens in the provided signature", leaderTrackerType)
 		}
 	}
 	return nameStr, nil

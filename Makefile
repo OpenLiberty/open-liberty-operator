@@ -3,8 +3,9 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 1.4.1
-OPERATOR_SDK_RELEASE_VERSION ?= v1.35.0
+VERSION ?= 1.4.4
+OPERATOR_SDK_RELEASE_VERSION ?= v1.38.0
+LIBERTY_VERSION ?= 25.0.0.1
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "preview,fast,stable")
@@ -147,21 +148,21 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= 4.5.5
+KUSTOMIZE_VERSION ?= 5.4.2
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/kustomize/v${KUSTOMIZE_VERSION}/hack/install_kustomize.sh"
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
 $(KUSTOMIZE): $(LOCALBIN)
-	test -s $(LOCALBIN)/kustomize || curl -s $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s $(KUSTOMIZE_VERSION) $(LOCALBIN)
+	test -s $(LOCALBIN)/kustomize || GOBIN=$(LOCALBIN) GO111MODULE=on go install sigs.k8s.io/kustomize/kustomize/v5@v$(KUSTOMIZE_VERSION)
 
-CONTROLLER_TOOLS_VERSION ?= 0.14.0
+CONTROLLER_TOOLS_VERSION ?= 0.15.0
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
 $(CONTROLLER_GEN): $(LOCALBIN)
 	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@v$(CONTROLLER_TOOLS_VERSION)
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.28
+ENVTEST_K8S_VERSION = 1.30.0
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
@@ -233,8 +234,24 @@ unit-test: ## Run unit tests
 	go test -v -mod=vendor -tags=unit github.com/OpenLiberty/open-liberty-operator/...
 
 .PHONY: run
-run: manifests generate fmt vet ## Run a controller against the configured Kubernetes cluster in ~/.kube/config from your host.
+run: manifests generate fmt vet install-secutil ## Run a controller against the configured Kubernetes cluster in ~/.kube/config from your host.
 	go run ./cmd/main.go
+
+.PHONY: install-secutil
+install-secutil:
+ifneq (found,$(shell test -e ./liberty/bin/securityUtility && echo -n found))
+	@mkdir -p ./liberty
+	@wget -O ./liberty.zip https://repo1.maven.org/maven2/io/openliberty/openliberty-kernel/$(LIBERTY_VERSION)/openliberty-kernel-$(LIBERTY_VERSION).zip
+	@unzip -d ./liberty ./liberty.zip
+	@mv -f ./liberty/wlp/* ./liberty
+	@rmdir ./liberty/wlp
+	@rm ./liberty.zip
+	@mkdir -p ./liberty/output
+	@echo "Liberty securityUtility has been installed!"
+else
+	@mkdir -p ./liberty/output
+	@echo "Liberty securityUtility is already installed!"
+endif 
 
 ##@ Deployment
 

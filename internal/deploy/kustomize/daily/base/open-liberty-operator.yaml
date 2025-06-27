@@ -49,10 +49,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        - name: MAX_CONCURRENT_RECONCILES
-          value: "1"
         - name: RELATED_IMAGE_LIBERTY_SAMPLE_APP
-          value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:3999aa86f788e601d305896e48a043a91861cdbf71951a1959887151390b3650
+          value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:f55b852d939f7ac3234c08e23c0d1ab183b68079d5b93b87b0945c937043f523
         - name: RELATED_IMAGE_OPEN_LIBERTY_OPERATOR
           value: icr.io/appcafe/open-liberty-operator:daily
         image: icr.io/appcafe/open-liberty-operator:daily
@@ -94,6 +92,10 @@ spec:
           runAsNonRoot: true
           seccompProfile:
             type: RuntimeDefault
+        volumeMounts:
+        - mountPath: /liberty/output
+          name: scratch
+          subPath: create-ltpa-keys
       hostIPC: false
       hostNetwork: false
       hostPID: false
@@ -103,3 +105,6 @@ spec:
           type: RuntimeDefault
       serviceAccountName: olo-controller-manager
       terminationGracePeriodSeconds: 10
+      volumes:
+      - emptyDir: {}
+        name: scratch

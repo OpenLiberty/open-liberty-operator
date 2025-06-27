@@ -8,7 +8,7 @@ resources:
 
 # +kubebuilder:scaffold:crdkustomizeresource
 
-patchesStrategicMerge:
+patches:
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.
 # patches here are for enabling the conversion webhook for each CRD
 #- patches/webhook_in_runtimecomponents.yaml
@@ -21,9 +21,9 @@ patchesStrategicMerge:
 #- patches/cainjection_in_runtimeoperations.yaml
 # +kubebuilder:scaffold:crdkustomizecainjectionpatch
 
-- patches/preserveUnknownFields_openlibertyapplications.yaml
-- patches/preserveUnknownFields_openlibertydumps.yaml
-- patches/preserveUnknownFields_openlibertytraces.yaml
+- path: patches/preserveUnknownFields_openlibertyapplications.yaml
+- path: patches/preserveUnknownFields_openlibertydumps.yaml
+- path: patches/preserveUnknownFields_openlibertytraces.yaml
 # +kubebuilder:scaffold:preserveunknownfieldspatch
 
 # the following config is for teaching kustomize how to do kustomization for CRDs.

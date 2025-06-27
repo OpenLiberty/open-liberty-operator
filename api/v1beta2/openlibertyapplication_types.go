@@ -757,15 +757,7 @@ func (s *OpenLibertyApplicationStatus) SetReconcileInterval(interval *int32) {
 	return
 }
 
-func (s *StatusCondition) GetUnchangedConditionCount() *int32 {
-	return nil
-}
-
-func (s *StatusCondition) SetUnchangedConditionCount(count *int32) {
-	return
-}
-
-func (s *OpenLibertyApplicationStatus) UnsetUnchangedConditionCount(conditionType common.StatusConditionType) {
+func (s *OpenLibertyApplicationStatus) UnsetReconcileInterval() {
 	return
 }
 
@@ -868,6 +860,11 @@ func (s *OpenLibertyApplicationService) GetCertificate() common.BaseComponentCer
 // GetBindable returns whether the application should be exposable as a service
 func (s *OpenLibertyApplicationService) GetBindable() *bool {
 	return s.Bindable
+}
+
+// GetSessionAffinity returns the session affinity setting for the service
+func (s *OpenLibertyApplicationService) GetSessionAffinity() common.BaseComponentServiceSessionAffinity {
+	return nil
 }
 
 // GetLabels returns labels to be added on ServiceMonitor
@@ -1031,6 +1028,11 @@ func (c *StatusCondition) GetLastTransitionTime() *metav1.Time {
 // SetLastTransitionTime sets time of last status change
 func (c *StatusCondition) SetLastTransitionTime(t *metav1.Time) {
 	c.LastTransitionTime = t
+}
+
+// GetLatestTransitionTime returns latest time of status change
+func (s *OpenLibertyApplicationStatus) GetLatestTransitionTime() *metav1.Time {
+	return nil
 }
 
 // GetMessage return condition's message

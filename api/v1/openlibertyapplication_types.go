@@ -8,6 +8,7 @@ import (
 	prometheusv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -298,6 +299,21 @@ type OpenLibertyApplicationService struct {
 	// Expose the application as a bindable service. Defaults to false.
 	// +operator-sdk:csv:customresourcedefinitions:order=18,type=spec,displayName="Bindable",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
 	Bindable *bool `json:"bindable,omitempty"`
+
+	// Configure service session affinity.
+	// +operator-sdk:csv:customresourcedefinitions:order=19,type=spec
+	SessionAffinity *OpenLibertyApplicationServiceSessionAffinity `json:"sessionAffinity,omitempty"`
+}
+
+// Configure service session affinity
+type OpenLibertyApplicationServiceSessionAffinity struct {
+	// Setting to maintain session affinity. Must be ClientIP or None. Defaults to None.
+	// +operator-sdk:csv:customresourcedefinitions:order=20,type=spec,displayName="Session Affinity Type",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	Type v1.ServiceAffinity `json:"type,omitempty"`
+
+	// Configurations of session affinity.
+	// +operator-sdk:csv:customresourcedefinitions:order=21,type=spec
+	Config *corev1.SessionAffinityConfig `json:"config,omitempty"`
 }
 
 // Configure service certificate.
@@ -474,9 +490,6 @@ type StatusCondition struct {
 	Message            string                 `json:"message,omitempty"`
 	Status             corev1.ConditionStatus `json:"status,omitempty"`
 	Type               StatusConditionType    `json:"type,omitempty"`
-
-	// The count of the number of reconciles the condition status type has not changed.
-	UnchangedConditionCount *int32 `json:"unchangedConditionCount,omitempty"`
 }
 
 // Defines the type of status condition.
@@ -977,6 +990,10 @@ func (s *OpenLibertyApplicationStatus) SetReconcileInterval(interval *int32) {
 	s.ReconcileInterval = interval
 }
 
+func (s *OpenLibertyApplicationStatus) UnsetReconcileInterval() {
+	s.ReconcileInterval = nil
+}
+
 // GetMinReplicas returns minimum replicas
 func (a *OpenLibertyApplicationAutoScaling) GetMinReplicas() *int32 {
 	return a.MinReplicas
@@ -1089,6 +1106,24 @@ func (c *OpenLibertyApplicationCertificate) GetAnnotations() map[string]string {
 // GetBindable returns whether the application should be exposable as a service
 func (s *OpenLibertyApplicationService) GetBindable() *bool {
 	return s.Bindable
+}
+
+// GetSessionAffinity returns the session affinity settings for the service
+func (s *OpenLibertyApplicationService) GetSessionAffinity() common.BaseComponentServiceSessionAffinity {
+	if s.SessionAffinity == nil {
+		return nil
+	}
+	return s.SessionAffinity
+}
+
+// GetType returns the session affinity type for the service
+func (ssa *OpenLibertyApplicationServiceSessionAffinity) GetType() v1.ServiceAffinity {
+	return ssa.Type
+}
+
+// GetConfig returns the session affinity configuration for the service
+func (ssa *OpenLibertyApplicationServiceSessionAffinity) GetConfig() *corev1.SessionAffinityConfig {
+	return ssa.Config
 }
 
 // GetNamespaceLabels returns the namespace selector labels that should be used for the ingress rule
@@ -1350,6 +1385,19 @@ func (c *StatusCondition) SetLastTransitionTime(t *metav1.Time) {
 	c.LastTransitionTime = t
 }
 
+// GetLatestTransitionTime returns latest time of status change
+func (s *OpenLibertyApplicationStatus) GetLatestTransitionTime() *metav1.Time {
+	var latestTime *metav1.Time
+	for i := range s.Conditions {
+		t := s.Conditions[i].GetLastTransitionTime()
+		// If latestTime is not set or condition's time is before latestTime
+		if latestTime == nil || latestTime.Before(t) {
+			latestTime = t
+		}
+	}
+	return latestTime
+}
+
 // GetMessage returns condition's message
 func (c *StatusCondition) GetMessage() string {
 	return c.Message
@@ -1426,7 +1474,7 @@ func (s *OpenLibertyApplicationStatus) SetCondition(c common.StatusCondition) {
 		}
 	}
 
-	if condition.GetStatus() != c.GetStatus() || condition.GetMessage() != c.GetMessage() {
+	if condition.GetStatus() != c.GetStatus() || condition.GetMessage() != c.GetMessage() || condition.GetReason() != c.GetReason() {
 		condition.SetLastTransitionTime(&metav1.Time{Time: time.Now()})
 	}
 
@@ -1434,7 +1482,6 @@ func (s *OpenLibertyApplicationStatus) SetCondition(c common.StatusCondition) {
 	condition.SetMessage(c.GetMessage())
 	condition.SetStatus(c.GetStatus())
 	condition.SetType(c.GetType())
-	condition.SetUnchangedConditionCount(c.GetUnchangedConditionCount())
 	if !found {
 		s.Conditions = append(s.Conditions, *condition)
 	}
@@ -1452,24 +1499,6 @@ func (s *OpenLibertyApplicationStatus) UnsetCondition(c common.StatusCondition) 
 				s.Conditions = append(s.Conditions[:i], s.Conditions[i+1])
 			}
 			return
-		}
-	}
-}
-
-func (sc *StatusCondition) GetUnchangedConditionCount() *int32 {
-	return sc.UnchangedConditionCount
-}
-
-func (sc *StatusCondition) SetUnchangedConditionCount(count *int32) {
-	sc.UnchangedConditionCount = count
-}
-
-func (s *OpenLibertyApplicationStatus) UnsetUnchangedConditionCount(conditionType common.StatusConditionType) {
-	// Reset unchanged count for other status conditions
-	var emptyCount *int32
-	for i := range s.Conditions {
-		if s.Conditions[i].GetType() != conditionType && s.Conditions[i].GetUnchangedConditionCount() != nil {
-			s.Conditions[i].SetUnchangedConditionCount(emptyCount)
 		}
 	}
 }
