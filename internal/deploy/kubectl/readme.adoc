@@ -15,7 +15,7 @@ Appropriate roles and bindings are required to watch another namespace or watch 
 +
 [source,sh]
 ----
-kubectl apply --server-side -f https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/internal/deploy/kubectl/openliberty-app-crd.yaml
+kubectl apply --server-side -f https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/deploy-1.4.4-rc/internal/deploy/kubectl/openliberty-app-crd.yaml
 ----
 
 . Install the `Open Liberty Operator:
@@ -39,7 +39,7 @@ NOTE: Ensure that you replace  `<SPECIFY_OPERATOR_NAMESPACE_HERE>` and `<SPECIFY
 +
 [source,sh]
 ----
-curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/internal/deploy/kubectl/openliberty-app-rbac-watch-all.yaml \
+curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/deploy-1.4.4-rc/internal/deploy/kubectl/openliberty-app-rbac-watch-all.yaml \
       | sed -e "s/OPEN_LIBERTY_OPERATOR_NAMESPACE/${OPERATOR_NAMESPACE}/" \
       | kubectl apply -f -
 ----
@@ -48,7 +48,7 @@ curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main
 +
 [source,sh]
 ----
-curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/internal/deploy/kubectl/openliberty-app-rbac-watch-another.yaml \
+curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/deploy-1.4.4-rc/internal/deploy/kubectl/openliberty-app-rbac-watch-another.yaml \
       | sed -e "s/OPEN_LIBERTY_OPERATOR_NAMESPACE/${OPERATOR_NAMESPACE}/" \
       | sed -e "s/OPEN_LIBERTY_WATCH_NAMESPACE/${WATCH_NAMESPACE}/" \
       | kubectl apply -f -
@@ -58,7 +58,7 @@ curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main
 +
 [source,sh]
 ----
-curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/internal/deploy/kubectl/openliberty-app-operator.yaml \
+curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/deploy-1.4.4-rc/internal/deploy/kubectl/openliberty-app-operator.yaml \
       | sed -e "s/OPEN_LIBERTY_WATCH_NAMESPACE/${WATCH_NAMESPACE}/" \
       | kubectl apply -n ${OPERATOR_NAMESPACE} -f -
 ----

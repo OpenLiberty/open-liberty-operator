@@ -52,8 +52,8 @@ spec:
         - name: RELATED_IMAGE_LIBERTY_SAMPLE_APP
           value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:f55b852d939f7ac3234c08e23c0d1ab183b68079d5b93b87b0945c937043f523
         - name: RELATED_IMAGE_OPEN_LIBERTY_OPERATOR
-          value: icr.io/appcafe/open-liberty-operator:daily
-        image: icr.io/appcafe/open-liberty-operator:daily
+          value: cp.stg.icr.io/cp/open-liberty-operator@sha256:a78321d64e1a2073bb814bcb50b1b28907ca8d31026dbbd85f21e824bb1da52f
+        image: cp.stg.icr.io/cp/open-liberty-operator@sha256:a78321d64e1a2073bb814bcb50b1b28907ca8d31026dbbd85f21e824bb1da52f
         livenessProbe:
           failureThreshold: 3
           httpGet:
