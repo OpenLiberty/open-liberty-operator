@@ -538,7 +538,7 @@ spec:
       - description: Removes default service annotations added to the Semeru Cloud
           Compiler. Defaults to false.
         displayName: Disable Service Annotations
-        path: semeruCloudCompiler.disableAnnotations
+        path: semeruCloudCompiler.disableServiceAnnotations
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Determines whether the access token that is provided in the request

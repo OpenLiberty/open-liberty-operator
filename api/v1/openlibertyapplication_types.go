@@ -460,7 +460,7 @@ type OpenLibertyApplicationSemeruCloudCompiler struct {
 
 	// Removes default service annotations added to the Semeru Cloud Compiler. Defaults to false.
 	// +operator-sdk:csv:customresourcedefinitions:order=55,type=spec,displayName="Disable Service Annotations",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
-	DisableServiceAnnotations *bool `json:"disableAnnotations,omitempty"`
+	DisableServiceAnnotations *bool `json:"disableServiceAnnotations,omitempty"`
 }
 
 // Defines SemeruCompiler status
@@ -1254,7 +1254,7 @@ func (scc *OpenLibertyApplicationSemeruCloudCompiler) GetReplicas() *int32 {
 	return &one
 }
 
-// GetDisableAnnotations returns true if default annotations should be removed from the Semeru Cloud Compiler service
+// GetDisableServiceAnnotations returns true if default service annotations should be removed from the Semeru Cloud Compiler
 func (scc *OpenLibertyApplicationSemeruCloudCompiler) GetDisableServiceAnnotations() bool {
 	if scc.DisableServiceAnnotations == nil {
 		return false

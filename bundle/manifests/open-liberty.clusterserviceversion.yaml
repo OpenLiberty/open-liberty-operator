@@ -92,7 +92,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2025-07-04T15:47:01Z"
+    createdAt: "2025-07-04T15:50:31Z"
     description: Deploy and manage containerized Liberty applications
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "true"
@@ -626,7 +626,7 @@ spec:
       - description: Removes default service annotations added to the Semeru Cloud
           Compiler. Defaults to false.
         displayName: Disable Service Annotations
-        path: semeruCloudCompiler.disableAnnotations
+        path: semeruCloudCompiler.disableServiceAnnotations
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Determines whether the access token that is provided in the request

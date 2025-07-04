@@ -4625,7 +4625,7 @@ spec:
                 description: Configures the Semeru Cloud Compiler to handle Just-In-Time
                   (JIT) compilation requests from the application.
                 properties:
-                  disableAnnotations:
+                  disableServiceAnnotations:
                     description: Removes default service annotations added to the
                       Semeru Cloud Compiler. Defaults to false.
                     type: boolean
