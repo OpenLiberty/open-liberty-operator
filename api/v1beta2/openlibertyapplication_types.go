@@ -796,6 +796,10 @@ func (s *OpenLibertyApplicationService) GetAnnotations() map[string]string {
 	return s.Annotations
 }
 
+func (s *OpenLibertyApplicationService) GetDisableAnnotations() bool {
+	return false
+}
+
 // GetServiceability returns serviceability
 func (cr *OpenLibertyApplication) GetServiceability() *OpenLibertyApplicationServiceability {
 	return cr.Spec.Serviceability

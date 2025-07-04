@@ -410,12 +410,13 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 	lutils.AddSecretResourceVersionAsEnvVar(&deploy.Spec.Template, ola, r.GetClient(), ola.Status.SemeruCompiler.TLSSecretName, "TLS")
 }
 
+// Precondition: .spec.semeruCloudCompiler is not nil
 func reconcileSemeruService(svc *corev1.Service, ola *openlibertyv1.OpenLibertyApplication) {
 	var port int32 = 38400
 	var timeout int32 = 86400
 	svc.Labels = getLabels(ola)
 	svc.Spec.Selector = getSelectors(ola)
-	utils.CustomizeServiceAnnotations(svc)
+	utils.CustomizeServiceAnnotations(svc, ola.GetSemeruCloudCompiler().GetDisableAnnotations())
 	if len(svc.Spec.Ports) == 0 {
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{})
 	}

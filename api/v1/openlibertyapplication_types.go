@@ -278,30 +278,34 @@ type OpenLibertyApplicationService struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=13,type=spec,displayName="Service Annotations",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	Annotations map[string]string `json:"annotations,omitempty"`
 
+	// Removes default annotations added to the service. Defaults to false.
+	// +operator-sdk:csv:customresourcedefinitions:order=14,type=spec,displayName="Disable Annotations",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	DisableAnnotations *bool `json:"disableAnnotations,omitempty"`
+
 	// The port that the operator assigns to containers inside pods. Defaults to the value of .spec.service.port.
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:validation:Minimum=1
-	// +operator-sdk:csv:customresourcedefinitions:order=14,type=spec,displayName="Target Port",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
+	// +operator-sdk:csv:customresourcedefinitions:order=15,type=spec,displayName="Target Port",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
 	TargetPort *int32 `json:"targetPort,omitempty"`
 
 	// A name of a secret that already contains TLS key, certificate and CA to be mounted in the pod. The following keys are valid in the secret: ca.crt, tls.crt, and tls.key.
-	// +operator-sdk:csv:customresourcedefinitions:order=15,type=spec,displayName="Certificate Secret Reference",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	// +operator-sdk:csv:customresourcedefinitions:order=16,type=spec,displayName="Certificate Secret Reference",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	CertificateSecretRef *string `json:"certificateSecretRef,omitempty"`
 
 	// Configure service certificate.
-	// +operator-sdk:csv:customresourcedefinitions:order=16,type=spec,displayName="Service Certificate"
+	// +operator-sdk:csv:customresourcedefinitions:order=17,type=spec,displayName="Service Certificate"
 	Certificate *OpenLibertyApplicationCertificate `json:"certificate,omitempty"`
 
 	// An array consisting of service ports.
-	// +operator-sdk:csv:customresourcedefinitions:order=17,type=spec
+	// +operator-sdk:csv:customresourcedefinitions:order=18,type=spec
 	Ports []corev1.ServicePort `json:"ports,omitempty"`
 
 	// Expose the application as a bindable service. Defaults to false.
-	// +operator-sdk:csv:customresourcedefinitions:order=18,type=spec,displayName="Bindable",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	// +operator-sdk:csv:customresourcedefinitions:order=19,type=spec,displayName="Bindable",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
 	Bindable *bool `json:"bindable,omitempty"`
 
 	// Configure service session affinity.
-	// +operator-sdk:csv:customresourcedefinitions:order=19,type=spec
+	// +operator-sdk:csv:customresourcedefinitions:order=20,type=spec
 	SessionAffinity *OpenLibertyApplicationServiceSessionAffinity `json:"sessionAffinity,omitempty"`
 }
 
@@ -445,12 +449,18 @@ type OpenLibertyApplicationSemeruCloudCompiler struct {
 	// Enable the Semeru Cloud Compiler. Defaults to false.
 	// +operator-sdk:csv:customresourcedefinitions:order=52,type=spec,displayName="Enable",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
 	Enable bool `json:"enable,omitempty"`
+
 	// Number of desired pods for the Semeru Cloud Compiler. Defaults to 1.
 	// +operator-sdk:csv:customresourcedefinitions:order=53,type=spec,displayName="Replicas",xDescriptors="urn:alm:descriptor:com.tectonic.ui:podCount"
 	Replicas *int32 `json:"replicas,omitempty"`
+
 	// Resource requests and limits for the Semeru Cloud Compiler. The CPU defaults to 100m with a limit of 2000m. The memory defaults to 800Mi, with a limit of 1200Mi.
 	// +operator-sdk:csv:customresourcedefinitions:order=54,type=spec,displayName="Resource Requirements",xDescriptors="urn:alm:descriptor:com.tectonic.ui:resourceRequirements"
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	// Removes default annotations added to the Semeru Cloud Compiler service. Defaults to false.
+	// +operator-sdk:csv:customresourcedefinitions:order=55,type=spec,displayName="Disable Annotations",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	DisableAnnotations *bool `json:"disableAnnotations,omitempty"`
 }
 
 // Defines SemeruCompiler status
@@ -1034,6 +1044,14 @@ func (s *OpenLibertyApplicationService) GetAnnotations() map[string]string {
 	return s.Annotations
 }
 
+// GetDisableAnnotations returns true if default annotations should be removed from the service
+func (s *OpenLibertyApplicationService) GetDisableAnnotations() bool {
+	if s.DisableAnnotations == nil {
+		return false
+	}
+	return *s.DisableAnnotations
+}
+
 // GetServiceability returns serviceability
 func (cr *OpenLibertyApplication) GetServiceability() *OpenLibertyApplicationServiceability {
 	return cr.Spec.Serviceability
@@ -1234,6 +1252,14 @@ func (scc *OpenLibertyApplicationSemeruCloudCompiler) GetReplicas() *int32 {
 	}
 	one := int32(1)
 	return &one
+}
+
+// GetDisableAnnotations returns true if default annotations should be removed from the Semeru Cloud Compiler service
+func (scc *OpenLibertyApplicationSemeruCloudCompiler) GetDisableAnnotations() bool {
+	if scc.DisableAnnotations == nil {
+		return false
+	}
+	return *scc.DisableAnnotations
 }
 
 // GetTopologySpreadConstraints returns the pod topology spread constraints configuration
