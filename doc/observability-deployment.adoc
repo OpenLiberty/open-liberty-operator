@@ -113,8 +113,6 @@ spec:
             key: password
             name: basic-auth
         interval: 30s
-        tlsConfig:
-          insecureSkipVerify: true
 ----
 
 

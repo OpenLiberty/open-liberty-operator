@@ -8,7 +8,7 @@ With the release of Logging 6.0 in RHOCP 4.17, the EFK stack is no longer suppor
 
 ## Setup LokiStack and Cluster Log Forwarding 
 
-Follow this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.0/html/about_openshift_logging/quick-start[guide] to set up LokiStack and a ClusterLogForwarder in the `openshift-logging` namespace.
+Follow this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.2/html/about_openshift_logging/quick-start[guide] to set up LokiStack and a ClusterLogForwarder in the `openshift-logging` namespace.
 
 After the LokiStack and ClusterLogForwarder deployments are completed, you should see the following pods running in the openshift-logging namespace.
 
@@ -38,7 +38,7 @@ collector-z75z5                                1/1     Running   0          3h16
 
 ## Tips
 
-You can configure LokiStack and the CustomLogForwarder according to your needs. Check out this link:https://docs.openshift.com/container-platform/4.18/observability/logging/logging-6.0/log6x-loki.html[doc] for how to configure LokiStack storage, and this link:https://docs.openshift.com/container-platform/4.18/observability/logging/logging-6.0/log6x-clf.html[doc] for how to configure log fowarding.
+You can configure LokiStack and the CustomLogForwarder according to your needs. Check out this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.2/html/configuring_logging/configuring-lokistack-storage#logging-loki-storage_configuring-the-log-store[doc] for how to configure LokiStack storage, and this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.2/html/configuring_logging/configuring-log-forwarding[doc] for how to configure log fowarding.
 
 ### Object storage
 
