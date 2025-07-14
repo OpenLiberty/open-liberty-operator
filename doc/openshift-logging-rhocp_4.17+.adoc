@@ -38,7 +38,7 @@ collector-z75z5                                1/1     Running   0          3h16
 
 ## Tips
 
-You can configure LokiStack and the CustomLogForwarder according to your needs. Check out this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.2/html/configuring_logging/configuring-lokistack-storage#logging-loki-storage_configuring-the-log-store[doc] for how to configure LokiStack storage, and this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.2/html/configuring_logging/configuring-log-forwarding[doc] for how to configure log fowarding.
+You can configure LokiStack and the CustomLogForwarder according to your needs. Check out this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.2/html/configuring_logging/configuring-lokistack-storage[doc] for how to configure LokiStack storage, and this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.2/html/configuring_logging/configuring-log-forwarding[doc] for how to configure log fowarding.
 
 ### Object storage
 
