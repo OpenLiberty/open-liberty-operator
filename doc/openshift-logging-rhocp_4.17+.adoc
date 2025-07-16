@@ -65,15 +65,15 @@ By default, if container logs are being output in JSON format, they will be nest
  kind: ClusterLogForwarder
  spec:
    ...
-   filterRefs:
-   - parse-json
+   filters:
+    - name: parse-json
+      type: parse
    ...
    pipelines:
    - name: default-logstore
      ...
-     filters:
-     - name: parse-json
-       type: parse
+     filterRefs:
+     - parse-json
 ----
 The addition of the JSON filter above will copy the nested JSON container log into a separate `structured` field inside the Vector JSON document, where the individual fields from the JSON container log can be accessed as `structured. <field_name>`.
 
