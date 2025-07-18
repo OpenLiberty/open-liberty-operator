@@ -884,6 +884,17 @@ spec:
       kind: OpenLibertyDump
       name: openlibertydumps.apps.openliberty.io
       version: v1beta2
+    - description: Day-2 operation for generating server performance datas
+      displayName: OpenLibertyPerformanceData
+      kind: OpenLibertyPerformanceData
+      name: openlibertyperformancedatas.apps.openliberty.io
+      statusDescriptors:
+      - description: Location of the generated performance data file
+        displayName: Performance Data File Path
+        path: performanceDataFile
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      version: v1
     - description: Day-2 operation for gathering server traces
       displayName: OpenLibertyTrace
       kind: OpenLibertyTrace
