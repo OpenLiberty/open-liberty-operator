@@ -37,7 +37,7 @@ metadata:
           "apiVersion": "apps.openliberty.io/v1",
           "kind": "OpenLibertyPerformanceData",
           "metadata": {
-            "name": "openliberty-performance-data-sample"
+            "name": "openliberty-performanace-data-sample"
           },
           "spec": {
             "interval": 30,
@@ -1072,10 +1072,10 @@ spec:
       kind: OpenLibertyDump
       name: openlibertydumps.apps.openliberty.io
       version: v1beta2
-    - description: Day-2 operation for generating server performance data
+    - description: Day-2 operation for generating server performance datas
       displayName: OpenLibertyPerformanceData
       kind: OpenLibertyPerformanceData
-      name: openlibertyperformancedata.apps.openliberty.io
+      name: openlibertyperformancedatas.apps.openliberty.io
       statusDescriptors:
       - description: Location of the generated performance data file
         displayName: Performance Data File Path
@@ -1336,9 +1336,31 @@ spec:
           - openlibertydumps
           - openlibertydumps/finalizers
           - openlibertydumps/status
-          - openlibertyperformancedata
-          - openlibertyperformancedata/finalizers
-          - openlibertyperformancedata/status
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - apps.openliberty.io
+          resources:
+          - openlibertyperformancedatas
+          - openlibertyperformancedatas/finalizers
+          - openlibertyperformancedatas/status
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - apps.openliberty.io
+          resources:
           - openlibertytraces
           - openlibertytraces/finalizers
           - openlibertytraces/status

@@ -35,6 +35,8 @@ import (
 	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	"github.com/OpenLiberty/open-liberty-operator/internal/controller"
 
+	_ "unsafe"
+
 	"github.com/application-stacks/runtime-component-operator/common"
 	"github.com/application-stacks/runtime-component-operator/utils"
 	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
@@ -44,7 +46,8 @@ import (
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/OpenLiberty/open-liberty-operator/utils/socket"
+	// +kubebuilder:scaffold:imports
+	"github.com/OpenLiberty/open-liberty-operator/cmd/socket"
 )
 
 var (
@@ -148,9 +151,12 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controller.ReconcileOpenLibertyPerformanceData{
-		ReconcilerBase:    utils.NewReconcilerBase(mgr.GetAPIReader(), mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor("open-liberty-operator")),
 		Log:               ctrl.Log.WithName("controller").WithName("OpenLibertyPerformanceData"),
-		PodInjectorClient: socket.GetPodInjectorClient(ctrl.Log.WithName("controller").WithName("PodInjectorClient").V(common.LogLevelDebug)),
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		RestConfig:        mgr.GetConfig(),
+		Recorder:          mgr.GetEventRecorderFor("open-liberty-operator"),
+		PodInjectorClient: socket.GetPodInjectorClient(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenLibertyPerformanceData")
 		os.Exit(1)
@@ -177,7 +183,7 @@ func main() {
 	}
 
 	setupLog.Info("creating socket for operator pod injector")
-	listener, err := socket.ServePodInjector(mgr, ctrl.Log.WithName("controller").WithName("PodInjectorServer").V(common.LogLevelDebug))
+	listener, err := socket.ServePodInjector(mgr)
 	if err != nil {
 		setupLog.Error(err, "problem running operator pod injector")
 		os.Exit(1)
