@@ -263,6 +263,7 @@ func ExecuteCommandInContainer(config *rest.Config, podName, podNamespace, conta
 		Stderr: &stderr,
 		Tty:    false,
 	})
+	fmt.Printf("out: %s\n", stdout.String())
 
 	if err != nil {
 		return stderr.String(), fmt.Errorf("Encountered error while running command: %v ; Stderr: %v ; Error: %v", command, stderr.String(), err.Error())
