@@ -11,6 +11,8 @@ import (
 
 	"math/rand/v2"
 
+	_ "unsafe"
+
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	rcoutils "github.com/application-stacks/runtime-component-operator/utils"
 	routev1 "github.com/openshift/api/route/v1"
@@ -23,6 +25,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
+	_ "k8s.io/kubectl/pkg/cmd/cp"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -134,6 +137,13 @@ type LTPAConfig struct {
 	EncryptionKeySharingEnabled bool // true or false
 }
 
+type PodInjectorClient interface {
+	Connect() error
+	CloseConnection()
+	PollStatus(scriptName, podName string) string
+	StartScript(scriptName, podName, attrs string) bool
+}
+
 // Validate if the OpenLibertyApplication is valid
 func Validate(olapp *olv1.OpenLibertyApplication) (bool, error) {
 	// Serviceability validation
@@ -149,6 +159,52 @@ func Validate(olapp *olv1.OpenLibertyApplication) (bool, error) {
 	}
 
 	return true, nil
+}
+
+const (
+	FlagDelimiterSpace  = " "
+	FlagDelimiterEquals = "="
+)
+
+func parseFlag(key, value, delimiter string) string {
+	return fmt.Sprintf("%s%s%s", key, delimiter, value)
+}
+
+func EncodeLinperfAttr(instance *olv1.OpenLibertyPerformanceData) string {
+	timespan := instance.GetTimespan()
+	interval := instance.GetInterval()
+	return fmt.Sprintf("timespan/%d|interval/%d", timespan, interval)
+}
+
+func DecodeLinperfAttr(encodedAttr string) map[string]string {
+	decodedAttrs := map[string]string{}
+	for _, attr := range strings.Split(strings.Trim(encodedAttr, " "), "|") {
+		attrArr := strings.Split(attr, "/")
+		if len(attrArr) != 2 {
+			continue
+		}
+		attrKey, attrValue := attrArr[0], attrArr[1]
+		decodedAttrs[attrKey] = attrValue
+	}
+	return decodedAttrs
+}
+
+func GetLinperfCmd(encodedAttr, podName, podNamespace string) string {
+	scriptDir := "/output/helper"
+	scriptName := "linperf.sh"
+
+	linperfCmdArgs := []string{fmt.Sprintf("%s/%s", scriptDir, scriptName)}
+	outputDir := fmt.Sprintf("/serviceability/%s/%s/performanceData/", podNamespace, podName)
+	linperfCmdArgs = append(linperfCmdArgs, parseFlag("--output-dir", outputDir, FlagDelimiterEquals))
+
+	decodedLinperfAttrs := DecodeLinperfAttr(encodedAttr)
+	linperfCmdArgs = append(linperfCmdArgs, parseFlag("-s", decodedLinperfAttrs["timespan"], FlagDelimiterSpace))
+	linperfCmdArgs = append(linperfCmdArgs, parseFlag("-j", decodedLinperfAttrs["interval"], FlagDelimiterSpace))
+	linperfCmdArgs = append(linperfCmdArgs, "--ignore-root")
+	linperfCmd := strings.Join(linperfCmdArgs, FlagDelimiterSpace)
+
+	linperfCmdWithPids := fmt.Sprintf("PIDS=$(ls -l /proc/[0-9]*/exe | grep \"/java\" | xargs -L 1 | rev | cut -d ' ' -f3 | rev | cut -d '/' -f 3); PIDS_OUT=$(echo $PIDS | tr '\n' ' '); %s \"$PIDS_OUT\"", linperfCmd)
+	return linperfCmdWithPids
 }
 
 // ExecuteCommandInContainer Execute command inside a container in a pod through API
@@ -180,11 +236,12 @@ func ExecuteCommandInContainer(config *rest.Config, podName, podNamespace, conta
 	}
 
 	var stdout, stderr bytes.Buffer
-	err = exec.Stream(remotecommand.StreamOptions{
+	err = exec.StreamWithContext(context.Background(), remotecommand.StreamOptions{
 		Stdout: &stdout,
 		Stderr: &stderr,
 		Tty:    false,
 	})
+	fmt.Printf("out: %s\n", stdout.String())
 
 	if err != nil {
 		return stderr.String(), fmt.Errorf("Encountered error while running command: %v ; Stderr: %v ; Error: %v", command, stderr.String(), err.Error())
