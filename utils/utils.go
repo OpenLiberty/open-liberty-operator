@@ -142,11 +142,8 @@ type LTPAConfig struct {
 type PodInjectorClient interface {
 	Connect() error
 	CloseConnection()
-	SetMaxWorkers(scriptName, podName, podNamespace, maxWorkers string) bool
-	PollStatus(scriptName, podName, podNamespace, attrs string) string
-	StartScript(scriptName, podName, podNamespace, attrs string) bool
-	CompleteScript(scriptName, podName, podNamespace string)
-	PollLinperfFileName(scriptName, podName, podNamespace string) string
+	PollStatus(scriptName, podName string) string
+	StartScript(scriptName, podName, attrs string) bool
 }
 
 // Validate if the OpenLibertyApplication is valid
@@ -167,17 +164,9 @@ func Validate(olapp *olv1.OpenLibertyApplication) (bool, error) {
 }
 
 const (
-	FlagDelimiterSpace                = " "
-	FlagDelimiterEquals               = "="
-	OpConfigPerformanceDataMaxWorkers = "performanceDataMaxWorkers"
+	FlagDelimiterSpace  = " "
+	FlagDelimiterEquals = "="
 )
-
-var DefaultLibertyOpConfig *sync.Map
-
-func init() {
-	DefaultLibertyOpConfig = &sync.Map{}
-	DefaultLibertyOpConfig.Store(OpConfigPerformanceDataMaxWorkers, "10")
-}
 
 func parseFlag(key, value, delimiter string) string {
 	return fmt.Sprintf("%s%s%s", key, delimiter, value)
@@ -202,14 +191,6 @@ func DecodeLinperfAttr(encodedAttr string) map[string]string {
 	return decodedAttrs
 }
 
-func GetPerformanceDataConnectionLostMessage(podName string) string {
-	return fmt.Sprintf("Connection between Liberty operator and Pod '%s' was lost while writing performance data.", podName)
-}
-
-func GetPerformanceDataWritingMessage(podName string) string {
-	return fmt.Sprintf("Collecting performance data for Pod '%s'...", podName)
-}
-
 func GetLinperfCmd(encodedAttr, podName, podNamespace string) string {
 	scriptDir := "/output/helper"
 	scriptName := "linperf.sh"
@@ -224,8 +205,7 @@ func GetLinperfCmd(encodedAttr, podName, podNamespace string) string {
 	linperfCmdArgs = append(linperfCmdArgs, "--ignore-root")
 	linperfCmd := strings.Join(linperfCmdArgs, FlagDelimiterSpace)
 
-	// linperfCmdWithPids := fmt.Sprintf("mkdir -p %s && PIDS=$(ls -l /proc/[0-9]*/exe | grep \"/java$\" | xargs -L 1 | cut -d ' ' -f9 | cut -d '/' -f 3 ) && PIDS_OUT=$(echo $PIDS | tr '\n' ' ') && ls -l /proc/[0-9]*/exe > /serviceability/%s/%s/test.out && %s \"1\"", outputDir, podNamespace, podName, linperfCmd)
-	linperfCmdWithPids := fmt.Sprintf("mkdir -p %s &&  %s \"1\"", outputDir, linperfCmd)
+	linperfCmdWithPids := fmt.Sprintf("PIDS=$(ls -l /proc/[0-9]*/exe | grep \"/java\" | xargs -L 1 | rev | cut -d ' ' -f3 | rev | cut -d '/' -f 3); PIDS_OUT=$(echo $PIDS | tr '\n' ' '); %s \"$PIDS_OUT\"", linperfCmd)
 	return linperfCmdWithPids
 }
 
@@ -263,6 +243,7 @@ func ExecuteCommandInContainer(config *rest.Config, podName, podNamespace, conta
 		Stderr: &stderr,
 		Tty:    false,
 	})
+	fmt.Printf("out: %s\n", stdout.String())
 
 	if err != nil {
 		return stderr.String(), fmt.Errorf("Encountered error while running command: %v ; Stderr: %v ; Error: %v", command, stderr.String(), err.Error())
