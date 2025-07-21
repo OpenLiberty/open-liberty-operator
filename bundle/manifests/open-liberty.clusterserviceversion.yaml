@@ -1244,6 +1244,9 @@ spec:
                 - mountPath: /liberty/output
                   name: scratch
                   subPath: create-ltpa-keys
+                - mountPath: /tmp
+                  name: socket
+                  subPath: operator.sock
               securityContext:
                 runAsNonRoot: true
                 seccompProfile:
@@ -1253,6 +1256,8 @@ spec:
               volumes:
               - emptyDir: {}
                 name: scratch
+              - emptyDir: {}
+                name: socket
       permissions:
       - rules:
         - apiGroups:
