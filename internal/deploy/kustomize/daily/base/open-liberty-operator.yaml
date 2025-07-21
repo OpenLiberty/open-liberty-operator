@@ -96,6 +96,9 @@ spec:
         - mountPath: /liberty/output
           name: scratch
           subPath: create-ltpa-keys
+        - mountPath: /tmp
+          name: socket
+          subPath: operator.sock
       hostIPC: false
       hostNetwork: false
       hostPID: false
@@ -108,3 +111,5 @@ spec:
       volumes:
       - emptyDir: {}
         name: scratch
+      - emptyDir: {}
+        name: socket

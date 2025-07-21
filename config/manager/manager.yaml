@@ -94,8 +94,13 @@ spec:
           - name: scratch
             mountPath: /liberty/output
             subPath: create-ltpa-keys
+          - name: socket
+            mountPath: /tmp
+            subPath: operator.sock
       volumes:
         - name: scratch
+          emptyDir: {}
+        - name: socket
           emptyDir: {}
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
