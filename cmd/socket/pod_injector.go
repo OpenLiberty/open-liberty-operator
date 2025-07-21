@@ -17,21 +17,22 @@ import (
 type PodInjectorStatusResponse string
 
 const (
-	podInjectorSocketPath                              = "/tmp/operator.sock"
-	PodInjectorActionStart                             = "start"
-	PodInjectorActionStop                              = "stop"
-	PodInjectorActionStatus                            = "status"
-	PodInjectorStatusWriting PodInjectorStatusResponse = "writing..."
-	PodInjectorStatusIdle    PodInjectorStatusResponse = "idle..."
-	PodInjectorStatusDone    PodInjectorStatusResponse = "done..."
-	PodInjectorStatusClosed  PodInjectorStatusResponse = "closed..."
+	podInjectorSocketPath                                     = "/tmp/operator.sock"
+	PodInjectorActionStart                                    = "start"
+	PodInjectorActionStop                                     = "stop"
+	PodInjectorActionStatus                                   = "status"
+	PodInjectorStatusWriting        PodInjectorStatusResponse = "writing..."
+	PodInjectorStatusIdle           PodInjectorStatusResponse = "idle..."
+	PodInjectorStatusDone           PodInjectorStatusResponse = "done..."
+	PodInjectorStatusClosed         PodInjectorStatusResponse = "closed..."
+	PodInjectorStatusTooManyWorkers PodInjectorStatusResponse = "toomanyworkers..."
 )
 
 var (
 	mutex         = &sync.Mutex{}
 	workers       = []Worker{}
 	completedPods = &sync.Map{}
-	maxWorkers    = 5
+	maxWorkers    = 1
 )
 
 type Worker struct {
@@ -126,6 +127,11 @@ func processAction(conn net.Conn, mgr manager.Manager, podName, tool, action, en
 	switch action {
 	case PodInjectorActionStart:
 		if hasWorker(podName) {
+			writeResponse(conn, PodInjectorStatusWriting)
+			return
+		}
+		if len(workers) >= maxWorkers {
+			writeResponse(conn, PodInjectorStatusTooManyWorkers)
 			return
 		}
 		completedPods.Store(podName, false)
@@ -142,6 +148,7 @@ func processAction(conn net.Conn, mgr manager.Manager, podName, tool, action, en
 				podName:       podName,
 			})
 		}
+		writeResponse(conn, PodInjectorStatusWriting)
 	case PodInjectorActionStatus:
 		if hasWorker(podName) {
 			writeResponse(conn, PodInjectorStatusWriting)
