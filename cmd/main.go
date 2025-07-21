@@ -44,7 +44,7 @@ import (
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/OpenLiberty/open-liberty-operator/cmd/socket"
+	"github.com/OpenLiberty/open-liberty-operator/utils/socket"
 )
 
 var (
