@@ -295,8 +295,6 @@ func processAction(conn net.Conn, mgr manager.Manager, logger logr.Logger, podNa
 	case PodInjectorActionLinperfFileName:
 		if value, ok := linperfFileNames.Load(podKey); ok {
 			writeResponse(conn, PodInjectorStatusResponse(fmt.Sprintf("name:%s", value.(string))))
-		} else if len(workers) >= maxWorkers {
-			writeResponse(conn, PodInjectorStatusTooManyWorkers)
 		} else {
 			writeResponse(conn, PodInjectorStatusNotFound)
 		}
