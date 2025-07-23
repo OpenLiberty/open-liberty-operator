@@ -2,7 +2,7 @@ package socket
 
 import "testing"
 
-func Test_getLinperfDataFileName(t *testing.T) {
+func TestCommaSeparatedStringContains(t *testing.T) {
 	outputFile := getLinperfDataFileName(`2025-07-23 13:34:54 \tTemporary directory linperf_RESULTS.20250723.133044 removed.
 2025-07-23 13:34:54 \tlinperf script complete.
 To share with IBM support, upload all the following files:
