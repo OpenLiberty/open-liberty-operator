@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/OpenLiberty/open-liberty-operator/utils"
@@ -149,8 +150,15 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		Status: corev1.ConditionTrue,
 	}
 
+	performanceDataFile := ""
+	fileNameOut := r.PodInjectorClient.PollLinperfFileName("linperf", pod.Name, pod.Namespace)
+	if strings.HasPrefix(fileNameOut, "name:") {
+		performanceDataFile = strings.TrimPrefix(fileNameOut, "name:")
+		performanceDataFile = strings.TrimSuffix(performanceDataFile, "\n")
+	}
+
 	instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
-	instance.Status.PerformanceDataFile = ""
+	instance.Status.PerformanceDataFile = performanceDataFile
 	instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 	instance.Status.Versions.Reconciled = utils.OperandVersion
 	r.Client.Status().Update(context.TODO(), instance)

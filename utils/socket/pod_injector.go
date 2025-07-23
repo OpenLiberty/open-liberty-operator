@@ -17,22 +17,25 @@ import (
 type PodInjectorStatusResponse string
 
 const (
-	podInjectorSocketPath                                     = "/tmp/operator.sock"
-	PodInjectorActionStart                                    = "start"
-	PodInjectorActionStop                                     = "stop"
-	PodInjectorActionStatus                                   = "status"
-	PodInjectorStatusWriting        PodInjectorStatusResponse = "writing..."
-	PodInjectorStatusIdle           PodInjectorStatusResponse = "idle..."
-	PodInjectorStatusDone           PodInjectorStatusResponse = "done..."
-	PodInjectorStatusClosed         PodInjectorStatusResponse = "closed..."
-	PodInjectorStatusTooManyWorkers PodInjectorStatusResponse = "toomanyworkers..."
+	podInjectorSocketPath                                      = "/tmp/operator.sock"
+	PodInjectorActionStart                                     = "start"
+	PodInjectorActionStop                                      = "stop"
+	PodInjectorActionStatus                                    = "status"
+	PodInjectorActionLinperfFileName                           = "linperfFileName"
+	PodInjectorStatusWriting         PodInjectorStatusResponse = "writing..."
+	PodInjectorStatusIdle            PodInjectorStatusResponse = "idle..."
+	PodInjectorStatusDone            PodInjectorStatusResponse = "done..."
+	PodInjectorStatusClosed          PodInjectorStatusResponse = "closed..."
+	PodInjectorStatusNotFound        PodInjectorStatusResponse = "notfound..."
+	PodInjectorStatusTooManyWorkers  PodInjectorStatusResponse = "toomanyworkers..."
 )
 
 var (
-	mutex         = &sync.Mutex{}
-	workers       = []Worker{}
-	completedPods = &sync.Map{}
-	maxWorkers    = 1
+	mutex            = &sync.Mutex{}
+	workers          = []Worker{}
+	completedPods    = &sync.Map{}
+	linperfFileNames = &sync.Map{}
+	maxWorkers       = 1
 )
 
 type Worker struct {
@@ -72,7 +75,29 @@ func (c *Client) PollStatus(scriptName, podName, podNamespace string) string {
 			break
 		}
 	}()
-	c.conn.Write([]byte(fmt.Sprintf("%s:%s:%s:%s:%s\n", podName, podNamespace, scriptName, "status", "")))
+	c.conn.Write([]byte(fmt.Sprintf("%s:%s:%s:%s:%s\n", podName, podNamespace, scriptName, PodInjectorActionStatus, "")))
+	wg.Wait()
+	return <-output
+}
+
+func (c *Client) PollLinperfFileName(scriptName, podName, podNamespace string) string {
+	if c.conn == nil {
+		return string(PodInjectorStatusClosed)
+	}
+	output := make(chan string, 1)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		scanner := bufio.NewScanner(c.conn)
+		for scanner.Scan() {
+			msg := scanner.Text()
+			fmt.Println("Message from pod injector: ", msg)
+			output <- msg
+			break
+		}
+	}()
+	c.conn.Write([]byte(fmt.Sprintf("%s:%s:%s:%s:%s\n", podName, podNamespace, scriptName, PodInjectorActionLinperfFileName, "")))
 	wg.Wait()
 	return <-output
 }
@@ -81,7 +106,7 @@ func (c *Client) StartScript(scriptName, podName, podNamespace, attrs string) bo
 	if c.conn == nil {
 		return false
 	}
-	c.conn.Write([]byte(fmt.Sprintf("%s:%s:%s:%s:%s\n", podName, podNamespace, scriptName, "start", attrs)))
+	c.conn.Write([]byte(fmt.Sprintf("%s:%s:%s:%s:%s\n", podName, podNamespace, scriptName, PodInjectorActionStart, attrs)))
 	return true
 }
 
@@ -123,10 +148,18 @@ func writeResponse(conn net.Conn, response PodInjectorStatusResponse) {
 	conn.Write([]byte(fmt.Sprintf("%s\n", response)))
 }
 
+func getPodKey(podName, podNamespace string) string {
+	return fmt.Sprintf("%s:%s", podNamespace, podName)
+}
+
 func processAction(conn net.Conn, mgr manager.Manager, podName, podNamespace, tool, action, encodedAttr string) {
+	if len(podName) == 0 || len(podNamespace) == 0 {
+		return
+	}
+	podKey := getPodKey(podName, podNamespace)
 	switch action {
 	case PodInjectorActionStart:
-		if hasWorker(podName) {
+		if hasWorker(podKey) {
 			writeResponse(conn, PodInjectorStatusWriting)
 			return
 		}
@@ -134,13 +167,15 @@ func processAction(conn net.Conn, mgr manager.Manager, podName, podNamespace, to
 			writeResponse(conn, PodInjectorStatusTooManyWorkers)
 			return
 		}
-		completedPods.Store(podName, false)
+		completedPods.Store(podKey, false)
+		linperfFileNames.Delete(podKey)
 		reader, writer, cancelContext, err := CopyAndRunLinperf(mgr.GetConfig(), podName, podNamespace, encodedAttr, func(stdout string, err error) {
-			removeWorker(podName)
+			removeWorker(podKey)
 			if err == nil {
 				fmt.Println("The linperf script has completed successfully.")
 				fmt.Println(stdout)
-				completedPods.Store(podName, true)
+				completedPods.Store(podKey, true)
+				linperfFileNames.Store(podKey, stdout)
 			} else {
 				fmt.Println("The linperf script has failed with error: ", err)
 				fmt.Println(stdout)
@@ -156,15 +191,21 @@ func processAction(conn net.Conn, mgr manager.Manager, podName, podNamespace, to
 		}
 		writeResponse(conn, PodInjectorStatusWriting)
 	case PodInjectorActionStatus:
-		if hasWorker(podName) {
+		if hasWorker(podKey) {
 			writeResponse(conn, PodInjectorStatusWriting)
-		} else if value, ok := completedPods.Load(podName); ok && value.(bool) {
+		} else if value, ok := completedPods.Load(podKey); ok && value.(bool) {
 			writeResponse(conn, PodInjectorStatusDone)
 		} else {
 			writeResponse(conn, PodInjectorStatusIdle)
 		}
+	case PodInjectorActionLinperfFileName:
+		if value, ok := linperfFileNames.Load(podKey); ok {
+			writeResponse(conn, PodInjectorStatusResponse(fmt.Sprintf("name:%s", value.(string))))
+		} else {
+			writeResponse(conn, PodInjectorStatusNotFound)
+		}
 	case PodInjectorActionStop:
-		removeWorker(podName)
+		removeWorker(podKey)
 	}
 }
 
