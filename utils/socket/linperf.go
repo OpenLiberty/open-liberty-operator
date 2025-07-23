@@ -22,7 +22,7 @@ import (
 //go:linkname cpMakeTar k8s.io/kubectl/pkg/cmd/cp.makeTar
 func cpMakeTar(srcPath, destPath string, writer io.Writer) error
 
-func CopyAndRunLinperf(restConfig *rest.Config, podName string, podNamespace string, encodedAttr string, doneCallback func(error)) (*io.PipeReader, *io.PipeWriter, context.CancelFunc, error) {
+func CopyAndRunLinperf(restConfig *rest.Config, podName string, podNamespace string, encodedAttr string, doneCallback func(string, error)) (*io.PipeReader, *io.PipeWriter, context.CancelFunc, error) {
 	containerName := "app"
 	sourceFolder := "internal/controller/assets/helper"
 	destFolder := "/output/helper"
@@ -46,7 +46,7 @@ func podExec(clientset *kubernetes.Clientset, podName, podNamespace, containerNa
 		}, scheme.ParameterCodec)
 }
 
-func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFolder string, podName, podNamespace, containerName, scriptCmd string, doneCallback func(string, string, error)) (*io.PipeReader, *io.PipeWriter, context.CancelFunc, error) {
+func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFolder string, podName, podNamespace, containerName, scriptCmd string, doneCallback func(string, error)) (*io.PipeReader, *io.PipeWriter, context.CancelFunc, error) {
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("Failed to create Clientset: %v", err.Error())
@@ -69,8 +69,8 @@ func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFold
 		usingStdin := true
 		exec, err := remotecommand.NewSPDYExecutor(config, "POST", podExec(clientset, podName, podNamespace, containerName, usingStdin, command).URL())
 		if err != nil {
-			doneCallback("", "", err)
-			return
+			fmt.Printf("error %s\n", err)
+			doneCallback("", err)
 		}
 		err = exec.StreamWithContext(streamContext, remotecommand.StreamOptions{
 			Stdin:  reader,
@@ -87,7 +87,7 @@ func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFold
 			Stderr: &stderr,
 			Tty:    false,
 		})
-		doneCallback(stdout.String(), stderr.String(), err)
+		doneCallback(stdout.String(), err)
 	}()
 	return reader, writer, cancelStreamContext, nil
 }

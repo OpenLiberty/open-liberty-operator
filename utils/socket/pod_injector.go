@@ -135,13 +135,15 @@ func processAction(conn net.Conn, mgr manager.Manager, podName, podNamespace, to
 			return
 		}
 		completedPods.Store(podName, false)
-		reader, writer, cancelContext, err := CopyAndRunLinperf(mgr.GetConfig(), podName, podNamespace, encodedAttr, func(err error) {
+		reader, writer, cancelContext, err := CopyAndRunLinperf(mgr.GetConfig(), podName, podNamespace, encodedAttr, func(stdout string, err error) {
 			removeWorker(podName)
 			if err == nil {
 				fmt.Println("The linperf script has completed successfully.")
+				fmt.Println(stdout)
 				completedPods.Store(podName, true)
 			} else {
 				fmt.Println("The linperf script has failed with error: ", err)
+				fmt.Println(stdout)
 			}
 		})
 		if err == nil {
