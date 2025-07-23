@@ -122,6 +122,11 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: networkPolicy.Name, Namespace: networkPolicy.Namespace}, networkPolicy)
 	if err != nil {
 		if kerrors.IsNotFound(err) {
+			networkPolicy.OwnerReferences = append(networkPolicy.OwnerReferences, metav1.OwnerReference{
+				APIVersion: "apps.openliberty.io/v1",
+				Kind:       "OpenLibertyPerformanceData",
+				Name:       instance.Name,
+			})
 			networkPolicy.Spec.PolicyTypes = append(networkPolicy.Spec.PolicyTypes, networkingv1.PolicyTypeIngress)
 			networkPolicy.Spec.PodSelector = metav1.LabelSelector{
 				MatchLabels: pod.Labels,
