@@ -126,6 +126,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 				APIVersion: "apps.openliberty.io/v1",
 				Kind:       "OpenLibertyPerformanceData",
 				Name:       instance.Name,
+				UID:        instance.UID,
 			})
 			networkPolicy.Spec.PolicyTypes = append(networkPolicy.Spec.PolicyTypes, networkingv1.PolicyTypeIngress)
 			networkPolicy.Spec.PodSelector = metav1.LabelSelector{
