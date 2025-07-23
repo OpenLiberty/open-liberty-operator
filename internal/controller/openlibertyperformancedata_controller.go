@@ -184,11 +184,15 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 
 	injectorStatus := r.PodInjectorClient.PollStatus("linperf", pod.Name, pod.Namespace)
 	if injectorStatus != "done..." {
+		var errMessage string
 		if injectorStatus == "idle..." {
 			r.PodInjectorClient.StartScript("linperf", pod.Name, pod.Namespace, utils.EncodeLinperfAttr(instance))
+		} else if injectorStatus == "toomanyworkers..." {
+			errMessage = fmt.Sprintf("The operator performance data queue is full. Waiting for a worker to become available...", pod.Name)
+		} else {
+			errMessage = fmt.Sprintf("Collecting performance data for Pod '%s'...", pod.Name)
 		}
 		// requeue and set status that the operator is waiting
-		errMessage := fmt.Sprintf("Collecting performance data for Pod '%s'...", pod.Name)
 		err = fmt.Errorf("%s", errMessage)
 		reqLogger.Error(err, errMessage)
 		r.Recorder.Event(instance, "Warning", "ProcessingError", err.Error())
