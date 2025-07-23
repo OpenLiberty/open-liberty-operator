@@ -42,7 +42,7 @@ type Worker struct {
 	reader        *io.PipeReader
 	writer        *io.PipeWriter
 	cancelContext context.CancelFunc
-	podName       string
+	podKey        string
 }
 
 type Client struct {
@@ -186,7 +186,7 @@ func processAction(conn net.Conn, mgr manager.Manager, podName, podNamespace, to
 				reader:        reader,
 				writer:        writer,
 				cancelContext: cancelContext,
-				podName:       podName,
+				podKey:        podKey,
 			})
 		}
 		writeResponse(conn, PodInjectorStatusWriting)
