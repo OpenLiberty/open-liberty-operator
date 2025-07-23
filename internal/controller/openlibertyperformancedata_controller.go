@@ -262,7 +262,10 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 			return reconcile.Result{}, nil
 		} else if injectorStatus == "idle..." {
 			r.PodInjectorClient.StartScript("linperf", pod.Name, pod.Namespace, utils.EncodeLinperfAttr(instance))
-		} else if injectorStatus == "toomanyworkers..." {
+		}
+
+		var errMessage string
+		if injectorStatus == "toomanyworkers..." {
 			errMessage = fmt.Sprintf("The operator performance data queue is full. Waiting for a worker to become available...", pod.Name)
 		} else {
 			errMessage = fmt.Sprintf("Collecting performance data for Pod '%s'...", pod.Name)
