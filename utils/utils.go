@@ -142,6 +142,7 @@ type PodInjectorClient interface {
 	CloseConnection()
 	PollStatus(scriptName, podName, podNamespace string) string
 	StartScript(scriptName, podName, podNamespace, attrs string) bool
+	PollLinperfFileName(scriptName, podName, podNamespace string) string
 }
 
 // Validate if the OpenLibertyApplication is valid
