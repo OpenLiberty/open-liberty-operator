@@ -21,12 +21,12 @@ import (
 //go:linkname cpMakeTar k8s.io/kubectl/pkg/cmd/cp.makeTar
 func cpMakeTar(srcPath, destPath string, writer io.Writer) error
 
-func CopyAndRunLinperf(restConfig *rest.Config, podName string, encodedAttr string, doneCallback func(error)) (*io.PipeReader, *io.PipeWriter, context.CancelFunc, error) {
+func CopyAndRunLinperf(restConfig *rest.Config, podName string, podNamespace string, encodedAttr string, doneCallback func(error)) (*io.PipeReader, *io.PipeWriter, context.CancelFunc, error) {
 	containerName := "app"
 	sourceFolder := "internal/controller/assets/helper"
 	destFolder := "/output/helper"
-	linperfCmd := utils.GetLinperfCmd(encodedAttr, podName, "olo-test")
-	return CopyFolderToPodAndRunScript(restConfig, sourceFolder, destFolder, podName, "olo-test", containerName, linperfCmd, doneCallback)
+	linperfCmd := utils.GetLinperfCmd(encodedAttr, podName, podNamespace)
+	return CopyFolderToPodAndRunScript(restConfig, sourceFolder, destFolder, podName, podNamespace, containerName, linperfCmd, doneCallback)
 }
 
 func podExec(clientset *kubernetes.Clientset, podName, podNamespace, containerName string, usingStdin bool, command []string) *rest.Request {
