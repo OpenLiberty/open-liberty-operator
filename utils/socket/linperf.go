@@ -30,6 +30,22 @@ func CopyAndRunLinperf(restConfig *rest.Config, podName string, podNamespace str
 	return CopyFolderToPodAndRunScript(restConfig, sourceFolder, destFolder, podName, podNamespace, containerName, linperfCmd, doneCallback)
 }
 
+// Gets the linperf data file name from the stdout output of the linperf.sh script
+func getLinperfDataFileName(linperfOutput string) string {
+	parentDir := "/serviceability"
+	fileType := ".tar.gz"
+	for _, line := range strings.Split(linperfOutput, "\n") {
+		if strings.Contains(line, parentDir) && strings.Contains(line, fileType) {
+			startIndex := strings.Index(line, parentDir)
+			endIndex := strings.Index(line, fileType)
+			if startIndex != -1 && endIndex != -1 && startIndex < len(line) && endIndex+len(fileType) <= len(line) {
+				return line[startIndex : endIndex+len(fileType)]
+			}
+		}
+	}
+	return ""
+}
+
 func podExec(clientset *kubernetes.Clientset, podName, podNamespace, containerName string, usingStdin bool, command []string) *rest.Request {
 	return clientset.CoreV1().RESTClient().Post().
 		Resource("pods").
@@ -87,7 +103,7 @@ func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFold
 			Stderr: &stderr,
 			Tty:    false,
 		})
-		doneCallback(stdout.String(), err)
+		doneCallback(getLinperfDataFileName(stdout.String()), err)
 	}()
 	return reader, writer, cancelStreamContext, nil
 }
