@@ -239,20 +239,20 @@ func handleConnection(mgr manager.Manager, conn net.Conn) {
 	}
 }
 
-func hasWorker(podName string) bool {
+func hasWorker(podKey string) bool {
 	for _, worker := range workers {
-		if worker.podName == podName {
+		if worker.podKey == podKey {
 			return true
 		}
 	}
 	return false
 }
 
-func removeWorker(podName string) {
+func removeWorker(podKey string) {
 	// find index of the worker
 	deleteIndex := -1
 	for i, worker := range workers {
-		if worker.podName == podName {
+		if worker.podKey == podKey {
 			deleteIndex = i
 			break
 		}
