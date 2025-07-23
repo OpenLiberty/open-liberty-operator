@@ -22,28 +22,12 @@ import (
 //go:linkname cpMakeTar k8s.io/kubectl/pkg/cmd/cp.makeTar
 func cpMakeTar(srcPath, destPath string, writer io.Writer) error
 
-func CopyAndRunLinperf(restConfig *rest.Config, podName string, podNamespace string, encodedAttrs string, doneCallback func(string, string, error)) (*io.PipeReader, *io.PipeWriter, context.CancelFunc, error) {
+func CopyAndRunLinperf(restConfig *rest.Config, podName string, podNamespace string, encodedAttr string, doneCallback func(error)) (*io.PipeReader, *io.PipeWriter, context.CancelFunc, error) {
 	containerName := "app"
 	sourceFolder := "internal/controller/assets/helper"
 	destFolder := "/output/helper"
-	linperfCmd := utils.GetLinperfCmd(encodedAttrs, podName, podNamespace)
+	linperfCmd := utils.GetLinperfCmd(encodedAttr, podName, podNamespace)
 	return CopyFolderToPodAndRunScript(restConfig, sourceFolder, destFolder, podName, podNamespace, containerName, linperfCmd, doneCallback)
-}
-
-// Gets the linperf data file name from the stdout output of the linperf.sh script
-func getLinperfDataFileName(linperfOutput string) string {
-	parentDir := "/serviceability"
-	fileType := ".tar.gz"
-	for _, line := range strings.Split(linperfOutput, "\n") {
-		if strings.Contains(line, parentDir) && strings.Contains(line, fileType) {
-			startIndex := strings.Index(line, parentDir)
-			endIndex := strings.Index(line, fileType)
-			if startIndex != -1 && endIndex != -1 && startIndex < len(line) && endIndex+len(fileType) <= len(line) {
-				return line[startIndex : endIndex+len(fileType)]
-			}
-		}
-	}
-	return ""
 }
 
 func podExec(clientset *kubernetes.Clientset, podName, podNamespace, containerName string, usingStdin bool, command []string) *rest.Request {

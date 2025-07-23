@@ -118,10 +118,10 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	}
 	defer r.PodInjectorClient.CloseConnection()
 
-	injectorStatus := r.PodInjectorClient.PollStatus("linperf", pod.Name)
+	injectorStatus := r.PodInjectorClient.PollStatus("linperf", pod.Name, pod.Namespace)
 	if injectorStatus != "done..." {
 		if injectorStatus == "idle..." {
-			r.PodInjectorClient.StartScript("linperf", pod.Name, utils.EncodeLinperfAttr(instance))
+			r.PodInjectorClient.StartScript("linperf", pod.Name, pod.Namespace, utils.EncodeLinperfAttr(instance))
 		}
 		// requeue and set status that the operator is waiting
 		errMessage := fmt.Sprintf("Collecting performance data for Pod '%s'...", pod.Name)
