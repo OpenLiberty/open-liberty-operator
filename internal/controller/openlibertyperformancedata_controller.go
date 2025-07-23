@@ -136,7 +136,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 							},
 							NamespaceSelector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
-									"name": operatorNamespace,
+									"kubernetes.io/metadata.name": operatorNamespace,
 								},
 							},
 						},
