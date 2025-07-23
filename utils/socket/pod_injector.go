@@ -55,7 +55,7 @@ func (c *Client) Connect() error {
 	return nil
 }
 
-func (c *Client) PollStatus(scriptName, podName string) string {
+func (c *Client) PollStatus(scriptName, podName, podNamespace string) string {
 	if c.conn == nil {
 		return string(PodInjectorStatusClosed)
 	}
@@ -72,16 +72,16 @@ func (c *Client) PollStatus(scriptName, podName string) string {
 			break
 		}
 	}()
-	c.conn.Write([]byte(fmt.Sprintf("%s:%s:%s:%s\n", podName, scriptName, "status", "")))
+	c.conn.Write([]byte(fmt.Sprintf("%s:%s:%s:%s:%s\n", podName, podNamespace, scriptName, "status", "")))
 	wg.Wait()
 	return <-output
 }
 
-func (c *Client) StartScript(scriptName, podName, attrs string) bool {
+func (c *Client) StartScript(scriptName, podName, podNamespace, attrs string) bool {
 	if c.conn == nil {
 		return false
 	}
-	c.conn.Write([]byte(fmt.Sprintf("%s:%s:%s:%s\n", podName, scriptName, "start", attrs)))
+	c.conn.Write([]byte(fmt.Sprintf("%s:%s:%s:%s:%s\n", podName, podNamespace, scriptName, "start", attrs)))
 	return true
 }
 
@@ -123,7 +123,7 @@ func writeResponse(conn net.Conn, response PodInjectorStatusResponse) {
 	conn.Write([]byte(fmt.Sprintf("%s\n", response)))
 }
 
-func processAction(conn net.Conn, mgr manager.Manager, podName, tool, action, encodedAttr string) {
+func processAction(conn net.Conn, mgr manager.Manager, podName, podNamespace, tool, action, encodedAttr string) {
 	switch action {
 	case PodInjectorActionStart:
 		if hasWorker(podName) {
@@ -135,10 +135,14 @@ func processAction(conn net.Conn, mgr manager.Manager, podName, tool, action, en
 			return
 		}
 		completedPods.Store(podName, false)
-		reader, writer, cancelContext, err := CopyAndRunLinperf(mgr.GetConfig(), podName, encodedAttr, func(err error) {
-			fmt.Println("The linperf script has completed successfully.")
+		reader, writer, cancelContext, err := CopyAndRunLinperf(mgr.GetConfig(), podName, podNamespace, encodedAttr, func(err error) {
 			removeWorker(podName)
-			completedPods.Store(podName, true)
+			if err == nil {
+				fmt.Println("The linperf script has completed successfully.")
+				completedPods.Store(podName, true)
+			} else {
+				fmt.Println("The linperf script has failed with error: ", err)
+			}
 		})
 		if err == nil {
 			workers = append(workers, Worker{
@@ -179,12 +183,12 @@ func handleConnection(mgr manager.Manager, conn net.Conn) {
 				continue
 			}
 			messageArr := strings.Split(message, ":")
-			if len(messageArr) != 4 {
+			if len(messageArr) != 5 {
 				return
 			}
-			podName, tool, action, encodedAttr := messageArr[0], messageArr[1], messageArr[2], messageArr[3]
+			podName, podNamespace, tool, action, encodedAttr := messageArr[0], messageArr[1], messageArr[2], messageArr[3], messageArr[4]
 			mutex.Lock()
-			processAction(conn, mgr, podName, tool, action, encodedAttr)
+			processAction(conn, mgr, podName, podNamespace, tool, action, encodedAttr)
 			mutex.Unlock()
 		}
 	}
