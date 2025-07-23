@@ -140,8 +140,8 @@ type LTPAConfig struct {
 type PodInjectorClient interface {
 	Connect() error
 	CloseConnection()
-	PollStatus(scriptName, podName string) string
-	StartScript(scriptName, podName, attrs string) bool
+	PollStatus(scriptName, podName, podNamespace string) string
+	StartScript(scriptName, podName, podNamespace, attrs string) bool
 }
 
 // Validate if the OpenLibertyApplication is valid
@@ -203,7 +203,7 @@ func GetLinperfCmd(encodedAttr, podName, podNamespace string) string {
 	linperfCmdArgs = append(linperfCmdArgs, "--ignore-root")
 	linperfCmd := strings.Join(linperfCmdArgs, FlagDelimiterSpace)
 
-	linperfCmdWithPids := fmt.Sprintf("PIDS=$(ls -l /proc/[0-9]*/exe | grep \"/java\" | xargs -L 1 | rev | cut -d ' ' -f3 | rev | cut -d '/' -f 3); PIDS_OUT=$(echo $PIDS | tr '\n' ' '); %s \"$PIDS_OUT\"", linperfCmd)
+	linperfCmdWithPids := fmt.Sprintf("PIDS=$(ls -l /proc/[0-9]*/exe | grep \"/java\" | xargs -L 1 | cut -d ' ' -f9 | cut -d '/' -f 3 ); PIDS_OUT=$(echo $PIDS | tr '\n' ' '); %s \"$PIDS_OUT\"", linperfCmd)
 	return linperfCmdWithPids
 }
 
