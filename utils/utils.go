@@ -192,6 +192,10 @@ func DecodeLinperfAttr(encodedAttr string) map[string]string {
 	return decodedAttrs
 }
 
+func GetWritingPerformanceDataMessage(podName string) string {
+	return fmt.Sprintf("Collecting performance data for Pod '%s'...", podName)
+}
+
 func GetLinperfCmd(encodedAttr, podName, podNamespace string) string {
 	scriptDir := "/output/helper"
 	scriptName := "linperf.sh"
