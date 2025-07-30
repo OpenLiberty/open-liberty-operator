@@ -81,13 +81,27 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.PodName, Namespace: request.Namespace}, pod)
 	if err != nil || pod.Status.Phase != corev1.PodRunning {
 		message := fmt.Sprintf("Failed to find pod %s in namespace %s", instance.Spec.PodName, request.Namespace)
+		var errMessage string
+		isWritingPerformanceData := false
+		for _, condition := range instance.Status.Conditions {
+			if condition.Type == openlibertyv1.OperationStatusConditionTypeCompleted && condition.Message == utils.GetWritingPerformanceDataMessage(pod.Name) {
+				isWritingPerformanceData = true
+				break
+			}
+		}
+		if isWritingPerformanceData {
+			errMessage = "Connection to the pod was lost while trying to write performance data"
+		} else {
+			errMessage = "Failed to find a pod or pod is not in running state"
+		}
+
 		reqLogger.Error(err, message)
 		r.Recorder.Event(instance, "Warning", "ProcessingError", message)
 		c := openlibertyv1.OperationStatusCondition{
 			Type:    openlibertyv1.OperationStatusConditionTypeStarted,
 			Status:  corev1.ConditionFalse,
 			Reason:  "Error",
-			Message: "Failed to find a pod or pod is not in running state",
+			Message: errMessage,
 		}
 		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
 		instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
@@ -193,7 +207,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		if injectorStatus == "toomanyworkers..." {
 			errMessage = "The operator performance data queue is full. Waiting for a worker to become available..."
 		} else {
-			errMessage = fmt.Sprintf("Collecting performance data for Pod '%s'...", pod.Name)
+			errMessage = utils.GetWritingPerformanceDataMessage(pod.Name)
 		}
 		// requeue and set status that the operator is waiting
 		err = fmt.Errorf("%s", errMessage)
