@@ -84,7 +84,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		var errMessage string
 		isWritingPerformanceData := false
 		for _, condition := range instance.Status.Conditions {
-			if condition.Type == openlibertyv1.OperationStatusConditionTypeCompleted && condition.Message == utils.GetWritingPerformanceDataMessage(pod.Name) {
+			if condition.Type == openlibertyv1.OperationStatusConditionTypeCompleted && condition.Message == utils.GetWritingPerformanceDataMessage(instance.Spec.PodName) {
 				isWritingPerformanceData = true
 				break
 			}
