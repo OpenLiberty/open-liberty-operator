@@ -268,7 +268,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		if injectorStatus == "toomanyworkers..." {
 			errMessage = "The operator performance data queue is full. Waiting for a worker to become available..."
 		} else {
-			errMessage = fmt.Sprintf("Collecting performance data for Pod '%s'...", pod.Name)
+			errMessage = utils.GetWritingPerformanceDataMessage(pod.Name)
 		}
 
 		var errMessage string
