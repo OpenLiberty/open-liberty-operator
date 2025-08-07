@@ -261,14 +261,6 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 			return reconcile.Result{}, nil
 		} else if injectorStatus == "idle..." {
 			r.PodInjectorClient.StartScript("linperf", pod.Name, pod.Namespace, utils.EncodeLinperfAttr(instance))
-		} else if injectorStatus == "writing..." {
-			c = openlibertyv1.OperationStatusCondition{
-				Type:   openlibertyv1.OperationStatusConditionTypeStarted,
-				Status: corev1.ConditionTrue,
-			}
-
-			instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
-			r.Client.Status().Update(context.TODO(), instance)
 		}
 
 		var errMessage string
