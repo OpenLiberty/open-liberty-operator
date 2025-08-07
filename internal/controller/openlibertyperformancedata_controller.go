@@ -13,10 +13,7 @@ import (
 
 	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -118,66 +115,66 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
 	r.Client.Status().Update(context.TODO(), instance)
 
-	operatorNamespace, err := oputils.GetOperatorNamespace()
-	if err != nil {
-		// for local dev fallback to the watch namespace
-		watchNamespace, err := oputils.GetWatchNamespace()
-		if err != nil {
-			reqLogger.Error(err, "Failed to get watch namespace")
-			return reconcile.Result{}, nil
-		}
-		operatorNamespace = watchNamespace
-	}
+	// operatorNamespace, err := oputils.GetOperatorNamespace()
+	// if err != nil {
+	// 	// for local dev fallback to the watch namespace
+	// 	watchNamespace, err := oputils.GetWatchNamespace()
+	// 	if err != nil {
+	// 		reqLogger.Error(err, "Failed to get watch namespace")
+	// 		return reconcile.Result{}, nil
+	// 	}
+	// 	operatorNamespace = watchNamespace
+	// }
 
 	// allow operator traffic to the Pod
-	networkPolicy := &networkingv1.NetworkPolicy{}
-	networkPolicy.Name = OperatorShortName + "-managed-linperf-" + instance.Spec.PodName
-	networkPolicy.Namespace = request.Namespace
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: networkPolicy.Name, Namespace: networkPolicy.Namespace}, networkPolicy)
-	if err != nil {
-		if kerrors.IsNotFound(err) {
-			networkPolicy.OwnerReferences = append(networkPolicy.OwnerReferences, metav1.OwnerReference{
-				APIVersion: "apps.openliberty.io/v1",
-				Kind:       "OpenLibertyPerformanceData",
-				Name:       instance.Name,
-				UID:        instance.UID,
-			})
-			networkPolicy.Spec.PolicyTypes = append(networkPolicy.Spec.PolicyTypes, networkingv1.PolicyTypeIngress)
-			networkPolicy.Spec.PodSelector = metav1.LabelSelector{
-				MatchLabels: pod.Labels,
-			}
-			networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
-				{
-					Ports: []networkingv1.NetworkPolicyPort{},
-					From: []networkingv1.NetworkPolicyPeer{
-						{
-							PodSelector: &metav1.LabelSelector{
-								MatchLabels: utils.GetOperatorLabels(),
-							},
-							NamespaceSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									"kubernetes.io/metadata.name": operatorNamespace,
-								},
-							},
-						},
-					},
-				},
-			}
-			err = r.Client.Create(context.TODO(), networkPolicy)
-			if err != nil {
-				reqLogger.Error(err, "Failed to create performance data network policy")
-				return reconcile.Result{
-					Requeue:      true,
-					RequeueAfter: 5 * time.Second,
-				}, nil
-			}
-		}
-		reqLogger.Error(err, "Failed to get performance data network policy")
-		return reconcile.Result{
-			Requeue:      true,
-			RequeueAfter: 5 * time.Second,
-		}, nil
-	}
+	// networkPolicy := &networkingv1.NetworkPolicy{}
+	// networkPolicy.Name = OperatorShortName + "-managed-linperf-" + instance.Spec.PodName
+	// networkPolicy.Namespace = request.Namespace
+	// err = r.Client.Get(context.TODO(), types.NamespacedName{Name: networkPolicy.Name, Namespace: networkPolicy.Namespace}, networkPolicy)
+	// if err != nil {
+	// 	if kerrors.IsNotFound(err) {
+	// 		networkPolicy.OwnerReferences = append(networkPolicy.OwnerReferences, metav1.OwnerReference{
+	// 			APIVersion: "apps.openliberty.io/v1",
+	// 			Kind:       "OpenLibertyPerformanceData",
+	// 			Name:       instance.Name,
+	// 			UID:        instance.UID,
+	// 		})
+	// 		networkPolicy.Spec.PolicyTypes = append(networkPolicy.Spec.PolicyTypes, networkingv1.PolicyTypeIngress)
+	// 		networkPolicy.Spec.PodSelector = metav1.LabelSelector{
+	// 			MatchLabels: pod.Labels,
+	// 		}
+	// 		networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
+	// 			{
+	// 				Ports: []networkingv1.NetworkPolicyPort{},
+	// 				From: []networkingv1.NetworkPolicyPeer{
+	// 					{
+	// 						PodSelector: &metav1.LabelSelector{
+	// 							MatchLabels: utils.GetOperatorLabels(),
+	// 						},
+	// 						NamespaceSelector: &metav1.LabelSelector{
+	// 							MatchLabels: map[string]string{
+	// 								"kubernetes.io/metadata.name": operatorNamespace,
+	// 							},
+	// 						},
+	// 					},
+	// 				},
+	// 			},
+	// 		}
+	// 		err = r.Client.Create(context.TODO(), networkPolicy)
+	// 		if err != nil {
+	// 			reqLogger.Error(err, "Failed to create performance data network policy")
+	// 			return reconcile.Result{
+	// 				Requeue:      true,
+	// 				RequeueAfter: 5 * time.Second,
+	// 			}, nil
+	// 		}
+	// 	}
+	// 	reqLogger.Error(err, "Failed to get performance data network policy")
+	// 	return reconcile.Result{
+	// 		Requeue:      true,
+	// 		RequeueAfter: 5 * time.Second,
+	// 	}, nil
+	// }
 
 	if r.PodInjectorClient.Connect() != nil {
 		message := fmt.Sprintf("Failed to connect to the operator pod injector")
@@ -199,6 +196,23 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 
 	injectorStatus := r.PodInjectorClient.PollStatus("linperf", pod.Name, pod.Namespace)
 	if injectorStatus != "done..." {
+		if injectorStatus != "writing..." && isPerformanceDataStarted(instance) {
+			errMessage := fmt.Sprintf("Connection between Liberty operator and Pod '%s' was lost while writing performance data.", pod.Name)
+			err = fmt.Errorf("%s", errMessage)
+			reqLogger.Error(err, errMessage)
+			r.Recorder.Event(instance, "Warning", "ProcessingError", err.Error())
+			c = openlibertyv1.OperationStatusCondition{
+				Type:    openlibertyv1.OperationStatusConditionTypeCompleted,
+				Status:  corev1.ConditionFalse,
+				Reason:  "Error",
+				Message: err.Error(),
+			}
+			instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+			instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
+			instance.Status.Versions.Reconciled = utils.OperandVersion
+			r.Client.Status().Update(context.TODO(), instance)
+			return reconcile.Result{}, nil
+		}
 		if injectorStatus == "idle..." {
 			r.PodInjectorClient.StartScript("linperf", pod.Name, pod.Namespace, utils.EncodeLinperfAttr(instance))
 		}
@@ -247,14 +261,23 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	instance.Status.Versions.Reconciled = utils.OperandVersion
 	r.Client.Status().Update(context.TODO(), instance)
 
-	if err = r.Client.Delete(context.TODO(), networkPolicy); err != nil {
-		reqLogger.Error(err, "Failed to delete performance data network policy")
-		return reconcile.Result{
-			Requeue:      true,
-			RequeueAfter: 5 * time.Second,
-		}, err
-	}
+	// if err = r.Client.Delete(context.TODO(), networkPolicy); err != nil {
+	// 	reqLogger.Error(err, "Failed to delete performance data network policy")
+	// 	return reconcile.Result{
+	// 		Requeue:      true,
+	// 		RequeueAfter: 5 * time.Second,
+	// 	}, err
+	// }
 	return reconcile.Result{}, nil
+}
+
+func isPerformanceDataStarted(instance *openlibertyv1.OpenLibertyPerformanceData) bool {
+	for _, condition := range instance.Status.Conditions {
+		if condition.Type == openlibertyv1.OperationStatusConditionTypeStarted && condition.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *ReconcileOpenLibertyPerformanceData) SetupWithManager(mgr ctrl.Manager) error {
