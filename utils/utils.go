@@ -192,7 +192,11 @@ func DecodeLinperfAttr(encodedAttr string) map[string]string {
 	return decodedAttrs
 }
 
-func GetWritingPerformanceDataMessage(podName string) string {
+func GetPerformanceDataConnectionLostMessage(podName string) string {
+	return fmt.Sprintf("Connection between Liberty operator and Pod '%s' was lost while writing performance data.", podName)
+}
+
+func GetPerformanceDataWritingMessage(podName string) string {
 	return fmt.Sprintf("Collecting performance data for Pod '%s'...", podName)
 }
 
