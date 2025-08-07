@@ -268,6 +268,13 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 			errMessage = "The operator performance data queue is full. Waiting for a worker to become available..."
 		} else {
 			errMessage = utils.GetWritingPerformanceDataMessage(pod.Name)
+			c = openlibertyv1.OperationStatusCondition{
+				Type:   openlibertyv1.OperationStatusConditionTypeStarted,
+				Status: corev1.ConditionTrue,
+			}
+
+			instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+			r.Client.Status().Update(context.TODO(), instance)
 		}
 
 		var errMessage string
