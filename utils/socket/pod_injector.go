@@ -34,6 +34,7 @@ var (
 	mutex            = &sync.Mutex{}
 	workers          = []Worker{}
 	completedPods    = &sync.Map{}
+	erroringPods     = &sync.Map{}
 	linperfFileNames = &sync.Map{}
 	maxWorkers       = 1
 )
@@ -177,8 +178,10 @@ func processAction(conn net.Conn, mgr manager.Manager, podName, podNamespace, to
 				completedPods.Store(podKey, true)
 				linperfFileNames.Store(podKey, stdout)
 			} else {
-				fmt.Println("The linperf script has failed with error: ", err)
+				errMessage := fmt.Sprintf("The performance data collector has failed with error: %s", err)
+				fmt.Println(errMessage)
 				fmt.Println(stdout)
+				erroringPods.Store(podKey, errMessage)
 			}
 		})
 		if err == nil {
@@ -193,6 +196,8 @@ func processAction(conn net.Conn, mgr manager.Manager, podName, podNamespace, to
 	case PodInjectorActionStatus:
 		if hasWorker(podKey) {
 			writeResponse(conn, PodInjectorStatusWriting)
+		} else if value, ok := erroringPods.Load(podKey); ok {
+			writeResponse(conn, PodInjectorStatusResponse(fmt.Sprintf("error:%s", value.(string))))
 		} else if value, ok := completedPods.Load(podKey); ok && value.(bool) {
 			writeResponse(conn, PodInjectorStatusDone)
 		} else if len(workers) >= maxWorkers {
