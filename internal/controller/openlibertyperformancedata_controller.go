@@ -87,7 +87,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 			}
 		}
 		if isWritingPerformanceData {
-			errMessage = "Connection to the pod was lost while trying to write performance data"
+			errMessage = getConnectionLostMessage(pod.Name)
 		} else {
 			errMessage = "Failed to find a pod or pod is not in running state"
 		}
@@ -169,14 +169,14 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	// }
 
 	if r.PodInjectorClient.Connect() != nil {
-		message := fmt.Sprintf("Failed to connect to the operator pod injector")
+		message := "Failed to connect to the operator pod injector"
 		reqLogger.Error(err, message)
 		r.Recorder.Event(instance, "Warning", "ProcessingError", message)
 		c := openlibertyv1.OperationStatusCondition{
 			Type:    openlibertyv1.OperationStatusConditionTypeStarted,
 			Status:  corev1.ConditionFalse,
 			Reason:  "Error",
-			Message: "Failed to connect to the operator pod injector",
+			Message: message,
 		}
 		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
 		instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
@@ -190,12 +190,12 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	injectorStatus := r.PodInjectorClient.PollStatus("linperf", pod.Name, pod.Namespace)
 	if injectorStatus != "done..." {
 		if injectorStatus != "writing..." && isPerformanceDataStarted(instance) {
-			errMessage := fmt.Sprintf("Connection between Liberty operator and Pod '%s' was lost while writing performance data.", pod.Name)
+			errMessage := getConnectionLostMessage(pod.Name)
 			err = fmt.Errorf("%s", errMessage)
 			reqLogger.Error(err, errMessage)
 			r.Recorder.Event(instance, "Warning", "ProcessingError", err.Error())
 			c = openlibertyv1.OperationStatusCondition{
-				Type:    openlibertyv1.OperationStatusConditionTypeCompleted,
+				Type:    openlibertyv1.OperationStatusConditionTypeStarted,
 				Status:  corev1.ConditionFalse,
 				Reason:  "Error",
 				Message: err.Error(),
@@ -269,6 +269,10 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	// 	}, err
 	// }
 	return reconcile.Result{}, nil
+}
+
+func getConnectionLostMessage(podName string) string {
+	return fmt.Sprintf("Connection between Liberty operator and Pod '%s' was lost while writing performance data.", podName)
 }
 
 func isPerformanceDataStarted(instance *openlibertyv1.OpenLibertyPerformanceData) bool {
