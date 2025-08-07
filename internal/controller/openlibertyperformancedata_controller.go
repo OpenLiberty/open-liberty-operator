@@ -122,6 +122,13 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		instance.Status.Versions.Reconciled = utils.OperandVersion
 		r.Client.Status().Update(context.TODO(), instance)
 		return reconcile.Result{}, nil
+	} else {
+		c := openlibertyv1.OperationStatusCondition{
+			Type:   openlibertyv1.OperationStatusConditionTypeStarted,
+			Status: corev1.ConditionTrue,
+		}
+		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+		r.Client.Status().Update(context.TODO(), instance)
 	}
 	defer r.PodInjectorClient.CloseConnection()
 
