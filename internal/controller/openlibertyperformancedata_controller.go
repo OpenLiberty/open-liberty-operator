@@ -151,6 +151,25 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	var c openlibertyv1.OperationStatusCondition
 	injectorStatus := r.PodInjectorClient.PollStatus("linperf", pod.Name, pod.Namespace)
 	if injectorStatus != "done..." {
+		// exit on error
+		if strings.HasPrefix(injectorStatus, "error:") {
+			errMessage := strings.TrimPrefix(injectorStatus, "error:")
+			err = fmt.Errorf("%s", errMessage)
+			reqLogger.Error(err, errMessage)
+			r.Recorder.Event(instance, "Warning", "ProcessingError", err.Error())
+			c = openlibertyv1.OperationStatusCondition{
+				Type:    openlibertyv1.OperationStatusConditionTypeCompleted,
+				Status:  corev1.ConditionFalse,
+				Reason:  "Error",
+				Message: err.Error(),
+			}
+			instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+			instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
+			instance.Status.Versions.Reconciled = utils.OperandVersion
+			r.Client.Status().Update(context.TODO(), instance)
+			return reconcile.Result{}, nil
+		}
+		// exit on connection loss
 		if injectorStatus != "writing..." && isPerformanceDataRunning(instance) {
 			errMessage := utils.GetPerformanceDataConnectionLostMessage(pod.Name)
 			err = fmt.Errorf("%s", errMessage)
@@ -159,7 +178,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 			c = openlibertyv1.OperationStatusCondition{
 				Type:    openlibertyv1.OperationStatusConditionTypeCompleted,
 				Status:  corev1.ConditionFalse,
-				Reason:  "Error",
+				Reason:  "ConnectionLost",
 				Message: err.Error(),
 			}
 			instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
@@ -177,14 +196,14 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		} else {
 			errMessage = utils.GetPerformanceDataWritingMessage(pod.Name)
 		}
-		// requeue and set status that the operator is waiting
+		// requeue when waiting on performance data collection
 		err = fmt.Errorf("%s", errMessage)
 		reqLogger.Error(err, errMessage)
 		r.Recorder.Event(instance, "Warning", "ProcessingError", err.Error())
 		c = openlibertyv1.OperationStatusCondition{
 			Type:    openlibertyv1.OperationStatusConditionTypeCompleted,
 			Status:  corev1.ConditionFalse,
-			Reason:  "Error",
+			Reason:  "InProgress",
 			Message: err.Error(),
 		}
 		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
