@@ -14,6 +14,7 @@ import (
 	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -76,7 +77,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	pod := &corev1.Pod{}
 
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.PodName, Namespace: request.Namespace}, pod)
-	if err != nil || pod.Status.Phase != corev1.PodRunning {
+	if err != nil && kerrors.IsNotFound(err) {
 		message := fmt.Sprintf("Failed to find pod %s in namespace %s", instance.Spec.PodName, request.Namespace)
 		var errMessage string
 		isWritingPerformanceData := false
@@ -105,6 +106,21 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		instance.Status.Versions.Reconciled = utils.OperandVersion
 		r.Client.Status().Update(context.TODO(), instance)
 		return reconcile.Result{}, nil
+	} else if pod.Status.Phase != corev1.PodRunning {
+		c := openlibertyv1.OperationStatusCondition{
+			Type:    openlibertyv1.OperationStatusConditionTypeStarted,
+			Status:  corev1.ConditionFalse,
+			Reason:  "Error",
+			Message: fmt.Sprintf("Waiting for Pod '%s' to be in a running state.", pod.Name),
+		}
+		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+		instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
+		instance.Status.Versions.Reconciled = utils.OperandVersion
+		r.Client.Status().Update(context.TODO(), instance)
+		return reconcile.Result{
+			Requeue:      true,
+			RequeueAfter: 5 * time.Second,
+		}, nil
 	}
 
 	if r.PodInjectorClient.Connect() != nil {
