@@ -107,14 +107,6 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		return reconcile.Result{}, nil
 	}
 
-	c := openlibertyv1.OperationStatusCondition{
-		Type:   openlibertyv1.OperationStatusConditionTypeStarted,
-		Status: corev1.ConditionTrue,
-	}
-
-	instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
-	r.Client.Status().Update(context.TODO(), instance)
-
 	// operatorNamespace, err := oputils.GetOperatorNamespace()
 	// if err != nil {
 	// 	// for local dev fallback to the watch namespace
@@ -194,6 +186,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	}
 	defer r.PodInjectorClient.CloseConnection()
 
+	var c openlibertyv1.OperationStatusCondition
 	injectorStatus := r.PodInjectorClient.PollStatus("linperf", pod.Name, pod.Namespace)
 	if injectorStatus != "done..." {
 		if injectorStatus != "writing..." && isPerformanceDataStarted(instance) {
@@ -212,8 +205,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 			instance.Status.Versions.Reconciled = utils.OperandVersion
 			r.Client.Status().Update(context.TODO(), instance)
 			return reconcile.Result{}, nil
-		}
-		if injectorStatus == "idle..." {
+		} else if injectorStatus == "idle..." {
 			r.PodInjectorClient.StartScript("linperf", pod.Name, pod.Namespace, utils.EncodeLinperfAttr(instance))
 		}
 
@@ -222,6 +214,13 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 			errMessage = "The operator performance data queue is full. Waiting for a worker to become available..."
 		} else {
 			errMessage = utils.GetWritingPerformanceDataMessage(pod.Name)
+			c = openlibertyv1.OperationStatusCondition{
+				Type:   openlibertyv1.OperationStatusConditionTypeStarted,
+				Status: corev1.ConditionTrue,
+			}
+
+			instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+			r.Client.Status().Update(context.TODO(), instance)
 		}
 		// requeue and set status that the operator is waiting
 		err = fmt.Errorf("%s", errMessage)
