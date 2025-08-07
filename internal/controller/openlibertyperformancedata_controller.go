@@ -151,7 +151,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	var c openlibertyv1.OperationStatusCondition
 	injectorStatus := r.PodInjectorClient.PollStatus("linperf", pod.Name, pod.Namespace)
 	if injectorStatus != "done..." {
-		if injectorStatus != "writing..." && isPerformanceDataStarted(instance) {
+		if injectorStatus != "writing..." && isPerformanceDataRunning(instance) {
 			errMessage := utils.GetPerformanceDataConnectionLostMessage(pod.Name)
 			err = fmt.Errorf("%s", errMessage)
 			reqLogger.Error(err, errMessage)
@@ -218,13 +218,18 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	return reconcile.Result{}, nil
 }
 
-func isPerformanceDataStarted(instance *openlibertyv1.OpenLibertyPerformanceData) bool {
+func isPerformanceDataRunning(instance *openlibertyv1.OpenLibertyPerformanceData) bool {
+	isStarted := false
+	isCompleted := true
 	for _, condition := range instance.Status.Conditions {
 		if condition.Type == openlibertyv1.OperationStatusConditionTypeStarted && condition.Status == corev1.ConditionTrue {
-			return true
+			isStarted = true
+		}
+		if condition.Type == openlibertyv1.OperationStatusConditionTypeCompleted && condition.Status == corev1.ConditionFalse {
+			isCompleted = false
 		}
 	}
-	return false
+	return isStarted && !isCompleted
 }
 
 func (r *ReconcileOpenLibertyPerformanceData) SetupWithManager(mgr ctrl.Manager) error {
