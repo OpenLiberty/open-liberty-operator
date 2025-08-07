@@ -37,7 +37,7 @@ metadata:
           "apiVersion": "apps.openliberty.io/v1",
           "kind": "OpenLibertyPerformanceData",
           "metadata": {
-            "name": "openliberty-performanace-data-sample"
+            "name": "openliberty-performance-data-sample"
           },
           "spec": {
             "interval": 30,
