@@ -207,13 +207,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 			return reconcile.Result{}, nil
 		} else if injectorStatus == "idle..." {
 			r.PodInjectorClient.StartScript("linperf", pod.Name, pod.Namespace, utils.EncodeLinperfAttr(instance))
-		}
-
-		var errMessage string
-		if injectorStatus == "toomanyworkers..." {
-			errMessage = "The operator performance data queue is full. Waiting for a worker to become available..."
-		} else {
-			errMessage = utils.GetWritingPerformanceDataMessage(pod.Name)
+		} else if injectorStatus == "writing..." {
 			c = openlibertyv1.OperationStatusCondition{
 				Type:   openlibertyv1.OperationStatusConditionTypeStarted,
 				Status: corev1.ConditionTrue,
@@ -221,6 +215,13 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 
 			instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
 			r.Client.Status().Update(context.TODO(), instance)
+		}
+
+		var errMessage string
+		if injectorStatus == "toomanyworkers..." {
+			errMessage = "The operator performance data queue is full. Waiting for a worker to become available..."
+		} else {
+			errMessage = utils.GetWritingPerformanceDataMessage(pod.Name)
 		}
 		// requeue and set status that the operator is waiting
 		err = fmt.Errorf("%s", errMessage)
