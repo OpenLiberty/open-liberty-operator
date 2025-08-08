@@ -67,6 +67,34 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		return reconcile.Result{}, err
 	}
 
+	// Check if the OpenLibertyPerformanceData instance is marked to be deleted, which is
+	// indicated by the deletion timestamp being set.
+	isInstanceMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
+	if isInstanceMarkedToBeDeleted {
+		if utils.Contains(instance.GetFinalizers(), applicationFinalizer) {
+			// Run finalization logic for applicationFinalizer. If the finalization logic fails, don't remove the
+			// finalizer so that we can retry during the next reconciliation.
+			if err := r.finalizeOpenLibertyPerformanceData(reqLogger, instance); err != nil {
+				return reconcile.Result{}, err
+			}
+
+			// Remove applicationFinalizer. Once all finalizers have been removed, the object will be deleted.
+			instance.SetFinalizers(utils.Remove(instance.GetFinalizers(), applicationFinalizer))
+			err := r.Client.Update(context.TODO(), instance)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+		}
+		return reconcile.Result{}, nil
+	}
+
+	// Add finalizer for this CR
+	if !utils.Contains(instance.GetFinalizers(), applicationFinalizer) {
+		if err := r.addFinalizer(reqLogger, instance); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
 	//do not reconcile if performance data collection already completed
 	oc := openlibertyv1.GetOperationCondtion(instance.Status.Conditions, openlibertyv1.OperationStatusConditionTypeCompleted)
 	if oc != nil && oc.Status == corev1.ConditionTrue {
@@ -232,9 +260,34 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	instance.Status.PerformanceDataFile = performanceDataFile
 	instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 	instance.Status.Versions.Reconciled = utils.OperandVersion
-	r.Client.Status().Update(context.TODO(), instance)
-
+	if err = r.Client.Status().Update(context.TODO(), instance); err == nil {
+		// cleanup pod refs
+		r.PodInjectorClient.CompleteScript("linperf", pod.Name, pod.Namespace)
+	}
 	return reconcile.Result{}, nil
+}
+
+func (r *ReconcileOpenLibertyPerformanceData) finalizeOpenLibertyPerformanceData(reqLogger logr.Logger, olpd *openlibertyv1.OpenLibertyPerformanceData) error {
+	if connErr := r.PodInjectorClient.Connect(); connErr != nil {
+		return connErr
+	}
+	r.PodInjectorClient.CompleteScript("linperf", olpd.Spec.PodName, olpd.Namespace)
+	r.PodInjectorClient.CloseConnection()
+	return nil
+}
+
+func (r *ReconcileOpenLibertyPerformanceData) addFinalizer(reqLogger logr.Logger, olpd *openlibertyv1.OpenLibertyPerformanceData) error {
+	reqLogger.Info("Adding Finalizer for OpenLibertyPerformanceData")
+	olpd.SetFinalizers(append(olpd.GetFinalizers(), applicationFinalizer))
+
+	// Update CR
+	err := r.Client.Update(context.TODO(), olpd)
+	if err != nil {
+		reqLogger.Error(err, "Failed to update OpenLibertyPerformanceData with finalizer")
+		return err
+	}
+
+	return nil
 }
 
 func isPerformanceDataRunning(instance *openlibertyv1.OpenLibertyPerformanceData) bool {

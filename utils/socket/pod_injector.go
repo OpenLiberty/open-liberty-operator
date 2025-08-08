@@ -19,6 +19,7 @@ type PodInjectorStatusResponse string
 const (
 	podInjectorSocketPath                                      = "/tmp/operator.sock"
 	PodInjectorActionStart                                     = "start"
+	PodInjectorActionComplete                                  = "complete"
 	PodInjectorActionStop                                      = "stop"
 	PodInjectorActionStatus                                    = "status"
 	PodInjectorActionLinperfFileName                           = "linperfFileName"
@@ -111,6 +112,13 @@ func (c *Client) StartScript(scriptName, podName, podNamespace, attrs string) bo
 	return true
 }
 
+func (c *Client) CompleteScript(scriptName, podName, podNamespace string) {
+	if c.conn == nil {
+		return
+	}
+	c.conn.Write([]byte(fmt.Sprintf("%s:%s:%s:%s\n", podName, podNamespace, scriptName, PodInjectorActionComplete)))
+}
+
 func (c *Client) CloseConnection() {
 	if c.conn == nil {
 		return
@@ -193,6 +201,10 @@ func processAction(conn net.Conn, mgr manager.Manager, podName, podNamespace, to
 			})
 		}
 		writeResponse(conn, PodInjectorStatusWriting)
+	case PodInjectorActionComplete:
+		removeWorker(podKey)
+		completedPods.Delete(podKey)
+		erroringPods.Delete(podKey)
 	case PodInjectorActionStatus:
 		if hasWorker(podKey) {
 			writeResponse(conn, PodInjectorStatusWriting)

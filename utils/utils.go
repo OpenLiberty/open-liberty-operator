@@ -145,6 +145,7 @@ type PodInjectorClient interface {
 	CloseConnection()
 	PollStatus(scriptName, podName, podNamespace string) string
 	StartScript(scriptName, podName, podNamespace, attrs string) bool
+	CompleteScript(scriptName, podName, podNamespace string)
 	PollLinperfFileName(scriptName, podName, podNamespace string) string
 }
 
