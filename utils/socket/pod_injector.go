@@ -116,7 +116,7 @@ func (c *Client) CompleteScript(scriptName, podName, podNamespace string) {
 	if c.conn == nil {
 		return
 	}
-	c.conn.Write([]byte(fmt.Sprintf("%s:%s:%s:%s\n", podName, podNamespace, scriptName, PodInjectorActionComplete)))
+	c.conn.Write([]byte(fmt.Sprintf("%s:%s:%s:%s:%s\n", podName, podNamespace, scriptName, PodInjectorActionComplete, "")))
 }
 
 func (c *Client) CloseConnection() {
