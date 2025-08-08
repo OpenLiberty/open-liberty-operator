@@ -214,7 +214,7 @@ func GetLinperfCmd(encodedAttr, podName, podNamespace string) string {
 	linperfCmdArgs = append(linperfCmdArgs, "--ignore-root")
 	linperfCmd := strings.Join(linperfCmdArgs, FlagDelimiterSpace)
 
-	linperfCmdWithPids := fmt.Sprintf("PIDS=$(ls -l /proc/[0-9]*/exe | grep \"/java\" | xargs -L 1 | cut -d ' ' -f9 | cut -d '/' -f 3 ); PIDS_OUT=$(echo $PIDS | tr '\n' ' '); %s \"$PIDS_OUT\"", linperfCmd)
+	linperfCmdWithPids := fmt.Sprintf("mkdir -p %s && PIDS=$(ls -l /proc/[0-9]*/exe | grep \"/java\" | xargs -L 1 | cut -d ' ' -f9 | cut -d '/' -f 3 ) && PIDS_OUT=$(echo $PIDS | tr '\n' ' ') && %s \"$PIDS_OUT\"", outputDir, linperfCmd)
 	return linperfCmdWithPids
 }
 
