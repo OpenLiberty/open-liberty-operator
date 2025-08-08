@@ -28,6 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const performanceDataFinalizer = "finalizer.openlibertyperformancedatas.apps.openliberty.io"
+
 // ReconcileOpenLibertyPerformanceData reconciles an OpenLibertyPerformanceData object
 type ReconcileOpenLibertyPerformanceData struct {
 	// This client, initialized using mgr.Client() above, is a split client
@@ -71,15 +73,15 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	// indicated by the deletion timestamp being set.
 	isInstanceMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
 	if isInstanceMarkedToBeDeleted {
-		if utils.Contains(instance.GetFinalizers(), applicationFinalizer) {
-			// Run finalization logic for applicationFinalizer. If the finalization logic fails, don't remove the
+		if utils.Contains(instance.GetFinalizers(), performanceDataFinalizer) {
+			// Run finalization logic for performanceDataFinalizer. If the finalization logic fails, don't remove the
 			// finalizer so that we can retry during the next reconciliation.
 			if err := r.finalizeOpenLibertyPerformanceData(reqLogger, instance); err != nil {
 				return reconcile.Result{}, err
 			}
 
-			// Remove applicationFinalizer. Once all finalizers have been removed, the object will be deleted.
-			instance.SetFinalizers(utils.Remove(instance.GetFinalizers(), applicationFinalizer))
+			// Remove performanceDataFinalizer. Once all finalizers have been removed, the object will be deleted.
+			instance.SetFinalizers(utils.Remove(instance.GetFinalizers(), performanceDataFinalizer))
 			err := r.Client.Update(context.TODO(), instance)
 			if err != nil {
 				return reconcile.Result{}, err
