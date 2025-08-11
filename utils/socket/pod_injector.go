@@ -185,7 +185,8 @@ func processAction(conn net.Conn, mgr manager.Manager, podName, podNamespace, to
 				fmt.Println(stdout)
 				fmt.Println(stderr)
 				completedPods.Store(podKey, true)
-				linperfFileNames.Store(podKey, stdout)
+				fileName := getLinperfDataFileName(stdout)
+				linperfFileNames.Store(podKey, fileName)
 			} else {
 				errMessage := fmt.Sprintf("The performance data collector has failed with error: %s", err)
 				fmt.Println(errMessage)
