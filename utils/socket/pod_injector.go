@@ -178,17 +178,19 @@ func processAction(conn net.Conn, mgr manager.Manager, podName, podNamespace, to
 		}
 		completedPods.Store(podKey, false)
 		linperfFileNames.Delete(podKey)
-		reader, writer, cancelContext, err := CopyAndRunLinperf(mgr.GetConfig(), podName, podNamespace, encodedAttr, func(stdout string, err error) {
+		reader, writer, cancelContext, err := CopyAndRunLinperf(mgr.GetConfig(), podName, podNamespace, encodedAttr, func(stdout string, stderr string, err error) {
 			removeWorker(podKey)
 			if err == nil {
 				fmt.Println("The linperf script has completed successfully.")
 				fmt.Println(stdout)
+				fmt.Println(stderr)
 				completedPods.Store(podKey, true)
 				linperfFileNames.Store(podKey, stdout)
 			} else {
 				errMessage := fmt.Sprintf("The performance data collector has failed with error: %s", err)
 				fmt.Println(errMessage)
 				fmt.Println(stdout)
+				fmt.Println(stderr)
 				erroringPods.Store(podKey, errMessage)
 			}
 		})
