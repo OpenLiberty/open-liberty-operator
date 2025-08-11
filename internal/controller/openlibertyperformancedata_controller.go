@@ -91,7 +91,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	}
 
 	// Add finalizer for this CR
-	if !utils.Contains(instance.GetFinalizers(), applicationFinalizer) {
+	if !utils.Contains(instance.GetFinalizers(), performanceDataFinalizer) {
 		if err := r.addFinalizer(reqLogger, instance); err != nil {
 			return reconcile.Result{}, err
 		}
@@ -280,7 +280,7 @@ func (r *ReconcileOpenLibertyPerformanceData) finalizeOpenLibertyPerformanceData
 
 func (r *ReconcileOpenLibertyPerformanceData) addFinalizer(reqLogger logr.Logger, olpd *openlibertyv1.OpenLibertyPerformanceData) error {
 	reqLogger.Info("Adding Finalizer for OpenLibertyPerformanceData")
-	olpd.SetFinalizers(append(olpd.GetFinalizers(), applicationFinalizer))
+	olpd.SetFinalizers(append(olpd.GetFinalizers(), performanceDataFinalizer))
 
 	// Update CR
 	err := r.Client.Update(context.TODO(), olpd)
