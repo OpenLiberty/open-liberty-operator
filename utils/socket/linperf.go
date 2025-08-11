@@ -98,7 +98,7 @@ func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFold
 		usingStdin = false
 		exec, err = remotecommand.NewSPDYExecutor(config, "POST", podExec(clientset, podName, podNamespace, containerName, usingStdin, []string{"/bin/sh", "-c", scriptCmd}).URL())
 		var stdout, stderr bytes.Buffer
-		err = exec.StreamWithContext(context.Background(), remotecommand.StreamOptions{
+		err = exec.StreamWithContext(streamContext, remotecommand.StreamOptions{
 			Stdout: &stdout,
 			Stderr: &stderr,
 			Tty:    false,
