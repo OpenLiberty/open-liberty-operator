@@ -103,7 +103,7 @@ func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFold
 			Stderr: &stderr,
 			Tty:    false,
 		})
-		doneCallback(getLinperfDataFileName(stdout.String()), stderr.String(), err)
+		doneCallback(stdout.String(), stderr.String(), err)
 	}()
 	return reader, writer, cancelStreamContext, nil
 }
