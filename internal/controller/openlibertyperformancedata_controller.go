@@ -224,10 +224,13 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		}
 
 		var errMessage string
+		var reason string
 		if injectorStatus == "toomanyworkers..." {
 			errMessage = "The operator performance data queue is full. Waiting for a worker to become available..."
+			reason = "TooManyWorkers"
 		} else {
 			errMessage = utils.GetPerformanceDataWritingMessage(pod.Name)
+			reason = "InProgress"
 		}
 		// requeue when waiting on performance data collection
 		err = fmt.Errorf("%s", errMessage)
@@ -236,7 +239,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		c = openlibertyv1.OperationStatusCondition{
 			Type:    openlibertyv1.OperationStatusConditionTypeCompleted,
 			Status:  corev1.ConditionFalse,
-			Reason:  "InProgress",
+			Reason:  reason,
 			Message: err.Error(),
 		}
 		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
