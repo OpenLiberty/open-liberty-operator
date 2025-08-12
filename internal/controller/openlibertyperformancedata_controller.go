@@ -300,16 +300,16 @@ func (r *ReconcileOpenLibertyPerformanceData) addFinalizer(reqLogger logr.Logger
 
 func isPerformanceDataRunning(instance *openlibertyv1.OpenLibertyPerformanceData) bool {
 	isStarted := false
-	isCompleted := true
+	isWorking := false
 	for _, condition := range instance.Status.Conditions {
 		if condition.Type == openlibertyv1.OperationStatusConditionTypeStarted && condition.Status == corev1.ConditionTrue {
 			isStarted = true
 		}
-		if condition.Type == openlibertyv1.OperationStatusConditionTypeCompleted && condition.Status == corev1.ConditionFalse {
-			isCompleted = false
+		if condition.Type == openlibertyv1.OperationStatusConditionTypeCompleted && condition.Status == corev1.ConditionFalse && condition.Reason == "InProgress" {
+			isWorking = true
 		}
 	}
-	return isStarted && !isCompleted
+	return isStarted && isWorking
 }
 
 func (r *ReconcileOpenLibertyPerformanceData) SetupWithManager(mgr ctrl.Manager) error {
