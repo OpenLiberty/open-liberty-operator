@@ -213,7 +213,7 @@ func GetLinperfCmd(encodedAttr, podName, podNamespace string) string {
 	linperfCmdArgs = append(linperfCmdArgs, "--ignore-root")
 	linperfCmd := strings.Join(linperfCmdArgs, FlagDelimiterSpace)
 
-	linperfCmdWithPids := fmt.Sprintf("mkdir -p %s && PIDS=$(ls -l /proc/[0-9]*/exe | grep \"/java$\" | xargs -L 1 | cut -d ' ' -f9 | cut -d '/' -f 3 ) && PIDS_OUT=$(echo $PIDS | tr '\n' ' ') && ls -l /proc/[0-9]*/exe | grep \"/java$\" > /serviceability/%s/%s/test.out && ls -la > /serviceability/%s/%s/test2.out &&  %s \"1\"", outputDir, podNamespace, podName, podNamespace, podName, linperfCmd)
+	linperfCmdWithPids := fmt.Sprintf("mkdir -p %s && PIDS=$(ls -l /proc/[0-9]*/exe | grep \"/java$\" | xargs -L 1 | cut -d ' ' -f9 | cut -d '/' -f 3 ) && PIDS_OUT=$(echo $PIDS | tr '\n' ' ') && ls -l /proc/[0-9]*/exe > /serviceability/%s/%s/test.out && %s \"1\"", outputDir, podNamespace, podName, linperfCmd)
 	// linperfCmdWithPids := fmt.Sprintf("mkdir -p %s &&  %s \"1\"", outputDir, linperfCmd)
 	return linperfCmdWithPids
 }
