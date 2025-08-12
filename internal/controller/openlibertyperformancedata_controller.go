@@ -135,7 +135,10 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 		instance.Status.Versions.Reconciled = utils.OperandVersion
 		r.Client.Status().Update(context.TODO(), instance)
-		return reconcile.Result{}, nil
+		return reconcile.Result{
+			Requeue:      !isWritingPerformanceData,
+			RequeueAfter: 5 * time.Second,
+		}, nil
 	} else if pod.Status.Phase != corev1.PodRunning {
 		c := openlibertyv1.OperationStatusCondition{
 			Type:    openlibertyv1.OperationStatusConditionTypeStarted,
