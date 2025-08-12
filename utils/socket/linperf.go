@@ -80,7 +80,7 @@ func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFold
 		command = append(command, "-C", destDir)
 	}
 
-	streamContext, cancelStreamContext := context.WithCancel(context.TODO())
+	streamContext, cancelStreamContext := context.WithCancel(context.Background())
 	go func() {
 		usingStdin := true
 		exec, err := remotecommand.NewSPDYExecutor(config, "POST", podExec(clientset, podName, podNamespace, containerName, usingStdin, command).URL())
