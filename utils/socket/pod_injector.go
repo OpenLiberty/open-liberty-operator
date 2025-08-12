@@ -171,8 +171,7 @@ func processAction(conn net.Conn, mgr manager.Manager, podName, podNamespace, to
 		if hasWorker(podKey) {
 			writeResponse(conn, PodInjectorStatusWriting)
 			return
-		}
-		if len(workers) >= maxWorkers {
+		} else if len(workers) >= maxWorkers {
 			writeResponse(conn, PodInjectorStatusTooManyWorkers)
 			return
 		}

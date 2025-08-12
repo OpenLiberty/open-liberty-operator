@@ -110,13 +110,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	if err != nil && kerrors.IsNotFound(err) {
 		message := fmt.Sprintf("Failed to find pod %s in namespace %s", instance.Spec.PodName, request.Namespace)
 		var errMessage string
-		isWritingPerformanceData := false
-		for _, condition := range instance.Status.Conditions {
-			if condition.Type == openlibertyv1.OperationStatusConditionTypeCompleted && condition.Message == utils.GetPerformanceDataWritingMessage(instance.Spec.PodName) {
-				isWritingPerformanceData = true
-				break
-			}
-		}
+		isWritingPerformanceData := isPerformanceDataRunning(instance)
 		if isWritingPerformanceData {
 			errMessage = utils.GetPerformanceDataConnectionLostMessage(instance.Spec.PodName)
 		} else {
@@ -125,7 +119,14 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 
 		reqLogger.Error(err, message)
 		r.Recorder.Event(instance, "Warning", "ProcessingError", message)
+		// Set Started condition
 		c := openlibertyv1.OperationStatusCondition{
+			Type:   openlibertyv1.OperationStatusConditionTypeStarted,
+			Status: corev1.ConditionTrue,
+		}
+		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+		// Set Completed condition
+		c = openlibertyv1.OperationStatusCondition{
 			Type:    openlibertyv1.OperationStatusConditionTypeCompleted,
 			Status:  corev1.ConditionFalse,
 			Reason:  "Error",
