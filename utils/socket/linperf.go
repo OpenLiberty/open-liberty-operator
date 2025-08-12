@@ -87,6 +87,7 @@ func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFold
 		if err != nil {
 			fmt.Printf("error %s\n", err)
 			doneCallback("", "", err)
+			return
 		}
 		err = exec.StreamWithContext(streamContext, remotecommand.StreamOptions{
 			Stdin:  reader,
