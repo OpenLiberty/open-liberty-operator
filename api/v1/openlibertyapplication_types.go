@@ -1617,3 +1617,10 @@ func convertFromCommonStatusEndpointScope(c common.StatusEndpointScope) StatusEn
 		panic(c)
 	}
 }
+
+func (s *OpenLibertyApplicationService) GetSessionAffinity() common.BaseComponentServiceSessionAffinity {
+    if s.SessionAffinity == nil {
+        return nil
+    }
+    return s.SessionAffinity
+}
