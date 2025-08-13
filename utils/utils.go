@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"math/rand/v2"
 
@@ -168,9 +167,17 @@ func Validate(olapp *olv1.OpenLibertyApplication) (bool, error) {
 }
 
 const (
-	FlagDelimiterSpace  = " "
-	FlagDelimiterEquals = "="
+	FlagDelimiterSpace                = " "
+	FlagDelimiterEquals               = "="
+	OpConfigPerformanceDataMaxWorkers = "performanceDataMaxWorkers"
 )
+
+var DefaultLibertyOpConfig *sync.Map
+
+func init() {
+	DefaultLibertyOpConfig = &sync.Map{}
+	DefaultLibertyOpConfig.Store(OpConfigPerformanceDataMaxWorkers, "10")
+}
 
 func parseFlag(key, value, delimiter string) string {
 	return fmt.Sprintf("%s%s%s", key, delimiter, value)
