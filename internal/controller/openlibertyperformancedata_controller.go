@@ -203,10 +203,10 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		reqLogger.Info("Failed to get open-liberty-operator config map, error: " + err.Error())
 		oputils.CreateConfigMap(OperatorName)
 	} else {
-		common.LoadFromConfigMap(common.Config, configMap)
+		common.LoadFromConfigMapWithAddedDefaults(common.Config, configMap, utils.DefaultLibertyOpConfig)
 	}
 
-	maxWorkers := common.LoadFromConfig(common.Config, common.OpConfigPerformanceDataMaxWorkers)
+	maxWorkers := common.LoadFromConfig(common.Config, utils.OpConfigPerformanceDataMaxWorkers)
 	if maxWorkers != "" {
 		r.PodInjectorClient.SetMaxWorkers("linperf", pod.Name, pod.Namespace, maxWorkers)
 	}
