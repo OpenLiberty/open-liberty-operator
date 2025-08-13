@@ -70,6 +70,10 @@ func (c *Client) Connect() error {
 	return nil
 }
 
+func buildMessage(podName, podNamespace, scriptName, podInjectorAction, payload string) []byte {
+	return []byte(fmt.Sprintf("%s:%s:%s:%s:%s\n", podName, podNamespace, scriptName, podInjectorAction, payload))
+}
+
 func (c *Client) PollStatus(scriptName, podName, podNamespace string) string {
 	if c.conn == nil {
 		return string(PodInjectorStatusClosed)
@@ -87,7 +91,7 @@ func (c *Client) PollStatus(scriptName, podName, podNamespace string) string {
 			break
 		}
 	}()
-	c.conn.Write([]byte(fmt.Sprintf("%s:%s:%s:%s:%s\n", podName, podNamespace, scriptName, PodInjectorActionStatus, "")))
+	c.conn.Write(buildMessage(podName, podNamespace, scriptName, PodInjectorActionStatus, ""))
 	wg.Wait()
 	return <-output
 }
@@ -109,24 +113,25 @@ func (c *Client) PollLinperfFileName(scriptName, podName, podNamespace string) s
 			break
 		}
 	}()
-	c.conn.Write([]byte(fmt.Sprintf("%s:%s:%s:%s:%s\n", podName, podNamespace, scriptName, PodInjectorActionLinperfFileName, "")))
+	c.conn.Write(buildMessage(podName, podNamespace, scriptName, PodInjectorActionLinperfFileName, ""))
 	wg.Wait()
 	return <-output
 }
 
-func (c *Client) StartScript(scriptName, podName, podNamespace, attrs string) bool {
+func (c *Client) write(msg []byte) {
 	if c.conn == nil {
-		return false
+		return
 	}
-	c.conn.Write([]byte(fmt.Sprintf("%s:%s:%s:%s:%s\n", podName, podNamespace, scriptName, PodInjectorActionStart, attrs)))
+	c.conn.Write(msg)
+}
+
+func (c *Client) StartScript(scriptName, podName, podNamespace, attrs string) bool {
+	c.write(buildMessage(podName, podNamespace, scriptName, PodInjectorActionStart, attrs))
 	return true
 }
 
 func (c *Client) CompleteScript(scriptName, podName, podNamespace string) {
-	if c.conn == nil {
-		return
-	}
-	c.conn.Write([]byte(fmt.Sprintf("%s:%s:%s:%s:%s\n", podName, podNamespace, scriptName, PodInjectorActionComplete, "")))
+	c.write(buildMessage(podName, podNamespace, scriptName, PodInjectorActionComplete, ""))
 }
 
 func (c *Client) CloseConnection() {
@@ -140,8 +145,22 @@ func (c *Client) SetMaxWorkers(scriptName, podName, podNamespace, maxWorkers str
 	if c.conn == nil {
 		return false
 	}
-	c.conn.Write([]byte(fmt.Sprintf("%s:%s:%s:%s:%s\n", podName, podNamespace, scriptName, PodInjectorActionSetMaxWorkers, maxWorkers)))
-	return true
+	output := make(chan string, 1)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		scanner := bufio.NewScanner(c.conn)
+		for scanner.Scan() {
+			msg := scanner.Text()
+			fmt.Println("Message from pod injector: ", msg)
+			output <- msg
+			break
+		}
+	}()
+	c.conn.Write(buildMessage(podName, podNamespace, scriptName, PodInjectorActionSetMaxWorkers, maxWorkers))
+	wg.Wait()
+	return <-output == string(PodInjectorStatusUpdateMaxWorkersSuccess)
 }
 
 func GetPodInjectorClient() *Client {
