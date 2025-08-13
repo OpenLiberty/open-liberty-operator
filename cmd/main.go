@@ -148,11 +148,8 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controller.ReconcileOpenLibertyPerformanceData{
+		ReconcilerBase:    utils.NewReconcilerBase(mgr.GetAPIReader(), mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor("open-liberty-operator")),
 		Log:               ctrl.Log.WithName("controller").WithName("OpenLibertyPerformanceData"),
-		Client:            mgr.GetClient(),
-		Scheme:            mgr.GetScheme(),
-		RestConfig:        mgr.GetConfig(),
-		Recorder:          mgr.GetEventRecorderFor("open-liberty-operator"),
 		PodInjectorClient: socket.GetPodInjectorClient(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenLibertyPerformanceData")

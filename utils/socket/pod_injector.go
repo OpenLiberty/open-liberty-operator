@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -17,27 +18,36 @@ import (
 type PodInjectorStatusResponse string
 
 const (
-	podInjectorSocketPath                                      = "/tmp/operator.sock"
-	PodInjectorActionStart                                     = "start"
-	PodInjectorActionComplete                                  = "complete"
-	PodInjectorActionStop                                      = "stop"
-	PodInjectorActionStatus                                    = "status"
-	PodInjectorActionLinperfFileName                           = "linperfFileName"
-	PodInjectorStatusWriting         PodInjectorStatusResponse = "writing..."
-	PodInjectorStatusIdle            PodInjectorStatusResponse = "idle..."
-	PodInjectorStatusDone            PodInjectorStatusResponse = "done..."
-	PodInjectorStatusClosed          PodInjectorStatusResponse = "closed..."
-	PodInjectorStatusNotFound        PodInjectorStatusResponse = "notfound..."
-	PodInjectorStatusTooManyWorkers  PodInjectorStatusResponse = "toomanyworkers..."
+	podInjectorSocketPath                                                      = "/tmp/operator.sock"
+	PodInjectorActionSetMaxWorkers                                             = "setMaxWorkers"
+	PodInjectorActionStart                                                     = "start"
+	PodInjectorActionComplete                                                  = "complete"
+	PodInjectorActionStop                                                      = "stop"
+	PodInjectorActionStatus                                                    = "status"
+	PodInjectorActionLinperfFileName                                           = "linperfFileName"
+	PodInjectorStatusUpdateMaxWorkersSuccess         PodInjectorStatusResponse = "updateMaxWorkersSuccess..."
+	PodInjectorStatusUpdateMaxWorkersBusy            PodInjectorStatusResponse = "updateMaxWorkersBusy..."
+	PodInjectorStatusUpdateMaxWorkersInvalidArgument PodInjectorStatusResponse = "updateMaxWorkersInvalidArgument..."
+	PodInjectorStatusWriting                         PodInjectorStatusResponse = "writing..."
+	PodInjectorStatusIdle                            PodInjectorStatusResponse = "idle..."
+	PodInjectorStatusDone                            PodInjectorStatusResponse = "done..."
+	PodInjectorStatusClosed                          PodInjectorStatusResponse = "closed..."
+	PodInjectorStatusNotFound                        PodInjectorStatusResponse = "notfound..."
+	PodInjectorStatusTooManyWorkers                  PodInjectorStatusResponse = "toomanyworkers..."
+)
+
+const (
+	MinWorkers = 1
+	MaxWorkers = 100
 )
 
 var (
-	mutex            = &sync.Mutex{}
-	workers          = []Worker{}
-	completedPods    = &sync.Map{}
-	erroringPods     = &sync.Map{}
-	linperfFileNames = &sync.Map{}
-	maxWorkers       = 1
+	mutex             = &sync.Mutex{}
+	workers           = []Worker{}
+	completedPods     = &sync.Map{}
+	erroringPods      = &sync.Map{}
+	linperfFileNames  = &sync.Map{}
+	currentMaxWorkers = 10
 )
 
 type Worker struct {
@@ -126,6 +136,14 @@ func (c *Client) CloseConnection() {
 	c.conn.Close()
 }
 
+func (c *Client) SetMaxWorkers(scriptName, podName, podNamespace, maxWorkers string) bool {
+	if c.conn == nil {
+		return false
+	}
+	c.conn.Write([]byte(fmt.Sprintf("%s:%s:%s:%s:%s\n", podName, podNamespace, scriptName, PodInjectorActionSetMaxWorkers, maxWorkers)))
+	return true
+}
+
 func GetPodInjectorClient() *Client {
 	return &Client{}
 }
@@ -167,11 +185,28 @@ func processAction(conn net.Conn, mgr manager.Manager, podName, podNamespace, to
 	}
 	podKey := getPodKey(podName, podNamespace)
 	switch action {
+	case PodInjectorActionSetMaxWorkers:
+		desiredWorkers, err := strconv.Atoi(encodedAttr)
+		// Exit early if desired workers is out of bounds
+		if err != nil || desiredWorkers < MinWorkers || desiredWorkers > MaxWorkers {
+			writeResponse(conn, PodInjectorStatusUpdateMaxWorkersInvalidArgument)
+			return
+		}
+		// Update currentMaxWorkers as needed
+		if desiredWorkers != currentMaxWorkers {
+			activeWorkers := len(workers)
+			currentMaxWorkers = max(activeWorkers, desiredWorkers)
+		}
+		if desiredWorkers == currentMaxWorkers {
+			writeResponse(conn, PodInjectorStatusUpdateMaxWorkersSuccess)
+		} else {
+			writeResponse(conn, PodInjectorStatusUpdateMaxWorkersBusy)
+		}
 	case PodInjectorActionStart:
 		if hasWorker(podKey) {
 			writeResponse(conn, PodInjectorStatusWriting)
 			return
-		} else if len(workers) >= maxWorkers {
+		} else if len(workers) >= currentMaxWorkers {
 			writeResponse(conn, PodInjectorStatusTooManyWorkers)
 			return
 		}
@@ -214,7 +249,7 @@ func processAction(conn net.Conn, mgr manager.Manager, podName, podNamespace, to
 			writeResponse(conn, PodInjectorStatusResponse(fmt.Sprintf("error:%s", value.(string))))
 		} else if value, ok := completedPods.Load(podKey); ok && value.(bool) {
 			writeResponse(conn, PodInjectorStatusDone)
-		} else if len(workers) >= maxWorkers {
+		} else if len(workers) >= currentMaxWorkers {
 			writeResponse(conn, PodInjectorStatusTooManyWorkers)
 		} else {
 			writeResponse(conn, PodInjectorStatusIdle)
