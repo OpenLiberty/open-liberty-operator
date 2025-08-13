@@ -298,6 +298,21 @@ type OpenLibertyApplicationService struct {
 	// Expose the application as a bindable service. Defaults to false.
 	// +operator-sdk:csv:customresourcedefinitions:order=18,type=spec,displayName="Bindable",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
 	Bindable *bool `json:"bindable,omitempty"`
+
+	// Configure service session affinity.
+	// +operator-sdk:csv:customresourcedefinitions:order=19,type=spec
+	SessionAffinity *OpenLibertyApplicationServiceSessionAffinity `json:"sessionAffinity,omitempty"`
+}
+
+// Configure service session affinity
+type OpenLibertyApplicationServiceSessionAffinity struct {
+	// Setting to maintain session affinity. Must be ClientIP or None. Defaults to None.
+	// +operator-sdk:csv:customresourcedefinitions:order=20,type=spec,displayName="Session Affinity Type",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	Type corev1.ServiceAffinity `json:"type,omitempty"`
+
+	// Configurations of session affinity.
+	// +operator-sdk:csv:customresourcedefinitions:order=21,type=spec
+	Config *corev1.SessionAffinityConfig `json:"config,omitempty"`
 }
 
 // Configure service certificate.
@@ -1582,6 +1597,7 @@ func (s *OpenLibertyApplicationStatus) SetStatusEndpoint(c common.StatusEndpoint
 	for i := range s.Endpoints {
 		if s.Endpoints[i].GetEndpointName() == c.GetEndpointName() {
 			endpoint = &s.Endpoints[i]
+		
 			found = true
 			break
 		}
@@ -1623,4 +1639,12 @@ func (s *OpenLibertyApplicationService) GetSessionAffinity() common.BaseComponen
         return nil
     }
     return s.SessionAffinity
+}
+
+func (ssa *OpenLibertyApplicationServiceSessionAffinity) GetType() corev1.ServiceAffinity {
+    return ssa.Type
+}
+
+func (ssa *OpenLibertyApplicationServiceSessionAffinity) GetConfig() *corev1.SessionAffinityConfig {
+    return ssa.Config
 }
