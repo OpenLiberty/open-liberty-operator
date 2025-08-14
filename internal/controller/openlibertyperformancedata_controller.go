@@ -227,6 +227,13 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 				Message: err.Error(),
 			}
 			instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+			c = openlibertyv1.OperationStatusCondition{
+				Type:    openlibertyv1.OperationStatusConditionTypeFailed,
+				Status:  corev1.ConditionTrue,
+				Reason:  "Error",
+				Message: err.Error(),
+			}
+			instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
 			instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 			instance.Status.Versions.Reconciled = utils.OperandVersion
 			r.GetClient().Status().Update(context.TODO(), instance)
@@ -241,6 +248,13 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 			c = openlibertyv1.OperationStatusCondition{
 				Type:    openlibertyv1.OperationStatusConditionTypeCompleted,
 				Status:  corev1.ConditionFalse,
+				Reason:  "ConnectionLost",
+				Message: err.Error(),
+			}
+			instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+			c = openlibertyv1.OperationStatusCondition{
+				Type:    openlibertyv1.OperationStatusConditionTypeFailed,
+				Status:  corev1.ConditionTrue,
 				Reason:  "ConnectionLost",
 				Message: err.Error(),
 			}
