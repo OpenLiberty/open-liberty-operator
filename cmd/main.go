@@ -150,7 +150,7 @@ func main() {
 	if err = (&controller.ReconcileOpenLibertyPerformanceData{
 		ReconcilerBase:    utils.NewReconcilerBase(mgr.GetAPIReader(), mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor("open-liberty-operator")),
 		Log:               ctrl.Log.WithName("controller").WithName("OpenLibertyPerformanceData"),
-		PodInjectorClient: socket.GetPodInjectorClient(),
+		PodInjectorClient: socket.GetPodInjectorClient(ctrl.Log.WithName("controller").WithName("PodInjectorClient").V(common.LogLevelDebug)),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenLibertyPerformanceData")
 		os.Exit(1)
@@ -177,7 +177,7 @@ func main() {
 	}
 
 	setupLog.Info("creating socket for operator pod injector")
-	listener, err := socket.ServePodInjector(mgr)
+	listener, err := socket.ServePodInjector(mgr, ctrl.Log.WithName("controller").WithName("PodInjectorServer").V(common.LogLevelDebug))
 	if err != nil {
 		setupLog.Error(err, "problem running operator pod injector")
 		os.Exit(1)
