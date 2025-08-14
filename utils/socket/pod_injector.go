@@ -300,7 +300,7 @@ func handleConnection(mgr manager.Manager, conn net.Conn, logger logr.Logger) {
 	for {
 		n, err := conn.Read(buffer)
 		if err != nil {
-			logger.Error(fmt.Errorf("Failed to populate data into the buffer, skipping..."), "Invalid message")
+			// logger.Error(fmt.Errorf("Failed to populate data into the buffer, skipping..."), "Invalid message")
 			return
 		}
 		messagesString := string(buffer[:n])
@@ -308,7 +308,7 @@ func handleConnection(mgr manager.Manager, conn net.Conn, logger logr.Logger) {
 		for _, message := range messages {
 			message = strings.Trim(message, " ")
 			if len(message) == 0 {
-				logger.Error(fmt.Errorf("Expected an non-empty message but received nothing, skipping..."), "Invalid message")
+				// logger.Error(fmt.Errorf("Expected an non-empty message but received nothing, skipping..."), "Invalid message")
 				continue
 			}
 			messageArr := strings.Split(message, ":")
