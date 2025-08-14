@@ -38,8 +38,9 @@ const (
 )
 
 const (
-	MinWorkers = 1
-	MaxWorkers = 100
+	MinWorkers         = 1
+	MaxWorkers         = 100
+	BuildMessageLength = 5
 )
 
 var (
@@ -175,7 +176,7 @@ var _ utils.PodInjectorClient = (*Client)(nil)
 
 func ServePodInjector(mgr manager.Manager, logger logr.Logger) (net.Listener, error) {
 	os.Remove(podInjectorSocketPath)
-
+	logger.Info(fmt.Sprintf("Creating socket at path: %s", podInjectorSocketPath))
 	listener, err := net.Listen("unix", podInjectorSocketPath)
 	if err != nil {
 		return nil, err
@@ -185,7 +186,7 @@ func ServePodInjector(mgr manager.Manager, logger logr.Logger) (net.Listener, er
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
-				logger.Error(err, "Failed to accept connection for the pod injector")
+				logger.Error(err, "Failed to accept connection")
 				continue
 			}
 			go handleConnection(mgr, conn, logger)
@@ -299,6 +300,7 @@ func handleConnection(mgr manager.Manager, conn net.Conn, logger logr.Logger) {
 	for {
 		n, err := conn.Read(buffer)
 		if err != nil {
+			logger.Error(fmt.Errorf("Failed to populate data into the buffer, skipping..."), "Invalid message")
 			return
 		}
 		messagesString := string(buffer[:n])
@@ -306,15 +308,22 @@ func handleConnection(mgr manager.Manager, conn net.Conn, logger logr.Logger) {
 		for _, message := range messages {
 			message = strings.Trim(message, " ")
 			if len(message) == 0 {
+				logger.Error(fmt.Errorf("Expected an non-empty message but received nothing, skipping..."), "Invalid message")
 				continue
 			}
 			messageArr := strings.Split(message, ":")
-			if len(messageArr) != 5 {
+			if len(messageArr) != BuildMessageLength {
+				logger.Error(fmt.Errorf("Expected len(messageArr) == %d but got length %d", BuildMessageLength, len(messageArr)), "Invalid message")
 				return
 			}
 			podName, podNamespace, tool, action, encodedAttr := messageArr[0], messageArr[1], messageArr[2], messageArr[3], messageArr[4]
+
+			debugLogSignature := fmt.Sprintf("tool (%s), action (%s), pod (%s), namespace (%s), payload (%s)", tool, action, podName, podNamespace, encodedAttr)
+			logger.V(2).Info(fmt.Sprintf("Requesting lock: [%s]", debugLogSignature))
 			mutex.Lock()
+			logger.V(2).Info(fmt.Sprintf("Holding critical section: [%s]", debugLogSignature))
 			processAction(conn, mgr, logger, podName, podNamespace, tool, action, encodedAttr)
+			logger.V(2).Info(fmt.Sprintf("Releasing critical section: [%s]", debugLogSignature))
 			mutex.Unlock()
 		}
 	}
