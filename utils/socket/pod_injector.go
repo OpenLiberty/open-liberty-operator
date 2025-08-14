@@ -88,7 +88,7 @@ func (c *Client) PollStatus(scriptName, podName, podNamespace string) string {
 		scanner := bufio.NewScanner(c.conn)
 		for scanner.Scan() {
 			msg := scanner.Text()
-			c.logger.Info("PollStatus: Received message: ", msg)
+			c.logger.Info(fmt.Sprintf("PollStatus: Received message: %s", msg))
 			output <- msg
 			break
 		}
@@ -110,7 +110,7 @@ func (c *Client) PollLinperfFileName(scriptName, podName, podNamespace string) s
 		scanner := bufio.NewScanner(c.conn)
 		for scanner.Scan() {
 			msg := scanner.Text()
-			c.logger.Info("PollLinperfFileName: Received message: ", msg)
+			c.logger.Info(fmt.Sprintf("PollLinperfFileName: Received message: %s", msg))
 			output <- msg
 			break
 		}
@@ -155,7 +155,7 @@ func (c *Client) SetMaxWorkers(scriptName, podName, podNamespace, maxWorkers str
 		scanner := bufio.NewScanner(c.conn)
 		for scanner.Scan() {
 			msg := scanner.Text()
-			c.logger.Info("SetMaxWorkers: Received message: ", msg)
+			c.logger.Info(fmt.Sprintf("SetMaxWorkers: Received message: %s", msg))
 			output <- msg
 			break
 		}
