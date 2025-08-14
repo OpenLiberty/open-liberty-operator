@@ -208,6 +208,13 @@ func processAction(conn net.Conn, mgr manager.Manager, logger logr.Logger, podNa
 		return
 	}
 	podKey := getPodKey(podName, podNamespace)
+	debugLogSignature := fmt.Sprintf("pod (%s), namespace (%s), active workers: (%d)", podName, podNamespace, len(workers))
+	logger.V(2).Info(fmt.Sprintf("processAction: start: [%s]", debugLogSignature))
+	defer func() {
+		debugLogSignature := fmt.Sprintf("pod (%s), namespace (%s), active workers: (%d)", podName, podNamespace, len(workers))
+		logger.V(2).Info(fmt.Sprintf("processAction: end: [%s]", debugLogSignature))
+	}()
+
 	switch action {
 	case PodInjectorActionSetMaxWorkers:
 		desiredWorkers, err := strconv.Atoi(encodedAttr)

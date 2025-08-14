@@ -85,7 +85,6 @@ func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFold
 		usingStdin := true
 		exec, err := remotecommand.NewSPDYExecutor(config, "POST", podExec(clientset, podName, podNamespace, containerName, usingStdin, command).URL())
 		if err != nil {
-			fmt.Printf("error %s\n", err)
 			doneCallback("", "", err)
 			return
 		}
