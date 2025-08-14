@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/OpenLiberty/open-liberty-operator/utils"
+	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -58,7 +59,8 @@ type Worker struct {
 }
 
 type Client struct {
-	conn net.Conn
+	conn   net.Conn
+	logger logr.Logger
 }
 
 func (c *Client) Connect() error {
@@ -86,7 +88,7 @@ func (c *Client) PollStatus(scriptName, podName, podNamespace string) string {
 		scanner := bufio.NewScanner(c.conn)
 		for scanner.Scan() {
 			msg := scanner.Text()
-			fmt.Println("Message from pod injector: ", msg)
+			c.logger.Info("PollStatus: Received message: ", msg)
 			output <- msg
 			break
 		}
@@ -108,7 +110,7 @@ func (c *Client) PollLinperfFileName(scriptName, podName, podNamespace string) s
 		scanner := bufio.NewScanner(c.conn)
 		for scanner.Scan() {
 			msg := scanner.Text()
-			fmt.Println("Message from pod injector: ", msg)
+			c.logger.Info("PollLinperfFileName: Received message: ", msg)
 			output <- msg
 			break
 		}
@@ -153,7 +155,7 @@ func (c *Client) SetMaxWorkers(scriptName, podName, podNamespace, maxWorkers str
 		scanner := bufio.NewScanner(c.conn)
 		for scanner.Scan() {
 			msg := scanner.Text()
-			fmt.Println("Message from pod injector: ", msg)
+			c.logger.Info("SetMaxWorkers: Received message: ", msg)
 			output <- msg
 			break
 		}
@@ -163,13 +165,15 @@ func (c *Client) SetMaxWorkers(scriptName, podName, podNamespace, maxWorkers str
 	return <-output == string(PodInjectorStatusUpdateMaxWorkersSuccess)
 }
 
-func GetPodInjectorClient() *Client {
-	return &Client{}
+func GetPodInjectorClient(logger logr.Logger) *Client {
+	return &Client{
+		logger: logger,
+	}
 }
 
 var _ utils.PodInjectorClient = (*Client)(nil)
 
-func ServePodInjector(mgr manager.Manager) (net.Listener, error) {
+func ServePodInjector(mgr manager.Manager, logger logr.Logger) (net.Listener, error) {
 	os.Remove(podInjectorSocketPath)
 
 	listener, err := net.Listen("unix", podInjectorSocketPath)
@@ -181,10 +185,10 @@ func ServePodInjector(mgr manager.Manager) (net.Listener, error) {
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
-				fmt.Println("Connection error:", err)
+				logger.Error(err, "Failed to accept connection for the pod injector")
 				continue
 			}
-			go handleConnection(mgr, conn)
+			go handleConnection(mgr, conn, logger)
 		}
 	}()
 	return listener, nil
@@ -198,7 +202,7 @@ func getPodKey(podName, podNamespace string) string {
 	return fmt.Sprintf("%s:%s", podNamespace, podName)
 }
 
-func processAction(conn net.Conn, mgr manager.Manager, podName, podNamespace, tool, action, encodedAttr string) {
+func processAction(conn net.Conn, mgr manager.Manager, logger logr.Logger, podName, podNamespace, tool, action, encodedAttr string) {
 	if len(podName) == 0 || len(podNamespace) == 0 {
 		return
 	}
@@ -234,17 +238,21 @@ func processAction(conn net.Conn, mgr manager.Manager, podName, podNamespace, to
 		reader, writer, cancelContext, err := CopyAndRunLinperf(mgr.GetConfig(), podName, podNamespace, encodedAttr, func(stdout string, stderr string, err error) {
 			removeWorker(podKey)
 			if err == nil {
-				fmt.Println("The linperf script has completed successfully.")
-				fmt.Println(stdout)
-				fmt.Println(stderr)
+				logger.Info("The linperf script has completed successfully!")
+				logger.Info("> linperf.sh (stdout):")
+				logger.Info(stdout)
+				logger.Info("> linperf.sh (stderr):")
+				logger.Info(stderr)
 				completedPods.Store(podKey, true)
 				fileName := getLinperfDataFileName(stdout)
 				linperfFileNames.Store(podKey, fileName)
 			} else {
-				errMessage := fmt.Sprintf("The performance data collector has failed with error: %s", err)
-				fmt.Println(errMessage)
-				fmt.Println(stdout)
-				fmt.Println(stderr)
+				errMessage := fmt.Sprintf("The performance data collector failed with error: %s", err)
+				logger.Error(err, "The performance data collector failed")
+				logger.Info("> linperf.sh (stdout):")
+				logger.Info(stdout)
+				logger.Info("> linperf.sh (stderr):")
+				logger.Info(stderr)
 				erroringPods.Store(podKey, errMessage)
 			}
 		})
@@ -284,7 +292,7 @@ func processAction(conn net.Conn, mgr manager.Manager, podName, podNamespace, to
 	}
 }
 
-func handleConnection(mgr manager.Manager, conn net.Conn) {
+func handleConnection(mgr manager.Manager, conn net.Conn, logger logr.Logger) {
 	defer conn.Close()
 
 	buffer := make([]byte, 1024)
@@ -306,7 +314,7 @@ func handleConnection(mgr manager.Manager, conn net.Conn) {
 			}
 			podName, podNamespace, tool, action, encodedAttr := messageArr[0], messageArr[1], messageArr[2], messageArr[3], messageArr[4]
 			mutex.Lock()
-			processAction(conn, mgr, podName, podNamespace, tool, action, encodedAttr)
+			processAction(conn, mgr, logger, podName, podNamespace, tool, action, encodedAttr)
 			mutex.Unlock()
 		}
 	}
