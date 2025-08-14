@@ -78,7 +78,7 @@ func buildMessage(podName, podNamespace, scriptName, podInjectorAction, payload 
 	return []byte(fmt.Sprintf("%s:%s:%s:%s:%s\n", podName, podNamespace, scriptName, podInjectorAction, payload))
 }
 
-func (c *Client) PollStatus(scriptName, podName, podNamespace string) string {
+func (c *Client) PollStatus(scriptName, podName, podNamespace, encodedAttrs string) string {
 	if c.conn == nil {
 		return string(PodInjectorStatusClosed)
 	}
@@ -95,7 +95,7 @@ func (c *Client) PollStatus(scriptName, podName, podNamespace string) string {
 			break
 		}
 	}()
-	c.conn.Write(buildMessage(podName, podNamespace, scriptName, PodInjectorActionStatus, ""))
+	c.conn.Write(buildMessage(podName, podNamespace, scriptName, PodInjectorActionStatus, encodedAttrs))
 	wg.Wait()
 	return <-output
 }
@@ -204,12 +204,12 @@ func getPodKey(podName, podNamespace string) string {
 	return fmt.Sprintf("%s:%s", podNamespace, podName)
 }
 
-func processAction(conn net.Conn, mgr manager.Manager, logger logr.Logger, podName, podNamespace, tool, action, encodedAttr string) {
+func processAction(conn net.Conn, mgr manager.Manager, logger logr.Logger, podName, podNamespace, tool, action, encodedAttrs string) {
 	if len(podName) == 0 || len(podNamespace) == 0 {
 		return
 	}
 	podKey := getPodKey(podName, podNamespace)
-	fullPodKey := fmt.Sprintf("%s:%s", podKey, encodedAttr)
+	fullPodKey := fmt.Sprintf("%s:%s", podKey, encodedAttrs)
 	debugLogSignature := fmt.Sprintf("pod (%s), namespace (%s), active workers: (%d)", podName, podNamespace, len(workers))
 	logger.V(2).Info(fmt.Sprintf("processAction: start: [%s]", debugLogSignature))
 	defer func() {
@@ -219,7 +219,7 @@ func processAction(conn net.Conn, mgr manager.Manager, logger logr.Logger, podNa
 
 	switch action {
 	case PodInjectorActionSetMaxWorkers:
-		desiredWorkers, err := strconv.Atoi(encodedAttr)
+		desiredWorkers, err := strconv.Atoi(encodedAttrs)
 		// Exit early if desired workers is out of bounds
 		if err != nil || desiredWorkers < MinWorkers || desiredWorkers > MaxWorkers {
 			writeResponse(conn, PodInjectorStatusUpdateMaxWorkersInvalidArgument)
@@ -236,7 +236,7 @@ func processAction(conn net.Conn, mgr manager.Manager, logger logr.Logger, podNa
 			writeResponse(conn, PodInjectorStatusUpdateMaxWorkersBusy)
 		}
 	case PodInjectorActionStart:
-		if hasWorker(podKey) && hasWorkerWithConfig(podKey, encodedAttr) {
+		if hasWorker(podKey) && hasWorkerWithConfig(podKey, encodedAttrs) {
 			writeResponse(conn, PodInjectorStatusWriting)
 			return
 		} else if len(workers) >= currentMaxWorkers {
@@ -245,8 +245,8 @@ func processAction(conn net.Conn, mgr manager.Manager, logger logr.Logger, podNa
 		}
 		completedPods.Store(fullPodKey, false)
 		linperfFileNames.Delete(fullPodKey)
-		reader, writer, cancelContext, err := CopyAndRunLinperf(mgr.GetConfig(), podName, podNamespace, encodedAttr, func(stdout string, stderr string, err error) {
-			removeWorker(podKey, encodedAttr)
+		reader, writer, cancelContext, err := CopyAndRunLinperf(mgr.GetConfig(), podName, podNamespace, encodedAttrs, func(stdout string, stderr string, err error) {
+			removeWorker(podKey, encodedAttrs)
 			if err == nil {
 				logger.Info("The linperf script has completed successfully!")
 				logger.Info("> linperf.sh (stdout):")
@@ -272,16 +272,16 @@ func processAction(conn net.Conn, mgr manager.Manager, logger logr.Logger, podNa
 				writer:        writer,
 				cancelContext: cancelContext,
 				podKey:        podKey,
-				config:        encodedAttr,
+				config:        encodedAttrs,
 			})
 		}
 		writeResponse(conn, PodInjectorStatusWriting)
 	case PodInjectorActionComplete:
-		removeWorker(podKey, encodedAttr)
+		removeWorker(podKey, encodedAttrs)
 		completedPods.Delete(fullPodKey)
 		erroringPods.Delete(fullPodKey)
 	case PodInjectorActionStatus:
-		if hasWorker(podKey) && hasWorkerWithConfig(podKey, encodedAttr) {
+		if hasWorker(podKey) && hasWorkerWithConfig(podKey, encodedAttrs) {
 			writeResponse(conn, PodInjectorStatusWriting)
 		} else if value, ok := erroringPods.Load(fullPodKey); ok {
 			writeResponse(conn, PodInjectorStatusResponse(fmt.Sprintf("error:%s", value.(string))))
@@ -299,7 +299,7 @@ func processAction(conn net.Conn, mgr manager.Manager, logger logr.Logger, podNa
 			writeResponse(conn, PodInjectorStatusNotFound)
 		}
 	case PodInjectorActionStop:
-		removeWorker(podKey, encodedAttr)
+		removeWorker(podKey, encodedAttrs)
 	}
 }
 
@@ -326,13 +326,13 @@ func handleConnection(mgr manager.Manager, conn net.Conn, logger logr.Logger) {
 				logger.Error(fmt.Errorf("Expected len(messageArr) == %d but got length %d", BuildMessageLength, len(messageArr)), "Invalid message")
 				return
 			}
-			podName, podNamespace, tool, action, encodedAttr := messageArr[0], messageArr[1], messageArr[2], messageArr[3], messageArr[4]
+			podName, podNamespace, tool, action, encodedAttrs := messageArr[0], messageArr[1], messageArr[2], messageArr[3], messageArr[4]
 
-			debugLogSignature := fmt.Sprintf("tool (%s), action (%s), pod (%s), namespace (%s), payload (%s)", tool, action, podName, podNamespace, encodedAttr)
+			debugLogSignature := fmt.Sprintf("tool (%s), action (%s), pod (%s), namespace (%s), payload (%s)", tool, action, podName, podNamespace, encodedAttrs)
 			logger.V(2).Info(fmt.Sprintf("Requesting lock: [%s]", debugLogSignature))
 			mutex.Lock()
 			logger.V(2).Info(fmt.Sprintf("Holding critical section: [%s]", debugLogSignature))
-			processAction(conn, mgr, logger, podName, podNamespace, tool, action, encodedAttr)
+			processAction(conn, mgr, logger, podName, podNamespace, tool, action, encodedAttrs)
 			logger.V(2).Info(fmt.Sprintf("Releasing lock: [%s]", debugLogSignature))
 			mutex.Unlock()
 		}

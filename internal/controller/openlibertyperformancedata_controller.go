@@ -212,7 +212,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	}
 
 	var c openlibertyv1.OperationStatusCondition
-	injectorStatus := r.PodInjectorClient.PollStatus("linperf", pod.Name, pod.Namespace)
+	injectorStatus := r.PodInjectorClient.PollStatus("linperf", pod.Name, pod.Namespace, utils.EncodeLinperfAttr(instance))
 	if injectorStatus != "done..." {
 		// exit on error
 		if strings.HasPrefix(injectorStatus, "error:") {
