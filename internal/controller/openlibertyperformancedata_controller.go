@@ -221,10 +221,8 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 			reqLogger.Error(err, errMessage)
 			r.GetRecorder().Event(instance, "Warning", "ProcessingError", err.Error())
 			c = openlibertyv1.OperationStatusCondition{
-				Type:    openlibertyv1.OperationStatusConditionTypeCompleted,
-				Status:  corev1.ConditionFalse,
-				Reason:  "Error",
-				Message: err.Error(),
+				Type:   openlibertyv1.OperationStatusConditionTypeCompleted,
+				Status: corev1.ConditionFalse,
 			}
 			instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
 			c = openlibertyv1.OperationStatusCondition{
@@ -246,10 +244,8 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 			reqLogger.Error(err, errMessage)
 			r.GetRecorder().Event(instance, "Warning", "ProcessingError", err.Error())
 			c = openlibertyv1.OperationStatusCondition{
-				Type:    openlibertyv1.OperationStatusConditionTypeCompleted,
-				Status:  corev1.ConditionFalse,
-				Reason:  "ConnectionLost",
-				Message: err.Error(),
+				Type:   openlibertyv1.OperationStatusConditionTypeCompleted,
+				Status: corev1.ConditionFalse,
 			}
 			instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
 			c = openlibertyv1.OperationStatusCondition{
@@ -345,6 +341,7 @@ func (r *ReconcileOpenLibertyPerformanceData) addFinalizer(reqLogger logr.Logger
 func isPerformanceDataRunning(instance *openlibertyv1.OpenLibertyPerformanceData) bool {
 	isStarted := false
 	isWorking := false
+	isFailed := false
 	for _, condition := range instance.Status.Conditions {
 		if condition.Type == openlibertyv1.OperationStatusConditionTypeStarted && condition.Status == corev1.ConditionTrue {
 			isStarted = true
@@ -352,8 +349,11 @@ func isPerformanceDataRunning(instance *openlibertyv1.OpenLibertyPerformanceData
 		if condition.Type == openlibertyv1.OperationStatusConditionTypeCompleted && condition.Status == corev1.ConditionFalse && condition.Reason == "InProgress" {
 			isWorking = true
 		}
+		if condition.Type == openlibertyv1.OperationStatusConditionTypeFailed && condition.Status == corev1.ConditionTrue {
+			isFailed = true
+		}
 	}
-	return isStarted && isWorking
+	return isStarted && isWorking && !isFailed
 }
 
 func (r *ReconcileOpenLibertyPerformanceData) SetupWithManager(mgr ctrl.Manager) error {
