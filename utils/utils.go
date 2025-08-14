@@ -142,7 +142,7 @@ type PodInjectorClient interface {
 	Connect() error
 	CloseConnection()
 	SetMaxWorkers(scriptName, podName, podNamespace, maxWorkers string) bool
-	PollStatus(scriptName, podName, podNamespace string) string
+	PollStatus(scriptName, podName, podNamespace, attrs string) string
 	StartScript(scriptName, podName, podNamespace, attrs string) bool
 	CompleteScript(scriptName, podName, podNamespace string)
 	PollLinperfFileName(scriptName, podName, podNamespace string) string
