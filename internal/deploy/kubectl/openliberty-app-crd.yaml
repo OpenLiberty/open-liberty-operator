@@ -18439,6 +18439,7 @@ spec:
               interval:
                 description: The time, in seconds, between executions. The minimum
                   value is 1 second. Defaults to 30 seconds.
+                minimum: 1
                 type: integer
               podName:
                 description: The name of the Pod, which must be in the same namespace
@@ -18447,7 +18448,9 @@ spec:
               timespan:
                 description: The total time, in seconds, for gathering performance
                   data. The minimum value is 60 seconds. Defaults to 240 seconds (4
-                  minutes).
+                  minutes)
+                maximum: 240
+                minimum: 60
                 type: integer
             required:
             - podName
