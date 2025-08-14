@@ -57,6 +57,7 @@ type Worker struct {
 	writer        *io.PipeWriter
 	cancelContext context.CancelFunc
 	podKey        string
+	config        string
 }
 
 type Client struct {
@@ -208,6 +209,7 @@ func processAction(conn net.Conn, mgr manager.Manager, logger logr.Logger, podNa
 		return
 	}
 	podKey := getPodKey(podName, podNamespace)
+	fullPodKey := fmt.Sprintf("%s:%s", podKey, encodedAttr)
 	debugLogSignature := fmt.Sprintf("pod (%s), namespace (%s), active workers: (%d)", podName, podNamespace, len(workers))
 	logger.V(2).Info(fmt.Sprintf("processAction: start: [%s]", debugLogSignature))
 	defer func() {
@@ -234,24 +236,24 @@ func processAction(conn net.Conn, mgr manager.Manager, logger logr.Logger, podNa
 			writeResponse(conn, PodInjectorStatusUpdateMaxWorkersBusy)
 		}
 	case PodInjectorActionStart:
-		if hasWorker(podKey) {
+		if hasWorker(podKey) && hasWorkerWithConfig(podKey, encodedAttr) {
 			writeResponse(conn, PodInjectorStatusWriting)
 			return
 		} else if len(workers) >= currentMaxWorkers {
 			writeResponse(conn, PodInjectorStatusTooManyWorkers)
 			return
 		}
-		completedPods.Store(podKey, false)
-		linperfFileNames.Delete(podKey)
+		completedPods.Store(fullPodKey, false)
+		linperfFileNames.Delete(fullPodKey)
 		reader, writer, cancelContext, err := CopyAndRunLinperf(mgr.GetConfig(), podName, podNamespace, encodedAttr, func(stdout string, stderr string, err error) {
-			removeWorker(podKey)
+			removeWorker(podKey, encodedAttr)
 			if err == nil {
 				logger.Info("The linperf script has completed successfully!")
 				logger.Info("> linperf.sh (stdout):")
 				logger.Info(stdout)
 				logger.Info("> linperf.sh (stderr):")
 				logger.Info(stderr)
-				completedPods.Store(podKey, true)
+				completedPods.Store(fullPodKey, true)
 				fileName := getLinperfDataFileName(stdout)
 				linperfFileNames.Store(podKey, fileName)
 			} else {
@@ -270,19 +272,20 @@ func processAction(conn net.Conn, mgr manager.Manager, logger logr.Logger, podNa
 				writer:        writer,
 				cancelContext: cancelContext,
 				podKey:        podKey,
+				config:        encodedAttr,
 			})
 		}
 		writeResponse(conn, PodInjectorStatusWriting)
 	case PodInjectorActionComplete:
-		removeWorker(podKey)
-		completedPods.Delete(podKey)
-		erroringPods.Delete(podKey)
+		removeWorker(podKey, encodedAttr)
+		completedPods.Delete(fullPodKey)
+		erroringPods.Delete(fullPodKey)
 	case PodInjectorActionStatus:
-		if hasWorker(podKey) {
+		if hasWorker(podKey) && hasWorkerWithConfig(podKey, encodedAttr) {
 			writeResponse(conn, PodInjectorStatusWriting)
-		} else if value, ok := erroringPods.Load(podKey); ok {
+		} else if value, ok := erroringPods.Load(fullPodKey); ok {
 			writeResponse(conn, PodInjectorStatusResponse(fmt.Sprintf("error:%s", value.(string))))
-		} else if value, ok := completedPods.Load(podKey); ok && value.(bool) {
+		} else if value, ok := completedPods.Load(fullPodKey); ok && value.(bool) {
 			writeResponse(conn, PodInjectorStatusDone)
 		} else if len(workers) >= currentMaxWorkers {
 			writeResponse(conn, PodInjectorStatusTooManyWorkers)
@@ -296,7 +299,7 @@ func processAction(conn net.Conn, mgr manager.Manager, logger logr.Logger, podNa
 			writeResponse(conn, PodInjectorStatusNotFound)
 		}
 	case PodInjectorActionStop:
-		removeWorker(podKey)
+		removeWorker(podKey, encodedAttr)
 	}
 }
 
@@ -336,6 +339,15 @@ func handleConnection(mgr manager.Manager, conn net.Conn, logger logr.Logger) {
 	}
 }
 
+func hasWorkerWithConfig(podKey, config string) bool {
+	for _, worker := range workers {
+		if worker.podKey == podKey && worker.config == config {
+			return true
+		}
+	}
+	return false
+}
+
 func hasWorker(podKey string) bool {
 	for _, worker := range workers {
 		if worker.podKey == podKey {
@@ -345,11 +357,11 @@ func hasWorker(podKey string) bool {
 	return false
 }
 
-func removeWorker(podKey string) {
+func removeWorker(podKey, config string) {
 	// find index of the worker
 	deleteIndex := -1
 	for i, worker := range workers {
-		if worker.podKey == podKey {
+		if worker.podKey == podKey && worker.config == config {
 			deleteIndex = i
 			break
 		}
