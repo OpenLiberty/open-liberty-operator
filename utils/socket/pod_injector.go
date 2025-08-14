@@ -323,7 +323,7 @@ func handleConnection(mgr manager.Manager, conn net.Conn, logger logr.Logger) {
 			mutex.Lock()
 			logger.V(2).Info(fmt.Sprintf("Holding critical section: [%s]", debugLogSignature))
 			processAction(conn, mgr, logger, podName, podNamespace, tool, action, encodedAttr)
-			logger.V(2).Info(fmt.Sprintf("Releasing critical section: [%s]", debugLogSignature))
+			logger.V(2).Info(fmt.Sprintf("Releasing lock: [%s]", debugLogSignature))
 			mutex.Unlock()
 		}
 	}
