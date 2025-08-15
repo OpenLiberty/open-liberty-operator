@@ -285,6 +285,7 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplic
 			corev1.EnvVar{Name: "IBM_HEAPDUMPDIR", Value: serviceabilityMountPath},
 			corev1.EnvVar{Name: "IBM_COREDIR", Value: serviceabilityMountPath},
 			corev1.EnvVar{Name: "IBM_JAVACOREDIR", Value: serviceabilityMountPath},
+			corev1.EnvVar{Name: "SERVICEABILITY_NAMESPACE", Value: la.GetNamespace()},
 		)
 	}
 
