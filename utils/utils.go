@@ -19,6 +19,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -444,6 +445,48 @@ func CreateServiceabilityPVC(instance *olv1.OpenLibertyApplication) *corev1.Pers
 		persistentVolume.Spec.StorageClassName = &instance.Spec.Serviceability.StorageClassName
 	}
 	return persistentVolume
+}
+
+// ConfigureServiceabilityNetworkPolicy adds a network policy rule to permit ingress to the Liberty pod from the operator if serviceability is enabled
+func ConfigureServiceabilityNetworkPolicy(networkPolicy *networkingv1.NetworkPolicy) {
+	operatorNamespace, err := rcoutils.GetOperatorNamespace()
+	if err != nil {
+		// For local dev fallback to the watch namespace
+		watchNamespace, err := rcoutils.GetWatchNamespace()
+		if err != nil {
+			return
+		}
+		operatorNamespace = watchNamespace
+	}
+
+	// Ensure PolicyTypeIngress is present
+	ingressPolicyDefined := false
+	for _, policyType := range networkPolicy.Spec.PolicyTypes {
+		if policyType == networkingv1.PolicyTypeIngress {
+			ingressPolicyDefined = true
+			break
+		}
+	}
+	if !ingressPolicyDefined {
+		networkPolicy.Spec.PolicyTypes = append(networkPolicy.Spec.PolicyTypes, networkingv1.PolicyTypeIngress)
+	}
+
+	// Permit ingress to the Liberty Pod for traffic originating from the operator Pod
+	networkPolicy.Spec.Ingress = append(networkPolicy.Spec.Ingress, networkingv1.NetworkPolicyIngressRule{
+		Ports: []networkingv1.NetworkPolicyPort{},
+		From: []networkingv1.NetworkPolicyPeer{
+			{
+				PodSelector: &metav1.LabelSelector{
+					MatchLabels: GetOperatorLabels(),
+				},
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"kubernetes.io/metadata.name": operatorNamespace,
+					},
+				},
+			},
+		},
+	})
 }
 
 // ConfigureServiceability setups the shared-storage for serviceability

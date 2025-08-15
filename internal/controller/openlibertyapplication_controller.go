@@ -439,6 +439,9 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	if np := instance.Spec.NetworkPolicy; np == nil || np != nil && !np.IsDisabled() {
 		err = r.CreateOrUpdate(networkPolicy, instance, func() error {
 			oputils.CustomizeNetworkPolicy(networkPolicy, r.IsOpenShift(), instance)
+			if instance.GetServiceability() != nil {
+				lutils.ConfigureServiceabilityNetworkPolicy(networkPolicy)
+			}
 			return nil
 		})
 		if err != nil {
