@@ -53,7 +53,7 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: Day-2 operation for generating server performance datas
+        description: Day-2 operation for generating server performance data
         properties:
           apiVersion:
             description: |-
