@@ -49,7 +49,7 @@ type PerformanceDataStatusVersions struct {
 // +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Completed')].message",priority=1,description="Message for performance data operation failing to complete"
 // +kubebuilder:printcolumn:name="Performance Data file",type="string",JSONPath=".status.performanceDataFile",priority=0,description="Indicates filename of the server performance data"
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenLibertyPerformanceData"
-// Day-2 operation for generating server performance datas
+// Day-2 operation for generating server performance data
 type OpenLibertyPerformanceData struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

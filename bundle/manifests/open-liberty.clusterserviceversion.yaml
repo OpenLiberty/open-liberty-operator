@@ -1072,7 +1072,7 @@ spec:
       kind: OpenLibertyDump
       name: openlibertydumps.apps.openliberty.io
       version: v1beta2
-    - description: Day-2 operation for generating server performance datas
+    - description: Day-2 operation for generating server performance data
       displayName: OpenLibertyPerformanceData
       kind: OpenLibertyPerformanceData
       name: openlibertyperformancedatas.apps.openliberty.io
