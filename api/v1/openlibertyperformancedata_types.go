@@ -12,7 +12,7 @@ type OpenLibertyPerformanceDataSpec struct {
 	PodName string `json:"podName"`
 
 	// The total time, in seconds, for gathering performance data. The minimum value is 60 seconds. Defaults to 240 seconds (4 minutes)
-	// +kubebuilder:validation:Minimum=60
+	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=240
 	Timespan *int `json:"timespan,omitempty"`
 
