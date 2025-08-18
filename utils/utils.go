@@ -281,11 +281,10 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplic
 	}
 
 	if la.GetServiceability() != nil {
-		serviceabilityPodMountPath := fmt.Sprintf("%s/%s/%s", serviceabilityMountPath, la.GetNamespace(), la.GetName())
 		targetEnv = append(targetEnv,
-			corev1.EnvVar{Name: "IBM_HEAPDUMPDIR", Value: serviceabilityPodMountPath},
-			corev1.EnvVar{Name: "IBM_COREDIR", Value: serviceabilityPodMountPath},
-			corev1.EnvVar{Name: "IBM_JAVACOREDIR", Value: serviceabilityPodMountPath},
+			corev1.EnvVar{Name: "IBM_HEAPDUMPDIR", Value: serviceabilityMountPath},
+			corev1.EnvVar{Name: "IBM_COREDIR", Value: serviceabilityMountPath},
+			corev1.EnvVar{Name: "IBM_JAVACOREDIR", Value: serviceabilityMountPath},
 		)
 	}
 
