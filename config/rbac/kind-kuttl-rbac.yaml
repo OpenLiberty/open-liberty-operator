@@ -97,7 +97,7 @@ rules:
   resources:
   - openlibertyapplications
   - openlibertydumps
-  - openlibertyperformancedatas
+  - openlibertyperformancedata
   - openlibertytraces
   verbs:
   - get

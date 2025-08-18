@@ -4,7 +4,7 @@
 resources:
 - bases/apps.openliberty.io_openlibertyapplications.yaml
 - bases/apps.openliberty.io_openlibertydumps.yaml
-- bases/apps.openliberty.io_openlibertyperformancedatas.yaml
+- bases/apps.openliberty.io_openlibertyperformancedata.yaml
 - bases/apps.openliberty.io_openlibertytraces.yaml
 
 # +kubebuilder:scaffold:crdkustomizeresource
@@ -24,7 +24,7 @@ patches:
 
 - path: patches/preserveUnknownFields_openlibertyapplications.yaml
 - path: patches/preserveUnknownFields_openlibertydumps.yaml
-- path: patches/preserveUnknownFields_openlibertyperformancedatas.yaml
+- path: patches/preserveUnknownFields_openlibertyperformancedata.yaml
 - path: patches/preserveUnknownFields_openlibertytraces.yaml
 # +kubebuilder:scaffold:preserveunknownfieldspatch
 
