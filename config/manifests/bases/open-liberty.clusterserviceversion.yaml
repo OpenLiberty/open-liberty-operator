@@ -132,6 +132,12 @@ spec:
         path: autoscaling.targetCPUUtilizationPercentage
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:number
+      - description: Skip verifying that the service account has a valid pull secret.
+          Defaults to false.
+        displayName: Skip service account pull secret validation
+        path: serviceAccount.skipPullSecretValidation
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - displayName: GitHub
         path: sso.github
       - description: Specifies the name of the claim. Use its value as the user group
