@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const performanceDataFinalizer = "finalizer.openlibertyperformancedatas.apps.openliberty.io"
+const performanceDataFinalizer = "finalizer.openlibertyperformancedata.apps.openliberty.io"
 
 // ReconcileOpenLibertyPerformanceData reconciles an OpenLibertyPerformanceData object
 type ReconcileOpenLibertyPerformanceData struct {
@@ -37,7 +37,7 @@ type ReconcileOpenLibertyPerformanceData struct {
 	watchNamespaces   []string
 }
 
-// +kubebuilder:rbac:groups=apps.openliberty.io,resources=openlibertyperformancedatas;openlibertyperformancedatas/status;openlibertyperformancedatas/finalizers,verbs=get;list;watch;create;update;patch;delete,namespace=open-liberty-operator
+// +kubebuilder:rbac:groups=apps.openliberty.io,resources=openlibertyperformancedata;openlibertyperformancedata/status;openlibertyperformancedata/finalizers,verbs=get;list;watch;create;update;patch;delete,namespace=open-liberty-operator
 // +kubebuilder:rbac:groups=core,resources=pods;pods/exec,verbs=get;list;watch;create;update;patch;delete,namespace=open-liberty-operator
 
 // Reconcile reads that state of the cluster for an OpenLibertyPerformanceData object and makes changes based on the state read

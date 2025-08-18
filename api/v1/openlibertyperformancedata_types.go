@@ -40,7 +40,7 @@ type PerformanceDataStatusVersions struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
-// +kubebuilder:resource:path=openlibertyperformancedatas,scope=Namespaced,shortName=olperformancedata;olperformancedatas
+// +kubebuilder:resource:path=openlibertyperformancedata,scope=Namespaced,shortName=olperfdata
 // +kubebuilder:printcolumn:name="Started",type="string",JSONPath=".status.conditions[?(@.type=='Started')].status",priority=0,description="Indicates if performance data operation has started"
 // +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.type=='Started')].reason",priority=1,description="Reason for performance data operation failing to start"
 // +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Started')].message",priority=1,description="Message for performance data operation failing to start"

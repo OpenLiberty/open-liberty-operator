@@ -18304,16 +18304,15 @@ metadata:
   labels:
     app.kubernetes.io/instance: open-liberty-operator
     app.kubernetes.io/name: open-liberty-operator
-  name: openlibertyperformancedatas.apps.openliberty.io
+  name: openlibertyperformancedata.apps.openliberty.io
 spec:
   group: apps.openliberty.io
   names:
     kind: OpenLibertyPerformanceData
     listKind: OpenLibertyPerformanceDataList
-    plural: openlibertyperformancedatas
+    plural: openlibertyperformancedata
     shortNames:
-    - olperformancedata
-    - olperformancedatas
+    - olperfdata
     singular: openlibertyperformancedata
   preserveUnknownFields: false
   scope: Namespaced
