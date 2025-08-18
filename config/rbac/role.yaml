@@ -55,9 +55,9 @@ rules:
 - apiGroups:
   - apps.openliberty.io
   resources:
-  - openlibertyperformancedatas
-  - openlibertyperformancedatas/finalizers
-  - openlibertyperformancedatas/status
+  - openlibertyperformancedata
+  - openlibertyperformancedata/finalizers
+  - openlibertyperformancedata/status
   verbs:
   - create
   - delete

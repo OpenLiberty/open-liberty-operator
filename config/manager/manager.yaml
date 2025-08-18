@@ -72,7 +72,7 @@ spec:
           - name: RELATED_IMAGE_LIBERTY_SAMPLE_APP
             value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:48634ec68770f7feb805401706e8426a2e838650ab68502aa3a5d2a6a0645d62
           - name: RELATED_IMAGE_OPEN_LIBERTY_OPERATOR
-            value: OPERATOR_IMAGE
+            value: icr.io/appcafe/open-liberty-operator:daily
         securityContext:
           allowPrivilegeEscalation: false
           privileged: false

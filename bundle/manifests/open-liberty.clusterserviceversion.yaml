@@ -1075,7 +1075,7 @@ spec:
     - description: Day-2 operation for generating server performance data
       displayName: OpenLibertyPerformanceData
       kind: OpenLibertyPerformanceData
-      name: openlibertyperformancedatas.apps.openliberty.io
+      name: openlibertyperformancedata.apps.openliberty.io
       statusDescriptors:
       - description: Location of the generated performance data file
         displayName: Performance Data File Path
@@ -1331,9 +1331,9 @@ spec:
         - apiGroups:
           - apps.openliberty.io
           resources:
-          - openlibertyperformancedatas
-          - openlibertyperformancedatas/finalizers
-          - openlibertyperformancedatas/status
+          - openlibertyperformancedata
+          - openlibertyperformancedata/finalizers
+          - openlibertyperformancedata/status
           verbs:
           - create
           - delete

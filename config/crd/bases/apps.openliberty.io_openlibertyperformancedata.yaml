@@ -4,16 +4,15 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.15.0
-  name: openlibertyperformancedatas.apps.openliberty.io
+  name: openlibertyperformancedata.apps.openliberty.io
 spec:
   group: apps.openliberty.io
   names:
     kind: OpenLibertyPerformanceData
     listKind: OpenLibertyPerformanceDataList
-    plural: openlibertyperformancedatas
+    plural: openlibertyperformancedata
     shortNames:
-    - olperformancedata
-    - olperformancedatas
+    - olperfdata
     singular: openlibertyperformancedata
   scope: Namespaced
   versions:
