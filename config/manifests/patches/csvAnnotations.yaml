@@ -4,5 +4,5 @@ metadata:
   name: open-liberty.v0.0.0
   namespace: placeholder
   annotations:
-    containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: 2025-08-18T13:02:20Z
+    containerImage: OPERATOR_IMAGE
+    createdAt: CREATEDAT
