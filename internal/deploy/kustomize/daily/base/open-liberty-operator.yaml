@@ -50,7 +50,7 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - name: RELATED_IMAGE_LIBERTY_SAMPLE_APP
-          value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:494f54bd1476465a4226cb62f0d97cd59cd85b55ff955073e176bda4bd2afbd3
+          value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:48634ec68770f7feb805401706e8426a2e838650ab68502aa3a5d2a6a0645d62
         - name: RELATED_IMAGE_OPEN_LIBERTY_OPERATOR
           value: icr.io/appcafe/open-liberty-operator:daily
         image: icr.io/appcafe/open-liberty-operator:daily

@@ -4,7 +4,7 @@ metadata:
   name: openliberty-app-sample
 spec:
   # Add fields here
-  applicationImage: icr.io/appcafe/open-liberty/samples/getting-started@sha256:494f54bd1476465a4226cb62f0d97cd59cd85b55ff955073e176bda4bd2afbd3
+  applicationImage: icr.io/appcafe/open-liberty/samples/getting-started@sha256:48634ec68770f7feb805401706e8426a2e838650ab68502aa3a5d2a6a0645d62
   expose: true
   replicas: 1
   service:

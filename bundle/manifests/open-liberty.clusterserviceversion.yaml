@@ -11,7 +11,7 @@ metadata:
             "name": "openliberty-app-sample"
           },
           "spec": {
-            "applicationImage": "icr.io/appcafe/open-liberty/samples/getting-started@sha256:494f54bd1476465a4226cb62f0d97cd59cd85b55ff955073e176bda4bd2afbd3",
+            "applicationImage": "icr.io/appcafe/open-liberty/samples/getting-started@sha256:48634ec68770f7feb805401706e8426a2e838650ab68502aa3a5d2a6a0645d62",
             "expose": true,
             "manageTLS": true,
             "replicas": 1,
@@ -53,7 +53,7 @@ metadata:
             "name": "openliberty-app-sample"
           },
           "spec": {
-            "applicationImage": "icr.io/appcafe/open-liberty/samples/getting-started@sha256:494f54bd1476465a4226cb62f0d97cd59cd85b55ff955073e176bda4bd2afbd3",
+            "applicationImage": "icr.io/appcafe/open-liberty/samples/getting-started@sha256:48634ec68770f7feb805401706e8426a2e838650ab68502aa3a5d2a6a0645d62",
             "expose": true,
             "replicas": 1,
             "service": {
@@ -92,7 +92,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2025-08-18T09:56:40Z"
+    createdAt: "2025-08-18T20:16:17Z"
     description: Deploy and manage containerized Liberty applications
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "true"
@@ -101,7 +101,7 @@ metadata:
     features.operators.openshift.io/token-auth-aws: "false"
     features.operators.openshift.io/token-auth-azure: "false"
     features.operators.openshift.io/token-auth-gcp: "false"
-    olm.skipRange: '>=0.8.0 <1.4.4'
+    olm.skipRange: '>=0.8.0 <1.5.0'
     operators.operatorframework.io/builder: operator-sdk-v1.38.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/OpenLiberty/open-liberty-operator
@@ -111,7 +111,7 @@ metadata:
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
     operatorframework.io/os.linux: supported
-  name: open-liberty.v1.4.4
+  name: open-liberty.v1.5.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -1175,7 +1175,7 @@ spec:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
                 - name: RELATED_IMAGE_LIBERTY_SAMPLE_APP
-                  value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:494f54bd1476465a4226cb62f0d97cd59cd85b55ff955073e176bda4bd2afbd3
+                  value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:48634ec68770f7feb805401706e8426a2e838650ab68502aa3a5d2a6a0645d62
                 - name: RELATED_IMAGE_OPEN_LIBERTY_OPERATOR
                   value: icr.io/appcafe/open-liberty-operator:daily
                 image: icr.io/appcafe/open-liberty-operator:daily
@@ -1489,8 +1489,8 @@ spec:
   provider:
     name: IBM
   relatedImages:
-  - image: icr.io/appcafe/open-liberty/samples/getting-started@sha256:494f54bd1476465a4226cb62f0d97cd59cd85b55ff955073e176bda4bd2afbd3
+  - image: icr.io/appcafe/open-liberty/samples/getting-started@sha256:48634ec68770f7feb805401706e8426a2e838650ab68502aa3a5d2a6a0645d62
     name: liberty-sample-app
   - image: icr.io/appcafe/open-liberty-operator:daily
     name: open-liberty-operator
-  version: 1.4.4
+  version: 1.5.0
