@@ -8,8 +8,8 @@ github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1/go.mod h1:xomTg6
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/MakeNowJust/heredoc v1.0.0 h1:cXCdzVdstXyiTqTvfqk9SDHpKNjxuom+DOlyEeQ4pzQ=
 github.com/MakeNowJust/heredoc v1.0.0/go.mod h1:mG5amYoWBHf8vpLOuehzbGGw0EHxpZZ6lCpQ4fNJ8LE=
-github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20250814202019-7685e08e8f5a h1:pn8K/fansgDuwJeVspYgHqdA8ym/kpiPaxexi44MP/A=
-github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20250814202019-7685e08e8f5a/go.mod h1:IWb2bp8hVEbKNUDRkfa5Pty3bSdOalGRDds/VMckYCA=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20250818180111-eb25c71fcda6 h1:Bkzrhp2+U1/ysfXX3m233nUFavpC2Rn+2U4N/Y5Lp3I=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20250818180111-eb25c71fcda6/go.mod h1:IWb2bp8hVEbKNUDRkfa5Pty3bSdOalGRDds/VMckYCA=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
