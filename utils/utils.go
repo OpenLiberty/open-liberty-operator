@@ -968,9 +968,8 @@ func CreateVolumeMount(mountPath string, fileName string) corev1.VolumeMount {
 
 func GetOperatorLabels() map[string]string {
 	return map[string]string{
-		"app.kubernetes.io/instance":   "open-liberty-operator",
-		"app.kubernetes.io/managed-by": "olm",
-		"app.kubernetes.io/name":       "open-liberty-operator",
+		"app.kubernetes.io/instance": "open-liberty-operator",
+		"app.kubernetes.io/name":     "open-liberty-operator",
 	}
 }
 
