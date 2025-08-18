@@ -472,22 +472,24 @@ func ConfigureServiceabilityNetworkPolicy(networkPolicy *networkingv1.NetworkPol
 		networkPolicy.Spec.PolicyTypes = append(networkPolicy.Spec.PolicyTypes, networkingv1.PolicyTypeIngress)
 	}
 
+	// Ensure the main NetworkPolicyIngressRule is present at index 0
+	ingressPolicyRuleDefined := len(networkPolicy.Spec.Ingress) > 0
+	if !ingressPolicyRuleDefined {
+		networkPolicy.Spec.Ingress = append(networkPolicy.Spec.Ingress, networkingv1.NetworkPolicyIngressRule{})
+	}
+
 	// Permit ingress to the Liberty Pod for traffic originating from the operator Pod
-	networkPolicy.Spec.Ingress = append(networkPolicy.Spec.Ingress, networkingv1.NetworkPolicyIngressRule{
-		Ports: []networkingv1.NetworkPolicyPort{},
-		From: []networkingv1.NetworkPolicyPeer{
-			{
-				PodSelector: &metav1.LabelSelector{
-					MatchLabels: GetOperatorLabels(),
-				},
-				NamespaceSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"kubernetes.io/metadata.name": operatorNamespace,
-					},
-				},
+	peer := networkingv1.NetworkPolicyPeer{
+		PodSelector: &metav1.LabelSelector{
+			MatchLabels: GetOperatorLabels(),
+		},
+		NamespaceSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"kubernetes.io/metadata.name": operatorNamespace,
 			},
 		},
-	})
+	}
+	networkPolicy.Spec.Ingress[0].From = append(networkPolicy.Spec.Ingress[0].From, peer)
 }
 
 // ConfigureServiceability setups the shared-storage for serviceability
