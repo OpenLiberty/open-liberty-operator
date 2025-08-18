@@ -18390,7 +18390,7 @@ spec:
                   data. The minimum value is 60 seconds. Defaults to 240 seconds (4
                   minutes)
                 maximum: 240
-                minimum: 1
+                minimum: 60
                 type: integer
             required:
             - podName
