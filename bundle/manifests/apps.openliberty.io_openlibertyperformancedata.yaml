@@ -90,7 +90,7 @@ spec:
                 type: string
               timespan:
                 description: The total time, in seconds, for gathering performance
-                  data. The minimum value is 10 seconds. The maximum value is 300
+                  data. The minimum value is 10 seconds. The maximum value is 600
                   seconds (10 minutes). Defaults to 240 seconds (4 minutes).
                 maximum: 600
                 minimum: 10
