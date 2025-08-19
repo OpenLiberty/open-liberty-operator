@@ -838,7 +838,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 	// Set Reconciled to True via SetCondition to trigger sanitize
 	c := instance.Status.NewCondition(common.StatusConditionTypeReconciled)
-	c.SetConditionFields(common.StatusConditionTypeReconciledMessage, "", corev1.ConditionTrue)
+	c.SetConditionFields("Reconciled", "", corev1.ConditionTrue)
 	instance.Status.SetCondition(c)
 
 	if rc := instance.Status.GetCondition(common.StatusConditionTypeReady); rc != nil {
