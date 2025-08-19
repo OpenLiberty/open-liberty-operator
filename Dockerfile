@@ -1,10 +1,10 @@
 # Build the manager binary
-FROM registry.access.redhat.com/ubi8-minimal:latest as builder
+FROM registry.access.redhat.com/ubi9-minimal:latest as builder
 ARG GO_PLATFORM=amd64
 ARG GO_VERSION_ARG
 ARG LIBERTY_VERSION=25.0.0.1
 ENV PATH=$PATH:/usr/local/go/bin
-RUN microdnf install tar gzip unzip
+RUN microdnf -y install tar gzip unzip
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
