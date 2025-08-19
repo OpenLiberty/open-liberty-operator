@@ -3,7 +3,7 @@ kind: OpenLibertyApplication
 metadata:
   name: openliberty-app-sample
 spec:
-  applicationImage: icr.io/appcafe/open-liberty/samples/getting-started@sha256:48634ec68770f7feb805401706e8426a2e838650ab68502aa3a5d2a6a0645d62
+  applicationImage: icr.io/appcafe/open-liberty/samples/getting-started@sha256:29220c85330a584ab1a22de6771d8b10a36796dd666f2b5b8c4dd92a8f8e76e0
   expose: true
   manageTLS: true
   replicas: 1
