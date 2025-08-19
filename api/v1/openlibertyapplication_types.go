@@ -1334,7 +1334,7 @@ func (cr *OpenLibertyApplication) Initialize() {
 	// Ensure Ready condition exists and starts False
 	if cr.Status.GetCondition(common.StatusConditionTypeReady) == nil {
 		c := cr.Status.NewCondition(common.StatusConditionTypeReady)
-		c.SetConditionFields("Reconciling", "", corev1.ConditionFalse)
+		c.SetConditionFields("Not ready", "NotReady", corev1.ConditionFalse)
 		cr.Status.SetCondition(c)
 	}
 }
