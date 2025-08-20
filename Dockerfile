@@ -42,7 +42,7 @@ RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -ldflags="-s -w" -a -o mana
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM icr.io/appcafe/ibm-semeru-runtimes:open-21-jre-ubi-minimal
+FROM icr.io/appcafe/ibm-semeru-runtimes:open-21-jre-ubi9-minimal
 
 ARG USER_ID=65532
 ARG GROUP_ID=65532
