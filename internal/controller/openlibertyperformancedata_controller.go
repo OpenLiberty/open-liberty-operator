@@ -313,7 +313,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	}
 
 	performanceDataFile := ""
-	fileNameOut := r.PodInjectorClient.PollLinperfFileName("linperf", pod.Name, pod.Namespace)
+	fileNameOut := r.PodInjectorClient.PollLinperfFileName("linperf", pod.Name, pod.Namespace, encodedAttrs)
 	if strings.HasPrefix(fileNameOut, "name:") {
 		performanceDataFile = strings.TrimPrefix(fileNameOut, "name:")
 		performanceDataFile = strings.TrimSuffix(performanceDataFile, "\n")
@@ -325,7 +325,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	instance.Status.Versions.Reconciled = utils.OperandVersion
 	if err = r.GetClient().Status().Update(context.TODO(), instance); err == nil {
 		// cleanup pod refs
-		r.PodInjectorClient.CompleteScript("linperf", pod.Name, pod.Namespace)
+		r.PodInjectorClient.CompleteScript("linperf", pod.Name, pod.Namespace, encodedAttrs)
 	}
 	return reconcile.Result{}, nil
 }
@@ -334,7 +334,8 @@ func (r *ReconcileOpenLibertyPerformanceData) finalizeOpenLibertyPerformanceData
 	if connErr := r.PodInjectorClient.Connect(); connErr != nil {
 		return connErr
 	}
-	r.PodInjectorClient.CompleteScript("linperf", olpd.Spec.PodName, olpd.Namespace)
+	encodedAttrs := utils.EncodeLinperfAttr(olpd)
+	r.PodInjectorClient.CompleteScript("linperf", olpd.Spec.PodName, olpd.Namespace, encodedAttrs)
 	r.PodInjectorClient.CloseConnection()
 	return nil
 }
