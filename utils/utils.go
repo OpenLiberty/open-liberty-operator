@@ -217,18 +217,20 @@ func GetLinperfCmd(encodedAttrs, podName, podNamespace string) string {
 	scriptDir := "/output/helper"
 	scriptName := "linperf.sh"
 
+	decodedLinperfAttrs := DecodeLinperfAttr(encodedAttrs)
+
 	linperfCmdArgs := []string{fmt.Sprintf("%s/%s", scriptDir, scriptName)}
 	outputDir := fmt.Sprintf("/serviceability/%s/%s/performanceData/", podNamespace, podName)
 	linperfCmdArgs = append(linperfCmdArgs, parseFlag("--output-dir", outputDir, FlagDelimiterEquals))
 
-	decodedLinperfAttrs := DecodeLinperfAttr(encodedAttrs)
-	linperfCmdArgs = append(linperfCmdArgs, parseFlag("-s", decodedLinperfAttrs["timespan"], FlagDelimiterSpace))
-	linperfCmdArgs = append(linperfCmdArgs, parseFlag("-j", decodedLinperfAttrs["interval"], FlagDelimiterSpace))
 	now := time.Now()
 	startDate := fmt.Sprintf("%d%d%d", now.Year(), now.Month(), now.Day())
 	startTime := fmt.Sprintf("%d%d%d", now.Hour(), now.Minute(), now.Second())
 	fileName := fmt.Sprintf("linperf_RESULTS_%s.%s.%s", decodedLinperfAttrs["name"], startDate, startTime)
-	linperfCmdArgs = append(linperfCmdArgs, parseFlag("--dir-name", fileName, FlagDelimiterSpace))
+	linperfCmdArgs = append(linperfCmdArgs, parseFlag("--dir-name", fileName, FlagDelimiterEquals))
+
+	linperfCmdArgs = append(linperfCmdArgs, parseFlag("-s", decodedLinperfAttrs["timespan"], FlagDelimiterSpace))
+	linperfCmdArgs = append(linperfCmdArgs, parseFlag("-j", decodedLinperfAttrs["interval"], FlagDelimiterSpace))
 
 	linperfCmdArgs = append(linperfCmdArgs, "--ignore-root")
 	linperfCmd := strings.Join(linperfCmdArgs, FlagDelimiterSpace)
