@@ -1918,7 +1918,7 @@ spec:
   timespan: 240
 ----
 
-The performance data file name is added to the `OpenLibertyPerformanceData` CR status and file is stored in the `serviceability` folder with a format such as `/serviceability/_namespace_/_pod_name_/performanceData/linperf_RESULTS._timestamp_.tar.gz`
+The performance data file name is added to the `OpenLibertyPerformanceData` CR status and file is stored in the `serviceability` folder with a format such as `/serviceability/_namespace_/_pod_name_/performanceData/_linperf_RESULTS_performance_data_name_._timestamp_.tar.gz`
 
 Once the performance data gather has started, the CR can not be re-used to take more data. A new CR needs to be created for each server performance data gather.
 
