@@ -9,10 +9,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"math/rand/v2"
-
-	_ "unsafe"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	rcoutils "github.com/application-stacks/runtime-component-operator/utils"
@@ -145,8 +144,8 @@ type PodInjectorClient interface {
 	SetMaxWorkers(scriptName, podName, podNamespace, maxWorkers string) bool
 	PollStatus(scriptName, podName, podNamespace, attrs string) string
 	StartScript(scriptName, podName, podNamespace, attrs string) bool
-	CompleteScript(scriptName, podName, podNamespace string)
-	PollLinperfFileName(scriptName, podName, podNamespace string) string
+	CompleteScript(scriptName, podName, podNamespace, attrs string)
+	PollLinperfFileName(scriptName, podName, podNamespace, attrs string) string
 }
 
 // Validate if the OpenLibertyApplication is valid
@@ -184,9 +183,11 @@ func parseFlag(key, value, delimiter string) string {
 }
 
 func EncodeLinperfAttr(instance *olv1.OpenLibertyPerformanceData) string {
-	timespan := instance.GetTimespan()
-	interval := instance.GetInterval()
-	return fmt.Sprintf("timespan/%d|interval/%d", timespan, interval)
+	return fmt.Sprintf("timespan/%d|interval/%d|uid/%s|name/%s",
+		instance.GetTimespan(),
+		instance.GetInterval(),
+		instance.GetUID(),
+		instance.GetName())
 }
 
 func DecodeLinperfAttr(encodedAttr string) map[string]string {
@@ -210,17 +211,25 @@ func GetPerformanceDataWritingMessage(podName string) string {
 	return fmt.Sprintf("Collecting performance data for Pod '%s'...", podName)
 }
 
-func GetLinperfCmd(encodedAttr, podName, podNamespace string) string {
+func GetLinperfCmd(encodedAttrs, podName, podNamespace string) string {
 	scriptDir := "/output/helper"
 	scriptName := "linperf.sh"
+
+	decodedLinperfAttrs := DecodeLinperfAttr(encodedAttrs)
 
 	linperfCmdArgs := []string{fmt.Sprintf("%s/%s", scriptDir, scriptName)}
 	outputDir := fmt.Sprintf("/serviceability/%s/%s/performanceData/", podNamespace, podName)
 	linperfCmdArgs = append(linperfCmdArgs, parseFlag("--output-dir", outputDir, FlagDelimiterEquals))
 
-	decodedLinperfAttrs := DecodeLinperfAttr(encodedAttr)
+	now := time.Now()
+	startDate := fmt.Sprintf("%d%d%d", now.Year(), now.Month(), now.Day())
+	startTime := fmt.Sprintf("%d%d%d", now.Hour(), now.Minute(), now.Second())
+	fileName := fmt.Sprintf("linperf_RESULTS_%s.%s.%s", decodedLinperfAttrs["name"], startDate, startTime)
+	linperfCmdArgs = append(linperfCmdArgs, parseFlag("--dir-name", fileName, FlagDelimiterEquals))
+
 	linperfCmdArgs = append(linperfCmdArgs, parseFlag("-s", decodedLinperfAttrs["timespan"], FlagDelimiterSpace))
 	linperfCmdArgs = append(linperfCmdArgs, parseFlag("-j", decodedLinperfAttrs["interval"], FlagDelimiterSpace))
+
 	linperfCmdArgs = append(linperfCmdArgs, "--ignore-root")
 	linperfCmd := strings.Join(linperfCmdArgs, FlagDelimiterSpace)
 
