@@ -145,8 +145,8 @@ type PodInjectorClient interface {
 	SetMaxWorkers(scriptName, podName, podNamespace, maxWorkers string) bool
 	PollStatus(scriptName, podName, podNamespace, attrs string) string
 	StartScript(scriptName, podName, podNamespace, attrs string) bool
-	CompleteScript(scriptName, podName, podNamespace string)
-	PollLinperfFileName(scriptName, podName, podNamespace string) string
+	CompleteScript(scriptName, podName, podNamespace, attrs string)
+	PollLinperfFileName(scriptName, podName, podNamespace, attrs string) string
 }
 
 // Validate if the OpenLibertyApplication is valid
@@ -186,7 +186,8 @@ func parseFlag(key, value, delimiter string) string {
 func EncodeLinperfAttr(instance *olv1.OpenLibertyPerformanceData) string {
 	timespan := instance.GetTimespan()
 	interval := instance.GetInterval()
-	return fmt.Sprintf("timespan/%d|interval/%d", timespan, interval)
+	uid := instance.GetUID()
+	return fmt.Sprintf("timespan/%d|interval/%d|uid/%s", timespan, interval, uid)
 }
 
 func DecodeLinperfAttr(encodedAttr string) map[string]string {
@@ -210,7 +211,7 @@ func GetPerformanceDataWritingMessage(podName string) string {
 	return fmt.Sprintf("Collecting performance data for Pod '%s'...", podName)
 }
 
-func GetLinperfCmd(encodedAttr, podName, podNamespace string) string {
+func GetLinperfCmd(encodedAttrs, podName, podNamespace string) string {
 	scriptDir := "/output/helper"
 	scriptName := "linperf.sh"
 
@@ -218,7 +219,7 @@ func GetLinperfCmd(encodedAttr, podName, podNamespace string) string {
 	outputDir := fmt.Sprintf("/serviceability/%s/%s/performanceData/", podNamespace, podName)
 	linperfCmdArgs = append(linperfCmdArgs, parseFlag("--output-dir", outputDir, FlagDelimiterEquals))
 
-	decodedLinperfAttrs := DecodeLinperfAttr(encodedAttr)
+	decodedLinperfAttrs := DecodeLinperfAttr(encodedAttrs)
 	linperfCmdArgs = append(linperfCmdArgs, parseFlag("-s", decodedLinperfAttrs["timespan"], FlagDelimiterSpace))
 	linperfCmdArgs = append(linperfCmdArgs, parseFlag("-j", decodedLinperfAttrs["interval"], FlagDelimiterSpace))
 	linperfCmdArgs = append(linperfCmdArgs, "--ignore-root")
