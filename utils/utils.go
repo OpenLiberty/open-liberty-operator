@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"math/rand/v2"
 
@@ -184,10 +185,11 @@ func parseFlag(key, value, delimiter string) string {
 }
 
 func EncodeLinperfAttr(instance *olv1.OpenLibertyPerformanceData) string {
-	timespan := instance.GetTimespan()
-	interval := instance.GetInterval()
-	uid := instance.GetUID()
-	return fmt.Sprintf("timespan/%d|interval/%d|uid/%s", timespan, interval, uid)
+	return fmt.Sprintf("timespan/%d|interval/%d|uid/%s|name/%s",
+		instance.GetTimespan(),
+		instance.GetInterval(),
+		instance.GetUID(),
+		instance.GetName())
 }
 
 func DecodeLinperfAttr(encodedAttr string) map[string]string {
@@ -222,6 +224,12 @@ func GetLinperfCmd(encodedAttrs, podName, podNamespace string) string {
 	decodedLinperfAttrs := DecodeLinperfAttr(encodedAttrs)
 	linperfCmdArgs = append(linperfCmdArgs, parseFlag("-s", decodedLinperfAttrs["timespan"], FlagDelimiterSpace))
 	linperfCmdArgs = append(linperfCmdArgs, parseFlag("-j", decodedLinperfAttrs["interval"], FlagDelimiterSpace))
+	now := time.Now()
+	startDate := fmt.Sprintf("%d%d%d", now.Year(), now.Month(), now.Day())
+	startTime := fmt.Sprintf("%d%d%d", now.Hour(), now.Minute(), now.Second())
+	fileName := fmt.Sprintf("linperf_RESULTS_%s.%s.%s", decodedLinperfAttrs["name"], startDate, startTime)
+	linperfCmdArgs = append(linperfCmdArgs, parseFlag("--dir-name", fileName, FlagDelimiterSpace))
+
 	linperfCmdArgs = append(linperfCmdArgs, "--ignore-root")
 	linperfCmd := strings.Join(linperfCmdArgs, FlagDelimiterSpace)
 
