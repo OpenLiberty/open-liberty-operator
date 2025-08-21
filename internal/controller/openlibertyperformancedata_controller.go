@@ -212,7 +212,8 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	}
 
 	var c openlibertyv1.OperationStatusCondition
-	injectorStatus := r.PodInjectorClient.PollStatus("linperf", pod.Name, pod.Namespace, utils.EncodeLinperfAttr(instance))
+	encodedAttrs := utils.EncodeLinperfAttr(instance)
+	injectorStatus := r.PodInjectorClient.PollStatus("linperf", pod.Name, pod.Namespace, encodedAttrs)
 	if injectorStatus != "done..." {
 		// exit on error
 		if strings.HasPrefix(injectorStatus, "error:") {
@@ -274,7 +275,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 			r.GetClient().Status().Update(context.TODO(), instance)
 			return reconcile.Result{}, nil
 		} else if injectorStatus == "idle..." {
-			r.PodInjectorClient.StartScript("linperf", pod.Name, pod.Namespace, utils.EncodeLinperfAttr(instance))
+			r.PodInjectorClient.StartScript("linperf", pod.Name, pod.Namespace, encodedAttrs)
 		}
 
 		var errMessage string
