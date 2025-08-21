@@ -13,8 +13,6 @@ import (
 
 	"math/rand/v2"
 
-	_ "unsafe"
-
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	rcoutils "github.com/application-stacks/runtime-component-operator/utils"
 	routev1 "github.com/openshift/api/route/v1"
