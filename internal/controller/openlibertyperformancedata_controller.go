@@ -93,8 +93,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	}
 
 	//do not reconcile if performance data collection already completed
-	oc := openlibertyv1.GetOperationCondtion(instance.Status.Conditions, openlibertyv1.OperationStatusConditionTypeCompleted)
-	if oc != nil && oc.Status == corev1.ConditionTrue {
+	if oc := openlibertyv1.GetOperationCondtion(instance.Status.Conditions, openlibertyv1.OperationStatusConditionTypeCompleted); oc != nil && oc.Status == corev1.ConditionTrue {
 		return reconcile.Result{}, err
 	}
 
@@ -115,19 +114,17 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		reqLogger.Error(err, message)
 		r.GetRecorder().Event(instance, "Warning", "ProcessingError", message)
 		// Set Started condition
-		c := openlibertyv1.OperationStatusCondition{
+		instance.Status.SetCondition(openlibertyv1.OperationStatusCondition{
 			Type:   openlibertyv1.OperationStatusConditionTypeStarted,
 			Status: corev1.ConditionTrue,
-		}
-		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+		})
 		// Set Completed condition
-		c = openlibertyv1.OperationStatusCondition{
+		instance.Status.SetCondition(openlibertyv1.OperationStatusCondition{
 			Type:    openlibertyv1.OperationStatusConditionTypeCompleted,
 			Status:  corev1.ConditionFalse,
 			Reason:  "Error",
 			Message: errMessage,
-		}
-		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+		})
 		instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 		instance.Status.Versions.Reconciled = utils.OperandVersion
 		r.GetClient().Status().Update(context.TODO(), instance)
@@ -136,13 +133,12 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		}
 		return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
 	} else if pod.Status.Phase != corev1.PodRunning {
-		c := openlibertyv1.OperationStatusCondition{
+		instance.Status.SetCondition(openlibertyv1.OperationStatusCondition{
 			Type:    openlibertyv1.OperationStatusConditionTypeStarted,
 			Status:  corev1.ConditionFalse,
 			Reason:  "Error",
 			Message: fmt.Sprintf("Waiting for Pod '%s' to be in a running state.", pod.Name),
-		}
-		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+		})
 		instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 		instance.Status.Versions.Reconciled = utils.OperandVersion
 		r.GetClient().Status().Update(context.TODO(), instance)
@@ -156,23 +152,21 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		message := "Failed to connect to the operator pod injector"
 		reqLogger.Error(err, message)
 		r.GetRecorder().Event(instance, "Warning", "ProcessingError", message)
-		c := openlibertyv1.OperationStatusCondition{
+		instance.Status.SetCondition(openlibertyv1.OperationStatusCondition{
 			Type:    openlibertyv1.OperationStatusConditionTypeStarted,
 			Status:  corev1.ConditionFalse,
 			Reason:  "Error",
 			Message: message,
-		}
-		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+		})
 		instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 		instance.Status.Versions.Reconciled = utils.OperandVersion
 		r.GetClient().Status().Update(context.TODO(), instance)
 		return reconcile.Result{}, nil
 	} else {
-		c := openlibertyv1.OperationStatusCondition{
+		instance.Status.SetCondition(openlibertyv1.OperationStatusCondition{
 			Type:   openlibertyv1.OperationStatusConditionTypeStarted,
 			Status: corev1.ConditionTrue,
-		}
-		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+		})
 		r.GetClient().Status().Update(context.TODO(), instance)
 	}
 	defer r.PodInjectorClient.CloseConnection()
@@ -211,9 +205,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		r.PodInjectorClient.SetMaxWorkers("linperf", pod.Name, pod.Namespace, maxWorkers)
 	}
 
-	var c openlibertyv1.OperationStatusCondition
-	encodedAttrs := utils.EncodeLinperfAttr(instance)
-	injectorStatus := r.PodInjectorClient.PollStatus("linperf", pod.Name, pod.Namespace, encodedAttrs)
+	injectorStatus := r.PodInjectorClient.PollStatus("linperf", pod.Name, pod.Namespace, utils.EncodeLinperfAttr(instance))
 	if injectorStatus != "done..." {
 		// exit on error
 		if strings.HasPrefix(injectorStatus, "error:") {
@@ -221,18 +213,16 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 			err = fmt.Errorf("%s", errMessage)
 			reqLogger.Error(err, errMessage)
 			r.GetRecorder().Event(instance, "Warning", "ProcessingError", err.Error())
-			c = openlibertyv1.OperationStatusCondition{
+			instance.Status.SetCondition(openlibertyv1.OperationStatusCondition{
 				Type:   openlibertyv1.OperationStatusConditionTypeCompleted,
 				Status: corev1.ConditionFalse,
-			}
-			instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
-			c = openlibertyv1.OperationStatusCondition{
+			})
+			instance.Status.SetCondition(openlibertyv1.OperationStatusCondition{
 				Type:    openlibertyv1.OperationStatusConditionTypeFailed,
 				Status:  corev1.ConditionTrue,
 				Reason:  "Error",
 				Message: err.Error(),
-			}
-			instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+			})
 			instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 			instance.Status.Versions.Reconciled = utils.OperandVersion
 			r.GetClient().Status().Update(context.TODO(), instance)
@@ -244,18 +234,16 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 			err = fmt.Errorf("%s", errMessage)
 			reqLogger.Error(err, errMessage)
 			r.GetRecorder().Event(instance, "Warning", "ProcessingError", err.Error())
-			c = openlibertyv1.OperationStatusCondition{
+			instance.Status.SetCondition(openlibertyv1.OperationStatusCondition{
 				Type:   openlibertyv1.OperationStatusConditionTypeCompleted,
 				Status: corev1.ConditionFalse,
-			}
-			instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
-			c = openlibertyv1.OperationStatusCondition{
+			})
+			instance.Status.SetCondition(openlibertyv1.OperationStatusCondition{
 				Type:    openlibertyv1.OperationStatusConditionTypeFailed,
 				Status:  corev1.ConditionTrue,
 				Reason:  "ConnectionLost",
 				Message: err.Error(),
-			}
-			instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+			})
 			instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 			instance.Status.Versions.Reconciled = utils.OperandVersion
 			r.GetClient().Status().Update(context.TODO(), instance)
@@ -277,13 +265,12 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		err = fmt.Errorf("%s", errMessage)
 		reqLogger.Error(err, errMessage)
 		r.GetRecorder().Event(instance, "Warning", "ProcessingError", err.Error())
-		c = openlibertyv1.OperationStatusCondition{
+		instance.Status.SetCondition(openlibertyv1.OperationStatusCondition{
 			Type:    openlibertyv1.OperationStatusConditionTypeCompleted,
 			Status:  corev1.ConditionFalse,
 			Reason:  reason,
 			Message: err.Error(),
-		}
-		instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+		})
 		instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 		instance.Status.Versions.Reconciled = utils.OperandVersion
 		r.GetClient().Status().Update(context.TODO(), instance)
@@ -293,11 +280,6 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		}, nil
 	}
 
-	c = openlibertyv1.OperationStatusCondition{
-		Type:   openlibertyv1.OperationStatusConditionTypeCompleted,
-		Status: corev1.ConditionTrue,
-	}
-
 	performanceDataFile := ""
 	fileNameOut := r.PodInjectorClient.PollLinperfFileName("linperf", pod.Name, pod.Namespace, encodedAttrs)
 	if strings.HasPrefix(fileNameOut, "name:") {
@@ -305,7 +287,10 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		performanceDataFile = strings.TrimSuffix(performanceDataFile, "\n")
 	}
 
-	instance.Status.Conditions = openlibertyv1.SetOperationCondtion(instance.Status.Conditions, c)
+	instance.Status.SetCondition(openlibertyv1.OperationStatusCondition{
+		Type:   openlibertyv1.OperationStatusConditionTypeCompleted,
+		Status: corev1.ConditionTrue,
+	})
 	instance.Status.PerformanceDataFile = performanceDataFile
 	instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 	instance.Status.Versions.Reconciled = utils.OperandVersion
