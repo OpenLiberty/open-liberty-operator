@@ -111,6 +111,9 @@ spec:
                   type: object
                 type: array
                 x-kubernetes-list-type: atomic
+              logDirectory:
+                description: Location of the trace log directory
+                type: string
               observedGeneration:
                 description: The generation identifier of this OpenLibertyTrace instance
                   completely reconciled by the Operator.

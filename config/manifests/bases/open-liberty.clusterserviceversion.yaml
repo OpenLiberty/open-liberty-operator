@@ -911,6 +911,12 @@ spec:
       displayName: OpenLibertyTrace
       kind: OpenLibertyTrace
       name: openlibertytraces.apps.openliberty.io
+      statusDescriptors:
+      - description: Location of the trace log directory
+        displayName: Log Directory
+        path: logDirectory
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       version: v1
     - description: Day-2 operation for gathering server traces
       displayName: OpenLibertyTrace
