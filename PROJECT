@@ -23,6 +23,9 @@ resources:
   kind: OpenLibertyDump
   version: v1
 - group: apps.openliberty.io
+  kind: OpenLibertyPerformanceData
+  version: v1
+- group: apps.openliberty.io
   kind: OpenLibertyTrace
   version: v1
 version: "3"

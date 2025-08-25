@@ -1,0 +1,8 @@
+apiVersion: apps.openliberty.io/v1
+kind: OpenLibertyPerformanceData
+metadata:
+  name: openliberty-performance-data-sample
+spec:
+  podName: Specify_Pod_Name_Here
+  timespan: 240
+  interval: 30

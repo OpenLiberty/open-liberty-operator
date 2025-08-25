@@ -94,6 +94,20 @@ rules:
 - apiGroups:
   - apps.openliberty.io
   resources:
+  - openlibertyperformancedata
+  - openlibertyperformancedata/finalizers
+  - openlibertyperformancedata/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.openliberty.io
+  resources:
   - openlibertytraces
   - openlibertytraces/finalizers
   - openlibertytraces/status
@@ -368,6 +382,9 @@ spec:
         - mountPath: /liberty/output
           name: scratch
           subPath: create-ltpa-keys
+        - mountPath: /tmp
+          name: socket
+          subPath: operator.sock
       hostIPC: false
       hostNetwork: false
       hostPID: false
@@ -380,3 +397,5 @@ spec:
       volumes:
       - emptyDir: {}
         name: scratch
+      - emptyDir: {}
+        name: socket

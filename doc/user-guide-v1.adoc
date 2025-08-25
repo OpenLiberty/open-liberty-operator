@@ -1842,7 +1842,7 @@ To allow auto-discovery of supported day-2 operations from external tools the fo
 [source,yaml]
 ----
   annotations:
-    openliberty.io/day2operations: OpenLibertyTrace,OpenLibertyDump
+    openliberty.io/day2operations: OpenLibertyTrace,OpenLibertyDump,OpenLibertyPerformanceData
 ----
 
 Additionally, each day-2 operation CRD has the following annotation which illustrates the k8s `Kind`(s) the operation applies to:

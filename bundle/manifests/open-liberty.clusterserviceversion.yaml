@@ -35,6 +35,18 @@ metadata:
         },
         {
           "apiVersion": "apps.openliberty.io/v1",
+          "kind": "OpenLibertyPerformanceData",
+          "metadata": {
+            "name": "openliberty-performance-data-sample"
+          },
+          "spec": {
+            "interval": 30,
+            "podName": "Specify_Pod_Name_Here",
+            "timespan": 240
+          }
+        },
+        {
+          "apiVersion": "apps.openliberty.io/v1",
           "kind": "OpenLibertyTrace",
           "metadata": {
             "name": "openliberty-trace-sample"
@@ -92,7 +104,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2025-08-18T20:16:17Z"
+    createdAt: "2025-08-19T16:54:11Z"
     description: Deploy and manage containerized Liberty applications
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "true"
@@ -1060,6 +1072,17 @@ spec:
       kind: OpenLibertyDump
       name: openlibertydumps.apps.openliberty.io
       version: v1beta2
+    - description: Day-2 operation for generating server performance data
+      displayName: OpenLibertyPerformanceData
+      kind: OpenLibertyPerformanceData
+      name: openlibertyperformancedata.apps.openliberty.io
+      statusDescriptors:
+      - description: Location of the generated performance data file
+        displayName: Performance Data File Path
+        path: performanceDataFile
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      version: v1
     - description: Day-2 operation for gathering server traces
       displayName: OpenLibertyTrace
       kind: OpenLibertyTrace
@@ -1221,6 +1244,9 @@ spec:
                 - mountPath: /liberty/output
                   name: scratch
                   subPath: create-ltpa-keys
+                - mountPath: /tmp
+                  name: socket
+                  subPath: operator.sock
               securityContext:
                 runAsNonRoot: true
                 seccompProfile:
@@ -1230,6 +1256,8 @@ spec:
               volumes:
               - emptyDir: {}
                 name: scratch
+              - emptyDir: {}
+                name: socket
       permissions:
       - rules:
         - apiGroups:
@@ -1292,6 +1320,20 @@ spec:
           - openlibertydumps
           - openlibertydumps/finalizers
           - openlibertydumps/status
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - apps.openliberty.io
+          resources:
+          - openlibertyperformancedata
+          - openlibertyperformancedata/finalizers
+          - openlibertyperformancedata/status
           verbs:
           - create
           - delete

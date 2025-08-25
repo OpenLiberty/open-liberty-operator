@@ -43,7 +43,8 @@ import (
 	prometheusv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	// +kubebuilder:scaffold:imports
+
+	"github.com/OpenLiberty/open-liberty-operator/utils/socket"
 )
 
 var (
@@ -146,6 +147,14 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenLibertyDump")
 		os.Exit(1)
 	}
+	if err = (&controller.ReconcileOpenLibertyPerformanceData{
+		ReconcilerBase:    utils.NewReconcilerBase(mgr.GetAPIReader(), mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor("open-liberty-operator")),
+		Log:               ctrl.Log.WithName("controller").WithName("OpenLibertyPerformanceData"),
+		PodInjectorClient: socket.GetPodInjectorClient(ctrl.Log.WithName("controller").WithName("PodInjectorClient").V(common.LogLevelDebug)),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "OpenLibertyPerformanceData")
+		os.Exit(1)
+	}
 	if err = (&controller.ReconcileOpenLibertyTrace{
 		Log:        ctrl.Log.WithName("controller").WithName("OpenLibertyTrace"),
 		Client:     mgr.GetClient(),
@@ -166,6 +175,14 @@ func main() {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
+
+	setupLog.Info("creating socket for operator pod injector")
+	listener, err := socket.ServePodInjector(mgr, ctrl.Log.WithName("controller").WithName("PodInjectorServer").V(common.LogLevelDebug))
+	if err != nil {
+		setupLog.Error(err, "problem running operator pod injector")
+		os.Exit(1)
+	}
+	defer listener.Close()
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
