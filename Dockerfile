@@ -1,10 +1,10 @@
 # Build the manager binary
-FROM registry.access.redhat.com/ubi8-minimal:latest as builder
+FROM registry.access.redhat.com/ubi9-minimal:latest as builder
 ARG GO_PLATFORM=amd64
 ARG GO_VERSION_ARG
 ARG LIBERTY_VERSION=25.0.0.1
 ENV PATH=$PATH:/usr/local/go/bin
-RUN microdnf install tar gzip unzip
+RUN microdnf -y install tar gzip unzip
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -42,7 +42,7 @@ RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -ldflags="-s -w" -a -o mana
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM icr.io/appcafe/ibm-semeru-runtimes:open-21-jre-ubi-minimal
+FROM icr.io/appcafe/ibm-semeru-runtimes:open-21-jre-ubi9-minimal
 
 ARG USER_ID=65532
 ARG GROUP_ID=65532
