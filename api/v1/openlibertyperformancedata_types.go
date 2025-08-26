@@ -3,7 +3,6 @@ package v1
 import (
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -88,69 +87,9 @@ func (cr *OpenLibertyPerformanceData) GetInterval() int {
 	return getIntValueOrDefault(cr.Spec.Interval, defaultInterval)
 }
 
-// GetType returns status condition type
-func (c *OperationStatusCondition) GetType() OperationStatusConditionType {
-	return c.Type
-}
-
-// SetType sets status condition type
-func (c *OperationStatusCondition) SetType(ct OperationStatusConditionType) {
-	c.Type = ct
-}
-
-// GetLastTransitionTime return time of last status change
-func (c *OperationStatusCondition) GetLastTransitionTime() *metav1.Time {
-	return c.LastTransitionTime
-}
-
-// SetLastTransitionTime sets time of last status change
-func (c *OperationStatusCondition) SetLastTransitionTime(t *metav1.Time) {
-	c.LastTransitionTime = t
-}
-
-// GetLastUpdateTime return time of last status update
-func (c *OperationStatusCondition) GetLastUpdateTime() metav1.Time {
-	return c.LastUpdateTime
-}
-
-// SetLastUpdateTime sets time of last status update
-func (c *OperationStatusCondition) SetLastUpdateTime(t metav1.Time) {
-	c.LastUpdateTime = t
-}
-
-// GetMessage return condition's message
-func (c *OperationStatusCondition) GetMessage() string {
-	return c.Message
-}
-
-// SetMessage sets condition's message
-func (c *OperationStatusCondition) SetMessage(m string) {
-	c.Message = m
-}
-
-// GetReason return condition's message
-func (c *OperationStatusCondition) GetReason() string {
-	return c.Reason
-}
-
-// SetReason sets condition's reason
-func (c *OperationStatusCondition) SetReason(r string) {
-	c.Reason = r
-}
-
 // GetStatus return condition's status
 func (cr *OpenLibertyPerformanceData) GetStatus() *OpenLibertyPerformanceDataStatus {
 	return &cr.Status
-}
-
-// GetStatus return condition's status
-func (c *OperationStatusCondition) GetStatus() corev1.ConditionStatus {
-	return c.Status
-}
-
-// SetStatus sets condition's status
-func (c *OperationStatusCondition) SetStatus(s corev1.ConditionStatus) {
-	c.Status = s
 }
 
 // NewCondition returns new condition
