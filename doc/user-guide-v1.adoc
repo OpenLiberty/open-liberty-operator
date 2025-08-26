@@ -1892,7 +1892,13 @@ _System dump might not work on certain Kubernetes versions, such as OpenShift 4.
 
 === Request server performance data [[day-2-perf-data]]
 
-You can request a snapshot of server diagnostic data from an instance of a Liberty server running inside a `Pod`, using Open Liberty Operator and `OpenLibertyPerformanceData` custom resource (CR). To use this feature the `OpenLibertyApplication` needs to have link:++#storage-for-serviceability++[storage for serviceability] already configured. Also, the `OpenLibertyPerformanceData` CR must be created in the same namespace as the `Pod` to operate on.
+You can request a snapshot of server diagnostic data from an instance of a Liberty server running inside a `Pod`, using Open Liberty Operator and `OpenLibertyPerformanceData` custom resource (CR). To use this feature the `OpenLibertyApplication` needs to have link:++#storage-for-serviceability++[storage for serviceability] already configured and the `OpenLibertyPerformanceData` CR must be created in the same namespace as the `Pod` to operate on. Additionally, the Liberty container must have the following libraries added at image build time:
+
+```
+USER 0
+RUN command -v yum && pkgcmd=yum || pkgcmd=microdnf && ($pkgcmd update -y && $pkgcmd install -y procps-ng net-tools ncurses hostname)
+USER 1001
+```
 
 The configurable fields are:
 
