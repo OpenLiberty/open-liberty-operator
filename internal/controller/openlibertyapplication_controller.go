@@ -185,6 +185,10 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 	}
 	instance.Initialize()
+	if err := r.UpdateStatus(instance); err != nil {
+		reqLogger.Error(err, "Failed to initialize OpenLibertyApplication status")
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	}
 
 	_, err = oputils.Validate(instance)
 	// If there's any validation error, don't bother with requeuing
@@ -834,8 +838,23 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 	instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 	instance.Status.Versions.Reconciled = lutils.OperandVersion
+
+	// Set Reconciled to True via SetCondition to trigger sanitize
+	c := instance.Status.NewCondition(common.StatusConditionTypeReconciled)
+	c.SetConditionFields("Reconciled", "", corev1.ConditionTrue)
+	instance.Status.SetCondition(c)
+
+	if rc := instance.Status.GetCondition(common.StatusConditionTypeReady); rc != nil {
+		instance.Status.SetCondition(rc)
+	}
+
+	if err := r.UpdateStatus(instance); err != nil {
+		reqLogger.Error(err, "Failed to update OpenLibertyApplication status")
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	}
+
 	reqLogger.Info("Reconcile OpenLibertyApplication - completed")
-	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
+	return ctrl.Result{}, nil
 }
 
 func (r *ReconcileOpenLiberty) isOpenLibertyApplicationReady(ba common.BaseComponent) bool {
