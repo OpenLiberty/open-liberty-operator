@@ -212,13 +212,14 @@ func GetPerformanceDataWritingMessage(podName string) string {
 }
 
 func GetLinperfCmd(encodedAttrs, podName, podNamespace string) string {
-	scriptDir := "/output/helper"
+	scriptDir := "$WLP_OUTPUT_DIR/helper"
 	scriptName := "linperf.sh"
 
 	decodedLinperfAttrs := DecodeLinperfAttr(encodedAttrs)
 
 	linperfCmdArgs := []string{fmt.Sprintf("%s/%s", scriptDir, scriptName)}
-	outputDir := fmt.Sprintf("/serviceability/%s/%s/performanceData/", podNamespace, podName)
+	serviceabilityRootDir := "/serviceability"
+	outputDir := fmt.Sprintf("%s/%s/%s/performanceData/", serviceabilityRootDir, podNamespace, podName)
 	linperfCmdArgs = append(linperfCmdArgs, parseFlag("--output-dir", outputDir, FlagDelimiterEquals))
 
 	now := time.Now()
@@ -234,7 +235,7 @@ func GetLinperfCmd(encodedAttrs, podName, podNamespace string) string {
 	linperfCmd := strings.Join(linperfCmdArgs, FlagDelimiterSpace)
 
 	// linperfCmdWithPids := fmt.Sprintf("mkdir -p %s && PIDS=$(ls -l /proc/[0-9]*/exe | grep \"/java$\" | xargs -L 1 | cut -d ' ' -f9 | cut -d '/' -f 3 ) && PIDS_OUT=$(echo $PIDS | tr '\n' ' ') && ls -l /proc/[0-9]*/exe > /serviceability/%s/%s/test.out && %s \"1\"", outputDir, podNamespace, podName, linperfCmd)
-	linperfCmdWithPids := fmt.Sprintf("mkdir -p %s &&  %s \"1\"", outputDir, linperfCmd)
+	linperfCmdWithPids := fmt.Sprintf("if test -w %s; then exit 1 fi && mkdir -p %s &&  %s \"1\"", serviceabilityRootDir, outputDir, linperfCmd)
 	return linperfCmdWithPids
 }
 
