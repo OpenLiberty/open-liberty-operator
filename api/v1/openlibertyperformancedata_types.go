@@ -139,7 +139,7 @@ func (c *OperationStatusCondition) SetReason(r string) {
 }
 
 // GetStatus return condition's status
-func (cr *OpenLibertyTrace) GetStatus() *OpenLibertyPerformanceDataStatus {
+func (cr *OpenLibertyPerformanceData) GetStatus() *OpenLibertyPerformanceDataStatus {
 	return &cr.Status
 }
 
