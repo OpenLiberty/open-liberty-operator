@@ -212,7 +212,8 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	}
 
 	var c openlibertyv1.OperationStatusCondition
-	injectorStatus := r.PodInjectorClient.PollStatus("linperf", pod.Name, pod.Namespace, utils.EncodeLinperfAttr(instance))
+	encodedAttrs := utils.EncodeLinperfAttr(instance)
+	injectorStatus := r.PodInjectorClient.PollStatus("linperf", pod.Name, pod.Namespace, encodedAttrs)
 	if injectorStatus != "done..." {
 		// exit on error
 		if strings.HasPrefix(injectorStatus, "error:") {
@@ -260,7 +261,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 			r.GetClient().Status().Update(context.TODO(), instance)
 			return reconcile.Result{}, nil
 		} else if injectorStatus == "idle..." {
-			r.PodInjectorClient.StartScript("linperf", pod.Name, pod.Namespace, utils.EncodeLinperfAttr(instance))
+			r.PodInjectorClient.StartScript("linperf", pod.Name, pod.Namespace, encodedAttrs)
 		}
 
 		var errMessage string
@@ -298,7 +299,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	}
 
 	performanceDataFile := ""
-	fileNameOut := r.PodInjectorClient.PollLinperfFileName("linperf", pod.Name, pod.Namespace)
+	fileNameOut := r.PodInjectorClient.PollLinperfFileName("linperf", pod.Name, pod.Namespace, encodedAttrs)
 	if strings.HasPrefix(fileNameOut, "name:") {
 		performanceDataFile = strings.TrimPrefix(fileNameOut, "name:")
 		performanceDataFile = strings.TrimSuffix(performanceDataFile, "\n")
@@ -310,7 +311,7 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 	instance.Status.Versions.Reconciled = utils.OperandVersion
 	if err = r.GetClient().Status().Update(context.TODO(), instance); err == nil {
 		// cleanup pod refs
-		r.PodInjectorClient.CompleteScript("linperf", pod.Name, pod.Namespace)
+		r.PodInjectorClient.CompleteScript("linperf", pod.Name, pod.Namespace, encodedAttrs)
 	}
 	return reconcile.Result{}, nil
 }
@@ -319,7 +320,8 @@ func (r *ReconcileOpenLibertyPerformanceData) finalizeOpenLibertyPerformanceData
 	if connErr := r.PodInjectorClient.Connect(); connErr != nil {
 		return connErr
 	}
-	r.PodInjectorClient.CompleteScript("linperf", olpd.Spec.PodName, olpd.Namespace)
+	encodedAttrs := utils.EncodeLinperfAttr(olpd)
+	r.PodInjectorClient.CompleteScript("linperf", olpd.Spec.PodName, olpd.Namespace, encodedAttrs)
 	r.PodInjectorClient.CloseConnection()
 	return nil
 }
