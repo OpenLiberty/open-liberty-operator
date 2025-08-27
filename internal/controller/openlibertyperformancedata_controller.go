@@ -205,7 +205,8 @@ func (r *ReconcileOpenLibertyPerformanceData) Reconcile(ctx context.Context, req
 		r.PodInjectorClient.SetMaxWorkers("linperf", pod.Name, pod.Namespace, maxWorkers)
 	}
 
-	injectorStatus := r.PodInjectorClient.PollStatus("linperf", pod.Name, pod.Namespace, utils.EncodeLinperfAttr(instance))
+	encodedAttrs := utils.EncodeLinperfAttr(instance)
+	injectorStatus := r.PodInjectorClient.PollStatus("linperf", pod.Name, pod.Namespace, encodedAttrs)
 	if injectorStatus != "done..." {
 		// exit on error
 		if strings.HasPrefix(injectorStatus, "error:") {
