@@ -57,7 +57,6 @@ type Worker struct {
 	writer        *io.PipeWriter
 	cancelContext context.CancelFunc
 	podKey        string
-	config        string
 }
 
 type Client struct {
@@ -100,7 +99,7 @@ func (c *Client) PollStatus(scriptName, podName, podNamespace, encodedAttrs stri
 	return <-output
 }
 
-func (c *Client) PollLinperfFileName(scriptName, podName, podNamespace string) string {
+func (c *Client) PollLinperfFileName(scriptName, podName, podNamespace, attrs string) string {
 	if c.conn == nil {
 		return string(PodInjectorStatusClosed)
 	}
@@ -117,7 +116,7 @@ func (c *Client) PollLinperfFileName(scriptName, podName, podNamespace string) s
 			break
 		}
 	}()
-	c.conn.Write(buildMessage(podName, podNamespace, scriptName, PodInjectorActionLinperfFileName, ""))
+	c.conn.Write(buildMessage(podName, podNamespace, scriptName, PodInjectorActionLinperfFileName, attrs))
 	wg.Wait()
 	return <-output
 }
@@ -134,8 +133,8 @@ func (c *Client) StartScript(scriptName, podName, podNamespace, attrs string) bo
 	return true
 }
 
-func (c *Client) CompleteScript(scriptName, podName, podNamespace string) {
-	c.write(buildMessage(podName, podNamespace, scriptName, PodInjectorActionComplete, ""))
+func (c *Client) CompleteScript(scriptName, podName, podNamespace, attrs string) {
+	c.write(buildMessage(podName, podNamespace, scriptName, PodInjectorActionComplete, attrs))
 }
 
 func (c *Client) CloseConnection() {
@@ -208,8 +207,9 @@ func processAction(conn net.Conn, mgr manager.Manager, logger logr.Logger, podNa
 	if len(podName) == 0 || len(podNamespace) == 0 {
 		return
 	}
-	podKey := getPodKey(podName, podNamespace)
-	fullPodKey := fmt.Sprintf("%s:%s", podKey, encodedAttrs)
+	podKeyPair := getPodKey(podName, podNamespace)
+	decodedLinperfAttrs := utils.DecodeLinperfAttr(encodedAttrs)
+	podKey := fmt.Sprintf("%s:%s", podKeyPair, decodedLinperfAttrs["uid"])
 	debugLogSignature := fmt.Sprintf("pod (%s), namespace (%s), active workers: (%d)", podName, podNamespace, len(workers))
 	logger.V(2).Info(fmt.Sprintf("processAction: start: [%s]", debugLogSignature))
 	defer func() {
@@ -236,24 +236,24 @@ func processAction(conn net.Conn, mgr manager.Manager, logger logr.Logger, podNa
 			writeResponse(conn, PodInjectorStatusUpdateMaxWorkersBusy)
 		}
 	case PodInjectorActionStart:
-		if hasWorker(podKey) && hasWorkerWithConfig(podKey, encodedAttrs) {
+		if hasWorker(podKey) {
 			writeResponse(conn, PodInjectorStatusWriting)
 			return
 		} else if len(workers) >= currentMaxWorkers {
 			writeResponse(conn, PodInjectorStatusTooManyWorkers)
 			return
 		}
-		completedPods.Store(fullPodKey, false)
-		linperfFileNames.Delete(fullPodKey)
+		completedPods.Store(podKey, false)
+		linperfFileNames.Delete(podKey)
 		reader, writer, cancelContext, err := CopyAndRunLinperf(mgr.GetConfig(), podName, podNamespace, encodedAttrs, func(stdout string, stderr string, err error) {
-			removeWorker(podKey, encodedAttrs)
+			removeWorker(podKey)
 			if err == nil {
 				logger.Info("The linperf script has completed successfully!")
 				logger.Info("> linperf.sh (stdout):")
 				logger.Info(stdout)
 				logger.Info("> linperf.sh (stderr):")
 				logger.Info(stderr)
-				completedPods.Store(fullPodKey, true)
+				completedPods.Store(podKey, true)
 				fileName := getLinperfDataFileName(stdout)
 				linperfFileNames.Store(podKey, fileName)
 			} else {
@@ -272,20 +272,19 @@ func processAction(conn net.Conn, mgr manager.Manager, logger logr.Logger, podNa
 				writer:        writer,
 				cancelContext: cancelContext,
 				podKey:        podKey,
-				config:        encodedAttrs,
 			})
 		}
 		writeResponse(conn, PodInjectorStatusWriting)
 	case PodInjectorActionComplete:
-		removeWorker(podKey, encodedAttrs)
-		completedPods.Delete(fullPodKey)
-		erroringPods.Delete(fullPodKey)
+		removeWorker(podKey)
+		completedPods.Delete(podKey)
+		erroringPods.Delete(podKey)
 	case PodInjectorActionStatus:
-		if hasWorker(podKey) && hasWorkerWithConfig(podKey, encodedAttrs) {
+		if hasWorker(podKey) {
 			writeResponse(conn, PodInjectorStatusWriting)
-		} else if value, ok := erroringPods.Load(fullPodKey); ok {
+		} else if value, ok := erroringPods.Load(podKey); ok {
 			writeResponse(conn, PodInjectorStatusResponse(fmt.Sprintf("error:%s", value.(string))))
-		} else if value, ok := completedPods.Load(fullPodKey); ok && value.(bool) {
+		} else if value, ok := completedPods.Load(podKey); ok && value.(bool) {
 			writeResponse(conn, PodInjectorStatusDone)
 		} else if len(workers) >= currentMaxWorkers {
 			writeResponse(conn, PodInjectorStatusTooManyWorkers)
@@ -299,7 +298,7 @@ func processAction(conn net.Conn, mgr manager.Manager, logger logr.Logger, podNa
 			writeResponse(conn, PodInjectorStatusNotFound)
 		}
 	case PodInjectorActionStop:
-		removeWorker(podKey, encodedAttrs)
+		removeWorker(podKey)
 	}
 }
 
@@ -339,15 +338,6 @@ func handleConnection(mgr manager.Manager, conn net.Conn, logger logr.Logger) {
 	}
 }
 
-func hasWorkerWithConfig(podKey, config string) bool {
-	for _, worker := range workers {
-		if worker.podKey == podKey && worker.config == config {
-			return true
-		}
-	}
-	return false
-}
-
 func hasWorker(podKey string) bool {
 	for _, worker := range workers {
 		if worker.podKey == podKey {
@@ -357,11 +347,11 @@ func hasWorker(podKey string) bool {
 	return false
 }
 
-func removeWorker(podKey, config string) {
+func removeWorker(podKey string) {
 	// find index of the worker
 	deleteIndex := -1
 	for i, worker := range workers {
-		if worker.podKey == podKey && worker.config == config {
+		if worker.podKey == podKey {
 			deleteIndex = i
 			break
 		}

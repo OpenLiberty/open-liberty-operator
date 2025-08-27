@@ -4,5 +4,5 @@ metadata:
   name: open-liberty.v0.0.0
   namespace: placeholder
   annotations:
-    containerImage: OPERATOR_IMAGE
+    containerImage: IMAGE
     createdAt: CREATEDAT
