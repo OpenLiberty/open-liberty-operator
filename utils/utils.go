@@ -547,6 +547,8 @@ func ConfigureServiceability(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyAp
 			}
 			pts.Spec.Volumes = append(pts.Spec.Volumes, vol)
 		}
+
+		pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, corev1.EnvVar{Name: "SERVICEABILITY_NAMESPACE", Value: la.GetNamespace()})
 	}
 }
 
