@@ -1,8 +1,8 @@
-FROM registry.redhat.io/openshift4/ose-operator-registry:v4.14 AS builder
-FROM registry.redhat.io/ubi8/ubi-minimal
+FROM registry.redhat.io/openshift4/ose-operator-registry-rhel9:v4.18 AS builder
+FROM registry.redhat.io/ubi9/ubi-minimal
 
 # Add label for location of Declarative Config root directory & required OpenShift labels
-ARG VERSION_LABEL=1.4.2
+ARG VERSION_LABEL=1.5.0
 ARG RELEASE_LABEL=XX
 ARG VCS_REF=0123456789012345678901234567890123456789
 ARG VCS_URL="https://github.com/OpenLiberty/open-liberty-operator"
@@ -31,7 +31,7 @@ COPY LICENSE /licenses
 USER root
 
 # Pick up any latest fixes
-RUN microdnf update && microdnf clean all
+RUN microdnf -y update && microdnf clean all
 
 # Copy required tooling, licenses, and declarative config into defined location
 COPY --from=builder --chown=1001:0 /bin/opm /bin/opm

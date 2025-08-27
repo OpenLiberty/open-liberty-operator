@@ -39,6 +39,34 @@ metadata:
   namespace: OPEN_LIBERTY_WATCH_NAMESPACE
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - persistentvolumeclaims
+  - secrets
+  - serviceaccounts
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - pods/exec
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - apps
   resources:
   - deployments
@@ -54,7 +82,6 @@ rules:
   - apps
   resources:
   - deployments/finalizers
-  - statefulsets
   verbs:
   - update
 - apiGroups:
@@ -63,31 +90,12 @@ rules:
   - openlibertyapplications
   - openlibertyapplications/finalizers
   - openlibertyapplications/status
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps.openliberty.io
-  resources:
   - openlibertydumps
   - openlibertydumps/finalizers
   - openlibertydumps/status
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps.openliberty.io
-  resources:
+  - openlibertyperformancedata
+  - openlibertyperformancedata/finalizers
+  - openlibertyperformancedata/status
   - openlibertytraces
   - openlibertytraces/finalizers
   - openlibertytraces/status
@@ -131,34 +139,6 @@ rules:
   - delete
   - get
   - list
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  - persistentvolumeclaims
-  - secrets
-  - serviceaccounts
-  - services
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  - pods/exec
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
   - update
   - watch
 - apiGroups:

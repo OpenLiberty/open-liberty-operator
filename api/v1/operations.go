@@ -53,6 +53,8 @@ const (
 	OperationStatusConditionTypeStarted OperationStatusConditionType = "Started"
 	// OperationStatusConditionTypeCompleted indicates whether operation has been completed
 	OperationStatusConditionTypeCompleted OperationStatusConditionType = "Completed"
+	// OperationStatusConditionTypeFailed indicates whether operation has failed
+	OperationStatusConditionTypeFailed OperationStatusConditionType = "Failed"
 )
 
 // GetOperationCondtion returns condition of specific type

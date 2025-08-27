@@ -7,6 +7,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	prometheusv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -776,6 +777,21 @@ func (a *OpenLibertyApplicationAutoScaling) GetTargetCPUUtilizationPercentage() 
 	return a.TargetCPUUtilizationPercentage
 }
 
+// GetTargetMemoryUtilizationPercentage returns target memory usage
+func (a *OpenLibertyApplicationAutoScaling) GetTargetMemoryUtilizationPercentage() *int32 {
+	return nil
+}
+
+// GetMetrics returns metrics for resource utilization
+func (a *OpenLibertyApplicationAutoScaling) GetMetrics() []autoscalingv2.MetricSpec {
+	return nil
+}
+
+// GetHorizontalPodAutoscalerBehavior returns behavior configures the scaling behavior of the target
+func (a *OpenLibertyApplicationAutoScaling) GetHorizontalPodAutoscalerBehavior() *autoscalingv2.HorizontalPodAutoscalerBehavior {
+	return nil
+}
+
 // GetSize returns pesistent volume size
 func (s *OpenLibertyApplicationStorage) GetSize() string {
 	return s.Size
@@ -860,6 +876,11 @@ func (s *OpenLibertyApplicationService) GetCertificate() common.BaseComponentCer
 // GetBindable returns whether the application should be exposable as a service
 func (s *OpenLibertyApplicationService) GetBindable() *bool {
 	return s.Bindable
+}
+
+// GetSessionAffinity returns the session affinity setting for the service
+func (s *OpenLibertyApplicationService) GetSessionAffinity() common.BaseComponentServiceSessionAffinity {
+	return nil
 }
 
 // GetLabels returns labels to be added on ServiceMonitor

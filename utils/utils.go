@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"math/rand/v2"
 
@@ -16,6 +18,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -23,6 +26,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
+	_ "k8s.io/kubectl/pkg/cmd/cp"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -35,7 +39,7 @@ var log = logf.Log.WithName("openliberty_utils")
 // Constant Values
 const serviceabilityMountPath = "/serviceability"
 const ssoEnvVarPrefix = "SEC_SSO_"
-const OperandVersion = "1.4.2"
+const OperandVersion = "1.5.0"
 
 // LTPA constants
 const LTPAServerXMLSuffix = "-managed-ltpa-server-xml"
@@ -134,6 +138,16 @@ type LTPAConfig struct {
 	EncryptionKeySharingEnabled bool // true or false
 }
 
+type PodInjectorClient interface {
+	Connect() error
+	CloseConnection()
+	SetMaxWorkers(scriptName, podName, podNamespace, maxWorkers string) bool
+	PollStatus(scriptName, podName, podNamespace, attrs string) string
+	StartScript(scriptName, podName, podNamespace, attrs string) bool
+	CompleteScript(scriptName, podName, podNamespace, attrs string)
+	PollLinperfFileName(scriptName, podName, podNamespace, attrs string) string
+}
+
 // Validate if the OpenLibertyApplication is valid
 func Validate(olapp *olv1.OpenLibertyApplication) (bool, error) {
 	// Serviceability validation
@@ -149,6 +163,79 @@ func Validate(olapp *olv1.OpenLibertyApplication) (bool, error) {
 	}
 
 	return true, nil
+}
+
+const (
+	FlagDelimiterSpace                = " "
+	FlagDelimiterEquals               = "="
+	OpConfigPerformanceDataMaxWorkers = "performanceDataMaxWorkers"
+)
+
+var DefaultLibertyOpConfig *sync.Map
+
+func init() {
+	DefaultLibertyOpConfig = &sync.Map{}
+	DefaultLibertyOpConfig.Store(OpConfigPerformanceDataMaxWorkers, "10")
+}
+
+func parseFlag(key, value, delimiter string) string {
+	return fmt.Sprintf("%s%s%s", key, delimiter, value)
+}
+
+func EncodeLinperfAttr(instance *olv1.OpenLibertyPerformanceData) string {
+	return fmt.Sprintf("timespan/%d|interval/%d|uid/%s|name/%s",
+		instance.GetTimespan(),
+		instance.GetInterval(),
+		instance.GetUID(),
+		instance.GetName())
+}
+
+func DecodeLinperfAttr(encodedAttr string) map[string]string {
+	decodedAttrs := map[string]string{}
+	for _, attr := range strings.Split(strings.Trim(encodedAttr, " "), "|") {
+		attrArr := strings.Split(attr, "/")
+		if len(attrArr) != 2 {
+			continue
+		}
+		attrKey, attrValue := attrArr[0], attrArr[1]
+		decodedAttrs[attrKey] = attrValue
+	}
+	return decodedAttrs
+}
+
+func GetPerformanceDataConnectionLostMessage(podName string) string {
+	return fmt.Sprintf("Connection between Liberty operator and Pod '%s' was lost while writing performance data.", podName)
+}
+
+func GetPerformanceDataWritingMessage(podName string) string {
+	return fmt.Sprintf("Collecting performance data for Pod '%s'...", podName)
+}
+
+func GetLinperfCmd(encodedAttrs, podName, podNamespace string) string {
+	scriptDir := "/output/helper"
+	scriptName := "linperf.sh"
+
+	decodedLinperfAttrs := DecodeLinperfAttr(encodedAttrs)
+
+	linperfCmdArgs := []string{fmt.Sprintf("%s/%s", scriptDir, scriptName)}
+	outputDir := fmt.Sprintf("/serviceability/%s/%s/performanceData/", podNamespace, podName)
+	linperfCmdArgs = append(linperfCmdArgs, parseFlag("--output-dir", outputDir, FlagDelimiterEquals))
+
+	now := time.Now()
+	startDate := fmt.Sprintf("%d%d%d", now.Year(), now.Month(), now.Day())
+	startTime := fmt.Sprintf("%d%d%d", now.Hour(), now.Minute(), now.Second())
+	fileName := fmt.Sprintf("linperf_RESULTS_%s.%s.%s", decodedLinperfAttrs["name"], startDate, startTime)
+	linperfCmdArgs = append(linperfCmdArgs, parseFlag("--dir-name", fileName, FlagDelimiterEquals))
+
+	linperfCmdArgs = append(linperfCmdArgs, parseFlag("-s", decodedLinperfAttrs["timespan"], FlagDelimiterSpace))
+	linperfCmdArgs = append(linperfCmdArgs, parseFlag("-j", decodedLinperfAttrs["interval"], FlagDelimiterSpace))
+
+	linperfCmdArgs = append(linperfCmdArgs, "--ignore-root")
+	linperfCmd := strings.Join(linperfCmdArgs, FlagDelimiterSpace)
+
+	// linperfCmdWithPids := fmt.Sprintf("mkdir -p %s && PIDS=$(ls -l /proc/[0-9]*/exe | grep \"/java$\" | xargs -L 1 | cut -d ' ' -f9 | cut -d '/' -f 3 ) && PIDS_OUT=$(echo $PIDS | tr '\n' ' ') && ls -l /proc/[0-9]*/exe > /serviceability/%s/%s/test.out && %s \"1\"", outputDir, podNamespace, podName, linperfCmd)
+	linperfCmdWithPids := fmt.Sprintf("mkdir -p %s &&  %s \"1\"", outputDir, linperfCmd)
+	return linperfCmdWithPids
 }
 
 // ExecuteCommandInContainer Execute command inside a container in a pod through API
@@ -180,7 +267,7 @@ func ExecuteCommandInContainer(config *rest.Config, podName, podNamespace, conta
 	}
 
 	var stdout, stderr bytes.Buffer
-	err = exec.Stream(remotecommand.StreamOptions{
+	err = exec.StreamWithContext(context.Background(), remotecommand.StreamOptions{
 		Stdout: &stdout,
 		Stderr: &stderr,
 		Tty:    false,
@@ -367,6 +454,55 @@ func CreateServiceabilityPVC(instance *olv1.OpenLibertyApplication) *corev1.Pers
 		persistentVolume.Spec.StorageClassName = &instance.Spec.Serviceability.StorageClassName
 	}
 	return persistentVolume
+}
+
+// ConfigureServiceabilityNetworkPolicy adds a network policy rule to permit ingress to the Liberty pod from the operator if serviceability is enabled
+func ConfigureServiceabilityNetworkPolicy(networkPolicy *networkingv1.NetworkPolicy) {
+	operatorNamespace, err := rcoutils.GetOperatorNamespace()
+	if err != nil {
+		// For local dev fallback to the watch namespace
+		watchNamespace, err := rcoutils.GetWatchNamespace()
+		if err != nil {
+			return
+		}
+		operatorNamespace = watchNamespace
+	}
+
+	// Ensure PolicyTypeIngress is present
+	ingressPolicyDefined := false
+	for _, policyType := range networkPolicy.Spec.PolicyTypes {
+		if policyType == networkingv1.PolicyTypeIngress {
+			ingressPolicyDefined = true
+			break
+		}
+	}
+	if !ingressPolicyDefined {
+		networkPolicy.Spec.PolicyTypes = append(networkPolicy.Spec.PolicyTypes, networkingv1.PolicyTypeIngress)
+	}
+
+	// Ensure the default Ingress Rule is defined at index 0
+	ingressRuleDefined := len(networkPolicy.Spec.Ingress) > 0
+	if !ingressRuleDefined {
+		networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
+			{
+				Ports: []networkingv1.NetworkPolicyPort{},
+				From:  []networkingv1.NetworkPolicyPeer{},
+			},
+		}
+	}
+
+	// Permit ingress to the Liberty Pod for traffic originating from the operator Pod using the default Ingress rule
+	peer := networkingv1.NetworkPolicyPeer{
+		PodSelector: &metav1.LabelSelector{
+			MatchLabels: GetOperatorLabels(),
+		},
+		NamespaceSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"kubernetes.io/metadata.name": operatorNamespace,
+			},
+		},
+	}
+	networkPolicy.Spec.Ingress[0].From = append(networkPolicy.Spec.Ingress[0].From, peer)
 }
 
 // ConfigureServiceability setups the shared-storage for serviceability
@@ -838,6 +974,13 @@ func CreateVolumeMount(mountPath string, fileName string) corev1.VolumeMount {
 		Name:      parseMountName(fileName),
 		MountPath: mountPath + "/" + fileName,
 		SubPath:   fileName,
+	}
+}
+
+func GetOperatorLabels() map[string]string {
+	return map[string]string{
+		"app.kubernetes.io/instance": "open-liberty-operator",
+		"app.kubernetes.io/name":     "open-liberty-operator",
 	}
 }
 

@@ -15,7 +15,7 @@ metadata:
     features.operators.openshift.io/token-auth-aws: "false"
     features.operators.openshift.io/token-auth-azure: "false"
     features.operators.openshift.io/token-auth-gcp: "false"
-    olm.skipRange: '>=0.8.0 <1.4.2'
+    olm.skipRange: '>=0.8.0 <1.5.0'
     repository: https://github.com/OpenLiberty/open-liberty-operator
     support: IBM
   labels:
@@ -132,12 +132,24 @@ spec:
         path: autoscaling.targetCPUUtilizationPercentage
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:number
+      - description: Skip verifying that the service account has a valid pull secret.
+          Defaults to false.
+        displayName: Skip service account pull secret validation
+        path: serviceAccount.skipPullSecretValidation
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - displayName: GitHub
         path: sso.github
       - description: Specifies the name of the claim. Use its value as the user group
           membership.
         displayName: Group Name Attribute
         path: sso.oidc[0].groupNameAttribute
+      - description: Target average Memory utilization, represented as a percentage
+          of requested memory, over all the pods.
+        displayName: Target Memory Utilization Percentage
+        path: autoscaling.targetMemoryUtilizationPercentage
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
       - description: Policy for pulling container images. Defaults to IfNotPresent.
         displayName: Pull Policy
         path: pullPolicy
@@ -301,10 +313,19 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - displayName: Route
         path: route
+      - description: Configure service session affinity.
+        displayName: Session Affinity
+        path: service.sessionAffinity
       - description: Configures the Semeru Cloud Compiler to handle Just-In-Time (JIT)
           compilation requests from the application.
         displayName: Semeru Cloud Compiler
         path: semeruCloudCompiler
+      - description: Setting to maintain session affinity. Must be ClientIP or None.
+          Defaults to None.
+        displayName: Session Affinity Type
+        path: service.sessionAffinity.type
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       - description: Specifies the strategy to replace old deployment pods with new
           pods.
         displayName: Deployment Update Strategy
@@ -313,6 +334,9 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:updateStrategy
       - displayName: Network Policy
         path: networkPolicy
+      - description: Configurations of session affinity.
+        displayName: Config
+        path: service.sessionAffinity.config
       - displayName: Serviceability
         path: serviceability
       - displayName: Single Sign-On
@@ -872,6 +896,17 @@ spec:
       kind: OpenLibertyDump
       name: openlibertydumps.apps.openliberty.io
       version: v1beta2
+    - description: Day-2 operation for generating server performance data
+      displayName: OpenLibertyPerformanceData
+      kind: OpenLibertyPerformanceData
+      name: openlibertyperformancedata.apps.openliberty.io
+      statusDescriptors:
+      - description: Location of the generated performance data file
+        displayName: Performance Data File Path
+        path: performanceDataFile
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      version: v1
     - description: Day-2 operation for gathering server traces
       displayName: OpenLibertyTrace
       kind: OpenLibertyTrace

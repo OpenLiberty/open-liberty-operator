@@ -70,7 +70,7 @@ spec:
               fieldRef:
                 fieldPath: metadata.annotations['olm.targetNamespaces']
           - name: RELATED_IMAGE_LIBERTY_SAMPLE_APP
-            value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:4d527962b6866e27f47f8f3f31f2a4c0fd7c657e9baa91126466387ad56fe923
+            value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:29220c85330a584ab1a22de6771d8b10a36796dd666f2b5b8c4dd92a8f8e76e0
           - name: RELATED_IMAGE_OPEN_LIBERTY_OPERATOR
             value: OPERATOR_IMAGE
         securityContext:
@@ -94,8 +94,13 @@ spec:
           - name: scratch
             mountPath: /liberty/output
             subPath: create-ltpa-keys
+          - name: socket
+            mountPath: /tmp
+            subPath: operator.sock
       volumes:
         - name: scratch
+          emptyDir: {}
+        - name: socket
           emptyDir: {}
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

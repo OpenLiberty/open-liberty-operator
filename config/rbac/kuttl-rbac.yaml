@@ -102,6 +102,7 @@ rules:
   resources:
   - openlibertyapplications
   - openlibertydumps
+  - openlibertyperformancedata
   - openlibertytraces
   verbs:
   - get
@@ -130,11 +131,19 @@ rules:
 - apiGroups:
   - cert-manager.io
   resources:
-  - issuers
   - certificates
   verbs:
   - get
   - list
+  - delete
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - issuers
+  verbs:
+  - get
+  - list
+  - create
   - delete
 - apiGroups:
   - batch

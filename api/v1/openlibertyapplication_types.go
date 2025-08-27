@@ -7,7 +7,9 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	prometheusv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -196,6 +198,10 @@ type OpenLibertyApplicationServiceAccount struct {
 	// Name of the service account to use for deploying the application. A service account is automatically created if it's not specified.
 	// +operator-sdk:csv:customresourcedefinitions:order=2,type=spec,displayName="Service Account Name",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	Name *string `json:"name,omitempty"`
+
+	// Skip verifying that the service account has a valid pull secret. Defaults to false.
+	// +operator-sdk:csv:customresourcedefinitions:order=3,type=spec,displayName="Skip service account pull secret validation",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	SkipPullSecretValidation *bool `json:"skipPullSecretValidation,omitempty"`
 }
 
 // Define health checks on application container to determine whether it is alive or ready to receive traffic
@@ -250,6 +256,16 @@ type OpenLibertyApplicationAutoScaling struct {
 	// Target average CPU utilization, represented as a percentage of requested CPU, over all the pods.
 	// +operator-sdk:csv:customresourcedefinitions:order=3,type=spec,displayName="Target CPU Utilization Percentage",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
 	TargetCPUUtilizationPercentage *int32 `json:"targetCPUUtilizationPercentage,omitempty"`
+
+	// Target average Memory utilization, represented as a percentage of requested memory, over all the pods.
+	// +operator-sdk:csv:customresourcedefinitions:order=4,type=spec,displayName="Target Memory Utilization Percentage",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
+	TargetMemoryUtilizationPercentage *int32 `json:"targetMemoryUtilizationPercentage,omitempty"`
+
+	// Specifications used for replica count calculation
+	Metrics []autoscalingv2.MetricSpec `json:"metrics,omitempty"`
+
+	// Scaling behavior of the target. If not set, the default HPAScalingRules for scale up and scale down are used.
+	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty"`
 }
 
 // Configures parameters for the network service of pods.
@@ -298,6 +314,21 @@ type OpenLibertyApplicationService struct {
 	// Expose the application as a bindable service. Defaults to false.
 	// +operator-sdk:csv:customresourcedefinitions:order=18,type=spec,displayName="Bindable",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
 	Bindable *bool `json:"bindable,omitempty"`
+
+	// Configure service session affinity.
+	// +operator-sdk:csv:customresourcedefinitions:order=19,type=spec
+	SessionAffinity *OpenLibertyApplicationServiceSessionAffinity `json:"sessionAffinity,omitempty"`
+}
+
+// Configure service session affinity
+type OpenLibertyApplicationServiceSessionAffinity struct {
+	// Setting to maintain session affinity. Must be ClientIP or None. Defaults to None.
+	// +operator-sdk:csv:customresourcedefinitions:order=20,type=spec,displayName="Session Affinity Type",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	Type v1.ServiceAffinity `json:"type,omitempty"`
+
+	// Configurations of session affinity.
+	// +operator-sdk:csv:customresourcedefinitions:order=21,type=spec
+	Config *corev1.SessionAffinityConfig `json:"config,omitempty"`
 }
 
 // Configure service certificate.
@@ -714,6 +745,11 @@ func (sa *OpenLibertyApplicationServiceAccount) GetName() *string {
 	return sa.Name
 }
 
+// GetSkipPullSecretValidation returns whether pull secrets should be validated
+func (sa *OpenLibertyApplicationServiceAccount) GetSkipPullSecretValidation() *bool {
+	return sa.SkipPullSecretValidation
+}
+
 // GetReplicas returns number of replicas
 func (cr *OpenLibertyApplication) GetReplicas() *int32 {
 	return cr.Spec.Replicas
@@ -993,6 +1029,21 @@ func (a *OpenLibertyApplicationAutoScaling) GetTargetCPUUtilizationPercentage() 
 	return a.TargetCPUUtilizationPercentage
 }
 
+// GetTargetMemoryUtilizationPercentage returns target memory usage
+func (a *OpenLibertyApplicationAutoScaling) GetTargetMemoryUtilizationPercentage() *int32 {
+	return a.TargetMemoryUtilizationPercentage
+}
+
+// GetMetrics returns metrics for resource utilization
+func (a *OpenLibertyApplicationAutoScaling) GetMetrics() []autoscalingv2.MetricSpec {
+	return a.Metrics
+}
+
+// GetHorizontalPodAutoscalerBehavior returns behavior configures the scaling behavior of the target
+func (a *OpenLibertyApplicationAutoScaling) GetHorizontalPodAutoscalerBehavior() *autoscalingv2.HorizontalPodAutoscalerBehavior {
+	return a.Behavior
+}
+
 // GetSize returns pesistent volume size
 func (s *OpenLibertyApplicationStorage) GetSize() string {
 	return s.Size
@@ -1090,6 +1141,24 @@ func (c *OpenLibertyApplicationCertificate) GetAnnotations() map[string]string {
 // GetBindable returns whether the application should be exposable as a service
 func (s *OpenLibertyApplicationService) GetBindable() *bool {
 	return s.Bindable
+}
+
+// GetSessionAffinity returns the session affinity settings for the service
+func (s *OpenLibertyApplicationService) GetSessionAffinity() common.BaseComponentServiceSessionAffinity {
+	if s.SessionAffinity == nil {
+		return nil
+	}
+	return s.SessionAffinity
+}
+
+// GetType returns the session affinity type for the service
+func (ssa *OpenLibertyApplicationServiceSessionAffinity) GetType() v1.ServiceAffinity {
+	return ssa.Type
+}
+
+// GetConfig returns the session affinity configuration for the service
+func (ssa *OpenLibertyApplicationServiceSessionAffinity) GetConfig() *corev1.SessionAffinityConfig {
+	return ssa.Config
 }
 
 // GetNamespaceLabels returns the namespace selector labels that should be used for the ingress rule
