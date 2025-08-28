@@ -116,7 +116,7 @@ func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFold
 		})
 		if err != nil {
 			if strings.HasSuffix(fmt.Sprintf("%v", err), "exit code 129") {
-				err = fmt.Errorf("The pod's OpenLibertyApplication must enable .spec.serviceability in order to gather performance data")
+				err = fmt.Errorf("The Liberty custom resource which created this pod must enable .spec.serviceability in order to gather performance data")
 			} else if strings.HasSuffix(fmt.Sprintf("%v", err), "exit code 130") {
 				err = fmt.Errorf("The Liberty container is missing packages required for collecting performance data; To install the packages, include the command 'RUN command -v yum && pkgcmd=yum || pkgcmd=microdnf && ($pkgcmd update -y && $pkgcmd install -y procps-ng net-tools ncurses hostname)' in the Liberty container image definition")
 			} else {

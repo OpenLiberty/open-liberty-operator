@@ -234,7 +234,6 @@ func GetLinperfCmd(encodedAttrs, podName, podNamespace string) string {
 	linperfCmdArgs = append(linperfCmdArgs, "--ignore-root")
 	linperfCmd := strings.Join(linperfCmdArgs, FlagDelimiterSpace)
 
-	// linperfCmdWithPids := fmt.Sprintf("mkdir -p %s && PIDS=$(ls -l /proc/[0-9]*/exe | grep \"/java$\" | xargs -L 1 | cut -d ' ' -f9 | cut -d '/' -f 3 ) && PIDS_OUT=$(echo $PIDS | tr '\n' ' ') && ls -l /proc/[0-9]*/exe > /serviceability/%s/%s/test.out && %s \"1\"", outputDir, podNamespace, podName, linperfCmd)
 	requiredPackages := []string{"procps-ng", "net-tools", "ncurses", "hostname"}
 	cmdArgs := []string{}
 	for _, pkg := range requiredPackages {
@@ -242,7 +241,8 @@ func GetLinperfCmd(encodedAttrs, podName, podNamespace string) string {
 	}
 	checkPackagesCmd := strings.Join(cmdArgs, "&&")
 
-	linperfCmdWithPids := fmt.Sprintf("if ! (command -v yum && pkgcmd=yum || pkgcmd=microdnf && %s); then exit 130; elif [ $(df | grep %s -c) -gt 0 ]; then exit 129; else mkdir -p %s && %s \"1\"; fi", checkPackagesCmd, serviceabilityRootDir, outputDir, linperfCmd)
+	// linperfCmdWithPids := fmt.Sprintf("mkdir -p %s && PIDS=$(ls -l /proc/[0-9]*/exe | grep \"/java$\" | xargs -L 1 | cut -d ' ' -f9 | cut -d '/' -f 3 ) && PIDS_OUT=$(echo $PIDS | tr '\n' ' ') && ls -l /proc/[0-9]*/exe > /serviceability/%s/%s/test.out && %s \"1\"", outputDir, podNamespace, podName, linperfCmd)
+	linperfCmdWithPids := fmt.Sprintf("if ! (command -v yum && pkgcmd=yum || pkgcmd=microdnf && %s); then exit 130; elif [ $(df | grep %s -c) -eq 0 ]; then exit 129; else mkdir -p %s && %s \"1\"; fi", checkPackagesCmd, serviceabilityRootDir, outputDir, linperfCmd)
 	fmt.Println("Linperf cmd: " + linperfCmdWithPids)
 	return linperfCmdWithPids
 }
