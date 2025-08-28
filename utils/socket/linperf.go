@@ -85,7 +85,8 @@ func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFold
 		usingStdin := true
 		exec, err := remotecommand.NewSPDYExecutor(config, "POST", podExec(clientset, podName, podNamespace, containerName, usingStdin, command).URL())
 		if err != nil {
-			doneCallback("", "", err)
+			wrappedErr := fmt.Errorf("Failed to create primary SPDY Executor: %v", err)
+			doneCallback("", "", wrappedErr)
 			return
 		}
 		err = exec.StreamWithContext(streamContext, remotecommand.StreamOptions{
@@ -95,14 +96,16 @@ func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFold
 			Tty:    false,
 		})
 		if err != nil {
-			doneCallback("", "", err)
+			wrappedErr := fmt.Errorf("Failed to create primary StreamWithContext: %v", err)
+			doneCallback("", "", wrappedErr)
 			return
 		}
 
 		usingStdin = false
 		exec, err = remotecommand.NewSPDYExecutor(config, "POST", podExec(clientset, podName, podNamespace, containerName, usingStdin, []string{"/bin/sh", "-c", scriptCmd}).URL())
 		if err != nil {
-			doneCallback("", "", err)
+			wrappedErr := fmt.Errorf("Failed to create secondary SPDY Executor: %v", err)
+			doneCallback("", "", wrappedErr)
 			return
 		}
 		var stdout, stderr bytes.Buffer
@@ -111,7 +114,8 @@ func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFold
 			Stderr: &stderr,
 			Tty:    false,
 		})
-		doneCallback(stdout.String(), stderr.String(), err)
+		wrappedErr := fmt.Errorf("Failed to create secondary StreamWithContext: %v", err)
+		doneCallback(stdout.String(), stderr.String(), wrappedErr)
 	}()
 	return reader, writer, cancelStreamContext, nil
 }
