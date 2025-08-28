@@ -212,7 +212,7 @@ func GetPerformanceDataWritingMessage(podName string) string {
 }
 
 func GetLinperfCmd(encodedAttrs, podName, podNamespace string) string {
-	scriptDir := "/output/helper"
+	scriptDir := "$WLP_OUTPUT_DIR/helper"
 	scriptName := "linperf.sh"
 
 	decodedLinperfAttrs := DecodeLinperfAttr(encodedAttrs)
