@@ -236,6 +236,7 @@ func GetLinperfCmd(encodedAttrs, podName, podNamespace string) string {
 
 	// linperfCmdWithPids := fmt.Sprintf("mkdir -p %s && PIDS=$(ls -l /proc/[0-9]*/exe | grep \"/java$\" | xargs -L 1 | cut -d ' ' -f9 | cut -d '/' -f 3 ) && PIDS_OUT=$(echo $PIDS | tr '\n' ' ') && ls -l /proc/[0-9]*/exe > /serviceability/%s/%s/test.out && %s \"1\"", outputDir, podNamespace, podName, linperfCmd)
 	linperfCmdWithPids := fmt.Sprintf("if [ $(df | grep /serviceability -c) -gt 0 ]; then echo 'exit 129'; else mkdir -p %s &&  %s \"1\"; fi", serviceabilityRootDir, outputDir, linperfCmd)
+	fmt.Println("Linperf cmd: " + linperfCmdWithPids)
 	return linperfCmdWithPids
 }
 
