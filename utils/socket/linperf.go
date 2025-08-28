@@ -114,8 +114,10 @@ func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFold
 			Stderr: &stderr,
 			Tty:    false,
 		})
-		wrappedErr := fmt.Errorf("Failed to create secondary StreamWithContext: %v", err)
-		doneCallback(stdout.String(), stderr.String(), wrappedErr)
+		if err != nil {
+			err = fmt.Errorf("Failed to create secondary StreamWithContext: %v", err)
+		}
+		doneCallback(stdout.String(), stderr.String(), err)
 	}()
 	return reader, writer, cancelStreamContext, nil
 }
