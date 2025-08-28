@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"path"
 	"strings"
 
@@ -89,15 +88,16 @@ func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFold
 			doneCallback("", "", wrappedErr)
 			return
 		}
+		var stdout, stderr bytes.Buffer
 		err = exec.StreamWithContext(streamContext, remotecommand.StreamOptions{
 			Stdin:  reader,
-			Stdout: os.Stdout,
-			Stderr: os.Stderr,
+			Stdout: &stdout,
+			Stderr: &stderr,
 			Tty:    false,
 		})
 		if err != nil {
 			wrappedErr := fmt.Errorf("Failed to create primary StreamWithContext: %v", err)
-			doneCallback("", "", wrappedErr)
+			doneCallback(stdout.String(), stderr.String(), wrappedErr)
 			return
 		}
 
@@ -108,7 +108,7 @@ func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFold
 			doneCallback("", "", wrappedErr)
 			return
 		}
-		var stdout, stderr bytes.Buffer
+		stdout, stderr = bytes.Buffer{}, bytes.Buffer{}
 		err = exec.StreamWithContext(streamContext, remotecommand.StreamOptions{
 			Stdout: &stdout,
 			Stderr: &stderr,
