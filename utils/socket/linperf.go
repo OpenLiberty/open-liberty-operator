@@ -25,7 +25,7 @@ func cpMakeTar(srcPath, destPath string, writer io.Writer) error
 func CopyAndRunLinperf(restConfig *rest.Config, podName string, podNamespace string, encodedAttrs string, doneCallback func(string, string, error)) (*io.PipeReader, *io.PipeWriter, context.CancelFunc, error) {
 	containerName := "app"
 	sourceFolder := "internal/controller/assets/helper"
-	destFolder := "$WLP_OUTPUT_DIR/helper"
+	destFolder := "/output/helper"
 	linperfCmd := utils.GetLinperfCmd(encodedAttrs, podName, podNamespace)
 	return CopyFolderToPodAndRunScript(restConfig, sourceFolder, destFolder, podName, podNamespace, containerName, linperfCmd, doneCallback)
 }
