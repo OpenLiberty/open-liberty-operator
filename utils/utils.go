@@ -239,11 +239,11 @@ func GetLinperfCmd(encodedAttrs, podName, podNamespace string) string {
 	for _, pkg := range requiredPackages {
 		cmdArgs = append(cmdArgs, fmt.Sprintf("$pkgcmd list installed %s", pkg))
 	}
-	checkPackagesCmd := strings.Join(cmdArgs, "&&")
+	checkPackagesCmd := strings.Join(cmdArgs, " && ") // add spaces for readability
 
 	// linperfCmdWithPids := fmt.Sprintf("mkdir -p %s && PIDS=$(ls -l /proc/[0-9]*/exe | grep \"/java$\" | xargs -L 1 | cut -d ' ' -f9 | cut -d '/' -f 3 ) && PIDS_OUT=$(echo $PIDS | tr '\n' ' ') && ls -l /proc/[0-9]*/exe > /serviceability/%s/%s/test.out && %s \"1\"", outputDir, podNamespace, podName, linperfCmd)
 	linperfCmdWithPids := fmt.Sprintf("if ! (command -v yum && pkgcmd=yum || pkgcmd=microdnf && %s); then exit 130; elif [ $(df | grep %s -c) -eq 0 ]; then exit 129; else mkdir -p %s && %s \"1\"; fi", checkPackagesCmd, serviceabilityRootDir, outputDir, linperfCmd)
-	fmt.Println("Linperf cmd: " + linperfCmdWithPids)
+	// fmt.Println("Linperf cmd: " + linperfCmdWithPids) // un-commment this line for debugging
 	return linperfCmdWithPids
 }
 
