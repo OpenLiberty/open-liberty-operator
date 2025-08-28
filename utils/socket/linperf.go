@@ -115,7 +115,13 @@ func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFold
 			Tty:    false,
 		})
 		if err != nil {
-			err = fmt.Errorf("Failed to create secondary StreamWithContext: %v", err)
+			if strings.HasSuffix(fmt.Sprintf("%v", err), "exit code 129") {
+				err = fmt.Errorf("The pod's OpenLibertyApplication must enable .spec.serviceability in order to gather performance data")
+			} else if strings.HasSuffix(fmt.Sprintf("%v", err), "exit code 130") {
+				err = fmt.Errorf("The Liberty container is missing packages required for collecting performance data; To install the packages, include the command 'RUN command -v yum && pkgcmd=yum || pkgcmd=microdnf && ($pkgcmd update -y && $pkgcmd install -y procps-ng net-tools ncurses hostname)' in the Liberty container image definition")
+			} else {
+				err = fmt.Errorf("Failed to create secondary StreamWithContext: %v", err)
+			}
 		}
 		doneCallback(stdout.String(), stderr.String(), err)
 	}()
