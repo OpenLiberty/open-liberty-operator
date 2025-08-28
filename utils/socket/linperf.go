@@ -78,11 +78,12 @@ func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFold
 	if len(destDir) > 0 {
 		command = append(command, "-C", destDir)
 	}
+	tarCmd := strings.Join(command, utils.FlagDelimiterSpace)
 
 	streamContext, cancelStreamContext := context.WithCancel(context.TODO())
 	go func() {
 		usingStdin := true
-		exec, err := remotecommand.NewSPDYExecutor(config, "POST", podExec(clientset, podName, podNamespace, containerName, usingStdin, command).URL())
+		exec, err := remotecommand.NewSPDYExecutor(config, "POST", podExec(clientset, podName, podNamespace, containerName, usingStdin, []string{"/bin/sh", "-c", tarCmd}).URL())
 		if err != nil {
 			wrappedErr := fmt.Errorf("Failed to create primary SPDY Executor: %v", err)
 			doneCallback("", "", wrappedErr)
