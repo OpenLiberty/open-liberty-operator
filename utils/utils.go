@@ -289,13 +289,13 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplic
 		{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: "json"},
 	}
 
-	// if la.GetServiceability() != nil {
-	// 	targetEnv = append(targetEnv,
-	// 		corev1.EnvVar{Name: "IBM_HEAPDUMPDIR", Value: serviceabilityMountPath},
-	// 		corev1.EnvVar{Name: "IBM_COREDIR", Value: serviceabilityMountPath},
-	// 		corev1.EnvVar{Name: "IBM_JAVACOREDIR", Value: serviceabilityMountPath},
-	// 	)
-	// }
+	if la.GetServiceability() != nil {
+		targetEnv = append(targetEnv,
+			corev1.EnvVar{Name: "IBM_HEAPDUMPDIR", Value: "/liberty/logs"},
+			corev1.EnvVar{Name: "IBM_COREDIR", Value: "/liberty/logs"},
+			corev1.EnvVar{Name: "IBM_JAVACOREDIR", Value: "/liberty/logs"},
+		)
+	}
 
 	// If manageTLS is true or not set, and SEC_IMPORT_K8S_CERTS is not set then default it to "true"
 	if la.GetManageTLS() == nil || *la.GetManageTLS() {
