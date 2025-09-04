@@ -175,6 +175,16 @@ elif [ $ROOT_ACCESS_REQUIRED -eq 0 ]; then
   echo $(date '+%Y-%m-%d %H:%M:%S') "\tWarning: Root access is disabled. Data may be incomplete."
 fi
 
+############################
+# Create serviceability link
+############################
+if ! test -L /liberty/logs; then
+  SERVICEABILITY_FOLDER="/serviceability/$SERVICEABILITY_NAMESPACE/$HOSTNAME/logs"
+  mkdir -p $SERVICEABILITY_FOLDER
+  rm -rf /liberty/logs
+  ln -s $SERVICEABILITY_FOLDER /liberty/logs
+fi
+
 ################################
 # Assign OUTPUT_DIR and DIR_NAME 
 ################################
