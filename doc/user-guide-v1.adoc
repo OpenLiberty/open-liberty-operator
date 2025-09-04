@@ -228,6 +228,7 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `serviceAccount`| [[crd-spec-serviceAccount-name]] The service account to use for application deployment. If a service account name is not specified, a service account is automatically created. For examples, see link:#create-a-service-account[Configure a service account].
 | `serviceAccount.mountToken` | A Boolean to toggle whether the service account's token should be mounted in the application pods. If unset or `true`, the token will be mounted.
 | `serviceAccount.name` | Name of the service account to use for deploying the application.
+| `serviceAccount.skipPullSecretValidation` | Skips verifying that the service account has a valid pull secret. Defaults to false.
 | `sidecarContainers` | The list of `sidecar` containers. These are additional containers to be added to the pods. Note: Sidecar containers should not be named `app`.
 | `sso`   | [[crd-sso]] Specifies the configuration for single sign-on providers to authenticate with. Specify sensitive fields, such as _clientId_ and _clientSecret_, for the selected providers by using the `Secret`. For examples, see link:++#configuring-single-sign-on-sso-specsso-++[Configuring Single Sign-On (SSO)].
 | `sso.github.hostname`   | Specifies the host name of your enterprise GitHub, such as `github._mycompany_.com`. The default is `github.com`, which is the public GitHub.
@@ -859,6 +860,8 @@ The Liberty server must allow configuration drop-ins. The following configuratio
 The operator can create a `ServiceAccount` resource when deploying an `OpenLibertyApplication` custom resource (CR). If `.spec.serviceAccount.name` is **not** specified in a CR, the operator creates a service account with the same name as the CR (e.g. `my-app`). In addition, this service account is dynamically updated when pull secret changes are detected in the CR field `.spec.pullSecret`.
 
 Alternatively, the operator can use a custom ServiceAccount that you provide. If `.spec.serviceAccount.name` is specified in a CR, the operator uses the service account as is (i.e. read-only) when provisioning new Pods. It is your responsibility to add any required image pull secrets to the service account when accessing images behind a private registry.
+
+By default, the operator verifies that the service account that is used has a reference to a valid pull secret. If a custom service account is being used, this check can be disabled by setting `.spec.serviceAccount.skipPullSecretValidation` to `true` in the CR.
 
 NOTE: `.spec.serviceAccountName` is now deprecated. The operator still looks up the value of `.spec.serviceAccountName`, but you must switch to using `.spec.serviceAccount.name`.
 
