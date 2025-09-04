@@ -133,7 +133,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 		}
 		r.UpdateStatus(nil, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
 	} else {
-		traceOutputDir := serviceabilityDir + "/" + podNamespace + "/" + podName + "/logs" + 
+		traceOutputDir := serviceabilityDir + "/" + podNamespace + "/" + podName + "/logs"
 		traceConfig := "<server><logging traceSpecification=\"" + instance.Spec.TraceSpecification + "\" logDirectory=\"" + traceOutputDir + "\""
 		if instance.Spec.MaxFileSize != nil {
 			traceConfig += " maxFileSize=\"" + strconv.Itoa(int(*instance.Spec.MaxFileSize)) + "\""
