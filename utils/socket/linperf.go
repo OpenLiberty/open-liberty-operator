@@ -29,20 +29,38 @@ func CopyAndRunLinperf(restConfig *rest.Config, podName string, podNamespace str
 	return CopyFolderToPodAndRunScript(restConfig, sourceFolder, destFolder, podName, podNamespace, containerName, linperfCmd, doneCallback)
 }
 
-// Gets the linperf data file name from the stdout output of the linperf.sh script
-func getLinperfDataFileName(linperfOutput string) string {
-	parentDir := "/serviceability"
-	fileType := ".tar.gz"
-	for _, line := range strings.Split(linperfOutput, "\n") {
-		if strings.Contains(line, parentDir) && strings.Contains(line, fileType) {
-			startIndex := strings.Index(line, parentDir)
-			endIndex := strings.Index(line, fileType)
-			if startIndex != -1 && endIndex != -1 && startIndex < len(line) && endIndex+len(fileType) <= len(line) {
-				return line[startIndex : endIndex+len(fileType)]
+// Matches a string within line in array lines that excludes the prefix and includes the suffix
+func getSubstring(lines []string, prefix, suffix string) string {
+	for _, line := range lines {
+		if strings.Contains(line, prefix) && strings.Contains(line, suffix) {
+			startIndex := strings.Index(line, prefix) + len(prefix)
+			endIndex := strings.Index(line, suffix)
+			if startIndex != -1 && endIndex != -1 && startIndex < len(line) && endIndex+len(suffix) <= len(line) {
+				return line[startIndex : endIndex+len(suffix)]
 			}
 		}
 	}
 	return ""
+}
+
+// Gets the linperf data file name from the stdout output of the linperf.sh script
+func getLinperfDataFileName(linperfOutput string) string {
+	linperfOutputLines := strings.Split(linperfOutput, "\n")
+	// 1. capture line '2025-07-23 13:34:54 Compressing the following files into linperf_RESULTS_sample.20250723.133044.tar.gz.'
+	prefix := "Compressing the following files into "
+	suffix := ".tar.gz"
+	fileName := getSubstring(linperfOutputLines, prefix, suffix)
+	if fileName == "" {
+		return "Could not parse tgz name from linperf.sh output"
+	}
+	// 2. capture line '* /serviceability/olo-test/example-75dfd65979-mwvnz/performanceData/linperf_RESULTS_sample.20250723.133044'
+	prefix = "* /serviceability/"
+	suffix = "/performanceData"
+	filePath := getSubstring(linperfOutputLines, prefix, suffix)
+	if filePath == "" {
+		return "Could not parse tgz path from linperf.sh output"
+	}
+	return fmt.Sprintf("/serviceability/%s/%s", filePath, fileName)
 }
 
 func podExec(clientset *kubernetes.Clientset, podName, podNamespace, containerName string, usingStdin bool, command []string) *rest.Request {
