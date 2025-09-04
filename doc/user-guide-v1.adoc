@@ -228,7 +228,7 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `serviceAccount`| [[crd-spec-serviceAccount-name]] The service account to use for application deployment. If a service account name is not specified, a service account is automatically created. For examples, see link:#create-a-service-account[Configure a service account].
 | `serviceAccount.mountToken` | A Boolean to toggle whether the service account's token should be mounted in the application pods. If unset or `true`, the token will be mounted.
 | `serviceAccount.name` | Name of the service account to use for deploying the application.
-| `serviceAccount.skipPullSecretValidation` | Skips verifying that the service account has a valid pull secret. Defaults to false.
+| `serviceAccount.skipPullSecretValidation` | Skips verifying that the service account has a valid pull secret. Defaults to `false`.
 | `sidecarContainers` | The list of `sidecar` containers. These are additional containers to be added to the pods. Note: Sidecar containers should not be named `app`.
 | `sso`   | [[crd-sso]] Specifies the configuration for single sign-on providers to authenticate with. Specify sensitive fields, such as _clientId_ and _clientSecret_, for the selected providers by using the `Secret`. For examples, see link:++#configuring-single-sign-on-sso-specsso-++[Configuring Single Sign-On (SSO)].
 | `sso.github.hostname`   | Specifies the host name of your enterprise GitHub, such as `github._mycompany_.com`. The default is `github.com`, which is the public GitHub.
