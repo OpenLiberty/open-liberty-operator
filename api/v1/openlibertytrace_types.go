@@ -31,6 +31,9 @@ type OpenLibertyTraceStatus struct {
 	Conditions       []OperationStatusCondition `json:"conditions,omitempty"`
 	OperatedResource OperatedResource           `json:"operatedResource,omitempty"`
 	Versions         TraceStatusVersions        `json:"versions,omitempty"`
+	// Location of the trace log directory
+	// +operator-sdk:csv:customresourcedefinitions:type=status,displayName="Log Directory",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	LogDirectory string `json:"logDirectory,omitempty"`
 	// The generation identifier of this OpenLibertyTrace instance completely reconciled by the Operator.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }

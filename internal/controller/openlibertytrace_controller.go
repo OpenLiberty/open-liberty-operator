@@ -118,7 +118,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 	if err != nil && errors.IsNotFound(err) {
 		//Pod is not found. Return and don't requeue
 		reqLogger.Error(err, "Pod "+podName+" was not found in namespace "+podNamespace)
-		return r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
+		return r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged, "")
 	}
 
 	if instance.Spec.Disable != nil && *instance.Spec.Disable {
@@ -127,11 +127,11 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 			_, err = lutils.ExecuteCommandInContainer(r.RestConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "rm -f " + traceConfigFile})
 			if err != nil {
 				reqLogger.Error(err, "Encountered error while disabling trace for pod "+podName+" in namespace "+podNamespace)
-				return r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionTrue, podName, podChanged)
+				return r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionTrue, podName, podChanged, "")
 			}
 			reqLogger.Info("Disabled trace for pod " + podName + " in namespace " + podNamespace)
 		}
-		r.UpdateStatus(nil, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
+		r.UpdateStatus(nil, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged, "")
 	} else {
 		traceOutputDir := serviceabilityDir + "/" + podNamespace + "/" + podName + "/logs"
 		traceConfig := "<server><logging traceSpecification=\"" + instance.Spec.TraceSpecification + "\" logDirectory=\"" + traceOutputDir + "\""
@@ -146,7 +146,7 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 		_, err = lutils.ExecuteCommandInContainer(r.RestConfig, podName, podNamespace, "app", []string{"/bin/sh", "-c", "mkdir -p " + traceOutputDir + " && echo '" + traceConfig + "' > " + traceConfigFile})
 		if err != nil {
 			reqLogger.Error(err, "Encountered error while setting up trace for pod "+podName+" in namespace "+podNamespace)
-			return r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged)
+			return r.UpdateStatus(err, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionFalse, podName, podChanged, traceOutputDir)
 		}
 
 		if podChanged || prevTraceEnabled == corev1.ConditionFalse {
@@ -154,14 +154,14 @@ func (r *ReconcileOpenLibertyTrace) Reconcile(ctx context.Context, request ctrl.
 		} else {
 			reqLogger.Info("Updated trace for pod " + podName + " in namespace " + podNamespace)
 		}
-		r.UpdateStatus(nil, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionTrue, podName, podChanged)
+		r.UpdateStatus(nil, openlibertyv1.OperationStatusConditionTypeEnabled, *instance, corev1.ConditionTrue, podName, podChanged, traceOutputDir)
 	}
 
 	return reconcile.Result{}, nil
 }
 
 // UpdateStatus updates the status
-func (r *ReconcileOpenLibertyTrace) UpdateStatus(issue error, conditionType openlibertyv1.OperationStatusConditionType, instance openlibertyv1.OpenLibertyTrace, newStatus corev1.ConditionStatus, podName string, podChanged bool) (reconcile.Result, error) {
+func (r *ReconcileOpenLibertyTrace) UpdateStatus(issue error, conditionType openlibertyv1.OperationStatusConditionType, instance openlibertyv1.OpenLibertyTrace, newStatus corev1.ConditionStatus, podName string, podChanged bool, traceOutputDir string) (reconcile.Result, error) {
 	s := instance.GetStatus()
 
 	s.SetOperatedResource(openlibertyv1.OperatedResource{ResourceName: podName, ResourceType: "pod"})
@@ -192,6 +192,9 @@ func (r *ReconcileOpenLibertyTrace) UpdateStatus(issue error, conditionType open
 
 	s.SetCondition(statusCondition)
 
+	if traceOutputDir != "" {
+		instance.Status.LogDirectory = traceOutputDir
+	}
 	instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 	instance.Status.Versions.Reconciled = lutils.OperandVersion
 

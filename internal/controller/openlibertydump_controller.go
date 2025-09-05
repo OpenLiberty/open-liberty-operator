@@ -92,7 +92,7 @@ func (r *ReconcileOpenLibertyDump) Reconcile(ctx context.Context, request ctrl.R
 	}
 
 	currentTime := time.Now()
-	dumpFolder := "/serviceability/" + pod.Namespace + "/" + pod.Name
+	dumpFolder := "/serviceability/" + pod.Namespace + "/" + pod.Name + "/serverDumps"
 	dumpFileName := dumpFolder + "/" + "dump_" + currentTime.UTC().Format("2006.01.02_15.04.05") + "_utc.zip"
 	dumpCmd := "mkdir -p " + dumpFolder + " &&  server dump --archive=" + dumpFileName
 	if len(instance.Spec.Include) > 0 {
