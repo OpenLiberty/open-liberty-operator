@@ -178,7 +178,7 @@ fi
 ############################
 # Create serviceability link
 ############################
-if ! test -f /liberty/logs; then
+if ! test -e /liberty/logs; then
   if [[ ! -z "$SERVICEABILITY_NAMESPACE" ]] && [[ ! -z $HOSTNAME ]]; then
     SERVICEABILITY_FOLDER="/serviceability/$SERVICEABILITY_NAMESPACE/$HOSTNAME/logs"
     mkdir -p $SERVICEABILITY_FOLDER
