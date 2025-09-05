@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"path"
 	"strings"
 
@@ -25,25 +24,43 @@ func cpMakeTar(srcPath, destPath string, writer io.Writer) error
 func CopyAndRunLinperf(restConfig *rest.Config, podName string, podNamespace string, encodedAttrs string, doneCallback func(string, string, error)) (*io.PipeReader, *io.PipeWriter, context.CancelFunc, error) {
 	containerName := "app"
 	sourceFolder := "internal/controller/assets/helper"
-	destFolder := "/output/helper"
+	destFolder := "$WLP_OUTPUT_DIR/helper"
 	linperfCmd := utils.GetLinperfCmd(encodedAttrs, podName, podNamespace)
 	return CopyFolderToPodAndRunScript(restConfig, sourceFolder, destFolder, podName, podNamespace, containerName, linperfCmd, doneCallback)
 }
 
-// Gets the linperf data file name from the stdout output of the linperf.sh script
-func getLinperfDataFileName(linperfOutput string) string {
-	parentDir := "/serviceability"
-	fileType := ".tar.gz"
-	for _, line := range strings.Split(linperfOutput, "\n") {
-		if strings.Contains(line, parentDir) && strings.Contains(line, fileType) {
-			startIndex := strings.Index(line, parentDir)
-			endIndex := strings.Index(line, fileType)
-			if startIndex != -1 && endIndex != -1 && startIndex < len(line) && endIndex+len(fileType) <= len(line) {
-				return line[startIndex : endIndex+len(fileType)]
+// Matches a string within line in array lines that excludes the prefix and includes the suffix
+func getSubstring(lines []string, prefix, suffix string) string {
+	for _, line := range lines {
+		if strings.Contains(line, prefix) && strings.Contains(line, suffix) {
+			startIndex := strings.Index(line, prefix) + len(prefix)
+			endIndex := strings.Index(line, suffix)
+			if startIndex != -1 && endIndex != -1 && startIndex < len(line) && endIndex+len(suffix) <= len(line) {
+				return line[startIndex : endIndex+len(suffix)]
 			}
 		}
 	}
 	return ""
+}
+
+// Gets the linperf data file name from the stdout output of the linperf.sh script
+func getLinperfDataFileName(linperfOutput string) string {
+	linperfOutputLines := strings.Split(linperfOutput, "\n")
+	// 1. capture line '2025-07-23 13:34:54 Compressing the following files into linperf_RESULTS_sample.20250723.133044.tar.gz.'
+	prefix := "Compressing the following files into "
+	suffix := ".tar.gz"
+	fileName := getSubstring(linperfOutputLines, prefix, suffix)
+	if fileName == "" {
+		return "Could not parse tgz name from linperf.sh output"
+	}
+	// 2. capture line '* /serviceability/olo-test/example-75dfd65979-mwvnz/performanceData/linperf_RESULTS_sample.20250723.133044'
+	prefix = "* /serviceability/"
+	suffix = "/performanceData"
+	filePath := getSubstring(linperfOutputLines, prefix, suffix)
+	if filePath == "" {
+		return "Could not parse tgz path from linperf.sh output"
+	}
+	return fmt.Sprintf("/serviceability/%s/%s", filePath, fileName)
 }
 
 func podExec(clientset *kubernetes.Clientset, podName, podNamespace, containerName string, usingStdin bool, command []string) *rest.Request {
@@ -79,30 +96,52 @@ func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFold
 	if len(destDir) > 0 {
 		command = append(command, "-C", destDir)
 	}
+	tarCmd := strings.Join(command, utils.FlagDelimiterSpace)
 
 	streamContext, cancelStreamContext := context.WithCancel(context.TODO())
 	go func() {
 		usingStdin := true
-		exec, err := remotecommand.NewSPDYExecutor(config, "POST", podExec(clientset, podName, podNamespace, containerName, usingStdin, command).URL())
+		exec, err := remotecommand.NewSPDYExecutor(config, "POST", podExec(clientset, podName, podNamespace, containerName, usingStdin, []string{"/bin/sh", "-c", tarCmd}).URL())
 		if err != nil {
-			doneCallback("", "", err)
+			wrappedErr := fmt.Errorf("Failed to create primary SPDY Executor: %v", err)
+			doneCallback("", "", wrappedErr)
 			return
 		}
+		var stdout, stderr bytes.Buffer
 		err = exec.StreamWithContext(streamContext, remotecommand.StreamOptions{
 			Stdin:  reader,
-			Stdout: os.Stdout,
-			Stderr: os.Stderr,
+			Stdout: &stdout,
+			Stderr: &stderr,
 			Tty:    false,
 		})
+		if err != nil {
+			wrappedErr := fmt.Errorf("Failed to create primary StreamWithContext: %v", err)
+			doneCallback(stdout.String(), stderr.String(), wrappedErr)
+			return
+		}
 
 		usingStdin = false
 		exec, err = remotecommand.NewSPDYExecutor(config, "POST", podExec(clientset, podName, podNamespace, containerName, usingStdin, []string{"/bin/sh", "-c", scriptCmd}).URL())
-		var stdout, stderr bytes.Buffer
+		if err != nil {
+			wrappedErr := fmt.Errorf("Failed to create secondary SPDY Executor: %v", err)
+			doneCallback("", "", wrappedErr)
+			return
+		}
+		stdout, stderr = bytes.Buffer{}, bytes.Buffer{}
 		err = exec.StreamWithContext(streamContext, remotecommand.StreamOptions{
 			Stdout: &stdout,
 			Stderr: &stderr,
 			Tty:    false,
 		})
+		if err != nil {
+			if strings.HasSuffix(fmt.Sprintf("%v", err), "exit code 129") {
+				err = fmt.Errorf("The Liberty custom resource which created this pod must enable .spec.serviceability in order to gather performance data")
+			} else if strings.HasSuffix(fmt.Sprintf("%v", err), "exit code 130") {
+				err = fmt.Errorf("The Liberty container is missing packages required for collecting performance data; To install the packages, include the command 'RUN command -v yum && pkgcmd=yum || pkgcmd=microdnf && ($pkgcmd update -y && $pkgcmd install -y procps-ng net-tools ncurses hostname)' in the Liberty container image definition")
+			} else {
+				err = fmt.Errorf("Failed to create secondary StreamWithContext: %v", err)
+			}
+		}
 		doneCallback(stdout.String(), stderr.String(), err)
 	}()
 	return reader, writer, cancelStreamContext, nil

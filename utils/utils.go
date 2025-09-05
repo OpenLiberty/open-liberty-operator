@@ -38,6 +38,7 @@ var log = logf.Log.WithName("openliberty_utils")
 
 // Constant Values
 const serviceabilityMountPath = "/serviceability"
+const serviceabilityPodMountPath = "/liberty/logs"
 const ssoEnvVarPrefix = "SEC_SSO_"
 const OperandVersion = "1.5.0"
 
@@ -212,13 +213,14 @@ func GetPerformanceDataWritingMessage(podName string) string {
 }
 
 func GetLinperfCmd(encodedAttrs, podName, podNamespace string) string {
-	scriptDir := "/output/helper"
+	scriptDir := "$WLP_OUTPUT_DIR/helper"
 	scriptName := "linperf.sh"
 
 	decodedLinperfAttrs := DecodeLinperfAttr(encodedAttrs)
 
 	linperfCmdArgs := []string{fmt.Sprintf("%s/%s", scriptDir, scriptName)}
-	outputDir := fmt.Sprintf("/serviceability/%s/%s/performanceData/", podNamespace, podName)
+	serviceabilityRootDir := "/serviceability"
+	outputDir := fmt.Sprintf("%s/%s/%s/performanceData/", serviceabilityRootDir, podNamespace, podName)
 	linperfCmdArgs = append(linperfCmdArgs, parseFlag("--output-dir", outputDir, FlagDelimiterEquals))
 
 	now := time.Now()
@@ -233,8 +235,16 @@ func GetLinperfCmd(encodedAttrs, podName, podNamespace string) string {
 	linperfCmdArgs = append(linperfCmdArgs, "--ignore-root")
 	linperfCmd := strings.Join(linperfCmdArgs, FlagDelimiterSpace)
 
+	requiredPackages := []string{"procps-ng", "net-tools", "ncurses", "hostname"}
+	cmdArgs := []string{}
+	for _, pkg := range requiredPackages {
+		cmdArgs = append(cmdArgs, fmt.Sprintf("$pkgcmd list installed %s", pkg))
+	}
+	checkPackagesCmd := strings.Join(cmdArgs, " && ") // add spaces for readability
+
 	// linperfCmdWithPids := fmt.Sprintf("mkdir -p %s && PIDS=$(ls -l /proc/[0-9]*/exe | grep \"/java$\" | xargs -L 1 | cut -d ' ' -f9 | cut -d '/' -f 3 ) && PIDS_OUT=$(echo $PIDS | tr '\n' ' ') && ls -l /proc/[0-9]*/exe > /serviceability/%s/%s/test.out && %s \"1\"", outputDir, podNamespace, podName, linperfCmd)
-	linperfCmdWithPids := fmt.Sprintf("mkdir -p %s &&  %s \"1\"", outputDir, linperfCmd)
+	linperfCmdWithPids := fmt.Sprintf("if ! (command -v yum && pkgcmd=yum || pkgcmd=microdnf && %s); then exit 130; elif [ $(df | grep %s -c) -eq 0 ]; then exit 129; else mkdir -p %s && %s \"1\"; fi", checkPackagesCmd, serviceabilityRootDir, outputDir, linperfCmd)
+	// fmt.Println("Linperf cmd: " + linperfCmdWithPids) // un-commment this line for debugging
 	return linperfCmdWithPids
 }
 
@@ -291,9 +301,9 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplic
 
 	if la.GetServiceability() != nil {
 		targetEnv = append(targetEnv,
-			corev1.EnvVar{Name: "IBM_HEAPDUMPDIR", Value: serviceabilityMountPath},
-			corev1.EnvVar{Name: "IBM_COREDIR", Value: serviceabilityMountPath},
-			corev1.EnvVar{Name: "IBM_JAVACOREDIR", Value: serviceabilityMountPath},
+			corev1.EnvVar{Name: "IBM_HEAPDUMPDIR", Value: serviceabilityPodMountPath},
+			corev1.EnvVar{Name: "IBM_COREDIR", Value: serviceabilityPodMountPath},
+			corev1.EnvVar{Name: "IBM_JAVACOREDIR", Value: serviceabilityPodMountPath},
 		)
 	}
 

@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -66,10 +68,6 @@ type OpenLibertyPerformanceDataList struct {
 	Items           []OpenLibertyPerformanceData `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&OpenLibertyPerformanceData{}, &OpenLibertyPerformanceDataList{})
-}
-
 func getIntValueOrDefault(value *int, defaultValue int) int {
 	if value == nil {
 		return defaultValue
@@ -87,4 +85,63 @@ func (cr *OpenLibertyPerformanceData) GetTimespan() int {
 func (cr *OpenLibertyPerformanceData) GetInterval() int {
 	defaultInterval := 30
 	return getIntValueOrDefault(cr.Spec.Interval, defaultInterval)
+}
+
+// GetStatus return condition's status
+func (cr *OpenLibertyPerformanceData) GetStatus() *OpenLibertyPerformanceDataStatus {
+	return &cr.Status
+}
+
+// NewCondition returns new condition
+func (s *OpenLibertyPerformanceDataStatus) NewCondition() OperationStatusCondition {
+	return OperationStatusCondition{}
+}
+
+// GetConditions returns slice of conditions
+func (s *OpenLibertyPerformanceDataStatus) GetConditions() []OperationStatusCondition {
+	var conditions = []OperationStatusCondition{}
+	for i := range s.Conditions {
+		conditions[i] = s.Conditions[i]
+	}
+	return conditions
+}
+
+// GetCondition ...
+func (s *OpenLibertyPerformanceDataStatus) GetCondition(t OperationStatusConditionType) OperationStatusCondition {
+
+	for i := range s.Conditions {
+		if s.Conditions[i].GetType() == t {
+			return s.Conditions[i]
+		}
+	}
+	return OperationStatusCondition{LastUpdateTime: metav1.Time{}} //revisit
+}
+
+// SetCondition ...
+func (s *OpenLibertyPerformanceDataStatus) SetCondition(c OperationStatusCondition) {
+	condition := &OperationStatusCondition{}
+	found := false
+	for i := range s.Conditions {
+		if s.Conditions[i].GetType() == c.GetType() {
+			condition = &s.Conditions[i]
+			found = true
+			break
+		}
+	}
+
+	if condition.GetStatus() != c.GetStatus() || condition.GetMessage() != c.GetMessage() || condition.GetReason() != c.GetReason() {
+		condition.SetLastTransitionTime(&metav1.Time{Time: time.Now()})
+	}
+
+	condition.SetReason(c.GetReason())
+	condition.SetMessage(c.GetMessage())
+	condition.SetStatus(c.GetStatus())
+	condition.SetType(c.GetType())
+	if !found {
+		s.Conditions = append(s.Conditions, *condition)
+	}
+}
+
+func init() {
+	SchemeBuilder.Register(&OpenLibertyPerformanceData{}, &OpenLibertyPerformanceDataList{})
 }
