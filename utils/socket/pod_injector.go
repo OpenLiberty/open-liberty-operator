@@ -7,9 +7,11 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/OpenLiberty/open-liberty-operator/utils"
 	"github.com/go-logr/logr"
@@ -181,6 +183,14 @@ func ServePodInjector(mgr manager.Manager, logger logr.Logger) (net.Listener, er
 	if err != nil {
 		return nil, err
 	}
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		os.Remove(podInjectorSocketPath)
+		os.Exit(1)
+	}()
 
 	go func() {
 		for {
