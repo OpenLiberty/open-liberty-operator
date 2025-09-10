@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/OpenLiberty/open-liberty-operator/utils"
 	"github.com/go-logr/logr"
@@ -67,7 +68,8 @@ type Client struct {
 }
 
 func (c *Client) Connect() error {
-	conn, err := net.Dial("unix", podInjectorSocketPath)
+	dialer := net.Dialer{Timeout: time.Second * 3}
+	conn, err := dialer.Dial("unix", podInjectorSocketPath)
 	if err != nil {
 		return err
 	}
