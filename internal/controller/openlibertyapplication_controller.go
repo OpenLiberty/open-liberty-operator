@@ -533,6 +533,11 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
 		err = r.CreateOrUpdate(statefulSet, instance, func() error {
 			oputils.CustomizeStatefulSet(statefulSet, instance)
+			if instance.Spec.Probes.EnableFileBased != nil && *instance.Spec.Probes.EnableFileBased {
+				instance.Spec.Probes.Startup.Exec.Command = []string{"/bin/sh", "-c", "/opt/ol/helpers/runtime/startupHealthCheck.sh -t 1"}
+				instance.Spec.Probes.Liveness.Exec.Command = []string{"/bin/sh", "-c", "/opt./ol/helpers/runtime/livenessHealthCheck.sh -p 8"}
+				instance.Spec.Probes.Readiness.Exec.Command = []string{"/bin/sh", "-c", "/opt./ol/helpers/runtime/readinessHealthCheck.sh -p 8"}
+			}
 			oputils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
 			oputils.CustomizePersistence(statefulSet, instance)
 			if err := lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance, r.GetClient()); err != nil {
