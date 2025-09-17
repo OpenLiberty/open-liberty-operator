@@ -475,7 +475,7 @@ Open Liberty Operator builds upon link:#common-component-documentation[component
 * link:#set-environment-variables-for-an-application-container[Set environment variables for an application container] (`.spec.env` or `.spec.envFrom`)
 * link:#setting-up-basic-authentication-credentials-by-using-environment-variables[Setting up basic authentication credentials by using environment variables] (`.spec.envFrom[].secretRef`)
 * link:#configure-multiple-application-instances-for-high-availability[Configure static replicas for high availability] (`.spec.replicas`)
-link:#configure-horizontal-pod-autoscaling-for-high-availability[Configure Horizontal Pod Autoscaling for high availability] (`.spec.autoscaling`)
+* link:#configure-horizontal-pod-autoscaling-for-high-availability[Configure Horizontal Pod Autoscaling for high availability] (`.spec.autoscaling`)
 * link:#set-privileges-and-permissions-for-a-pod-or-container[Set privileges and permissions for a pod or container] (`.spec.securityContext`)
 * link:#persist-resources[Persist resources] (`.spec.statefulSet` and `.spec.volumeMounts`)
 * link:#monitor-resources[Monitor resources] (`.spec.monitoring`)
@@ -1001,6 +1001,8 @@ To dynamically scale your application based on resource consumption, use Horizon
 - The `.spec.resources.requests.cpu` field is required for autoscaling based on CPU usage with the `.spec.autoscaling.targetCPUUtilizationPercentage` field.
 - The `.spec.resources.requests.memory` field is required for autoscaling based on memory usage with the `.spec.autoscaling.targetMemoryUtilizationPercentage` field.
 
+For configuration examples, see link:#autoscaling-configurations[Autoscaling Configurations.]
+
 [[set-privileges-and-permissions-for-a-pod-or-container]]
 === Set privileges and permissions for a pod or container (`.spec.securityContext`)
 
@@ -1110,6 +1112,110 @@ spec:
   statefulSet: {}
 ----
 
+[[autoscaling-configurations]]
+=== Autoscaling configurations (`.spec.autoscaling`)
+
+You can use Horizontal Pod Autoscaling (HPA) with the `.spec.autoscaling` field to dynamically scale your application based on resource consumption.
+
+==== CPU and Memory utilization configurations
+Resource metrics CPU and Memory average utilization-based autoscaling are provided with simple configurations. When you specify the `.spec.autoscaling.targetCPUUtilizationPercentage` field or the `.spec.autoscaling.targetMemoryUtilizationPercentage` field, the Horizontal Pod Autoscaler automatically use the built-in resource metrics to make scaling decisions.
+
+The following example shows the configuration for CPU and Memory-based autoscaling.
+[source,yaml]
+----
+apiVersion: liberty.websphere.ibm.com/v1
+kind: WebSphereLibertyApplication
+metadata:
+  name: example-app-1
+spec:
+...
+  autoscaling:
+    maxReplicas: 3
+    minReplicas: 1
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  resources: 
+    requests:
+      cpu: "0.5"
+      memory: 512Mi
+----
+
+==== Custom Metrics for Autoscaling
+To use custom metrics from the `.spec.autoscaling.metrics` field, application monitoring must be enabled to scrape metrics from the application. For more information about setting up application monitoring, see the link:++https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/monitoring/configuring-user-workload-monitoring#preparing-to-configure-the-monitoring-stack-uwm++[Configuring user workload monitoring] Red Hat® OpenShift® guide.
+
+After application monitoring is setup, install Prometheus-Adapter. Prometheus-Adapter converts exposed custom metrics between Kubernetes and Prometheus. For more information about installing Prometheus-Adapter, see link:++https://github.com/kubernetes-sigs/prometheus-adapter/blob/master/docs/walkthrough.md#launching-the-adapter++[Prometheus-Adapter walkthrough].
+
+The following example shows a Prometheus-Adapter ConfigMap for Liberty Provided Metrics.
+
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: adapter-config
+data:
+  config.yaml: |
+    rules:
+    - seriesQuery: '{__name__=~"memory_usedHeap_bytes",pod!=""}'
+      seriesFilters:
+      - is: ^memory_usedHeap_bytes
+      resources:
+        overrides:
+          namespace:
+            resource: namespace
+          service:
+            resource : service
+          pod:
+            resource : pod
+      name:
+        matches: ^memory_usedHeap_bytes
+        as: "usedHeap"
+      metricsQuery: (sum(memory_usedHeap_bytes)by(pod))
+----
+
+To use Liberty-provided metrics, monitoring must be enabled to scrape the metrics data from the Liberty applications by using the `.spec.monitoring` field. For more information about configurations to use Liberty provided metrics for autoscaling, see link:++https://github.com/OpenLiberty/open-liberty-operator/blob/main/doc/observability-deployment.adoc#how-to-monitor-your-liberty-runtimes++[How to Monitor Your Liberty Runtimes].
+
+==== Configuration Examples
+The following example shows the WebSphereLibertyApplication custom resource with CPU, Memory, and custom metrics. The CPU, Memory, and custom metrics can be combined to calculate the ideal number of replicas to provide high availability.
+
+[source,yaml]
+----
+apiVersion: liberty.websphere.ibm.com/v1
+kind: WebSphereLibertyApplication
+metadata:
+  name: example-app-1
+spec:
+...
+  autoscaling:
+    metrics:
+    - pods:
+        metric:
+          name: usedHeap
+        target:
+          averageValue: 209715200
+          type: AverageValue
+      type: Pods    
+    maxReplicas: 3
+    minReplicas: 1
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 75
+  monitoring:
+    endpoints:
+      - basicAuth:
+          username:
+            key: username
+            name: basic-auth
+          password:
+            key: password
+            name: basic-auth
+        interval: 30s
+  resources: 
+    requests:
+      cpu: "12.2"
+      memory: 1Gi
+...
+----
+
 [[monitor-resources]]
 === Monitor resources (`.spec.monitoring`)
 
@@ -1117,7 +1223,6 @@ An Open Liberty operator can create a `ServiceMonitor` resource to integrate wit
 
 NOTE: The operator monitoring does not support integration with Knative Service. Prometheus Operator is required to use `ServiceMonitor`.
 
-At minimum, provide a label for Prometheus set on `ServiceMonitor` objects. In the following example, the `.spec.monitoring` label is `apps-prometheus`.
 
 [source,yaml]
 ----
