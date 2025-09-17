@@ -309,7 +309,8 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplic
 
 	if isFileBasedProbesEnabled(la) {
 		targetEnv = append(targetEnv,
-			corev1.EnvVar{Name: "MP_HEALTH_FILE_UPDATE_INTERVAL", Value: "10s"},
+			corev1.EnvVar{Name: "MP_HEALTH_CHECK_INTERVAL", Value: "10s"},
+			corev1.EnvVar{Name: "MP_HEALTH_STARTUP_CHECK_INTERVAL", Value: "10s"},
 		)
 	}
 
