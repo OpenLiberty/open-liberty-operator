@@ -307,6 +307,12 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplic
 		)
 	}
 
+	if isFileBasedProbesEnabled(la) {
+		targetEnv = append(targetEnv,
+			corev1.EnvVar{Name: "MP_HEALTH_FILE_UPDATE_INTERVAL", Value: "10s"},
+		)
+	}
+
 	// If manageTLS is true or not set, and SEC_IMPORT_K8S_CERTS is not set then default it to "true"
 	if la.GetManageTLS() == nil || *la.GetManageTLS() {
 		targetEnv = append(targetEnv, corev1.EnvVar{Name: "SEC_IMPORT_K8S_CERTS", Value: "true"})
@@ -929,6 +935,62 @@ func CustomizeLibertyFileMountXML(mountingPasswordKeySecret *corev1.Secret, moun
 	severXMLString := strings.Replace(string(serverXML), "MOUNT_LOCATION", fileLocation, 1)
 	mountingPasswordKeySecret.StringData[mountXMLFileName] = severXMLString
 	return nil
+}
+
+func isFileBasedProbesEnabled(instance *olv1.OpenLibertyApplication) bool {
+	return instance.Spec.Probes != nil && instance.Spec.Probes.EnableFileBased != nil && *instance.Spec.Probes.EnableFileBased
+}
+
+func isFileBasedProbeConfigured(probe *corev1.Probe) bool {
+	if probe == nil || probe.Exec == nil || len(probe.Exec.Command) != 3 {
+		return false
+	}
+	scriptCmd := probe.Exec.Command[2]
+	return strings.HasPrefix(scriptCmd, "/opt/ol/helpers/runtime/startupHealthCheck.sh") ||
+		strings.HasPrefix(scriptCmd, "/opt/ol/helpers/runtime/livenessHealthCheck.sh") ||
+		strings.HasPrefix(scriptCmd, "/opt/ol/helpers/runtime/readinessHealthCheck.sh")
+}
+
+func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLibertyApplication) {
+	if !isFileBasedProbesEnabled(instance) {
+		if instance.Spec.Probes == nil {
+			return
+		}
+		if isFileBasedProbeConfigured(instance.Spec.Probes.Startup) {
+			instance.Spec.Probes.Startup.Exec = nil
+		}
+		if isFileBasedProbeConfigured(instance.Spec.Probes.Liveness) {
+			instance.Spec.Probes.Liveness.Exec = nil
+		}
+		if isFileBasedProbeConfigured(instance.Spec.Probes.Readiness) {
+			instance.Spec.Probes.Readiness.Exec = nil
+		}
+		return
+	}
+	if instance.Spec.Probes.Startup == nil {
+		instance.Spec.Probes.Startup = &corev1.Probe{}
+	}
+	if instance.Spec.Probes.Liveness == nil {
+		instance.Spec.Probes.Liveness = &corev1.Probe{}
+	}
+	if instance.Spec.Probes.Readiness == nil {
+		instance.Spec.Probes.Readiness = &corev1.Probe{}
+	}
+	if instance.Spec.Probes.Startup.Exec == nil {
+		instance.Spec.Probes.Startup.Exec = &corev1.ExecAction{
+			Command: []string{"/bin/sh", "-c", "/opt/ol/helpers/runtime/startupHealthCheck.sh -t 1"},
+		}
+	}
+	if instance.Spec.Probes.Liveness.Exec == nil {
+		instance.Spec.Probes.Liveness.Exec = &corev1.ExecAction{
+			Command: []string{"/bin/sh", "-c", "/opt./ol/helpers/runtime/livenessHealthCheck.sh -p 8"},
+		}
+	}
+	if instance.Spec.Probes.Readiness.Exec == nil {
+		instance.Spec.Probes.Readiness.Exec = &corev1.ExecAction{
+			Command: []string{"/bin/sh", "-c", "/opt./ol/helpers/runtime/readinessHealthCheck.sh -p 8"},
+		}
+	}
 }
 
 // Converts a file name into a lowercase word separated string

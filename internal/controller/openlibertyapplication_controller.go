@@ -533,32 +533,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
 		err = r.CreateOrUpdate(statefulSet, instance, func() error {
 			oputils.CustomizeStatefulSet(statefulSet, instance)
-			if instance.Spec.Probes != nil && instance.Spec.Probes.EnableFileBased != nil && *instance.Spec.Probes.EnableFileBased {
-				if instance.Spec.Probes.Startup == nil {
-					instance.Spec.Probes.Startup = &corev1.Probe{}
-				}
-				if instance.Spec.Probes.Liveness == nil {
-					instance.Spec.Probes.Liveness = &corev1.Probe{}
-				}
-				if instance.Spec.Probes.Readiness == nil {
-					instance.Spec.Probes.Readiness = &corev1.Probe{}
-				}
-				if instance.Spec.Probes.Startup.Exec == nil {
-					instance.Spec.Probes.Startup.Exec = &corev1.ExecAction{
-						Command: []string{"/bin/sh", "-c", "/opt/ol/helpers/runtime/startupHealthCheck.sh -t 1"},
-					}
-				}
-				if instance.Spec.Probes.Liveness.Exec == nil {
-					instance.Spec.Probes.Liveness.Exec = &corev1.ExecAction{
-						Command: []string{"/bin/sh", "-c", "/opt./ol/helpers/runtime/livenessHealthCheck.sh -p 8"},
-					}
-				}
-				if instance.Spec.Probes.Readiness.Exec == nil {
-					instance.Spec.Probes.Readiness.Exec = &corev1.ExecAction{
-						Command: []string{"/bin/sh", "-c", "/opt./ol/helpers/runtime/readinessHealthCheck.sh -p 8"},
-					}
-				}
-			}
+			lutils.CustomizeFileBasedProbes(&statefulSet.Spec.Template, instance)
 			oputils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
 			oputils.CustomizePersistence(statefulSet, instance)
 			if err := lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance, r.GetClient()); err != nil {
@@ -657,6 +632,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
 		err = r.CreateOrUpdate(deploy, instance, func() error {
 			oputils.CustomizeDeployment(deploy, instance)
+			lutils.CustomizeFileBasedProbes(&deploy.Spec.Template, instance)
 			oputils.CustomizePodSpec(&deploy.Spec.Template, instance)
 			if err := lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance, r.GetClient()); err != nil {
 				reqLogger.Error(err, "Failed to reconcile Liberty env, error: "+err.Error())
