@@ -983,12 +983,12 @@ func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLi
 	}
 	if instance.Spec.Probes.Liveness.Exec == nil {
 		instance.Spec.Probes.Liveness.Exec = &corev1.ExecAction{
-			Command: []string{"/bin/sh", "-c", "/opt./ol/helpers/runtime/livenessHealthCheck.sh -p 8"},
+			Command: []string{"/bin/sh", "-c", "/opt/ol/helpers/runtime/livenessHealthCheck.sh -p 8"},
 		}
 	}
 	if instance.Spec.Probes.Readiness.Exec == nil {
 		instance.Spec.Probes.Readiness.Exec = &corev1.ExecAction{
-			Command: []string{"/bin/sh", "-c", "/opt./ol/helpers/runtime/readinessHealthCheck.sh -p 8"},
+			Command: []string{"/bin/sh", "-c", "/opt/ol/helpers/runtime/readinessHealthCheck.sh -p 8"},
 		}
 	}
 }
