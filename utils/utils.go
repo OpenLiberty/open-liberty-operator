@@ -232,6 +232,7 @@ func GetLinperfCmd(encodedAttrs, podName, podNamespace string) string {
 	linperfCmdArgs = append(linperfCmdArgs, parseFlag("-j", decodedLinperfAttrs["interval"], FlagDelimiterSpace))
 
 	linperfCmdArgs = append(linperfCmdArgs, "--ignore-root")
+	linperfCmdArgs = append(linperfCmdArgs, "--clean-up-javacores")
 	linperfCmd := strings.Join(linperfCmdArgs, FlagDelimiterSpace)
 
 	requiredCLIs := []string{"netstat", "ps", "dmesg", "tput", "ifconfig", "vmstat", "top", "uptime", "hostname"}
