@@ -144,9 +144,9 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `applicationVersion` | The current version of the application. Label `app.kubernetes.io/version` will be added to all resources when the version is defined.
 | `autoscaling` | Configures the wanted resource consumption of pods. For more information, see link:#configure-horizontal-pod-autoscaling-for-high-availability[Configure Horizontal Pod Autoscaling for high availability].
 | `autoscaling.behavior` | Controls the scaling behavior of the target. If not set, the default HPAScalingRules for scale up and scale down are used. For more information, see link:++https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#configurable-scaling-behavior++[Configurable Scaling Behavior].
-| `autoscaling.maxReplicas` | Required field for autoscaling. Upper limit for the number of pods that can be set by the autoscaler. It cannot be lower than the minimum number of replicas.
+| `autoscaling.maxReplicas` | Required field for autoscaling. The maximum number of pods that the autoscaler can set. The value cannot be less than the minimum number of replicas.
 | `autoscaling.metrics` | Specifications used for replica count calculation. Custom metrics that use metrics APIs can be added to the list. For more information, see link:++https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#support-for-metrics-apis++[Support for Metrics APIs].
-| `autoscaling.minReplicas` | Lower limit for the number of pods that can be set by the autoscaler.
+| `autoscaling.minReplicas` | The minimum number of pods that the autoscaler can set.
 | `autoscaling.targetCPUUtilizationPercentage` | The target average CPU usage, represented as a percentage of requested CPU, over all the pods.
 | `autoscaling.targetMemoryUtilizationPercentage` | The target average Memory utilization, represented as a percentage of requested memory, over all the pods.
 | `createKnativeService`   | A Boolean to toggle the creation of Knative resources and use of Knative serving. To create a Knative service, set the parameter to true. For examples, see link:#deploy-serverless-applications-with-knative[Deploy serverless applications with Knative] and link:#expose-applications-externally[Expose applications externally].
@@ -181,9 +181,8 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `replicas` | The static number of desired replica pods that run simultaneously.
 | `resources.limits.cpu` | The upper limit of CPU core. Specify integers, fractions (e.g. `0.5`), or millicores values(e.g. `100m`, where `100m` is equivalent to `.1` core).
 | `resources.limits.memory` | The memory upper limit in bytes. Specify integers with suffixes: `E`, `P`, `T`, `G`, `M`, `K`, or power-of-two equivalents: `Ei`, `Pi`, `Ti`, `Gi`, `Mi`, `Ki`.
-| `resources.requests` | The minimum allowed amount of compute resources. If requests is omitted for a container, it defaults to limits if that is explicitly specified, otherwise to an implementation-defined value.
-
-| `resources.requests.cpu` | The minimum required CPU core. Specify integers, fractions (e.g. `0.5`), or millicore values(e.g. `100m`, where `100m` is equivalent to `.1` core). Required field for autoscaling based on CPU usage with the `.spec.autoscaling.`
+| `resources.requests` | The minimum allowed amount of compute resources. If `requests` is omitted for a container, it defaults to limits if that is explicitly specified, otherwise to an implementation-defined value.
+| `resources.requests.cpu` | The minimum required CPU core. Specify integers, fractions (e.g. `0.5`), or millicore values(e.g. `100m`, where `100m` is equivalent to `.1` core). Required field for autoscaling based on CPU usage with the `.spec.autoscaling.targetCPUUtilizationPercentage`
 | `resources.requests.memory` | The minimum memory in bytes. Specify integers with one of these suffixes: `E`, `P`, `T`, `G`, `M`, `K`, or power-of-two equivalents: `Ei`, `Pi`, `Ti`, `Gi`, `Mi`, `Ki`. Required field for autoscaling based on memory usage with the `.spec.autoscaling.targetMemoryUtilizationPercentage` field.
 | `route.annotations` | Annotations to be added to the `Route`.
 | `route.certificateSecretRef` | A name of a secret that already contains TLS key, certificate and CA to be used in the `Route`. It can also contain destination CA certificate. The following keys are valid in the secret: `ca.crt`, `destCA.crt`, `tls.crt`, and `tls.key`.
@@ -1223,6 +1222,7 @@ An Open Liberty operator can create a `ServiceMonitor` resource to integrate wit
 
 NOTE: The operator monitoring does not support integration with Knative Service. Prometheus Operator is required to use `ServiceMonitor`.
 
+At minimum, provide a label for Prometheus set on `ServiceMonitor` objects. In the following example, the `.spec.monitoring` label is `apps-prometheus`.
 
 [source,yaml]
 ----
