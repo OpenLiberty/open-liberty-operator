@@ -977,18 +977,30 @@ func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLi
 		instance.Spec.Probes.Readiness = &corev1.Probe{}
 	}
 	if instance.Spec.Probes.Startup.Exec == nil {
+		var timeoutSeconds int32 = 1
+		if instance.Spec.Probes.Startup.TimeoutSeconds > 0 {
+			timeoutSeconds = instance.Spec.Probes.Startup.TimeoutSeconds
+		}
 		instance.Spec.Probes.Startup.Exec = &corev1.ExecAction{
-			Command: []string{"/bin/sh", "-c", "/opt/ol/helpers/runtime/startupHealthCheck.sh -t 1"},
+			Command: []string{"/bin/sh", "-c", fmt.Sprintf("/opt/ol/helpers/runtime/startupHealthCheck.sh -t %d", timeoutSeconds)},
 		}
 	}
 	if instance.Spec.Probes.Liveness.Exec == nil {
+		var periodSeconds int32 = 10
+		if instance.Spec.Probes.Liveness.PeriodSeconds > 0 {
+			periodSeconds = instance.Spec.Probes.Liveness.PeriodSeconds
+		}
 		instance.Spec.Probes.Liveness.Exec = &corev1.ExecAction{
-			Command: []string{"/bin/sh", "-c", "/opt/ol/helpers/runtime/livenessHealthCheck.sh -p 8"},
+			Command: []string{"/bin/sh", "-c", fmt.Sprintf("/opt/ol/helpers/runtime/livenessHealthCheck.sh -p %d", periodSeconds)},
 		}
 	}
 	if instance.Spec.Probes.Readiness.Exec == nil {
+		var periodSeconds int32 = 10
+		if instance.Spec.Probes.Liveness.PeriodSeconds > 0 {
+			periodSeconds = instance.Spec.Probes.Liveness.PeriodSeconds
+		}
 		instance.Spec.Probes.Readiness.Exec = &corev1.ExecAction{
-			Command: []string{"/bin/sh", "-c", "/opt/ol/helpers/runtime/readinessHealthCheck.sh -p 8"},
+			Command: []string{"/bin/sh", "-c", fmt.Sprintf("/opt/ol/helpers/runtime/readinessHealthCheck.sh -p %d", periodSeconds)},
 		}
 	}
 }
