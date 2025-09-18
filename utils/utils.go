@@ -996,8 +996,8 @@ func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLi
 	}
 	if instance.Spec.Probes.Readiness.Exec == nil {
 		var periodSeconds int32 = 10
-		if instance.Spec.Probes.Liveness.PeriodSeconds > 0 {
-			periodSeconds = instance.Spec.Probes.Liveness.PeriodSeconds
+		if instance.Spec.Probes.Readiness.PeriodSeconds > 0 {
+			periodSeconds = instance.Spec.Probes.Readiness.PeriodSeconds
 		}
 		instance.Spec.Probes.Readiness.Exec = &corev1.ExecAction{
 			Command: []string{"/bin/sh", "-c", fmt.Sprintf("readinessHealthCheck.sh -p %d", periodSeconds)},
