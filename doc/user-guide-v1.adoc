@@ -1001,7 +1001,7 @@ To dynamically scale your application based on resource consumption, use Horizon
 - The `.spec.resources.requests.cpu` field is required for autoscaling based on CPU usage with the `.spec.autoscaling.targetCPUUtilizationPercentage` field.
 - The `.spec.resources.requests.memory` field is required for autoscaling based on memory usage with the `.spec.autoscaling.targetMemoryUtilizationPercentage` field.
 
-For configuration examples, see link:#autoscaling-configurations[Autoscaling Configurations.]
+For configuration examples, see link:#autoscaling-configurations[Configure Autoscaling].
 
 [[set-privileges-and-permissions-for-a-pod-or-container]]
 === Set privileges and permissions for a pod or container (`.spec.securityContext`)
@@ -1113,7 +1113,7 @@ spec:
 ----
 
 [[autoscaling-configurations]]
-=== Autoscaling configurations (`.spec.autoscaling`)
+=== Configure Autoscaling (`.spec.autoscaling`)
 
 You can use Horizontal Pod Autoscaling (HPA) with the `.spec.autoscaling` field to dynamically scale your application based on resource consumption.
 
@@ -1123,8 +1123,8 @@ Resource metrics CPU and Memory average utilization-based autoscaling are provid
 The following example shows the configuration for CPU and Memory-based autoscaling.
 [source,yaml]
 ----
-apiVersion: liberty.websphere.ibm.com/v1
-kind: WebSphereLibertyApplication
+apiVersion: apps.openliberty.io/v1
+kind: OpenLibertyApplication
 metadata:
   name: example-app-1
 spec:
@@ -1176,12 +1176,12 @@ data:
 To use Liberty-provided metrics, monitoring must be enabled to scrape the metrics data from the Liberty applications by using the `.spec.monitoring` field. For more information about configurations to use Liberty provided metrics for autoscaling, see link:++https://github.com/OpenLiberty/open-liberty-operator/blob/main/doc/observability-deployment.adoc#how-to-monitor-your-liberty-runtimes++[How to Monitor Your Liberty Runtimes].
 
 ==== Configuration Examples
-The following example shows the WebSphereLibertyApplication custom resource with CPU, Memory, and custom metrics. The CPU, Memory, and custom metrics can be combined to calculate the ideal number of replicas to provide high availability.
+The following example shows the OpenLibertyApplication custom resource with CPU, Memory, and custom metrics. The CPU, Memory, and custom metrics can be combined to calculate the ideal number of replicas to provide high availability.
 
 [source,yaml]
 ----
-apiVersion: liberty.websphere.ibm.com/v1
-kind: WebSphereLibertyApplication
+apiVersion: apps.openliberty.io/v1
+kind: OpenLibertyApplication
 metadata:
   name: example-app-1
 spec:
