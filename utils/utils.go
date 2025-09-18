@@ -982,7 +982,7 @@ func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLi
 			timeoutSeconds = instance.Spec.Probes.Startup.TimeoutSeconds
 		}
 		instance.Spec.Probes.Startup.Exec = &corev1.ExecAction{
-			Command: []string{"/bin/sh", "-c", fmt.Sprintf("/opt/ol/helpers/runtime/startupHealthCheck.sh -t %d", timeoutSeconds)},
+			Command: []string{"/bin/sh", "-c", fmt.Sprintf("startupHealthCheck.sh -t %d", timeoutSeconds)},
 		}
 	}
 	if instance.Spec.Probes.Liveness.Exec == nil {
@@ -991,7 +991,7 @@ func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLi
 			periodSeconds = instance.Spec.Probes.Liveness.PeriodSeconds
 		}
 		instance.Spec.Probes.Liveness.Exec = &corev1.ExecAction{
-			Command: []string{"/bin/sh", "-c", fmt.Sprintf("/opt/ol/helpers/runtime/livenessHealthCheck.sh -p %d", periodSeconds)},
+			Command: []string{"/bin/sh", "-c", fmt.Sprintf("livenessHealthCheck.sh -p %d", periodSeconds)},
 		}
 	}
 	if instance.Spec.Probes.Readiness.Exec == nil {
@@ -1000,7 +1000,7 @@ func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLi
 			periodSeconds = instance.Spec.Probes.Liveness.PeriodSeconds
 		}
 		instance.Spec.Probes.Readiness.Exec = &corev1.ExecAction{
-			Command: []string{"/bin/sh", "-c", fmt.Sprintf("/opt/ol/helpers/runtime/readinessHealthCheck.sh -p %d", periodSeconds)},
+			Command: []string{"/bin/sh", "-c", fmt.Sprintf("readinessHealthCheck.sh -p %d", periodSeconds)},
 		}
 	}
 }
