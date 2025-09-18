@@ -946,9 +946,9 @@ func isFileBasedProbeConfigured(probe *corev1.Probe) bool {
 		return false
 	}
 	scriptCmd := probe.Exec.Command[2]
-	return strings.HasPrefix(scriptCmd, "/opt/ol/helpers/runtime/startupHealthCheck.sh") ||
-		strings.HasPrefix(scriptCmd, "/opt/ol/helpers/runtime/livenessHealthCheck.sh") ||
-		strings.HasPrefix(scriptCmd, "/opt/ol/helpers/runtime/readinessHealthCheck.sh")
+	return strings.HasPrefix(scriptCmd, "startupHealthCheck.sh") ||
+		strings.HasPrefix(scriptCmd, "livenessHealthCheck.sh") ||
+		strings.HasPrefix(scriptCmd, "readinessHealthCheck.sh")
 }
 
 func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLibertyApplication) {
