@@ -957,6 +957,7 @@ func isFileBasedProbeConfigured(probe *corev1.Probe) bool {
 }
 
 func configureFileBasedProbe(instance *olv1.OpenLibertyApplication, probe *corev1.Probe, scriptName string) {
+	probe = getProbeWithoutHandlers(probe) // remove any preset handlers configured to this probe
 	probesConfig := instance.Spec.Probes
 	cmdList := []string{scriptName}
 	if scriptName == StartupProbeFileBasedScriptName {
@@ -982,6 +983,22 @@ func configureFileBasedProbe(instance *olv1.OpenLibertyApplication, probe *corev
 	}
 }
 
+func getProbeWithoutHandlers(probe *corev1.Probe) *corev1.Probe {
+	probe = getOrInitProbe(probe)
+	probe.ProbeHandler.Exec = nil
+	probe.ProbeHandler.GRPC = nil
+	probe.ProbeHandler.HTTPGet = nil
+	probe.ProbeHandler.TCPSocket = nil
+	return probe
+}
+
+func getOrInitProbe(probe *corev1.Probe) *corev1.Probe {
+	if probe == nil {
+		return &corev1.Probe{}
+	}
+	return probe
+}
+
 func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLibertyApplication) {
 	if !isFileBasedProbesEnabled(instance) {
 		if instance.Spec.Probes == nil {
@@ -1002,15 +1019,6 @@ func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLi
 	instance.Spec.Probes.Startup = instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultStartupProbe(instance)
 	instance.Spec.Probes.Liveness = instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultLivenessProbe(instance)
 	instance.Spec.Probes.Readiness = instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultReadinessProbe(instance)
-	if instance.Spec.Probes.Startup == nil {
-		instance.Spec.Probes.Startup = &corev1.Probe{}
-	}
-	if instance.Spec.Probes.Liveness == nil {
-		instance.Spec.Probes.Liveness = &corev1.Probe{}
-	}
-	if instance.Spec.Probes.Readiness == nil {
-		instance.Spec.Probes.Readiness = &corev1.Probe{}
-	}
 	configureFileBasedProbe(instance, instance.Spec.Probes.Startup, StartupProbeFileBasedScriptName)
 	configureFileBasedProbe(instance, instance.Spec.Probes.Liveness, LivenessProbeFileBasedScriptName)
 	configureFileBasedProbe(instance, instance.Spec.Probes.Readiness, ReadinessProbeFileBasedScriptName)
