@@ -1021,7 +1021,7 @@ func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLi
 		configureFileBasedProbe(instance, instance.Spec.Probes.Liveness, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultLivenessProbe(instance), LivenessProbeFileBasedScriptName)
 	}
 	if instance.Spec.Probes.Readiness.Exec == nil {
-		configureFileBasedProbe(instance, instance.Spec.Probes.Readiness, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultReadinessProbe(instance), StartupProbeFileBasedScriptName)
+		configureFileBasedProbe(instance, instance.Spec.Probes.Readiness, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultReadinessProbe(instance), ReadinessProbeFileBasedScriptName)
 	}
 }
 
