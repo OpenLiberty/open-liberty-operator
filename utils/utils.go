@@ -61,6 +61,11 @@ const LocalPasswordEncryptionKeyRootName = "olo-wlp-password-encryption-key"
 const EncryptionKeyXMLFileName = "encryptionKey.xml"
 const EncryptionKeyMountXMLFileName = "encryptionKeyMount.xml"
 
+// File-based probe constants
+const StartupProbeFileBasedScriptName = "startupHealthCheck.sh"
+const LivenessProbeFileBasedScriptName = "livenessHealthCheck.sh"
+const ReadinessProbeFileBasedScriptName = "readinessHealthCheck.sh"
+
 type LTPAMetadata struct {
 	Kind       string
 	APIVersion string
@@ -946,9 +951,34 @@ func isFileBasedProbeConfigured(probe *corev1.Probe) bool {
 		return false
 	}
 	scriptCmd := probe.Exec.Command[2]
-	return strings.HasPrefix(scriptCmd, "startupHealthCheck.sh") ||
-		strings.HasPrefix(scriptCmd, "livenessHealthCheck.sh") ||
-		strings.HasPrefix(scriptCmd, "readinessHealthCheck.sh")
+	return strings.HasPrefix(scriptCmd, StartupProbeFileBasedScriptName) ||
+		strings.HasPrefix(scriptCmd, LivenessProbeFileBasedScriptName) ||
+		strings.HasPrefix(scriptCmd, ReadinessProbeFileBasedScriptName)
+}
+
+func configureFileBasedProbe(probesConfig *olv1.OpenLibertyApplicationProbesConfig, probe *corev1.Probe, scriptName string) {
+	cmdList := []string{scriptName}
+	if scriptName == StartupProbeFileBasedScriptName {
+		// Set timeout seconds for the startup probe
+		timeoutSeconds := int32(1)
+		if probe.TimeoutSeconds > 0 {
+			timeoutSeconds = probe.TimeoutSeconds
+		}
+		cmdList = append(cmdList, fmt.Sprintf("-t %d", timeoutSeconds))
+	} else {
+		// Set period seconds for all other probes
+		periodSeconds := int32(10)
+		if probe.PeriodSeconds > 0 {
+			periodSeconds = probe.PeriodSeconds
+		}
+		cmdList = append(cmdList, fmt.Sprintf("-p %d", periodSeconds))
+	}
+	if probesConfig.FileDirectory != nil && len(*probesConfig.FileDirectory) > 0 {
+		cmdList = append(cmdList, fmt.Sprintf("-f %s", *probesConfig.FileDirectory))
+	}
+	probe.Exec = &corev1.ExecAction{
+		Command: []string{"/bin/sh", "-c", strings.Join(cmdList, FlagDelimiterSpace)},
+	}
 }
 
 func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLibertyApplication) {
@@ -956,6 +986,7 @@ func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLi
 		if instance.Spec.Probes == nil {
 			return
 		}
+		// Clear the Exec field if file-based probes were previously configured
 		if isFileBasedProbeConfigured(instance.Spec.Probes.Startup) {
 			instance.Spec.Probes.Startup.Exec = nil
 		}
@@ -977,31 +1008,13 @@ func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLi
 		instance.Spec.Probes.Readiness = &corev1.Probe{}
 	}
 	if instance.Spec.Probes.Startup.Exec == nil {
-		var timeoutSeconds int32 = 1
-		if instance.Spec.Probes.Startup.TimeoutSeconds > 0 {
-			timeoutSeconds = instance.Spec.Probes.Startup.TimeoutSeconds
-		}
-		instance.Spec.Probes.Startup.Exec = &corev1.ExecAction{
-			Command: []string{"/bin/sh", "-c", fmt.Sprintf("startupHealthCheck.sh -t %d", timeoutSeconds)},
-		}
+		configureFileBasedProbe(instance.Spec.Probes, instance.Spec.Probes.Startup, StartupProbeFileBasedScriptName)
 	}
 	if instance.Spec.Probes.Liveness.Exec == nil {
-		var periodSeconds int32 = 10
-		if instance.Spec.Probes.Liveness.PeriodSeconds > 0 {
-			periodSeconds = instance.Spec.Probes.Liveness.PeriodSeconds
-		}
-		instance.Spec.Probes.Liveness.Exec = &corev1.ExecAction{
-			Command: []string{"/bin/sh", "-c", fmt.Sprintf("livenessHealthCheck.sh -p %d", periodSeconds)},
-		}
+		configureFileBasedProbe(instance.Spec.Probes, instance.Spec.Probes.Liveness, LivenessProbeFileBasedScriptName)
 	}
 	if instance.Spec.Probes.Readiness.Exec == nil {
-		var periodSeconds int32 = 10
-		if instance.Spec.Probes.Readiness.PeriodSeconds > 0 {
-			periodSeconds = instance.Spec.Probes.Readiness.PeriodSeconds
-		}
-		instance.Spec.Probes.Readiness.Exec = &corev1.ExecAction{
-			Command: []string{"/bin/sh", "-c", fmt.Sprintf("readinessHealthCheck.sh -p %d", periodSeconds)},
-		}
+		configureFileBasedProbe(instance.Spec.Probes, instance.Spec.Probes.Readiness, StartupProbeFileBasedScriptName)
 	}
 }
 
