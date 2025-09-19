@@ -956,15 +956,12 @@ func isFileBasedProbeConfigured(probe *corev1.Probe) bool {
 		strings.HasPrefix(scriptCmd, ReadinessProbeFileBasedScriptName)
 }
 
-func configureFileBasedProbe(instance *olv1.OpenLibertyApplication, probe *corev1.Probe, defaultProbe *corev1.Probe, scriptName string) {
+func configureFileBasedProbe(instance *olv1.OpenLibertyApplication, probe *corev1.Probe, scriptName string) {
 	probesConfig := instance.Spec.Probes
 	cmdList := []string{scriptName}
 	if scriptName == StartupProbeFileBasedScriptName {
 		// Set timeout seconds for the startup probe
 		timeoutSeconds := int32(1)
-		if defaultProbe != nil {
-			timeoutSeconds = defaultProbe.TimeoutSeconds
-		}
 		if probe.TimeoutSeconds > 0 {
 			timeoutSeconds = probe.TimeoutSeconds
 		}
@@ -972,9 +969,6 @@ func configureFileBasedProbe(instance *olv1.OpenLibertyApplication, probe *corev
 	} else {
 		// Set period seconds for all other probes
 		periodSeconds := int32(10)
-		if defaultProbe != nil {
-			periodSeconds = defaultProbe.PeriodSeconds
-		}
 		if probe.PeriodSeconds > 0 {
 			periodSeconds = probe.PeriodSeconds
 		}
@@ -1005,6 +999,9 @@ func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLi
 		}
 		return
 	}
+	instance.Spec.Probes.Startup = instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultStartupProbe(instance)
+	instance.Spec.Probes.Liveness = instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultLivenessProbe(instance)
+	instance.Spec.Probes.Readiness = instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultReadinessProbe(instance)
 	if instance.Spec.Probes.Startup == nil {
 		instance.Spec.Probes.Startup = &corev1.Probe{}
 	}
@@ -1014,15 +1011,9 @@ func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLi
 	if instance.Spec.Probes.Readiness == nil {
 		instance.Spec.Probes.Readiness = &corev1.Probe{}
 	}
-	if instance.Spec.Probes.Startup.Exec == nil {
-		configureFileBasedProbe(instance, instance.Spec.Probes.Startup, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultStartupProbe(instance), StartupProbeFileBasedScriptName)
-	}
-	if instance.Spec.Probes.Liveness.Exec == nil {
-		configureFileBasedProbe(instance, instance.Spec.Probes.Liveness, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultLivenessProbe(instance), LivenessProbeFileBasedScriptName)
-	}
-	if instance.Spec.Probes.Readiness.Exec == nil {
-		configureFileBasedProbe(instance, instance.Spec.Probes.Readiness, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultReadinessProbe(instance), ReadinessProbeFileBasedScriptName)
-	}
+	configureFileBasedProbe(instance, instance.Spec.Probes.Startup, StartupProbeFileBasedScriptName)
+	configureFileBasedProbe(instance, instance.Spec.Probes.Liveness, LivenessProbeFileBasedScriptName)
+	configureFileBasedProbe(instance, instance.Spec.Probes.Readiness, ReadinessProbeFileBasedScriptName)
 }
 
 // Converts a file name into a lowercase word separated string
