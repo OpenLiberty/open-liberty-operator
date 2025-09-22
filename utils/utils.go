@@ -946,16 +946,16 @@ func isFileBasedProbesEnabled(instance *olv1.OpenLibertyApplication) bool {
 	return instance.Spec.Probes != nil && instance.Spec.Probes.EnableFileBased != nil && *instance.Spec.Probes.EnableFileBased
 }
 
-func clearFileBasedProbe(probe *corev1.Probe) {
-	if probe == nil || probe.Exec == nil || len(probe.Exec.Command) != 3 {
-		return
+func clearFileBasedProbe(probe *corev1.Probe) *corev1.Probe {
+	if probe != nil && probe.Exec != nil && len(probe.Exec.Command) == 3 {
+		scriptCmd := probe.Exec.Command[2]
+		if strings.HasPrefix(scriptCmd, StartupProbeFileBasedScriptName) ||
+			strings.HasPrefix(scriptCmd, LivenessProbeFileBasedScriptName) ||
+			strings.HasPrefix(scriptCmd, ReadinessProbeFileBasedScriptName) {
+			probe = &corev1.Probe{}
+		}
 	}
-	scriptCmd := probe.Exec.Command[2]
-	if strings.HasPrefix(scriptCmd, StartupProbeFileBasedScriptName) ||
-		strings.HasPrefix(scriptCmd, LivenessProbeFileBasedScriptName) ||
-		strings.HasPrefix(scriptCmd, ReadinessProbeFileBasedScriptName) {
-		probe = &corev1.Probe{}
-	}
+	return probe
 }
 
 func configureFileBasedProbeExec(instance *olv1.OpenLibertyApplication, probe *corev1.Probe, scriptName string) {
@@ -1035,9 +1035,9 @@ func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLi
 			return
 		}
 		// Reset probe if file-based settings were previously configured
-		clearFileBasedProbe(instance.Spec.Probes.Startup)
-		clearFileBasedProbe(instance.Spec.Probes.Liveness)
-		clearFileBasedProbe(instance.Spec.Probes.Readiness)
+		instance.Spec.Probes.Startup = clearFileBasedProbe(instance.Spec.Probes.Startup)
+		instance.Spec.Probes.Liveness = clearFileBasedProbe(instance.Spec.Probes.Liveness)
+		instance.Spec.Probes.Readiness = clearFileBasedProbe(instance.Spec.Probes.Readiness)
 		return
 	}
 	instance.Spec.Probes.Startup = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultStartupProbe(instance), instance.Spec.Probes.Startup, StartupProbeFileBasedScriptName)
