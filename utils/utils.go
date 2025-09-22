@@ -1002,29 +1002,31 @@ func patchFileBasedProbe(instance *olv1.OpenLibertyApplication, probe *corev1.Pr
 	if probe == nil {
 		probe = &corev1.Probe{}
 	}
-	if instanceProbe.InitialDelaySeconds > 0 {
-		probe.InitialDelaySeconds = instanceProbe.InitialDelaySeconds
-	}
-	if instanceProbe.FailureThreshold > 0 {
-		probe.FailureThreshold = instanceProbe.FailureThreshold
-	}
-	if instanceProbe.PeriodSeconds > 0 {
-		probe.PeriodSeconds = instanceProbe.PeriodSeconds
-	}
-	if instanceProbe.SuccessThreshold > 0 {
-		probe.SuccessThreshold = instanceProbe.SuccessThreshold
-	}
-	if instanceProbe.TerminationGracePeriodSeconds != nil {
-		probe.TerminationGracePeriodSeconds = instanceProbe.TerminationGracePeriodSeconds
-	}
-	if instanceProbe.TimeoutSeconds > 0 {
-		probe.TimeoutSeconds = instanceProbe.TimeoutSeconds
-	}
-	// init exec probe after period seconds and timeout seconds are configured
-	if instanceProbe.Exec == nil {
-		configureFileBasedProbeExec(instance, probe, scriptName)
-	} else {
-		probe.Exec = instanceProbe.Exec
+	if instanceProbe != nil {
+		if instanceProbe.InitialDelaySeconds > 0 {
+			probe.InitialDelaySeconds = instanceProbe.InitialDelaySeconds
+		}
+		if instanceProbe.FailureThreshold > 0 {
+			probe.FailureThreshold = instanceProbe.FailureThreshold
+		}
+		if instanceProbe.PeriodSeconds > 0 {
+			probe.PeriodSeconds = instanceProbe.PeriodSeconds
+		}
+		if instanceProbe.SuccessThreshold > 0 {
+			probe.SuccessThreshold = instanceProbe.SuccessThreshold
+		}
+		if instanceProbe.TerminationGracePeriodSeconds != nil {
+			probe.TerminationGracePeriodSeconds = instanceProbe.TerminationGracePeriodSeconds
+		}
+		if instanceProbe.TimeoutSeconds > 0 {
+			probe.TimeoutSeconds = instanceProbe.TimeoutSeconds
+		}
+		// init exec probe after period seconds and timeout seconds are configured
+		if instanceProbe.Exec == nil {
+			configureFileBasedProbeExec(instance, probe, scriptName)
+		} else {
+			probe.Exec = instanceProbe.Exec
+		}
 	}
 	return probe
 }
