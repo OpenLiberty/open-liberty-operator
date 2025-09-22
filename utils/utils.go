@@ -956,7 +956,7 @@ func isFileBasedProbeConfigured(probe *corev1.Probe) bool {
 		strings.HasPrefix(scriptCmd, ReadinessProbeFileBasedScriptName)
 }
 
-func configureFileBasedProbe(instance *olv1.OpenLibertyApplication, probe *corev1.Probe, scriptName string) {
+func configureFileBasedProbeExec(instance *olv1.OpenLibertyApplication, probe *corev1.Probe, scriptName string) {
 	probe = getProbeWithoutHandlers(probe) // remove any preset handlers configured to this probe
 	probesConfig := instance.Spec.Probes
 	cmdList := []string{scriptName}
@@ -999,6 +999,35 @@ func getOrInitProbe(probe *corev1.Probe) *corev1.Probe {
 	return probe
 }
 
+func patchFileBasedProbe(instance *olv1.OpenLibertyApplication, probe *corev1.Probe, instanceProbe *corev1.Probe, scriptName string) *corev1.Probe {
+	if probe == nil {
+		probe = &corev1.Probe{}
+	}
+	if instanceProbe.Exec == nil {
+		configureFileBasedProbeExec(instance, probe, scriptName)
+	} else {
+		probe.Exec = instanceProbe.Exec
+	}
+	if instanceProbe.InitialDelaySeconds > 0 {
+		probe.InitialDelaySeconds = instanceProbe.InitialDelaySeconds
+	}
+	if instanceProbe.FailureThreshold > 0 {
+		probe.FailureThreshold = instanceProbe.FailureThreshold
+	}
+	if instanceProbe.PeriodSeconds > 0 {
+		probe.PeriodSeconds = instanceProbe.PeriodSeconds
+	}
+	if instanceProbe.SuccessThreshold > 0 {
+		probe.SuccessThreshold = instanceProbe.SuccessThreshold
+	}
+	if instanceProbe.TerminationGracePeriodSeconds != nil {
+		probe.TerminationGracePeriodSeconds = instanceProbe.TerminationGracePeriodSeconds
+	}
+	if instanceProbe.TimeoutSeconds > 0 {
+		probe.TimeoutSeconds = instanceProbe.TimeoutSeconds
+	}
+}
+
 func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLibertyApplication) {
 	if !isFileBasedProbesEnabled(instance) {
 		if instance.Spec.Probes == nil {
@@ -1016,12 +1045,9 @@ func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLi
 		}
 		return
 	}
-	instance.Spec.Probes.Startup = instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultStartupProbe(instance)
-	instance.Spec.Probes.Liveness = instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultLivenessProbe(instance)
-	instance.Spec.Probes.Readiness = instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultReadinessProbe(instance)
-	configureFileBasedProbe(instance, instance.Spec.Probes.Startup, StartupProbeFileBasedScriptName)
-	configureFileBasedProbe(instance, instance.Spec.Probes.Liveness, LivenessProbeFileBasedScriptName)
-	configureFileBasedProbe(instance, instance.Spec.Probes.Readiness, ReadinessProbeFileBasedScriptName)
+	instance.Spec.Probes.Startup = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultStartupProbe(instance), instance.Spec.Probes.Startup, StartupProbeFileBasedScriptName)
+	instance.Spec.Probes.Liveness = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultLivenessProbe(instance), instance.Spec.Probes.Liveness, LivenessProbeFileBasedScriptName)
+	instance.Spec.Probes.Readiness = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultReadinessProbe(instance), instance.Spec.Probes.Readiness, ReadinessProbeFileBasedScriptName)
 }
 
 // Converts a file name into a lowercase word separated string
