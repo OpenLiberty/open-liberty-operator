@@ -1003,11 +1003,6 @@ func patchFileBasedProbe(instance *olv1.OpenLibertyApplication, probe *corev1.Pr
 	if probe == nil {
 		probe = &corev1.Probe{}
 	}
-	if instanceProbe.Exec == nil {
-		configureFileBasedProbeExec(instance, probe, scriptName)
-	} else {
-		probe.Exec = instanceProbe.Exec
-	}
 	if instanceProbe.InitialDelaySeconds > 0 {
 		probe.InitialDelaySeconds = instanceProbe.InitialDelaySeconds
 	}
@@ -1025,6 +1020,12 @@ func patchFileBasedProbe(instance *olv1.OpenLibertyApplication, probe *corev1.Pr
 	}
 	if instanceProbe.TimeoutSeconds > 0 {
 		probe.TimeoutSeconds = instanceProbe.TimeoutSeconds
+	}
+	// init exec probe after period seconds and timeout seconds are configured
+	if instanceProbe.Exec == nil {
+		configureFileBasedProbeExec(instance, probe, scriptName)
+	} else {
+		probe.Exec = instanceProbe.Exec
 	}
 	return probe
 }
