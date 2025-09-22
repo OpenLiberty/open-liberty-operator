@@ -1026,6 +1026,7 @@ func patchFileBasedProbe(instance *olv1.OpenLibertyApplication, probe *corev1.Pr
 	if instanceProbe.TimeoutSeconds > 0 {
 		probe.TimeoutSeconds = instanceProbe.TimeoutSeconds
 	}
+	return probe
 }
 
 func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLibertyApplication) {
