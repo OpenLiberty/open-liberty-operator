@@ -1037,13 +1037,13 @@ func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLi
 		}
 		// Clear the Exec field if file-based probes were previously configured
 		if isFileBasedProbeConfigured(instance.Spec.Probes.Startup) {
-			instance.Spec.Probes.Startup.Exec = nil
+			instance.Spec.Probes.Startup.ProbeHandler = corev1.ProbeHandler{}
 		}
 		if isFileBasedProbeConfigured(instance.Spec.Probes.Liveness) {
-			instance.Spec.Probes.Liveness.Exec = nil
+			instance.Spec.Probes.Liveness.ProbeHandler = corev1.ProbeHandler{}
 		}
 		if isFileBasedProbeConfigured(instance.Spec.Probes.Readiness) {
-			instance.Spec.Probes.Readiness.Exec = nil
+			instance.Spec.Probes.Readiness.ProbeHandler = corev1.ProbeHandler{}
 		}
 		return
 	}
