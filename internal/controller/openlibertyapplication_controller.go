@@ -533,8 +533,9 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
 		err = r.CreateOrUpdate(statefulSet, instance, func() error {
 			oputils.CustomizeStatefulSet(statefulSet, instance)
-			lutils.CustomizeFileBasedProbes(&statefulSet.Spec.Template, instance)
-			oputils.CustomizePodSpec(&statefulSet.Spec.Template, instance)
+			newInstance := instance.DeepCopy()
+			lutils.CustomizeFileBasedProbes(&statefulSet.Spec.Template, newInstance)
+			oputils.CustomizePodSpec(&statefulSet.Spec.Template, newInstance)
 			oputils.CustomizePersistence(statefulSet, instance)
 			if err := lutils.CustomizeLibertyEnv(&statefulSet.Spec.Template, instance, r.GetClient()); err != nil {
 				reqLogger.Error(err, "Failed to reconcile Liberty env, error: "+err.Error())
@@ -632,8 +633,9 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
 		err = r.CreateOrUpdate(deploy, instance, func() error {
 			oputils.CustomizeDeployment(deploy, instance)
-			lutils.CustomizeFileBasedProbes(&deploy.Spec.Template, instance)
-			oputils.CustomizePodSpec(&deploy.Spec.Template, instance)
+			newInstance := instance.DeepCopy()
+			lutils.CustomizeFileBasedProbes(&deploy.Spec.Template, newInstance)
+			oputils.CustomizePodSpec(&deploy.Spec.Template, newInstance)
 			if err := lutils.CustomizeLibertyEnv(&deploy.Spec.Template, instance, r.GetClient()); err != nil {
 				reqLogger.Error(err, "Failed to reconcile Liberty env, error: "+err.Error())
 				return err
