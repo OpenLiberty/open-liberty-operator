@@ -65,6 +65,9 @@ const EncryptionKeyMountXMLFileName = "encryptionKeyMount.xml"
 const StartupProbeFileBasedScriptName = "startupHealthCheck.sh"
 const LivenessProbeFileBasedScriptName = "livenessHealthCheck.sh"
 const ReadinessProbeFileBasedScriptName = "readinessHealthCheck.sh"
+const StartupProbeFileName = "started"
+const LivenessProbeFileName = "live"
+const ReadinessProbeFileName = "ready"
 
 type LTPAMetadata struct {
 	Kind       string
@@ -958,7 +961,7 @@ func clearFileBasedProbe(probe *corev1.Probe) *corev1.Probe {
 	return probe
 }
 
-func configureFileBasedProbeExec(instance *olv1.OpenLibertyApplication, probe *corev1.Probe, scriptName string) {
+func configureFileBasedProbeExec(instance *olv1.OpenLibertyApplication, probe *corev1.Probe, scriptName string, probeFile string) {
 	probe = getProbeWithoutHandlers(probe) // remove any preset handlers configured to this probe
 	probesConfig := instance.Spec.Probes
 	cmdList := []string{scriptName}
@@ -978,7 +981,10 @@ func configureFileBasedProbeExec(instance *olv1.OpenLibertyApplication, probe *c
 		cmdList = append(cmdList, fmt.Sprintf("-p %d", periodSeconds))
 	}
 	if probesConfig.FileDirectory != nil && len(*probesConfig.FileDirectory) > 0 {
-		cmdList = append(cmdList, fmt.Sprintf("-f %s", *probesConfig.FileDirectory))
+		fileDirectory := strings.TrimRight(*probesConfig.FileDirectory, "/")
+		if len(fileDirectory) > 0 {
+			cmdList = append(cmdList, fmt.Sprintf("-f %s/%s", fileDirectory, probeFile))
+		}
 	}
 	probe.Exec = &corev1.ExecAction{
 		Command: []string{"/bin/sh", "-c", strings.Join(cmdList, FlagDelimiterSpace)},
@@ -998,7 +1004,7 @@ func getOrInitProbe(probe *corev1.Probe) *corev1.Probe {
 	return probe
 }
 
-func patchFileBasedProbe(instance *olv1.OpenLibertyApplication, defaultProbe *corev1.Probe, instanceProbe *corev1.Probe, scriptName string) *corev1.Probe {
+func patchFileBasedProbe(instance *olv1.OpenLibertyApplication, defaultProbe *corev1.Probe, instanceProbe *corev1.Probe, scriptName string, probeFile string) *corev1.Probe {
 	if defaultProbe == nil {
 		defaultProbe = &corev1.Probe{}
 	}
@@ -1007,7 +1013,7 @@ func patchFileBasedProbe(instance *olv1.OpenLibertyApplication, defaultProbe *co
 	}
 	instanceProbe = rcoutils.CustomizeProbeDefaults(instanceProbe, defaultProbe)
 	if instanceProbe.Exec == nil {
-		configureFileBasedProbeExec(instance, instanceProbe, scriptName)
+		configureFileBasedProbeExec(instance, instanceProbe, scriptName, probeFile)
 	} else {
 		instanceProbe.Exec = instanceProbe.Exec
 	}
@@ -1025,9 +1031,9 @@ func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLi
 		instance.Spec.Probes.Readiness = clearFileBasedProbe(instance.Spec.Probes.Readiness)
 		return
 	}
-	instance.Spec.Probes.Startup = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultStartupProbe(instance), instance.Spec.Probes.Startup, StartupProbeFileBasedScriptName)
-	instance.Spec.Probes.Liveness = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultLivenessProbe(instance), instance.Spec.Probes.Liveness, LivenessProbeFileBasedScriptName)
-	instance.Spec.Probes.Readiness = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultReadinessProbe(instance), instance.Spec.Probes.Readiness, ReadinessProbeFileBasedScriptName)
+	instance.Spec.Probes.Startup = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultStartupProbe(instance), instance.Spec.Probes.Startup, StartupProbeFileBasedScriptName, StartupProbeFileName)
+	instance.Spec.Probes.Liveness = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultLivenessProbe(instance), instance.Spec.Probes.Liveness, LivenessProbeFileBasedScriptName, LivenessProbeFileName)
+	instance.Spec.Probes.Readiness = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultReadinessProbe(instance), instance.Spec.Probes.Readiness, ReadinessProbeFileBasedScriptName, ReadinessProbeFileName)
 }
 
 // Converts a file name into a lowercase word separated string
