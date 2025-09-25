@@ -641,6 +641,14 @@ spec:
         path: semeruCloudCompiler.resources
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
+      - description: The health settings for the Semeru Cloud Compiler.
+        displayName: Health
+        path: semeruCloudCompiler.health
+      - description: The health port for the Semeru Cloud Compiler. Defaults to 38600.
+        displayName: Port
+        path: semeruCloudCompiler.health.port
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
       - description: Determines whether the access token that is provided in the request
           is used for authentication.
         displayName: Access Token Required
