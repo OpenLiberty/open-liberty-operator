@@ -228,6 +228,7 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `serviceAccount`| [[crd-spec-serviceAccount-name]] The service account to use for application deployment. If a service account name is not specified, a service account is automatically created. For examples, see link:#create-a-service-account[Configure a service account].
 | `serviceAccount.mountToken` | A Boolean to toggle whether the service account's token should be mounted in the application pods. If unset or `true`, the token will be mounted.
 | `serviceAccount.name` | Name of the service account to use for deploying the application.
+| `serviceAccount.skipPullSecretValidation` | Skips verifying that the service account has a valid pull secret. Defaults to `false`.
 | `sidecarContainers` | The list of `sidecar` containers. These are additional containers to be added to the pods. Note: Sidecar containers should not be named `app`.
 | `sso`   | [[crd-sso]] Specifies the configuration for single sign-on providers to authenticate with. Specify sensitive fields, such as _clientId_ and _clientSecret_, for the selected providers by using the `Secret`. For examples, see link:++#configuring-single-sign-on-sso-specsso-++[Configuring Single Sign-On (SSO)].
 | `sso.github.hostname`   | Specifies the host name of your enterprise GitHub, such as `github._mycompany_.com`. The default is `github.com`, which is the public GitHub.
@@ -428,6 +429,7 @@ data:
   showReconcileInterval: 'false'
   reconcileIntervalMinimum: '5'
   certManagerCACertDuration: 8766h
+  performanceDataMaxWorkers: '10'
 ----
 
 And here is the set of descriptions corresponding to each configurable field.
@@ -720,7 +722,7 @@ sso:
 
 The operator provides single storage for serviceability.
 
-The operator makes it easy to use a single storage for link:#day-2-operations[Day-2 Operations] that are related to serviceability, such as gathering link:#day-2-trace[server traces] or link:#day-2-dump[server dumps]. The single storage is shared by all pods of a `OpenLibertyApplication` instance. You don't need to mount a separate storage for each pod.
+The operator makes it easy to use a single storage for link:#day-2-operations[Day-2 Operations] that are related to serviceability, such as gathering link:#day-2-trace[server traces], link:#day-2-dump[server dumps], or link:#day-2-perf-data[server performance data]. The single storage is shared by all pods of a `OpenLibertyApplication` instance. You don't need to mount a separate storage for each pod.
 
 Your cluster must be configured to automatically bind the link:++https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims++[PersistentVolumeClaim] (PVC) to a PersistentVolume or you must bind it manually.
 
@@ -859,6 +861,8 @@ The Liberty server must allow configuration drop-ins. The following configuratio
 The operator can create a `ServiceAccount` resource when deploying an `OpenLibertyApplication` custom resource (CR). If `.spec.serviceAccount.name` is **not** specified in a CR, the operator creates a service account with the same name as the CR (e.g. `my-app`). In addition, this service account is dynamically updated when pull secret changes are detected in the CR field `.spec.pullSecret`.
 
 Alternatively, the operator can use a custom ServiceAccount that you provide. If `.spec.serviceAccount.name` is specified in a CR, the operator uses the service account as is (i.e. read-only) when provisioning new Pods. It is your responsibility to add any required image pull secrets to the service account when accessing images behind a private registry.
+
+By default, the operator verifies that the service account that is used has a reference to a valid pull secret. If a custom service account is being used, this check can be disabled by setting `.spec.serviceAccount.skipPullSecretValidation` to `true` in the CR.
 
 NOTE: `.spec.serviceAccountName` is now deprecated. The operator still looks up the value of `.spec.serviceAccountName`, but you must switch to using `.spec.serviceAccount.name`.
 
@@ -1888,6 +1892,48 @@ You can check the status of a dump operation using the `status` field inside the
 
 Note:
 _System dump might not work on certain Kubernetes versions, such as OpenShift 4.x_
+
+=== Request server performance data [[day-2-perf-data]]
+
+You can request a snapshot of server diagnostic data from an instance of a Liberty server running inside a `Pod`, using Open Liberty Operator and `OpenLibertyPerformanceData` custom resource (CR). To use this feature the `OpenLibertyApplication` needs to have link:++#storage-for-serviceability++[storage for serviceability] already configured and the `OpenLibertyPerformanceData` CR must be created in the same namespace as the `Pod` to operate on. Additionally, the Liberty container must have the following libraries added at image build time:
+
+```
+USER 0
+RUN command -v yum && pkgcmd=yum || pkgcmd=microdnf && ($pkgcmd update -y && $pkgcmd install -y procps-ng net-tools ncurses hostname)
+USER 1001
+```
+
+The configurable fields are:
+
+.Configurable Performance Data Fields
+|===
+| Field | Description
+| `podName` | The name of the Pod, which must be in the same namespace as the `OpenLibertyPerformanceData` CR.
+| `interval` | Optional. The time, in seconds, between executions. The minimum value is 1 second. Defaults to 30 seconds.
+| `timespan` | Optional. The total time, in seconds, for gathering performance data. The minimum value is 10 seconds. The maximum value is 600 seconds (10 minutes). Defaults to 240 seconds (4 minutes).
+|===
+
+Example:
+
+[source,yaml]
+----
+apiVersion: apps.openliberty.io/v1
+kind: OpenLibertyPerformanceData
+metadata:
+  name: example-performance-data
+spec:
+  interval: 30
+  podName: Specify_Pod_Name_Here
+  timespan: 240
+----
+
+The performance data file name is added to the `OpenLibertyPerformanceData` CR status and file is stored in the `serviceability` folder with a format such as `/serviceability/_namespace_/_pod_name_/performanceData/_linperf_RESULTS_performance_data_name_._timestamp_.tar.gz`
+
+Once the performance data gather has started, the CR can not be re-used to take more data. A new CR needs to be created for each server performance data gather.
+
+You can check the status of a performance data operation using the `status` field inside the CR YAML. You can also run the command `oc get olperfdata -o wide` to see the status of all performance data operations in the current namespace.
+
+The operator maintains a global maximum number of concurrent workers to collect performance data at any given point in time. The default value is `'10'` workers which can be modified in the link:#operator-configmap[Operator ConfigMap] by updating the `performanceDataMaxWorkers` field.
 
 === Request server traces [[day-2-trace]]
 
