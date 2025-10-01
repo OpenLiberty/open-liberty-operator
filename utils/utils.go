@@ -38,7 +38,6 @@ var log = logf.Log.WithName("openliberty_utils")
 
 // Constant Values
 const serviceabilityMountPath = "/serviceability"
-const serviceabilityPodMountPath = "/liberty/logs"
 const ssoEnvVarPrefix = "SEC_SSO_"
 const OperandVersion = "1.5.0"
 
@@ -243,15 +242,14 @@ func GetLinperfCmd(encodedAttrs, podName, podNamespace string) string {
 	linperfCmdArgs = append(linperfCmdArgs, "--ignore-root")
 	linperfCmd := strings.Join(linperfCmdArgs, FlagDelimiterSpace)
 
-	requiredPackages := []string{"procps-ng", "net-tools", "ncurses", "hostname"}
+	requiredCLIs := []string{"netstat", "ps", "dmesg", "tput", "ifconfig", "vmstat", "top", "uptime", "hostname"}
 	cmdArgs := []string{}
-	for _, pkg := range requiredPackages {
-		cmdArgs = append(cmdArgs, fmt.Sprintf("$pkgcmd list installed %s", pkg))
+	for _, cli := range requiredCLIs {
+		cmdArgs = append(cmdArgs, fmt.Sprintf("command -v %s >/dev/null 2>&1", cli))
 	}
-	checkPackagesCmd := strings.Join(cmdArgs, " && ") // add spaces for readability
+	checkCLICmd := strings.Join(cmdArgs, " && ") // add spaces for readability
 
-	// linperfCmdWithPids := fmt.Sprintf("mkdir -p %s && PIDS=$(ls -l /proc/[0-9]*/exe | grep \"/java$\" | xargs -L 1 | cut -d ' ' -f9 | cut -d '/' -f 3 ) && PIDS_OUT=$(echo $PIDS | tr '\n' ' ') && ls -l /proc/[0-9]*/exe > /serviceability/%s/%s/test.out && %s \"1\"", outputDir, podNamespace, podName, linperfCmd)
-	linperfCmdWithPids := fmt.Sprintf("if ! (command -v yum && pkgcmd=yum || pkgcmd=microdnf && %s); then exit 130; elif [ $(df | grep %s -c) -eq 0 ]; then exit 129; else mkdir -p %s && %s \"1\"; fi", checkPackagesCmd, serviceabilityRootDir, outputDir, linperfCmd)
+	linperfCmdWithPids := fmt.Sprintf("if ! (%s); then exit 130; elif [ $(df | grep %s -c) -eq 0 ]; then exit 129; else mkdir -p %s && %s \"1\"; fi", checkCLICmd, serviceabilityRootDir, outputDir, linperfCmd)
 	// fmt.Println("Linperf cmd: " + linperfCmdWithPids) // un-commment this line for debugging
 	return linperfCmdWithPids
 }
@@ -308,10 +306,15 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplic
 	}
 
 	if la.GetServiceability() != nil {
+		logDirMountPath := fmt.Sprintf("%s/%s/%s/logs", serviceabilityMountPath, la.GetNamespace(), "$(SERVICEABILITY_HOSTNAME)")
+		logDirEnvName := "LOG_DIR"
+		logDirEnvValue := fmt.Sprintf("$(%s)", logDirEnvName)
 		targetEnv = append(targetEnv,
-			corev1.EnvVar{Name: "IBM_HEAPDUMPDIR", Value: serviceabilityPodMountPath},
-			corev1.EnvVar{Name: "IBM_COREDIR", Value: serviceabilityPodMountPath},
-			corev1.EnvVar{Name: "IBM_JAVACOREDIR", Value: serviceabilityPodMountPath},
+			corev1.EnvVar{Name: "SERVICEABILITY_HOSTNAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"}}},
+			corev1.EnvVar{Name: logDirEnvName, Value: logDirMountPath},
+			corev1.EnvVar{Name: "IBM_HEAPDUMPDIR", Value: logDirEnvValue},
+			corev1.EnvVar{Name: "IBM_COREDIR", Value: logDirEnvValue},
+			corev1.EnvVar{Name: "IBM_JAVACOREDIR", Value: logDirEnvValue},
 		)
 	}
 
