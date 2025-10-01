@@ -1005,17 +1005,12 @@ func getOrInitProbe(probe *corev1.Probe) *corev1.Probe {
 }
 
 func patchFileBasedProbe(instance *olv1.OpenLibertyApplication, defaultProbe *corev1.Probe, instanceProbe *corev1.Probe, scriptName string, probeFile string) *corev1.Probe {
-	if defaultProbe == nil {
-		defaultProbe = &corev1.Probe{}
-	}
-	if instanceProbe == nil {
-		instanceProbe = &corev1.Probe{}
-	}
+	defaultProbe = getOrInitProbe(defaultProbe)
+	instanceProbe = getOrInitProbe(instanceProbe)
+	isExecConfigured := instanceProbe.Exec != nil
 	instanceProbe = rcoutils.CustomizeProbeDefaults(instanceProbe, defaultProbe)
-	if instanceProbe.Exec == nil {
+	if !isExecConfigured {
 		configureFileBasedProbeExec(instance, instanceProbe, scriptName, probeFile)
-	} else {
-		instanceProbe.Exec = instanceProbe.Exec
 	}
 	return instanceProbe
 }
