@@ -211,8 +211,14 @@ type OpenLibertyApplicationProbesConfig struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=100,type=spec,displayName="Enable File Based",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
 	EnableFileBased *bool `json:"enableFileBased,omitempty"`
 
-	// The Liberty container directory used to track file-based health checks for the 'live', 'ready', and 'started' files. Only supported on Liberty version 25.0.0.6-beta or higher. Defaults to /output/health.
+	// The Liberty container directory used to track file-based health checks for the 'live', 'ready', and 'started' files. Only used when .spec.probes.enableFiledBased is set to true. Defaults to /output/health.
 	FileDirectory *string `json:"fileDirectory,omitempty"`
+
+	// The interval at which the Liberty runtime queries to update the file-based health check files. The value is a number followed by an optional time unit of ms for milliseconds or s for seconds. Only used when .spec.probes.enableFiledBased is set to true. Defaults to 5s.
+	CheckInterval *string `json:"checkInterval,omitempty"`
+
+	// The interval at which the Liberty runtime will query until an UP status is resolved and the health check file is created. The value is a number followed by an optional time unit of ms for milliseconds or s for seconds. If no time unit is specified for a value, the value is in milliseconds by default. Only used when .spec.probes.enableFiledBased is set to true. Defaults to 100ms.
+	StartupCheckInterval *string `json:"startupCheckInterval,omitempty"`
 }
 
 // Define health checks on application container to determine whether it is alive or ready to receive traffic

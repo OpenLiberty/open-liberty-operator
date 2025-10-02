@@ -319,8 +319,24 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplic
 	}
 
 	if isFileBasedProbesEnabled(la) {
+		checkInterval := "5s"
+		startupCheckInterval := "100ms"
+		if la.Spec.Probes != nil {
+			if la.Spec.Probes.CheckInterval != nil && len(*la.Spec.Probes.CheckInterval) > 0 {
+				// Lightly guard against user setting checkInterval to 0, 0ms, or 0s because isFileBasedProbesEnabled() returned true
+				configCheckInterval := *la.Spec.Probes.CheckInterval
+				if configCheckInterval != "0" && configCheckInterval != "0ms" && configCheckInterval != "0s" {
+					checkInterval = configCheckInterval
+				}
+			}
+			if la.Spec.Probes.StartupCheckInterval != nil && len(*la.Spec.Probes.StartupCheckInterval) > 0 {
+				startupCheckInterval = *la.Spec.Probes.StartupCheckInterval
+			}
+		}
+
 		targetEnv = append(targetEnv,
-			corev1.EnvVar{Name: "MP_HEALTH_CHECK_INTERVAL", Value: "10s"},
+			corev1.EnvVar{Name: "MP_HEALTH_CHECK_INTERVAL", Value: checkInterval},
+			corev1.EnvVar{Name: "MP_HEALTH_STARTUP_CHECK_INTERVAL", Value: startupCheckInterval},
 		)
 	}
 
