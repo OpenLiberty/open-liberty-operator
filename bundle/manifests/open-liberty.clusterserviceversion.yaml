@@ -104,7 +104,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2025-09-19T14:07:11Z"
+    createdAt: "2025-10-02T17:09:44Z"
     description: Deploy and manage containerized Liberty applications
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "true"
@@ -648,6 +648,31 @@ spec:
         path: probes.enableFileBased
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: The Liberty container directory used to track file-based health
+          checks for the 'live', 'ready', and 'started' files. Only used when .spec.probes.enableFiledBased
+          is set to true. Defaults to /output/health.
+        displayName: File Directory
+        path: probes.fileDirectory
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The interval at which the Liberty runtime queries to update the
+          file-based health check files. The value is a number followed by an optional
+          time unit of ms for milliseconds or s for seconds. Only used when .spec.probes.enableFiledBased
+          is set to true. Defaults to 5s.
+        displayName: Check Interval
+        path: probes.checkInterval
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The interval at which the Liberty runtime will query until an
+          UP status is resolved and the health check file is created. The value is
+          a number followed by an optional time unit of ms for milliseconds or s for
+          seconds. If no time unit is specified for a value, the value is in milliseconds
+          by default. Only used when .spec.probes.enableFiledBased is set to true.
+          Defaults to 100ms.
+        displayName: Startup Check Interval
+        path: probes.startupCheckInterval
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       - description: Determines whether the access token that is provided in the request
           is used for authentication.
         displayName: Access Token Required
