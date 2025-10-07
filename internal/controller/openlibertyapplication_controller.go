@@ -244,9 +244,18 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				if image.DockerImageReference != "" {
 					instance.Status.ImageReference = image.DockerImageReference
 				}
-			} else if err != nil && !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) && !strings.Contains(isTagName, "/") {
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+				libertyVersion := lutils.ParseLibertyVersionFromImageStreamTagLabels(isTag.Labels)
+				if instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != libertyVersion {
+					instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyVersion)
+				}
+			} else {
+				lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.StatusReferenceLibertyVersion)
+				if err != nil && !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) && !strings.Contains(isTagName, "/") {
+					return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+				}
 			}
+		} else {
+			lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.StatusReferenceLibertyVersion)
 		}
 	}
 

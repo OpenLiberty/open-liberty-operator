@@ -36,6 +36,9 @@ import (
 
 var log = logf.Log.WithName("openliberty_utils")
 
+// Status References
+const StatusReferenceLibertyVersion = "libertyVersion"
+
 // Constant Values
 const serviceabilityMountPath = "/serviceability"
 const ssoEnvVarPrefix = "SEC_SSO_"
@@ -1151,6 +1154,33 @@ func IsValidOperandVersion(version string) bool {
 	return true
 }
 
+// Returns true if version is a valid Liberty version string and false otherwise
+func IsValidLibertyVersion(version string) bool {
+	args := strings.Split(version, ".")
+	if len(args) != 4 {
+		return false
+	}
+
+	// year should be a number
+	_, err := strconv.Atoi(args[0])
+	if err != nil {
+		return false
+	}
+
+	// 2nd and 3rd args should be "0"
+	if args[1] != "0" || args[2] != "0" {
+		return false
+	}
+
+	// month should be a number
+	_, err = strconv.Atoi(args[3])
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
 func CompareOperandVersion(a string, b string) int {
 	arrA := strings.Split(a[1:], "_")
 	arrB := strings.Split(b[1:], "_")
@@ -1162,4 +1192,31 @@ func CompareOperandVersion(a string, b string) int {
 		}
 	}
 	return 0
+}
+
+func CompareLibertyVersion(a string, b string) int {
+	arrA := strings.Split(a, ".")
+	arrB := strings.Split(b, ".")
+	for i := range arrA {
+		if i == 1 || i == 2 {
+			continue
+		}
+		intA, _ := strconv.ParseInt(GetFirstNumberFromString(arrA[i]), 10, 64)
+		intB, _ := strconv.ParseInt(GetFirstNumberFromString(arrB[i]), 10, 64)
+		if intA != intB {
+			return int(intA - intB)
+		}
+	}
+	return 0
+}
+
+func ParseLibertyVersionFromImageStreamTagLabels(tagLabels map[string]string) string {
+	if version, found := tagLabels["liberty.version"]; found && IsValidLibertyVersion(version) {
+		return version
+	}
+	if version, found := tagLabels["io.openliberty.version"]; found && IsValidLibertyVersion(version) {
+		return version
+	}
+	// No version found
+	return ""
 }
