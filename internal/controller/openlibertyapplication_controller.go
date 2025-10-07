@@ -247,7 +247,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				if image.DockerImageReference != "" {
 					instance.Status.ImageReference = image.DockerImageReference
 				}
-				libertyVersion := lutils.ParseLibertyVersionFromDockerImageMetadata(isTag.Image.DockerImageMetadata.Object)
+				libertyVersion := lutils.ParseLibertyVersionFromDockerImageMetadata(isTag.Image.DockerImageMetadata)
 				reqLogger.Info("Setting liberty version: " + libertyVersion)
 				if instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != libertyVersion {
 					reqLogger.Info("Set ref")

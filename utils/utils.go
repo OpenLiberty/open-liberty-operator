@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
@@ -1212,12 +1213,12 @@ func CompareLibertyVersion(a string, b string) int {
 	return 0
 }
 
-func ParseLibertyVersionFromDockerImageMetadata(dockerImageMetadata runtime.Object) string {
-	metadataObject, err := runtime.DefaultUnstructuredConverter.ToUnstructured(dockerImageMetadata)
-	if err != nil {
+func ParseLibertyVersionFromDockerImageMetadata(dockerImageMetadata runtime.RawExtension) string {
+	unstructuredImageMeta := &unstructured.Unstructured{}
+	if err := json.Unmarshal(dockerImageMetadata.Raw, unstructuredImageMeta); err != nil {
 		return ""
 	}
-	if imageLabels, found, err := unstructured.NestedFieldNoCopy(metadataObject, "Config", "Labels"); err == nil && found {
+	if imageLabels, found, err := unstructured.NestedFieldNoCopy(unstructuredImageMeta.Object, "Config", "Labels"); err == nil && found {
 		imageLabelsMap, isMap := imageLabels.(map[string]interface{})
 		if !isMap {
 			return ""
