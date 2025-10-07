@@ -227,7 +227,9 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	instance.Status.ImageReference = instance.Spec.ApplicationImage
 	if r.IsOpenShift() {
 		image, err := imageutil.ParseDockerImageReference(instance.Spec.ApplicationImage)
+		reqLogger.Info("Setting app image ref...")
 		if err == nil {
+			reqLogger.Info("Creating image stream tag...")
 			isTag := &imagev1.ImageStreamTag{}
 			isTagName := imageutil.JoinImageStreamTag(image.Name, image.Tag)
 			isTagNamespace := image.Namespace
@@ -240,21 +242,28 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			// when the operator tries to call GET for ImageStreamTags on a namespace that doesn't exists (e.g.
 			// cannot get imagestreamtags.image.openshift.io in the namespace "navidsh": no RBAC policy matched)
 			if err == nil {
+				reqLogger.Info("Found namespace for image stream...")
 				image := isTag.Image
 				if image.DockerImageReference != "" {
 					instance.Status.ImageReference = image.DockerImageReference
 				}
 				libertyVersion := lutils.ParseLibertyVersionFromImageStreamTagLabels(isTag.Labels)
+				reqLogger.Info("Setting liberty version: " + libertyVersion)
 				if instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != libertyVersion {
+					reqLogger.Info("Set ref")
 					instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyVersion)
+				} else {
+					reqLogger.Info("Couldn't set ref")
 				}
 			} else {
+				reqLogger.Info("Removing liberty version ref...")
 				lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.StatusReferenceLibertyVersion)
 				if err != nil && !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) && !strings.Contains(isTagName, "/") {
 					return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 				}
 			}
 		} else {
+			reqLogger.Info("Removing liberty version ref 2...")
 			lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.StatusReferenceLibertyVersion)
 		}
 	}
