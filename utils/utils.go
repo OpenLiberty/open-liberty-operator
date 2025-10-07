@@ -21,6 +21,8 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -1278,4 +1280,41 @@ func CompareOperandVersion(a string, b string) int {
 		}
 	}
 	return 0
+}
+
+func CompareLibertyVersion(a string, b string) int {
+	arrA := strings.Split(a, ".")
+	arrB := strings.Split(b, ".")
+	for i := range arrA {
+		if i == 1 || i == 2 {
+			continue
+		}
+		intA, _ := strconv.ParseInt(GetFirstNumberFromString(arrA[i]), 10, 64)
+		intB, _ := strconv.ParseInt(GetFirstNumberFromString(arrB[i]), 10, 64)
+		if intA != intB {
+			return int(intA - intB)
+		}
+	}
+	return 0
+}
+
+func ParseLibertyVersionFromDockerImageMetadata(dockerImageMetadata runtime.Object) string {
+	metadataObject, err := runtime.DefaultUnstructuredConverter.ToUnstructured(dockerImageMetadata)
+	if err != nil {
+		return ""
+	}
+	if imageLabels, found, err := unstructured.NestedFieldNoCopy(metadataObject, "Config", "Labels"); err == nil && found {
+		imageLabelsMap, isMap := imageLabels.(map[string]interface{})
+		if !isMap {
+			return ""
+		}
+		if version, versionFound := imageLabelsMap["liberty.version"]; versionFound && IsValidLibertyVersion(version.(string)) {
+			return version.(string)
+		}
+		if version, versionFound := imageLabelsMap["io.openliberty.version"]; versionFound && IsValidLibertyVersion(version.(string)) {
+			return version.(string)
+		}
+	}
+	// No version found
+	return ""
 }
