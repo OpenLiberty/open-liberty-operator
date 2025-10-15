@@ -104,7 +104,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2025-09-08T03:08:31Z"
+    createdAt: "2025-10-15T20:57:44Z"
     description: Deploy and manage containerized Liberty applications
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "true"
@@ -174,6 +174,12 @@ spec:
       - description: The DNS Policy for the application pod. Defaults to ClusterFirst.
         displayName: DNS Policy
         path: dns.policy
+      - description: Insecure is true if the server may bypass certificate verification
+          or connect directly over HTTP during image import.
+        displayName: Insecure
+        path: importPolicy.insecure
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Whether the Service Account token should be mounted into the
           application pods. Defaults to true.
         displayName: Mount Service Account Token
@@ -524,6 +530,11 @@ spec:
         path: monitoring.endpoints
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:endpointList
+      - description: Policy for importing container image manifests.
+        displayName: Import Policy
+        path: importPolicy
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:importPolicy
       - description: Controls which nodes the pod are scheduled to run on, based on
           labels on the node.
         displayName: Node Affinity
