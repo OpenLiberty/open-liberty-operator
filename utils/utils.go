@@ -1213,7 +1213,10 @@ func CompareLibertyVersion(a string, b string) int {
 	return 0
 }
 
-func ParseLibertyVersionFromDockerImageMetadata(dockerImageMetadata runtime.RawExtension) string {
+func ParseLibertyVersionFromDockerImageMetadata(dockerImageMetadata *runtime.RawExtension) string {
+	if dockerImageMetadata == nil {
+		return ""
+	}
 	unstructuredImageMeta := &unstructured.Unstructured{}
 	if err := json.Unmarshal(dockerImageMetadata.Raw, unstructuredImageMeta); err != nil {
 		return ""
