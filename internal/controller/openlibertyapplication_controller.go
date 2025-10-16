@@ -25,6 +25,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -225,11 +226,13 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 	imageReferenceOld := instance.Status.ImageReference
 	instance.Status.ImageReference = instance.Spec.ApplicationImage
+	if imageReferenceOld != instance.Status.ImageReference {
+		// reset the liberty version field if the image has changed
+		lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.StatusReferenceLibertyVersion)
+	}
 	if r.IsOpenShift() {
 		image, err := imageutil.ParseDockerImageReference(instance.Spec.ApplicationImage)
-		reqLogger.Info("Setting app image ref...")
 		if err == nil {
-			reqLogger.Info("Creating image stream tag...")
 			isTag := &imagev1.ImageStreamTag{}
 			isTagName := imageutil.JoinImageStreamTag(image.Name, image.Tag)
 			isTagNamespace := image.Namespace
@@ -247,19 +250,44 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				if image.DockerImageReference != "" {
 					instance.Status.ImageReference = image.DockerImageReference
 				}
-				libertyVersion := lutils.ParseLibertyVersionFromDockerImageMetadata(isTag.Image.DockerImageMetadata)
-				reqLogger.Info("Setting liberty version: " + libertyVersion)
+				libertyVersion := lutils.ParseLibertyVersionFromDockerImageMetadata(&isTag.Image.DockerImageMetadata)
 				if instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != libertyVersion {
-					reqLogger.Info("Set ref")
 					instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyVersion)
-				} else {
-					reqLogger.Info("Couldn't set ref")
 				}
-			} else {
-				reqLogger.Info("Removing liberty version ref...")
-				lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.StatusReferenceLibertyVersion)
-				if err != nil && !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) && !strings.Contains(isTagName, "/") {
-					return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			} else if currentVersion, found := instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion]; !found || currentVersion != lutils.NilLibertyVersion {
+				// Pull metadata from the image directly
+				name, id, split := imageutil.SplitImageStreamImage(instance.Spec.ApplicationImage)
+				if !split {
+					image.Tag = imageutil.DefaultImageTag
+				} else if split && strings.HasSuffix(name, image.Name) {
+					image.ID = id
+				} else {
+					reqLogger.Info("The .spec.applicationImage does not have a tag or id to pull liberty version information")
+				}
+				// To prevent leaking credentials, don't attempt to pull an image that is not namespace bounded
+				if image.Namespace != "" {
+					dockerImageMetadata, err := r.GetDockerImageMetadata(reqLogger, instance, image)
+					if err == nil {
+						// Get liberty version from the labels
+						libertyVersion := lutils.ParseLibertyVersionFromDockerImageMetadata(dockerImageMetadata)
+						if instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != libertyVersion {
+							instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyVersion)
+						}
+					} else if strings.Contains(fmt.Sprint(err), "unauthorized") {
+						return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+					} else {
+						reqLogger.Error(err, "Couldn't get docker image metadata manually")
+						instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, lutils.NilLibertyVersion)
+						if err != nil && !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) && !strings.Contains(isTagName, "/") {
+							return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+						}
+					}
+				} else {
+					reqLogger.Error(err, "Blocked from getting docker image metadata because the image is missing a namespace record")
+					instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, lutils.NilLibertyVersion)
+					if err != nil && !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) && !strings.Contains(isTagName, "/") {
+						return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+					}
 				}
 			}
 		} else {
@@ -1025,4 +1053,26 @@ func (r *ReconcileOpenLiberty) deletePVC(reqLogger logr.Logger, pvcName string, 
 			}
 		}
 	}
+}
+
+func (r *ReconcileOpenLiberty) GetDockerImageMetadata(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, imageRef imagev1.DockerImageReference) (*runtime.RawExtension, error) {
+	olappSecrets := []corev1.Secret{}
+	pullSecret := &corev1.Secret{}
+	if olapp.GetPullSecret() != nil {
+		if err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: *olapp.GetPullSecret(), Namespace: olapp.GetNamespace()}, pullSecret); err != nil {
+			if kerrors.IsNotFound(err) {
+				reqLogger.Info("The instance pull secret specified does not exist")
+				pullSecret = nil
+			} else {
+				reqLogger.Error(err, "Failed to get the instance pull secret")
+				return nil, fmt.Errorf("Failed to get the instance pull secret: %v", err)
+			}
+		}
+		olappSecrets = append(olappSecrets, *pullSecret)
+	}
+	insecure := false
+	if olapp.GetImportPolicy() != nil && olapp.GetImportPolicy().GetInsecure() != nil {
+		insecure = *olapp.GetImportPolicy().GetInsecure()
+	}
+	return lutils.NewPullSecretCredentialsContext(reqLogger, olappSecrets).GetDockerImageMetadata(context.TODO(), imageRef, pullSecret, insecure)
 }
