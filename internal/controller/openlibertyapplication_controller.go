@@ -301,7 +301,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 	// Exit early if the detected Liberty version is not compatible with the application CR instance
 	if err := r.checkLibertyVersionGuards(instance); err != nil {
-		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
 	// Reconciles the shared LTPA state for the instance namespace
