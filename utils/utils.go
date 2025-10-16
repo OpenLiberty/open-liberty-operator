@@ -39,6 +39,9 @@ import (
 
 var log = logf.Log.WithName("openliberty_utils")
 
+// Status References
+const StatusReferenceLibertyVersion = "libertyVersion"
+
 // Constant Values
 const serviceabilityMountPath = "/serviceability"
 const ssoEnvVarPrefix = "SEC_SSO_"
@@ -321,7 +324,7 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplic
 		)
 	}
 
-	if isFileBasedProbesEnabled(la) {
+	if IsFileBasedProbesEnabled(la) {
 		checkInterval := "5s"
 		startupCheckInterval := "100ms"
 		if la.Spec.Probes != nil {
@@ -967,7 +970,7 @@ func CustomizeLibertyFileMountXML(mountingPasswordKeySecret *corev1.Secret, moun
 	return nil
 }
 
-func isFileBasedProbesEnabled(instance *olv1.OpenLibertyApplication) bool {
+func IsFileBasedProbesEnabled(instance *olv1.OpenLibertyApplication) bool {
 	return instance.Spec.Probes != nil && instance.Spec.Probes.EnableFileBased != nil && *instance.Spec.Probes.EnableFileBased
 }
 
@@ -1038,7 +1041,7 @@ func patchFileBasedProbe(instance *olv1.OpenLibertyApplication, defaultProbe *co
 }
 
 func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLibertyApplication) {
-	if !isFileBasedProbesEnabled(instance) {
+	if !IsFileBasedProbesEnabled(instance) {
 		if instance.Spec.Probes == nil {
 			return
 		}
@@ -1265,6 +1268,33 @@ func IsValidOperandVersion(version string) bool {
 		if len(GetFirstNumberFromString(version)) == 0 {
 			return false
 		}
+	}
+
+	return true
+}
+
+// Returns true if version is a valid Liberty version string and false otherwise
+func IsValidLibertyVersion(version string) bool {
+	args := strings.Split(version, ".")
+	if len(args) != 4 {
+		return false
+	}
+
+	// year should be a number
+	_, err := strconv.Atoi(args[0])
+	if err != nil {
+		return false
+	}
+
+	// 2nd and 3rd args should be "0"
+	if args[1] != "0" || args[2] != "0" {
+		return false
+	}
+
+	// month should be a number
+	_, err = strconv.Atoi(args[3])
+	if err != nil {
+		return false
 	}
 
 	return true

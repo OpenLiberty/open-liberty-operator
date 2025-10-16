@@ -254,7 +254,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				if instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != libertyVersion {
 					instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyVersion)
 				}
-			} else if currentVersion, found := instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion]; !found || currentVersion != lutils.NilLibertyVersion {
+			} else if instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != lutils.NilLibertyVersion {
 				// Pull metadata from the image directly
 				name, id, split := imageutil.SplitImageStreamImage(instance.Spec.ApplicationImage)
 				if !split {
@@ -266,7 +266,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				}
 				// To prevent leaking credentials, don't attempt to pull an image that is not namespace bounded
 				if image.Namespace != "" {
-					dockerImageMetadata, err := r.GetDockerImageMetadata(reqLogger, instance, image)
+					dockerImageMetadata, err := r.getDockerImageMetadata(reqLogger, instance, image)
 					if err == nil {
 						// Get liberty version from the labels
 						libertyVersion := lutils.ParseLibertyVersionFromDockerImageMetadata(dockerImageMetadata)
@@ -294,6 +294,11 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			reqLogger.Info("Removing liberty version ref 2...")
 			lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.StatusReferenceLibertyVersion)
 		}
+	}
+
+	// Exit early if the detected Liberty version is not compatible with the application CR instance
+	if err := r.checkLibertyVersionGuards(instance); err != nil {
+		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
 	// Reconciles the shared LTPA state for the instance namespace
@@ -1055,7 +1060,7 @@ func (r *ReconcileOpenLiberty) deletePVC(reqLogger logr.Logger, pvcName string, 
 	}
 }
 
-func (r *ReconcileOpenLiberty) GetDockerImageMetadata(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, imageRef imagev1.DockerImageReference) (*runtime.RawExtension, error) {
+func (r *ReconcileOpenLiberty) getDockerImageMetadata(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, imageRef imagev1.DockerImageReference) (*runtime.RawExtension, error) {
 	olappSecrets := []corev1.Secret{}
 	pullSecret := &corev1.Secret{}
 	if olapp.GetPullSecret() != nil {
@@ -1075,4 +1080,20 @@ func (r *ReconcileOpenLiberty) GetDockerImageMetadata(reqLogger logr.Logger, ola
 		insecure = *olapp.GetImportPolicy().GetInsecure()
 	}
 	return lutils.NewPullSecretCredentialsContext(reqLogger, olappSecrets).GetDockerImageMetadata(context.TODO(), imageRef, pullSecret, insecure)
+}
+
+func (r *ReconcileOpenLiberty) checkLibertyVersionGuards(instance *openlibertyv1.OpenLibertyApplication) error {
+	libertyVersion := instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion]
+	if libertyVersion == "" || libertyVersion == lutils.NilLibertyVersion || !lutils.IsValidLibertyVersion(libertyVersion) {
+		// the liberty version couldn't be determined
+		return nil
+	}
+	// Only allow file-based health checks on Liberty container images 25.0.0.6+
+	if lutils.IsFileBasedProbesEnabled(instance) {
+		isFileBasedProbesAllowed := lutils.CompareLibertyVersion(libertyVersion, "25.0.0.6") >= 0
+		if !isFileBasedProbesAllowed {
+			return fmt.Errorf("Could not set .spec.probes.enableFileBased because the detected Liberty version is not running version 25.0.0.6 or higher")
+		}
+	}
+	return nil
 }
