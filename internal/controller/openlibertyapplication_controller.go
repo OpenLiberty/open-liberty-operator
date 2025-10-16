@@ -245,7 +245,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			// when the operator tries to call GET for ImageStreamTags on a namespace that doesn't exists (e.g.
 			// cannot get imagestreamtags.image.openshift.io in the namespace "navidsh": no RBAC policy matched)
 			if err == nil {
-				reqLogger.Info("Found namespace for image stream...")
 				image := isTag.Image
 				if image.DockerImageReference != "" {
 					instance.Status.ImageReference = image.DockerImageReference
@@ -256,10 +255,15 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				}
 			} else if instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != lutils.NilLibertyVersion {
 				// Pull metadata from the image directly
-				name, id, split := imageutil.SplitImageStreamImage(instance.Spec.ApplicationImage)
-				if !split {
-					image.Tag = imageutil.DefaultImageTag
-				} else if split && strings.HasSuffix(name, image.Name) {
+				name, id, hasID := imageutil.SplitImageStreamImage(instance.Spec.ApplicationImage)
+				if !hasID {
+					_, tag, hasTag := imageutil.SplitImageStreamTag(instance.Spec.ApplicationImage)
+					if hasTag {
+						image.Tag = tag
+					} else {
+						image.Tag = imageutil.DefaultImageTag
+					}
+				} else if hasID && strings.HasSuffix(name, image.Name) {
 					image.ID = id
 				} else {
 					reqLogger.Info("The .spec.applicationImage does not have a tag or id to pull liberty version information")
@@ -291,7 +295,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				}
 			}
 		} else {
-			reqLogger.Info("Removing liberty version ref 2...")
 			lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.StatusReferenceLibertyVersion)
 		}
 	}
