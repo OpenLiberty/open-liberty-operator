@@ -42,7 +42,7 @@ type PullSecretCredentialsContext struct {
 func NewPullSecretCredentialsContext(reqLogger logr.Logger, secrets []corev1.Secret) *PullSecretCredentialsContext {
 	return &PullSecretCredentialsContext{
 		secrets:   secrets,
-		reqLogger: reqLogger.V(2).WithName(fmt.Sprintf("PullSecretCredentialsContext")),
+		reqLogger: reqLogger.V(2).WithName("PullSecretCredentialsContext"),
 	}
 }
 
@@ -64,7 +64,7 @@ func (s *PullSecretCredentialsContext) Repository(
 ) (distribution.Repository, error) {
 	ref := convertImageV1ToReferenceDockerImageReference(refIn)
 	defRef := ref.DockerClientDefaults()
-	repo := fmt.Sprintf(defRef.AsRepository().Exact())
+	repo := defRef.AsRepository().Exact()
 	if ctxIf, ok := s.contexts.Load(repo); ok {
 		importCtx := ctxIf.(*registryclient.Context)
 		return importCtx.Repository(ctx, defRef.RegistryURL(), defRef.RepositoryName(), insecure)
@@ -73,9 +73,9 @@ func (s *PullSecretCredentialsContext) Repository(
 	instanceKeyring := &credentialprovider.BasicDockerKeyring{}
 	if pullSecret != nil {
 		if config, err := credentialprovider.ReadDockerConfigFileFromBytes(pullSecret.Data[".dockerconfigjson"]); err != nil {
-			s.reqLogger.Info("Proceeding without instance pull secret credentials; pull secret is missing field .data.dockerconfigjson; %v", err)
+			s.reqLogger.Info(fmt.Sprintf("Proceeding without instance pull secret credentials; pull secret is missing field .data.dockerconfigjson; %v", err))
 		} else {
-			instanceKeyring.Add(config)
+			instanceKeyring.Add(nil, config)
 			s.reqLogger.Info("Added pull secret config to the keyring")
 		}
 	}
