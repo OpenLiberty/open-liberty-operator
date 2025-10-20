@@ -42,6 +42,8 @@ var log = logf.Log.WithName("openliberty_utils")
 // Status References
 const StatusReferenceLibertyVersion = "libertyVersion"
 
+var ValidLibertyVersionLabels = []string{"liberty.version", "io.openliberty.version", "org.opencontainers.image.version", "version"}
+
 // Constant Values
 const serviceabilityMountPath = "/serviceability"
 const ssoEnvVarPrefix = "SEC_SSO_"
@@ -1342,11 +1344,10 @@ func ParseLibertyVersionFromDockerImageMetadata(dockerImageMetadata *runtime.Raw
 		if !isMap {
 			return ""
 		}
-		if version, versionFound := imageLabelsMap["liberty.version"]; versionFound && IsValidLibertyVersion(version.(string)) {
-			return version.(string)
-		}
-		if version, versionFound := imageLabelsMap["io.openliberty.version"]; versionFound && IsValidLibertyVersion(version.(string)) {
-			return version.(string)
+		for _, validLibertyVersionLabel := range ValidLibertyVersionLabels {
+			if version, versionFound := imageLabelsMap[validLibertyVersionLabel]; versionFound && IsValidLibertyVersion(version.(string)) {
+				return version.(string)
+			}
 		}
 	}
 	// No version found

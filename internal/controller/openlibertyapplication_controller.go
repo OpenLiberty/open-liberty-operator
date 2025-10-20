@@ -227,7 +227,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	imageReferenceOld := instance.Status.ImageReference
 	instance.Status.ImageReference = instance.Spec.ApplicationImage
 	if imageReferenceOld != instance.Status.ImageReference {
-		// reset the liberty version field if the image has changed
+		// clear the liberty version field if the image has changed
 		lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.StatusReferenceLibertyVersion)
 	}
 
@@ -253,14 +253,17 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				instance.Status.ImageReference = image.DockerImageReference
 			}
 			libertyVersion := lutils.ParseLibertyVersionFromDockerImageMetadata(&isTag.Image.DockerImageMetadata)
-			if instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != libertyVersion {
+			if libertyVersion == "" {
+				reqLogger.Info("Could not parse Liberty version field from ImageStream metadata; version was not found in any of the labels: " + strings.Join(lutils.ValidLibertyVersionLabels, ", "))
+				instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, lutils.NilLibertyVersion)
+			} else if instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != libertyVersion {
 				instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyVersion)
 			}
 			versionTakenFromImageStream = true
 		}
 	}
-	if !versionTakenFromImageStream && instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != lutils.NilLibertyVersion {
-		// Pull metadata from the image directly
+	// Pull manifests for the liberty version if the reference field is not set
+	if !versionTakenFromImageStream && instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] == "" {
 		name, id, hasID := imageutil.SplitImageStreamImage(instance.Spec.ApplicationImage)
 		if !hasID {
 			_, tag, hasTag := imageutil.SplitImageStreamTag(instance.Spec.ApplicationImage)
@@ -280,8 +283,11 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			if err == nil {
 				// Get liberty version from the labels
 				libertyVersion := lutils.ParseLibertyVersionFromDockerImageMetadata(dockerImageMetadata)
-				reqLogger.Info("Parsed liberty version: " + libertyVersion)
-				if instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != libertyVersion {
+				if libertyVersion == "" {
+					reqLogger.Info("Could not parse Liberty version field from Docker image metadata; version was not found in any of the labels: " + strings.Join(lutils.ValidLibertyVersionLabels, ", "))
+					instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, lutils.NilLibertyVersion)
+				} else if instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != libertyVersion {
+					reqLogger.Info("Parsed liberty version: " + libertyVersion)
 					instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyVersion)
 				}
 			} else if strings.Contains(fmt.Sprint(err), "unauthorized") {
