@@ -230,72 +230,70 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		// reset the liberty version field if the image has changed
 		lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.StatusReferenceLibertyVersion)
 	}
-	if r.IsOpenShift() {
-		image, err := imageutil.ParseDockerImageReference(instance.Spec.ApplicationImage)
+
+	versionTakenFromImageStream := false
+	image, err := imageutil.ParseDockerImageReference(instance.Spec.ApplicationImage)
+	image.Name = imageutil.JoinImageStreamTag(image.Name, image.Tag)
+	if image.Namespace == "" {
+		image.Namespace = instance.Namespace
+	}
+	if r.IsOpenShift() && err == nil {
+		isTag := &imagev1.ImageStreamTag{}
+		err = r.GetAPIReader().Get(context.Background(), types.NamespacedName{Name: image.Name, Namespace: image.Namespace}, isTag)
+		// Call ManageError only if the error type is not found or is not forbidden. Forbidden could happen
+		// when the operator tries to call GET for ImageStreamTags on a namespace that doesn't exists (e.g.
+		// cannot get imagestreamtags.image.openshift.io in the namespace "navidsh": no RBAC policy matched)
 		if err == nil {
-			isTag := &imagev1.ImageStreamTag{}
-			isTagName := imageutil.JoinImageStreamTag(image.Name, image.Tag)
-			isTagNamespace := image.Namespace
-			if isTagNamespace == "" {
-				isTagNamespace = instance.Namespace
+			image := isTag.Image
+			if image.DockerImageReference != "" {
+				instance.Status.ImageReference = image.DockerImageReference
 			}
-			key := types.NamespacedName{Name: isTagName, Namespace: isTagNamespace}
-			err = r.GetAPIReader().Get(context.Background(), key, isTag)
-			// Call ManageError only if the error type is not found or is not forbidden. Forbidden could happen
-			// when the operator tries to call GET for ImageStreamTags on a namespace that doesn't exists (e.g.
-			// cannot get imagestreamtags.image.openshift.io in the namespace "navidsh": no RBAC policy matched)
+			libertyVersion := lutils.ParseLibertyVersionFromDockerImageMetadata(&isTag.Image.DockerImageMetadata)
+			if instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != libertyVersion {
+				instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyVersion)
+			}
+			versionTakenFromImageStream = true
+		}
+	}
+	if !versionTakenFromImageStream && instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != lutils.NilLibertyVersion {
+		// Pull metadata from the image directly
+		name, id, hasID := imageutil.SplitImageStreamImage(instance.Spec.ApplicationImage)
+		if !hasID {
+			_, tag, hasTag := imageutil.SplitImageStreamTag(instance.Spec.ApplicationImage)
+			if hasTag {
+				image.Tag = tag
+			} else {
+				image.Tag = imageutil.DefaultImageTag
+			}
+		} else if hasID && strings.HasSuffix(name, image.Name) {
+			image.ID = id
+		} else {
+			reqLogger.Info("The .spec.applicationImage does not have a tag or id to pull liberty version information")
+		}
+		// To prevent leaking credentials, don't attempt to pull an image that is not namespace bounded
+		if image.Namespace != "" {
+			dockerImageMetadata, err := r.getDockerImageMetadata(reqLogger, instance, image)
 			if err == nil {
-				image := isTag.Image
-				if image.DockerImageReference != "" {
-					instance.Status.ImageReference = image.DockerImageReference
-				}
-				libertyVersion := lutils.ParseLibertyVersionFromDockerImageMetadata(&isTag.Image.DockerImageMetadata)
+				// Get liberty version from the labels
+				libertyVersion := lutils.ParseLibertyVersionFromDockerImageMetadata(dockerImageMetadata)
 				if instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != libertyVersion {
 					instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyVersion)
 				}
-			} else if instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != lutils.NilLibertyVersion {
-				// Pull metadata from the image directly
-				name, id, hasID := imageutil.SplitImageStreamImage(instance.Spec.ApplicationImage)
-				if !hasID {
-					_, tag, hasTag := imageutil.SplitImageStreamTag(instance.Spec.ApplicationImage)
-					if hasTag {
-						image.Tag = tag
-					} else {
-						image.Tag = imageutil.DefaultImageTag
-					}
-				} else if hasID && strings.HasSuffix(name, image.Name) {
-					image.ID = id
-				} else {
-					reqLogger.Info("The .spec.applicationImage does not have a tag or id to pull liberty version information")
-				}
-				// To prevent leaking credentials, don't attempt to pull an image that is not namespace bounded
-				if image.Namespace != "" {
-					dockerImageMetadata, err := r.getDockerImageMetadata(reqLogger, instance, image)
-					if err == nil {
-						// Get liberty version from the labels
-						libertyVersion := lutils.ParseLibertyVersionFromDockerImageMetadata(dockerImageMetadata)
-						if instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != libertyVersion {
-							instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyVersion)
-						}
-					} else if strings.Contains(fmt.Sprint(err), "unauthorized") {
-						return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-					} else {
-						reqLogger.Error(err, "Couldn't get docker image metadata manually")
-						instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, lutils.NilLibertyVersion)
-						if err != nil && !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) && !strings.Contains(isTagName, "/") {
-							return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-						}
-					}
-				} else {
-					reqLogger.Error(err, "Blocked from getting docker image metadata because the image is missing a namespace record")
-					instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, lutils.NilLibertyVersion)
-					if err != nil && !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) && !strings.Contains(isTagName, "/") {
-						return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-					}
+			} else if strings.Contains(fmt.Sprint(err), "unauthorized") {
+				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			} else {
+				reqLogger.Error(err, "Couldn't get docker image metadata manually")
+				instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, lutils.NilLibertyVersion)
+				if err != nil && !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) && !strings.Contains(image.Name, "/") {
+					return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 				}
 			}
 		} else {
-			lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.StatusReferenceLibertyVersion)
+			reqLogger.Error(err, "Blocked from getting docker image metadata because the image is missing a namespace record")
+			instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, lutils.NilLibertyVersion)
+			if err != nil && !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) && !strings.Contains(image.Name, "/") {
+				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			}
 		}
 	}
 
