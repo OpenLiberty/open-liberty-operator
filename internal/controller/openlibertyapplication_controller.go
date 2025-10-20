@@ -1067,8 +1067,9 @@ func (r *ReconcileOpenLiberty) deletePVC(reqLogger logr.Logger, pvcName string, 
 
 func (r *ReconcileOpenLiberty) getDockerImageMetadata(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, imageRef imagev1.DockerImageReference) (*runtime.RawExtension, error) {
 	olappSecrets := []corev1.Secret{}
-	pullSecret := &corev1.Secret{}
+	var pullSecret *corev1.Secret
 	if olapp.GetPullSecret() != nil {
+		pullSecret = &corev1.Secret{}
 		if err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: *olapp.GetPullSecret(), Namespace: olapp.GetNamespace()}, pullSecret); err != nil {
 			if kerrors.IsNotFound(err) {
 				reqLogger.Info("The instance pull secret specified does not exist")
