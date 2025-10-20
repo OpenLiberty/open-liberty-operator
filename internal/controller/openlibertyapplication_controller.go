@@ -262,6 +262,29 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			versionTakenFromImageStream = true
 		}
 	}
+
+	// Reconcile ServiceAccount before pulling images
+	serviceAccountName := oputils.GetServiceAccountName(instance)
+	if serviceAccountName != defaultMeta.Name {
+		if serviceAccountName == "" {
+			serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
+			err = r.CreateOrUpdate(serviceAccount, instance, func() error {
+				return oputils.CustomizeServiceAccount(serviceAccount, instance, r.GetClient())
+			})
+			if err != nil {
+				reqLogger.Error(err, "Failed to reconcile ServiceAccount")
+				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			}
+		} else {
+			serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
+			err = r.DeleteResource(serviceAccount)
+			if err != nil {
+				reqLogger.Error(err, "Failed to delete ServiceAccount")
+				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			}
+		}
+	}
+
 	// Pull manifests for the liberty version if the reference field is not set
 	if !versionTakenFromImageStream && instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] == "" {
 		name, id, hasID := imageutil.SplitImageStreamImage(instance.Spec.ApplicationImage)
@@ -356,27 +379,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		if err != nil {
 			reqLogger.Error(err, "Error updating Open Liberty application status")
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-	}
-
-	serviceAccountName := oputils.GetServiceAccountName(instance)
-	if serviceAccountName != defaultMeta.Name {
-		if serviceAccountName == "" {
-			serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
-			err = r.CreateOrUpdate(serviceAccount, instance, func() error {
-				return oputils.CustomizeServiceAccount(serviceAccount, instance, r.GetClient())
-			})
-			if err != nil {
-				reqLogger.Error(err, "Failed to reconcile ServiceAccount")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
-		} else {
-			serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
-			err = r.DeleteResource(serviceAccount)
-			if err != nil {
-				reqLogger.Error(err, "Failed to delete ServiceAccount")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
 		}
 	}
 
