@@ -280,10 +280,12 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			if err == nil {
 				// Get liberty version from the labels
 				libertyVersion := lutils.ParseLibertyVersionFromDockerImageMetadata(dockerImageMetadata)
+				reqLogger.Info("Parsed liberty version: " + libertyVersion)
 				if instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != libertyVersion {
 					instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyVersion)
 				}
 			} else if strings.Contains(fmt.Sprint(err), "unauthorized") {
+				reqLogger.Error(err, "Couldn't get docker image metadata - unauthorized")
 				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 			} else {
 				reqLogger.Error(err, "Couldn't get docker image metadata manually")
