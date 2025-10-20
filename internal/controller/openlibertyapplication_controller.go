@@ -285,6 +285,13 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 	}
 
+	// Check if the ServiceAccount has a valid pull secret before creating the deployment/statefulset
+	// or setting up knative. Otherwise the pods can go into an ImagePullBackOff loop
+	saErr := oputils.ServiceAccountPullSecretExists(instance, r.GetClient())
+	if saErr != nil {
+		return r.ManageError(saErr, common.StatusConditionTypeReconciled, instance)
+	}
+
 	// Pull manifests for the liberty version if the reference field is not set
 	if !versionTakenFromImageStream && instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] == "" {
 		name, id, hasID := imageutil.SplitImageStreamImage(instance.Spec.ApplicationImage)
@@ -380,13 +387,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			reqLogger.Error(err, "Error updating Open Liberty application status")
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
-	}
-
-	// Check if the ServiceAccount has a valid pull secret before creating the deployment/statefulset
-	// or setting up knative. Otherwise the pods can go into an ImagePullBackOff loop
-	saErr := oputils.ServiceAccountPullSecretExists(instance, r.GetClient())
-	if saErr != nil {
-		return r.ManageError(saErr, common.StatusConditionTypeReconciled, instance)
 	}
 
 	// Check if SemeruCloudCompiler is enabled before reconciling the Semeru Compiler deployment and service.
