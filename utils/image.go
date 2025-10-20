@@ -39,7 +39,7 @@ type PullSecretCredentialsContext struct {
 	reqLogger         logr.Logger
 }
 
-func NewPullSecretCredentialsContext(reqLogger logr.Logger, secrets []corev1.Secret) *PullSecretCredentialsContext {
+func NewPullSecretCredentialsContext(reqLogger logr.Logger, secrets []corev1.Secret, namespace string) *PullSecretCredentialsContext {
 	return &PullSecretCredentialsContext{
 		secrets:   secrets,
 		reqLogger: reqLogger.V(2).WithName("PullSecretCredentialsContext"),

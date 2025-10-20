@@ -233,13 +233,17 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 	versionTakenFromImageStream := false
 	image, err := imageutil.ParseDockerImageReference(instance.Spec.ApplicationImage)
-	image.Name = imageutil.JoinImageStreamTag(image.Name, image.Tag)
-	if image.Namespace == "" {
-		image.Namespace = instance.Namespace
+	if err != nil {
+		reqLogger.Error(err, "The .spec.applicationImage does not have a valid docker image reference")
+	}
+	isTagName := imageutil.JoinImageStreamTag(image.Name, image.Tag)
+	isTagNamespace := image.Namespace
+	if isTagNamespace == "" {
+		isTagNamespace = instance.Namespace
 	}
 	if r.IsOpenShift() && err == nil {
 		isTag := &imagev1.ImageStreamTag{}
-		err = r.GetAPIReader().Get(context.Background(), types.NamespacedName{Name: image.Name, Namespace: image.Namespace}, isTag)
+		err = r.GetAPIReader().Get(context.Background(), types.NamespacedName{Name: isTagName, Namespace: isTagNamespace}, isTag)
 		// Call ManageError only if the error type is not found or is not forbidden. Forbidden could happen
 		// when the operator tries to call GET for ImageStreamTags on a namespace that doesn't exists (e.g.
 		// cannot get imagestreamtags.image.openshift.io in the namespace "navidsh": no RBAC policy matched)
@@ -271,7 +275,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			reqLogger.Info("The .spec.applicationImage does not have a tag or id to pull liberty version information")
 		}
 		// To prevent leaking credentials, don't attempt to pull an image that is not namespace bounded
-		if image.Namespace != "" {
+		if isTagNamespace != "" {
 			dockerImageMetadata, err := r.getDockerImageMetadata(reqLogger, instance, image)
 			if err == nil {
 				// Get liberty version from the labels
@@ -1080,7 +1084,7 @@ func (r *ReconcileOpenLiberty) getDockerImageMetadata(reqLogger logr.Logger, ola
 	if olapp.GetImportPolicy() != nil && olapp.GetImportPolicy().GetInsecure() != nil {
 		insecure = *olapp.GetImportPolicy().GetInsecure()
 	}
-	return lutils.NewPullSecretCredentialsContext(reqLogger, olappSecrets).GetDockerImageMetadata(context.TODO(), imageRef, pullSecret, insecure)
+	return lutils.NewPullSecretCredentialsContext(reqLogger, olappSecrets, olapp.GetNamespace()).GetDockerImageMetadata(context.TODO(), imageRef, pullSecret, insecure)
 }
 
 func (r *ReconcileOpenLiberty) checkLibertyVersionGuards(instance *openlibertyv1.OpenLibertyApplication) error {
