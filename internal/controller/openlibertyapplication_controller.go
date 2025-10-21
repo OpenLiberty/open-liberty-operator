@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/application-stacks/runtime-component-operator/common"
@@ -229,6 +230,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	if imageReferenceOld != instance.Status.ImageReference {
 		// clear the liberty version field if the image has changed
 		lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.StatusReferenceLibertyVersion)
+		instance.Status.SetReference(lutils.StatusReferenceLibertyVersionRetries, "5")
 	}
 
 	versionTakenFromImageStream := false
@@ -320,12 +322,20 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 					reqLogger.Info("Parsed liberty version: " + libertyVersion)
 					instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyVersion)
 				}
-			} else if strings.Contains(fmt.Sprint(err), "unauthorized") {
-				reqLogger.Error(err, "Couldn't get docker image metadata - unauthorized")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 			} else {
-				reqLogger.Error(err, "Couldn't get docker image metadata manually")
-				instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, lutils.NilLibertyVersion)
+				reqLogger.Error(err, "Couldn't get docker image metadata - unauthorized or image does not exist")
+				retriesString := instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersionRetries]
+				if retriesString != "0" && len(retriesString) > 0 {
+					retries, err := strconv.Atoi(retriesString)
+					if err != nil {
+						retries = -1
+					} else {
+						retries = max(0, retries-1)
+					}
+					instance.Status.SetReference(lutils.StatusReferenceLibertyVersionRetries, fmt.Sprint(retries))
+				} else {
+					instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, lutils.NilLibertyVersion)
+				}
 				if err != nil && !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) && !strings.Contains(image.Name, "/") {
 					return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 				}
@@ -1095,7 +1105,7 @@ func (r *ReconcileOpenLiberty) getDockerImageMetadata(reqLogger logr.Logger, ola
 	if olapp.GetImportPolicy() != nil && olapp.GetImportPolicy().GetInsecure() != nil {
 		insecure = *olapp.GetImportPolicy().GetInsecure()
 	}
-	return lutils.NewPullSecretCredentialsContext(reqLogger, olappSecrets, olapp.GetNamespace()).GetDockerImageMetadata(context.TODO(), imageRef, pullSecret, insecure)
+	return lutils.NewNamespaceCredentialsContext(reqLogger, olappSecrets, olapp.GetNamespace()).GetDockerImageMetadata(context.TODO(), imageRef, pullSecret, insecure)
 }
 
 func (r *ReconcileOpenLiberty) checkLibertyVersionGuards(instance *openlibertyv1.OpenLibertyApplication) error {

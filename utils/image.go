@@ -31,7 +31,7 @@ const (
 	NilLibertyVersion = "0.0.0.0"
 )
 
-type PullSecretCredentialsContext struct {
+type NamespaceCredentialsContext struct {
 	transport         http.RoundTripper
 	insecureTransport http.RoundTripper
 	secrets           []corev1.Secret
@@ -39,11 +39,22 @@ type PullSecretCredentialsContext struct {
 	reqLogger         logr.Logger
 }
 
-func NewPullSecretCredentialsContext(reqLogger logr.Logger, secrets []corev1.Secret, namespace string) *PullSecretCredentialsContext {
-	return &PullSecretCredentialsContext{
-		secrets:   secrets,
-		reqLogger: reqLogger.V(2).WithName("PullSecretCredentialsContext"),
+var credentialsContexts *sync.Map
+
+func init() {
+	credentialsContexts = &sync.Map{}
+}
+
+func NewNamespaceCredentialsContext(reqLogger logr.Logger, secrets []corev1.Secret, namespace string) *NamespaceCredentialsContext {
+	if ctx, found := credentialsContexts.Load(namespace); found {
+		return ctx.(*NamespaceCredentialsContext)
 	}
+	newCtx := &NamespaceCredentialsContext{
+		secrets:   secrets,
+		reqLogger: reqLogger.WithValues("Request.Namespace", namespace).V(2).WithName("NamespaceCredentialsContext"),
+	}
+	credentialsContexts.Store(namespace, newCtx)
+	return newCtx
 }
 
 func convertImageV1ToReferenceDockerImageReference(refIn imagev1.DockerImageReference) reference.DockerImageReference {
@@ -56,7 +67,7 @@ func convertImageV1ToReferenceDockerImageReference(refIn imagev1.DockerImageRefe
 	}
 }
 
-func (s *PullSecretCredentialsContext) Repository(
+func (s *NamespaceCredentialsContext) Repository(
 	ctx context.Context,
 	refIn imagev1.DockerImageReference,
 	pullSecret *corev1.Secret,
@@ -100,7 +111,7 @@ func (s *PullSecretCredentialsContext) Repository(
 	return importCtx.Repository(ctx, defRef.RegistryURL(), defRef.RepositoryName(), insecure)
 }
 
-func (s *PullSecretCredentialsContext) GetDockerImageMetadata(ctx context.Context, imageRef imagev1.DockerImageReference, pullSecret *corev1.Secret, insecure bool) (*runtime.RawExtension, error) {
+func (s *NamespaceCredentialsContext) GetDockerImageMetadata(ctx context.Context, imageRef imagev1.DockerImageReference, pullSecret *corev1.Secret, insecure bool) (*runtime.RawExtension, error) {
 	imageMetadata := &runtime.RawExtension{}
 	repo, err := s.Repository(ctx, imageRef, pullSecret, insecure)
 	if err != nil {

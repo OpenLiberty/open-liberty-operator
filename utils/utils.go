@@ -41,6 +41,7 @@ var log = logf.Log.WithName("openliberty_utils")
 
 // Status References
 const StatusReferenceLibertyVersion = "libertyVersion"
+const StatusReferenceLibertyVersionRetries = "libertyVersionRetries"
 
 var ValidLibertyVersionLabels = []string{"liberty.version", "io.openliberty.version", "org.opencontainers.image.version", "version"}
 
