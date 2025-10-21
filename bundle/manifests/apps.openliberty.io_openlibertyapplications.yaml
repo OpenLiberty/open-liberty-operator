@@ -1665,6 +1665,18 @@ spec:
                     format: int32
                     type: integer
                 type: object
+              containers:
+                description: Defines the Containers
+                properties:
+                  args:
+                    items:
+                      type: string
+                    type: array
+                  command:
+                    items:
+                      type: string
+                    type: array
+                type: object
               createKnativeService:
                 description: Create Knative resources and use Knative serving.
                 type: boolean

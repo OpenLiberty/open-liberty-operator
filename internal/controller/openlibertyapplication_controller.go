@@ -700,6 +700,11 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				lutils.RemovePodTemplateSpecAnnotationByKey(&deploy.Spec.Template, lutils.GetLastRotationLabelKey(LTPA_RESOURCE_SHARING_FILE_NAME))
 				lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.GetTrackedResourceName(LTPA_RESOURCE_SHARING_FILE_NAME))
 			}
+
+			if instance.Spec.Containers != nil {
+				deploy.Spec.Template.Spec.Containers[0].Command = instance.Spec.Containers.Command
+				deploy.Spec.Template.Spec.Containers[0].Args = instance.Spec.Containers.Args
+			}
 			return nil
 		})
 		if err != nil {

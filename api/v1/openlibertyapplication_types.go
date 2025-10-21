@@ -165,6 +165,14 @@ type OpenLibertyApplicationSpec struct {
 	// DNS settings for the application pod.
 	// +operator-sdk:csv:customresourcedefinitions:order=35,type=spec,displayName="DNS"
 	DNS *OpenLibertyApplicationDNS `json:"dns,omitempty"`
+
+	Containers *OpenLibertyApplicationContainers `json:"containers,omitempty"`
+}
+
+// Defines the Containers
+type OpenLibertyApplicationContainers struct {
+	Args    []string `json:"args,omitempty"`
+	Command []string `json:"command,omitempty"`
 }
 
 // Defines the DNS
@@ -706,6 +714,18 @@ type GithubLogin struct {
 
 func init() {
 	SchemeBuilder.Register(&OpenLibertyApplication{}, &OpenLibertyApplicationList{})
+}
+
+func (cr *OpenLibertyApplication) GetContainer() *OpenLibertyApplicationContainers {
+	return cr.Spec.Containers
+}
+
+func (sc *OpenLibertyApplicationContainers) GetContainerArgs() []string {
+	return sc.Args
+}
+
+func (sc *OpenLibertyApplicationContainers) GetContainerCommand() []string {
+	return sc.Command
 }
 
 // GetApplicationImage returns application image
