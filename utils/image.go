@@ -39,22 +39,11 @@ type NamespaceCredentialsContext struct {
 	reqLogger         logr.Logger
 }
 
-var credentialsContexts *sync.Map
-
-func init() {
-	credentialsContexts = &sync.Map{}
-}
-
 func NewNamespaceCredentialsContext(reqLogger logr.Logger, secrets []corev1.Secret, namespace string) *NamespaceCredentialsContext {
-	if ctx, found := credentialsContexts.Load(namespace); found {
-		return ctx.(*NamespaceCredentialsContext)
-	}
-	newCtx := &NamespaceCredentialsContext{
+	return &NamespaceCredentialsContext{
 		secrets:   secrets,
 		reqLogger: reqLogger.WithValues("Request.Namespace", namespace).V(2).WithName("NamespaceCredentialsContext"),
 	}
-	credentialsContexts.Store(namespace, newCtx)
-	return newCtx
 }
 
 func convertImageV1ToReferenceDockerImageReference(refIn imagev1.DockerImageReference) reference.DockerImageReference {
@@ -133,12 +122,16 @@ func (s *NamespaceCredentialsContext) GetDockerImageMetadata(ctx context.Context
 		imageRefName = imageRef.Tag
 	}
 
+	var manifestDigest godigest.Digest
 	if imageRef.ID != "" {
-		manifest, err = service.Get(ctx, godigest.Digest(imageRef.ID))
+		manifestDigest = godigest.Digest(imageRef.ID)
+		manifest, err = service.Get(ctx, manifestDigest)
 		if err != nil {
 			return nil, fmt.Errorf("Could not pull manifest for id %s; %v", imageRef.ID, err)
 		}
 		imageRefName = imageRef.ID
+	} else {
+		manifestDigest = manifest.References()[0].Digest
 	}
 
 	blobStore := repo.Blobs(ctx)
@@ -146,11 +139,11 @@ func (s *NamespaceCredentialsContext) GetDockerImageMetadata(ctx context.Context
 	if err == nil {
 		return imageMetadata, nil
 	}
-	err = createSchema2Image(ctx, blobStore, imageMetadata, manifest, manifest.References()[0].Digest, imageRefName)
+	err = createSchema2Image(ctx, blobStore, imageMetadata, manifest, manifestDigest, imageRefName)
 	if err == nil {
 		return imageMetadata, nil
 	}
-	err = createOCIImage(ctx, blobStore, imageMetadata, manifest, manifest.References()[0].Digest, imageRefName)
+	err = createOCIImage(ctx, blobStore, imageMetadata, manifest, manifestDigest, imageRefName)
 	if err == nil {
 		return imageMetadata, nil
 	}
