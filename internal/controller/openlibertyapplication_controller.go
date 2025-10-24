@@ -99,7 +99,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		reqLogger.Info("Failed to get open-liberty-operator config map, error: " + err.Error())
 		oputils.CreateConfigMap(OperatorName)
 	} else {
-		common.LoadFromConfigMap(common.Config, configMap)
+		common.LoadFromConfigMapWithAddedDefaults(common.Config, configMap, lutils.DefaultLibertyOpConfig)
 	}
 
 	// Fetch the OpenLiberty instance
@@ -225,12 +225,20 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		Namespace: instance.Namespace,
 	}
 
+	skipLibertyVersionChecks := common.LoadFromConfig(common.Config, lutils.OpConfigSkipLibertyVersionChecks) == "true"
+
 	imageReferenceOld := instance.Status.ImageReference
 	instance.Status.ImageReference = instance.Spec.ApplicationImage
 	if imageReferenceOld != instance.Status.ImageReference {
 		// clear the liberty version field if the image has changed
 		lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.StatusReferenceLibertyVersion)
-		instance.Status.SetReference(lutils.StatusReferenceLibertyVersionRetries, "5")
+		if !skipLibertyVersionChecks {
+			libertyVersionRetries := common.LoadFromConfig(common.Config, lutils.OpConfigLibertyVersionRetries)
+			_, err := strconv.Atoi(libertyVersionRetries)
+			if libertyVersionRetries != "" && err == nil {
+				instance.Status.SetReference(lutils.StatusReferenceLibertyVersionRetries, libertyVersionRetries)
+			}
+		}
 	}
 
 	versionTakenFromImageStream := false
@@ -295,7 +303,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	// Pull manifests for the liberty version if the reference field is not set
-	if !versionTakenFromImageStream && instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] == "" {
+	if !skipLibertyVersionChecks && !versionTakenFromImageStream && instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] == "" {
 		name, id, hasID := imageutil.SplitImageStreamImage(instance.Spec.ApplicationImage)
 		if !hasID {
 			_, tag, hasTag := imageutil.SplitImageStreamTag(instance.Spec.ApplicationImage)
@@ -350,8 +358,10 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	// Exit early if the detected Liberty version is not compatible with the application CR instance
-	if err := r.checkLibertyVersionGuards(instance); err != nil {
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	if !skipLibertyVersionChecks {
+		if err := r.checkLibertyVersionGuards(instance); err != nil {
+			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		}
 	}
 
 	// Reconciles the shared LTPA state for the instance namespace

@@ -186,6 +186,8 @@ const (
 	FlagDelimiterSpace                = " "
 	FlagDelimiterEquals               = "="
 	OpConfigPerformanceDataMaxWorkers = "performanceDataMaxWorkers"
+	OpConfigSkipLibertyVersionChecks  = "skipLibertyVersionChecks"
+	OpConfigLibertyVersionRetries     = "libertyVersionRetries"
 )
 
 var DefaultLibertyOpConfig *sync.Map
@@ -193,6 +195,8 @@ var DefaultLibertyOpConfig *sync.Map
 func init() {
 	DefaultLibertyOpConfig = &sync.Map{}
 	DefaultLibertyOpConfig.Store(OpConfigPerformanceDataMaxWorkers, "10")
+	DefaultLibertyOpConfig.Store(OpConfigSkipLibertyVersionChecks, "false")
+	DefaultLibertyOpConfig.Store(OpConfigLibertyVersionRetries, "3")
 }
 
 func parseFlag(key, value, delimiter string) string {
