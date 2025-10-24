@@ -357,8 +357,8 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 	}
 
-	// Exit early if the detected Liberty version is not compatible with the application CR instance
-	if !skipLibertyVersionChecks {
+	// Exit early if the detected Liberty version is not compatible with the application CR instance, skip this check if the image is at the latest version not using an ID
+	if !skipLibertyVersionChecks || image.Tag == "latest" || (image.Tag == "" && image.ID != "") {
 		if err := r.checkLibertyVersionGuards(instance); err != nil {
 			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
