@@ -49,6 +49,7 @@ var ValidLibertyVersionLabels = []string{"liberty.version", "io.openliberty.vers
 const serviceabilityMountPath = "/serviceability"
 const ssoEnvVarPrefix = "SEC_SSO_"
 const OperandVersion = "1.5.0"
+const LatestLibertyImage = "icr.io/appcafe/open-liberty:latest"
 
 // LTPA constants
 const LTPAServerXMLSuffix = "-managed-ltpa-server-xml"
@@ -183,11 +184,15 @@ func Validate(olapp *olv1.OpenLibertyApplication) (bool, error) {
 }
 
 const (
-	FlagDelimiterSpace                = " "
-	FlagDelimiterEquals               = "="
-	OpConfigPerformanceDataMaxWorkers = "performanceDataMaxWorkers"
-	OpConfigSkipLibertyVersionChecks  = "skipLibertyVersionChecks"
-	OpConfigLibertyVersionRetries     = "libertyVersionRetries"
+	FlagDelimiterSpace                           = " "
+	FlagDelimiterEquals                          = "="
+	OpConfigPerformanceDataMaxWorkers            = "performanceDataMaxWorkers"
+	OpConfigImageVersionChecks                   = "imageVersionChecks"
+	OpConfigImagePullRetries                     = "imagePullRetries"
+	OpConfigImageVersionLatestOptimized          = "imageVersionLatestOptimized"
+	OpConfigImageVersionLatestPullRefreshSeconds = "imageVersionLatestPullRefreshSeconds"
+	OpConfigImageVersionLatestLastPullSeconds    = "imageVersionLatestLastPullSeconds"
+	OpConfigImageVersionLatest                   = "imageVersionLatest"
 )
 
 var DefaultLibertyOpConfig *sync.Map
@@ -195,8 +200,12 @@ var DefaultLibertyOpConfig *sync.Map
 func init() {
 	DefaultLibertyOpConfig = &sync.Map{}
 	DefaultLibertyOpConfig.Store(OpConfigPerformanceDataMaxWorkers, "10")
-	DefaultLibertyOpConfig.Store(OpConfigSkipLibertyVersionChecks, "false")
-	DefaultLibertyOpConfig.Store(OpConfigLibertyVersionRetries, "3")
+	DefaultLibertyOpConfig.Store(OpConfigImageVersionChecks, "true")
+	DefaultLibertyOpConfig.Store(OpConfigImagePullRetries, "3")
+	DefaultLibertyOpConfig.Store(OpConfigImageVersionLatest, NilLibertyVersion)
+	DefaultLibertyOpConfig.Store(OpConfigImageVersionLatestOptimized, "true")
+	DefaultLibertyOpConfig.Store(OpConfigImageVersionLatestPullRefreshSeconds, "86400")
+	DefaultLibertyOpConfig.Store(OpConfigImageVersionLatestLastPullSeconds, "0")
 }
 
 func parseFlag(key, value, delimiter string) string {
