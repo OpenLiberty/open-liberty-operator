@@ -191,8 +191,6 @@ const (
 	OpConfigImagePullRetries                     = "imagePullRetries"
 	OpConfigImageVersionLatestOptimized          = "imageVersionLatestOptimized"
 	OpConfigImageVersionLatestPullRefreshSeconds = "imageVersionLatestPullRefreshSeconds"
-	OpConfigImageVersionLatestLastPullSeconds    = "imageVersionLatestLastPullSeconds"
-	OpConfigImageVersionLatest                   = "imageVersionLatest"
 )
 
 var DefaultLibertyOpConfig *sync.Map
@@ -202,10 +200,8 @@ func init() {
 	DefaultLibertyOpConfig.Store(OpConfigPerformanceDataMaxWorkers, "10")
 	DefaultLibertyOpConfig.Store(OpConfigImageVersionChecks, "true")
 	DefaultLibertyOpConfig.Store(OpConfigImagePullRetries, "3")
-	DefaultLibertyOpConfig.Store(OpConfigImageVersionLatest, NilLibertyVersion)
 	DefaultLibertyOpConfig.Store(OpConfigImageVersionLatestOptimized, "true")
 	DefaultLibertyOpConfig.Store(OpConfigImageVersionLatestPullRefreshSeconds, "86400")
-	DefaultLibertyOpConfig.Store(OpConfigImageVersionLatestLastPullSeconds, "0")
 }
 
 func parseFlag(key, value, delimiter string) string {
