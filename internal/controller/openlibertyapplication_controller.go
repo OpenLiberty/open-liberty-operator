@@ -11,10 +11,10 @@ import (
 	"github.com/application-stacks/runtime-component-operator/common"
 	"github.com/go-logr/logr"
 
+	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
 	oputils "github.com/application-stacks/runtime-component-operator/utils"
-
-	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
+	godigest "github.com/opencontainers/go-digest"
 
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
@@ -230,6 +230,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 	// Pull the latest Liberty image to limit version guard checks
 	latestOptimizedLibertyVersionChecks := common.LoadFromConfig(common.Config, lutils.OpConfigImageVersionLatestOptimized) == "true"
+
 	if latestOptimizedLibertyVersionChecks {
 		// get how long in seconds until another latest image pull
 		pullRefreshSecondsString := common.LoadFromConfig(common.Config, lutils.OpConfigImageVersionLatestPullRefreshSeconds)
@@ -241,17 +242,17 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 		// get the time in seconds since the last latest image pull
 		now := int(time.Now().UTC().Unix())
-		secondsSinceLastPull := now - lutils.GetLatestImageState().GetLastPull()
+		secondsSinceLastPull := now - lutils.GetImageState(lutils.LatestLibertyImage).GetLastPull()
 		// if the time since the last pull exceeds the refresh duration time in seconds, pull the latest image again
 		if secondsSinceLastPull >= pullRefreshSeconds {
 			// re-pull latest image
 			imageRef, err := imageutil.ParseDockerImageReference(lutils.LatestLibertyImage)
 			if err == nil {
-				libertyVersion, err := r.pullLibertyVersionFromManifest(reqLogger, instance, lutils.LatestLibertyImage, imageRef, instance.GetNamespace())
+				_, libertyVersion, err := r.pullLibertyVersionFromManifest(reqLogger, instance, lutils.LatestLibertyImage, imageRef, instance.GetNamespace())
 				if err == nil && libertyVersion != "" {
-					lutils.SetLatestImageState(now, libertyVersion)
+					lutils.SetImageState(lutils.LatestLibertyImage, now, libertyVersion)
 				} else {
-					lutils.SetLatestImageState(now, lutils.NilLibertyVersion)
+					lutils.SetImageState(lutils.LatestLibertyImage, now, lutils.NilLibertyVersion)
 				}
 			}
 
@@ -299,6 +300,10 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, lutils.NilLibertyVersion)
 			} else if instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != libertyVersion {
 				instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyVersion)
+				if len(instance.Status.ImageReference) > 0 {
+					now := int(time.Now().UTC().Unix())
+					lutils.SetImageState(instance.Status.ImageReference, now, libertyVersion)
+				}
 			}
 			versionTakenFromImageStream = true
 		}
@@ -336,7 +341,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// Pull manifests for the liberty version if the reference field is not set
 	libertyVersion := instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion]
 	if !skipLibertyVersionChecks && !versionTakenFromImageStream && libertyVersion == "" {
-		pulledLibertyVersion, err := r.pullLibertyVersionFromManifest(reqLogger, instance, instance.Spec.ApplicationImage, image, isTagNamespace)
+		pulledManifestDigest, pulledLibertyVersion, err := r.pullLibertyVersionFromManifest(reqLogger, instance, instance.Spec.ApplicationImage, image, isTagNamespace)
 		if err != nil {
 			reqLogger.Error(err, "Couldn't get docker image metadata - unauthorized or image does not exist")
 			retriesString := instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersionRetries]
@@ -354,19 +359,37 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			}
 		} else {
 			libertyVersion = pulledLibertyVersion
+			if pulledManifestDigest != "" {
+				instance.Status.ImageReference = pulledManifestDigest
+			}
 			instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyVersion)
+			if len(instance.Status.ImageReference) > 0 {
+				now := int(time.Now().UTC().Unix())
+				lutils.SetImageState(instance.Status.ImageReference, now, libertyVersion)
+			}
 		}
 	}
 
-	// Exit early if the detected Liberty version is not compatible with the application CR instance, skip this check if the image is at the latest version (not using an ID nor image stream)
-	latestLibertyVersion := lutils.GetLatestImageState().GetVersion()
-	usingLatest := latestLibertyVersion != lutils.NilLibertyVersion && latestLibertyVersion == libertyVersion
-	if !skipLibertyVersionChecks && !usingLatest {
-		if err := r.checkLibertyVersionGuards(instance); err != nil {
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	// Exit early if the detected Liberty version is not compatible with the application CR instance,
+	// skip this check if the operator ConfigMap specifies lutils.OpConfigImageVersionChecks as false
+	if !skipLibertyVersionChecks {
+		// Check if the latest image is recent
+		driftThresholdString := common.LoadFromConfig(common.Config, lutils.OpConfigImageVersionLatestDriftThresholdSeconds)
+		driftThreshold, err := strconv.Atoi(driftThresholdString)
+		// Is the latest image last pulled within the drift threshold?
+		isLatestImageRecent := err == nil && lutils.GetImageDriftSeconds(lutils.LatestLibertyImage) <= driftThreshold
+
+		// Run version guards only if the latest image is recent, otherwise we can not trust the integrity of latestLibertyVersion
+		// (i.e. in an air-gapped environment, general network issues, or from being registry rate limited)
+		if isLatestImageRecent {
+			latestLibertyVersion := lutils.GetImageState(lutils.LatestLibertyImage).GetVersion()
+			usingLatest := latestLibertyVersion != lutils.NilLibertyVersion && latestLibertyVersion == libertyVersion
+			if !usingLatest {
+				if err := r.checkLibertyVersionGuards(instance); err != nil {
+					return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+				}
+			}
 		}
-	} else if usingLatest {
-		reqLogger.Info("Using the latest image, skipped all liberty version guards")
 	}
 
 	// Reconciles the shared LTPA state for the instance namespace
@@ -1100,7 +1123,7 @@ func (r *ReconcileOpenLiberty) deletePVC(reqLogger logr.Logger, pvcName string, 
 	}
 }
 
-func (r *ReconcileOpenLiberty) getDockerImageMetadata(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, imageRef imagev1.DockerImageReference) (*runtime.RawExtension, error) {
+func (r *ReconcileOpenLiberty) getDockerImageMetadata(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, imageRef imagev1.DockerImageReference) (godigest.Digest, *runtime.RawExtension, error) {
 	olappSecrets := []corev1.Secret{}
 	var pullSecret *corev1.Secret
 	if olapp.GetPullSecret() != nil {
@@ -1111,7 +1134,7 @@ func (r *ReconcileOpenLiberty) getDockerImageMetadata(reqLogger logr.Logger, ola
 				pullSecret = nil
 			} else {
 				reqLogger.Error(err, "Failed to get the instance pull secret")
-				return nil, fmt.Errorf("Failed to get the instance pull secret: %v", err)
+				return "", nil, fmt.Errorf("Failed to get the instance pull secret: %v", err)
 			}
 		}
 		olappSecrets = append(olappSecrets, *pullSecret)
@@ -1139,32 +1162,33 @@ func (r *ReconcileOpenLiberty) checkLibertyVersionGuards(instance *openlibertyv1
 	return nil
 }
 
-func (r *ReconcileOpenLiberty) pullLibertyVersionFromManifest(reqLogger logr.Logger, instance *openlibertyv1.OpenLibertyApplication, applicationImage string, image imagev1.DockerImageReference, namespace string) (string, error) {
+func (r *ReconcileOpenLiberty) pullLibertyVersionFromManifest(reqLogger logr.Logger, instance *openlibertyv1.OpenLibertyApplication, applicationImage string, image imagev1.DockerImageReference, namespace string) (string, string, error) {
 	name, id, hasID := imageutil.SplitImageStreamImage(applicationImage)
 	if !hasID {
-		_, tag, hasTag := imageutil.SplitImageStreamTag(applicationImage)
+		noIdName, tag, hasTag := imageutil.SplitImageStreamTag(applicationImage)
 		if hasTag {
 			image.Tag = tag
+			name = noIdName
 		} else {
 			image.Tag = imageutil.DefaultImageTag
 		}
 	} else if hasID && strings.HasSuffix(name, image.Name) {
 		image.ID = id
 	} else {
-		reqLogger.Info("The .spec.applicationImage does not have a tag or id to pull liberty version information")
+		image.Tag = imageutil.DefaultImageTag
 	}
 	// To prevent leaking credentials, don't attempt to pull an image that is not namespace bounded
 	if namespace != "" {
-		dockerImageMetadata, err := r.getDockerImageMetadata(reqLogger, instance, image)
+		manifestDigest, dockerImageMetadata, err := r.getDockerImageMetadata(reqLogger, instance, image)
 		if err == nil {
 			// Get liberty version from the labels
 			libertyVersion := lutils.ParseLibertyVersionFromDockerImageMetadata(dockerImageMetadata)
 			if libertyVersion == "" {
-				return "", fmt.Errorf("Could not parse Liberty version field from Docker image metadata; version was not found in any of the labels: %s", strings.Join(lutils.ValidLibertyVersionLabels, ", "))
+				return "", "", fmt.Errorf("Could not parse Liberty version field from Docker image metadata; version was not found in any of the labels: %s", strings.Join(lutils.ValidLibertyVersionLabels, ", "))
 			}
-			return libertyVersion, nil
+			return fmt.Sprintf("%s@%s", name, manifestDigest), libertyVersion, nil
 		}
-		return "", err
+		return "", "", err
 	}
-	return "", fmt.Errorf("Blocked from getting docker image metadata because the image is missing a namespace record")
+	return "", "", fmt.Errorf("Blocked from getting docker image metadata because the image is missing a namespace record")
 }

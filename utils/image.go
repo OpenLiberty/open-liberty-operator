@@ -100,16 +100,16 @@ func (s *NamespaceCredentialsContext) Repository(
 	return importCtx.Repository(ctx, defRef.RegistryURL(), defRef.RepositoryName(), insecure)
 }
 
-func (s *NamespaceCredentialsContext) GetDockerImageMetadata(ctx context.Context, imageRef imagev1.DockerImageReference, pullSecret *corev1.Secret, insecure bool) (*runtime.RawExtension, error) {
+func (s *NamespaceCredentialsContext) GetDockerImageMetadata(ctx context.Context, imageRef imagev1.DockerImageReference, pullSecret *corev1.Secret, insecure bool) (godigest.Digest, *runtime.RawExtension, error) {
 	imageMetadata := &runtime.RawExtension{}
 	repo, err := s.Repository(ctx, imageRef, pullSecret, insecure)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to create a repository; %v", err)
+		return "", nil, fmt.Errorf("Failed to create a repository; %v", err)
 	}
 
 	service, err := repo.Manifests(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get the repository manifest service; %v", err)
+		return "", nil, fmt.Errorf("Failed to get the repository manifest service; %v", err)
 	}
 
 	var manifest distribution.Manifest
@@ -117,7 +117,7 @@ func (s *NamespaceCredentialsContext) GetDockerImageMetadata(ctx context.Context
 	if imageRef.Tag != "" {
 		manifest, err = service.Get(ctx, "", distribution.WithTag(imageRef.Tag))
 		if err != nil {
-			return nil, fmt.Errorf("Could not pull manifest for tag %s; %v", imageRef.Tag, err)
+			return "", nil, fmt.Errorf("Could not pull manifest for tag %s; %v", imageRef.Tag, err)
 		}
 		imageRefName = imageRef.Tag
 	}
@@ -127,7 +127,7 @@ func (s *NamespaceCredentialsContext) GetDockerImageMetadata(ctx context.Context
 		manifestDigest = godigest.Digest(imageRef.ID)
 		manifest, err = service.Get(ctx, manifestDigest)
 		if err != nil {
-			return nil, fmt.Errorf("Could not pull manifest for id %s; %v", imageRef.ID, err)
+			return "", nil, fmt.Errorf("Could not pull manifest for id %s; %v", imageRef.ID, err)
 		}
 		imageRefName = imageRef.ID
 	} else {
@@ -135,27 +135,27 @@ func (s *NamespaceCredentialsContext) GetDockerImageMetadata(ctx context.Context
 	}
 
 	blobStore := repo.Blobs(ctx)
-	err = createImageFromManifestList(ctx, service, blobStore, imageMetadata, manifest, imageRefName)
+	manifestDigest, err = createImageFromManifestList(ctx, service, blobStore, imageMetadata, manifest, imageRefName)
 	if err == nil {
-		return imageMetadata, nil
+		return manifestDigest, imageMetadata, nil
 	}
 	err = createSchema2Image(ctx, blobStore, imageMetadata, manifest, manifestDigest, imageRefName)
 	if err == nil {
-		return imageMetadata, nil
+		return manifestDigest, imageMetadata, nil
 	}
 	err = createOCIImage(ctx, blobStore, imageMetadata, manifest, manifestDigest, imageRefName)
 	if err == nil {
-		return imageMetadata, nil
+		return manifestDigest, imageMetadata, nil
 	}
-	return nil, fmt.Errorf("Could not deserialize manifest for ref %s; %v", imageRefName, err)
+	return "", nil, fmt.Errorf("Could not deserialize manifest for ref %s; %v", imageRefName, err)
 }
 
-func createImageFromManifestList(ctx context.Context, service distribution.ManifestService, blobStore distribution.BlobStore, imageMetadata *runtime.RawExtension, manifest distribution.Manifest, imageRefName string) error {
+func createImageFromManifestList(ctx context.Context, service distribution.ManifestService, blobStore distribution.BlobStore, imageMetadata *runtime.RawExtension, manifest distribution.Manifest, imageRefName string) (godigest.Digest, error) {
 	var schema2Err, ociErr error
 	if deserializedManifestList, found := manifest.(*manifestlist.DeserializedManifestList); found {
 		manifests := deserializedManifestList.ManifestList.Manifests
 		if len(manifests) == 0 {
-			return fmt.Errorf("Failed to parse manifest list; the list is empty")
+			return "", fmt.Errorf("Failed to parse manifest list; the list is empty")
 		}
 		var manifestDigest godigest.Digest
 		if manifestDigest == "" {
@@ -168,16 +168,16 @@ func createImageFromManifestList(ctx context.Context, service distribution.Manif
 		}
 		subManifest, err := service.Get(ctx, manifestDigest)
 		if err != nil {
-			return fmt.Errorf("Failed to get manifest for id %s; %v", manifestDigest, err)
+			return "", fmt.Errorf("Failed to get manifest for id %s; %v", manifestDigest, err)
 		}
 		schema2Err = createSchema2Image(ctx, blobStore, imageMetadata, subManifest, manifestDigest, imageRefName)
 		if schema2Err == nil {
-			return nil
+			return manifestDigest, nil
 		}
 
 		ociErr = createOCIImage(ctx, blobStore, imageMetadata, subManifest, manifestDigest, imageRefName)
 		if ociErr == nil {
-			return nil
+			return manifestDigest, nil
 		}
 	}
 	errStrings := []string{}
@@ -187,7 +187,7 @@ func createImageFromManifestList(ctx context.Context, service distribution.Manif
 	if ociErr != nil {
 		errStrings = append(errStrings, fmt.Sprintf("%v", ociErr))
 	}
-	return fmt.Errorf("Failed to parse schema2 manifest list; %s", strings.Join(errStrings, "; "))
+	return "", fmt.Errorf("Failed to parse schema2 manifest list; %s", strings.Join(errStrings, "; "))
 }
 
 func createSchema2Image(ctx context.Context, blobStore distribution.BlobStore, imageMetadata *runtime.RawExtension, manifest distribution.Manifest, manifestDigest godigest.Digest, imageRefName string) error {

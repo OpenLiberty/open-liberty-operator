@@ -247,9 +247,11 @@ ifneq (found,$(shell test -e ./liberty/bin/securityUtility && echo -n found))
 	@rmdir ./liberty/wlp
 	@rm ./liberty.zip
 	@mkdir -p ./liberty/output
+	@mkdir -p ./liberty/cache
 	@echo "Liberty securityUtility has been installed!"
 else
 	@mkdir -p ./liberty/output
+	@mkdir -p ./liberty/cache
 	@echo "Liberty securityUtility is already installed!"
 endif 
 
