@@ -9,148 +9,33 @@ import (
 
 const imageStateFileName = "liberty/cache/imageState.json"
 
-var imageState *ImageStateMaxHeap
-var imageStateLock *sync.Mutex
+var globalImageState *NamespaceImageStateMap
+var globalImageStateLock *sync.Mutex
 
 type ImageState struct {
-	LastPull  int    `json:"lastPull"`
-	ImageName string `json:"imageName"`
-	Version   string `json:"version"`
+	ImageLastPull  int    `json:"imageLastPull,omitempty"`
+	LibertyVersion string `json:"libertyVersion,omitempty"`
 }
 
 func init() {
-	imageStateLock = &sync.Mutex{}
-	imageState = nil
+	globalImageStateLock = &sync.Mutex{}
+	globalImageState = nil
 }
 
-type ImageStateMaxHeap struct {
-	Data  []*ImageState  `json:"data"`
-	Index map[string]int `json:"index"`
+type NamespaceImageStateMap struct {
+	NamespaceImages map[string]*NamespaceImageState `json:"namespaceImages"`
+	LatestImage     *ImageState                     `json:"latestImage"`
+	ClusterLastPull int                             `json:"clusterLastPull"`
 }
 
-func (mh *ImageStateMaxHeap) swapIndex(i, j int) {
-	mh.Index[mh.Data[i].ImageName], mh.Index[mh.Data[j].ImageName] = j, i
+type NamespaceImageState struct {
+	Images            map[string]*ImageState `json:"images,omitempty"` // maps image names to ImageStates
+	NamespaceLastPull int                    `json:"namespaceLastPull,omitempty"`
 }
 
-func (mh *ImageStateMaxHeap) swapData(i, j int) {
-	mh.Data[i], mh.Data[j] = mh.Data[j], mh.Data[i]
-}
-
-func (mh *ImageStateMaxHeap) swap(i, j int) {
-	mh.swapIndex(i, j)
-	mh.swapData(i, j)
-}
-
-func (mh *ImageStateMaxHeap) Heapify(i int) {
-	for {
-		if i >= len(mh.Data) {
-			break
-		}
-		l := 2 * i
-		r := 2*i + 1
-		largest := i
-
-		if l < len(mh.Data) && mh.Data[l].LastPull > mh.Data[i].LastPull {
-			largest = l
-		}
-		if r < len(mh.Data) && mh.Data[r].LastPull > mh.Data[i].LastPull {
-			largest = r
-		}
-		if i == largest {
-			break
-		}
-		mh.swap(i, largest)
-		i = largest
-	}
-}
-
-func (mh *ImageStateMaxHeap) HeapifyUp(i int) {
-	for {
-		p := (i - 1) / 2
-		if i == p || mh.Data[p].LastPull > mh.Data[i].LastPull {
-			return
-		}
-		mh.swap(i, p)
-		i = p
-	}
-}
-
-func (mh *ImageStateMaxHeap) BuildHeap(data []*ImageState) {
-	mh.Data = data
-	mh.Index = map[string]int{}
-	for i, image := range mh.Data {
-		mh.Index[image.ImageName] = i
-	}
-	n := len(mh.Data)
-	for i := n - 1; i >= 0; i-- {
-		mh.Heapify(i)
-	}
-}
-
-func (mh *ImageStateMaxHeap) Add(val *ImageState) bool {
-	if val == nil || val.Version == "" || val.ImageName == "" {
-		return false
-	}
-	foundIndex, found := mh.Index[val.ImageName]
-	if found {
-		// found the index, so modify in-place
-		var hasChanged bool = false
-		mh.Data[foundIndex], hasChanged = mh.Data[foundIndex].Max(val)
-		return hasChanged
-	}
-	mh.Data = append(mh.Data, val)
-	mh.Index[val.ImageName] = max(len(mh.Index)-1, 0)
-	mh.HeapifyUp(len(mh.Data) - 1)
-	return true
-}
-
-func (mh *ImageStateMaxHeap) Remove(imageName string) *ImageState {
-	if len(mh.Data) == 0 {
-		return nil
-	}
-	imageIndex, found := mh.Index[imageName]
-	if !found {
-		return nil
-	}
-
-	// swap the found index with the ending element
-	end := len(mh.Data) - 1
-	deletedElement := mh.Data[imageIndex]
-	mh.swap(imageIndex, end)
-	mh.Data = mh.Data[:end]
-	delete(mh.Index, imageName)
-	// re-sort the newly placed element
-	if imageIndex < len(mh.Data) {
-		mh.Heapify(imageIndex)
-		mh.HeapifyUp(imageIndex)
-	}
-	return deletedElement
-}
-
-func (mh *ImageStateMaxHeap) Peek() *ImageState {
-	if len(mh.Data) == 0 {
-		return nil
-	}
-	return mh.Data[0]
-}
-
-func (mh *ImageStateMaxHeap) Get(imageName string) *ImageState {
-	if len(mh.Data) == 0 {
-		return nil
-	}
-	imageIndex, found := mh.Index[imageName]
-	if !found || imageIndex < 0 {
-		return nil
-	}
-	if imageIndex < len(mh.Data) {
-		return mh.Data[imageIndex]
-	}
-	return nil
-}
-
-// Deserializes a byte array into an ImageStateMaxHeap
-func deserializeImageStateMaxHeap(data []byte) (*ImageStateMaxHeap, error) {
-	state := &ImageStateMaxHeap{}
+// Deserializes a byte array into an NamespaceImageStateMap
+func deserializeNamespaceImageStateMap(data []byte) (*NamespaceImageStateMap, error) {
+	state := &NamespaceImageStateMap{}
 	err := json.Unmarshal(data, state)
 	if err != nil {
 		return nil, err
@@ -158,23 +43,71 @@ func deserializeImageStateMaxHeap(data []byte) (*ImageStateMaxHeap, error) {
 	return state, nil
 }
 
-// Serializes an ImageStateMaxHeap into a byte array
-func (s *ImageStateMaxHeap) serialize() ([]byte, error) {
+// Serializes an NamespaceImageStateMap into a byte array
+func (s *NamespaceImageStateMap) serialize() ([]byte, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
-		return nil, fmt.Errorf("Could not serialize ImageStateMaxHeap")
+		return nil, fmt.Errorf("Could not serialize NamespaceImageStateMap")
 	}
 	return data, nil
 }
 
-// Writes ImageStateMaxHeap to disk (support for persistence)
-func writeStateToDisk(state *ImageStateMaxHeap) error {
+// Returns true and the last pull time if the image state has changed, false and -1 otherwise
+func (s *NamespaceImageState) Set(imageName string, lastPull int, version string) (bool, int) {
+	_, found := s.Images[imageName]
+	if !found {
+		s.Images[imageName] = &ImageState{ImageLastPull: lastPull, LibertyVersion: version}
+		return true, lastPull
+	} else {
+		if s.Images[imageName].ImageLastPull != lastPull {
+			s.Images[imageName].ImageLastPull = lastPull
+			s.Images[imageName].LibertyVersion = version
+			s.NamespaceLastPull = max(s.NamespaceLastPull, lastPull)
+			return true, s.NamespaceLastPull
+		}
+	}
+	return false, -1
+}
+
+func (s *NamespaceImageStateMap) Set(namespace string, imageName string, lastPull int, version string) bool {
+	_, found := s.NamespaceImages[namespace]
+	if !found {
+		imageState := &NamespaceImageState{}
+		imageState.Set(imageName, lastPull, version)
+		s.NamespaceImages[namespace] = imageState
+		return true
+	}
+	hasChanged, namespaceLastPull := s.NamespaceImages[namespace].Set(imageName, lastPull, version)
+	if hasChanged {
+		s.ClusterLastPull = max(s.ClusterLastPull, namespaceLastPull)
+	}
+	return hasChanged
+}
+
+func (s *NamespaceImageState) Get(imageName string) *ImageState {
+	val, found := s.Images[imageName]
+	if !found {
+		return &ImageState{}
+	}
+	return val
+}
+
+func (s *NamespaceImageStateMap) Get(namespace string) *NamespaceImageState {
+	namespaceImageState, found := s.NamespaceImages[namespace]
+	if !found {
+		return &NamespaceImageState{}
+	}
+	return namespaceImageState
+}
+
+// Writes NamespaceImageStateMap to disk (support for persistence)
+func writeStateToDisk(state *NamespaceImageStateMap) error {
 	f, err := os.Create(imageStateFileName)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	data, err := imageState.serialize()
+	data, err := globalImageState.serialize()
 	if err != nil {
 		return err
 	}
@@ -185,95 +118,113 @@ func writeStateToDisk(state *ImageStateMaxHeap) error {
 	return nil
 }
 
-// Reads ImageStateMaxHeap from disk (support for persistence)
-func readStateFromDisk() (*ImageStateMaxHeap, error) {
+// Reads NamespaceImageStateMap from disk (support for persistence)
+func readStateFromDisk() (*NamespaceImageStateMap, error) {
 	bytes, err := os.ReadFile(imageStateFileName)
 	if err != nil {
 		return nil, err
 	}
-	return deserializeImageStateMaxHeap(bytes)
+	return deserializeNamespaceImageStateMap(bytes)
 }
 
-func (state *ImageState) GetLastPull() int {
-	imageStateLock.Lock()
-	defer imageStateLock.Unlock()
-	return state.LastPull
+func (state *ImageState) GetImageLastPull() int {
+	return state.ImageLastPull
 }
 
-func (state *ImageState) GetVersion() string {
-	imageStateLock.Lock()
-	defer imageStateLock.Unlock()
-	return state.Version
+func (state *ImageState) GetLibertyVersion() string {
+	if state.LibertyVersion == "" {
+		return NilLibertyVersion
+	}
+	return state.LibertyVersion
 }
 
-// Precondiiton: state.ImageName == otherState.ImageName
-func (state *ImageState) Max(otherState *ImageState) (*ImageState, bool) {
-	if otherState == nil {
-		return state, false
-	}
-	if state.LastPull >= otherState.LastPull {
-		return state, false
-	}
-	if CompareLibertyVersion(state.Version, otherState.Version) >= 0 {
-		return state, false
-	}
-	return otherState, true
-}
+// // Precondiiton: state.ImageName == otherState.ImageName
+// func (state *ImageState) Max(otherState *ImageState) (*ImageState, bool) {
+// 	if otherState == nil {
+// 		return state, false
+// 	}
+// 	if state.ImageLastPull >= otherState.ImageLastPull {
+// 		return state, false
+// 	}
+// 	if CompareLibertyVersion(state.LibertyVersion, otherState.LibertyVersion) >= 0 {
+// 		return state, false
+// 	}
+// 	return otherState, true
+// }
 
 func readOrCreateState() {
-	if imageState == nil {
+	if globalImageState == nil {
 		state, err := readStateFromDisk()
 		if err == nil {
-			imageState = state
+			globalImageState = state
+			return
 		}
-	} else {
-		imageState = &ImageStateMaxHeap{}
-		imageState.BuildHeap([]*ImageState{})
 	}
+	globalImageState = &NamespaceImageStateMap{}
+}
+
+func SetLatestImageState(newLastPull int, newVersion string) bool {
+	globalImageStateLock.Lock()
+	defer globalImageStateLock.Unlock()
+	readOrCreateState()
+	globalImageState.LatestImage = &ImageState{ImageLastPull: newLastPull, LibertyVersion: newVersion}
+	return writeStateToDisk(globalImageState) == nil
 }
 
 // Returns true if the latest image state was updated false otherwise
-func SetImageState(newImageName string, newLastPull int, newVersion string) bool {
-	imageStateLock.Lock()
-	defer imageStateLock.Unlock()
+func SetImageState(namespace string, newImageName string, newLastPull int, newVersion string) bool {
+	globalImageStateLock.Lock()
+	defer globalImageStateLock.Unlock()
 	readOrCreateState()
-	if imageState.Add(&ImageState{ImageName: newImageName, LastPull: newLastPull, Version: newVersion}) {
-		return writeStateToDisk(imageState) == nil
+	if globalImageState.Set(namespace, newImageName, newLastPull, newVersion) {
+		return writeStateToDisk(globalImageState) == nil
 	}
 	return false
 }
 
-// Returns a pointer to the latest image pull state stored in persistence or creates a new state
-func GetImageState(imageName string) *ImageState {
-	imageStateLock.Lock()
-	defer imageStateLock.Unlock()
+func GetLatestImageState() *ImageState {
+	globalImageStateLock.Lock()
+	defer globalImageStateLock.Unlock()
 	readOrCreateState()
-	top := imageState.Get(imageName)
-	if top != nil {
-		return top
+	if globalImageState.LatestImage == nil {
+		return &ImageState{}
+	}
+	return globalImageState.LatestImage
+}
+
+// Returns a pointer to the latest image pull state stored in persistence or creates a new state
+func GetImageState(namespace string, imageName string) *ImageState {
+	globalImageStateLock.Lock()
+	defer globalImageStateLock.Unlock()
+	readOrCreateState()
+	img := globalImageState.Get(namespace).Get(imageName)
+	if img != nil {
+		return img
 	}
 	return &ImageState{}
 }
 
+func GetLatestImageLastPull() int {
+	globalImageStateLock.Lock()
+	defer globalImageStateLock.Unlock()
+	readOrCreateState()
+	if globalImageState.LatestImage == nil {
+		return -1
+	}
+	return globalImageState.LatestImage.ImageLastPull
+}
+
+func GetLatestImageDriftSeconds() int {
+	globalImageStateLock.Lock()
+	defer globalImageStateLock.Unlock()
+	readOrCreateState()
+	return globalImageState.ClusterLastPull - globalImageState.LatestImage.ImageLastPull
+}
+
 // Calculates the time drift in seconds between when imageName was last pulled against the most recently pulled image
-func GetImageDriftSeconds(imageName string) int {
-	imageStateLock.Lock()
-	defer imageStateLock.Unlock()
-	if imageState == nil {
-		state, err := readStateFromDisk()
-		if err == nil {
-			imageState = state
-		}
-	} else {
-		imageState = &ImageStateMaxHeap{}
-		imageState.BuildHeap([]*ImageState{})
-	}
-	latest := imageState.Get(imageName)
-	if latest != nil {
-		top := imageState.Peek()
-		if top != nil && top != latest {
-			return top.LastPull - latest.LastPull
-		}
-	}
-	return 0
+func GetNamespaceLastPull(namespace string) int {
+	globalImageStateLock.Lock()
+	defer globalImageStateLock.Unlock()
+	readOrCreateState()
+	return globalImageState.Get(namespace).NamespaceLastPull
 }
