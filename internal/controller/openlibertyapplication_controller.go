@@ -256,7 +256,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 					lutils.SetLatestImageState(now, lutils.NilLibertyVersion)
 				}
 			}
-
 		}
 	}
 
@@ -378,7 +377,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		driftThresholdString := common.LoadFromConfig(common.Config, lutils.OpConfigImageVersionLatestDriftThresholdSeconds)
 		driftThreshold, err := strconv.Atoi(driftThresholdString)
 		// Is the latest image last pulled within the drift threshold?
-		isLatestImageRecent := err == nil && lutils.GetLatestImageDriftSeconds() <= driftThreshold
+		isLatestImageRecent := err == nil && lutils.GetLatestImageState().GetImageDriftSeconds() <= driftThreshold
 
 		// Run version guards only if the latest image is recent, otherwise we can not trust the integrity of latestLibertyVersion
 		// (i.e. in an air-gapped environment, general network issues, or from being registry rate limited)

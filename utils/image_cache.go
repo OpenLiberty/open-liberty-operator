@@ -19,12 +19,12 @@ type ImageState struct {
 
 func init() {
 	globalImageStateLock = &sync.Mutex{}
-	globalImageState = nil
+	globalImageState = readOrCreateState()
 }
 
 type NamespaceImageStateMap struct {
-	NamespaceImages map[string]*NamespaceImageState `json:"namespaceImages"`
-	LatestImage     *ImageState                     `json:"latestImage"`
+	NamespaceImages map[string]*NamespaceImageState `json:"namespaceImages,omitempty"`
+	LatestImage     *ImageState                     `json:"latestImage,omitempty"`
 	ClusterLastPull int                             `json:"clusterLastPull"`
 }
 
@@ -43,6 +43,16 @@ func deserializeNamespaceImageStateMap(data []byte) (*NamespaceImageStateMap, er
 	return state, nil
 }
 
+func (s *NamespaceImageStateMap) SetLatestImage(lastPull int, version string) {
+	if s.LatestImage == nil {
+		s.LatestImage = &ImageState{}
+	}
+	if lastPull > s.LatestImage.ImageLastPull {
+		s.LatestImage.ImageLastPull = lastPull
+		s.LatestImage.LibertyVersion = version
+	}
+}
+
 // Serializes an NamespaceImageStateMap into a byte array
 func (s *NamespaceImageStateMap) serialize() ([]byte, error) {
 	data, err := json.Marshal(s)
@@ -54,6 +64,9 @@ func (s *NamespaceImageStateMap) serialize() ([]byte, error) {
 
 // Returns true and the last pull time if the image state has changed, false and -1 otherwise
 func (s *NamespaceImageState) Set(imageName string, lastPull int, version string) (bool, int) {
+	if s.Images == nil {
+		s.Images = map[string]*ImageState{}
+	}
 	_, found := s.Images[imageName]
 	if !found {
 		s.Images[imageName] = &ImageState{ImageLastPull: lastPull, LibertyVersion: version}
@@ -70,6 +83,9 @@ func (s *NamespaceImageState) Set(imageName string, lastPull int, version string
 }
 
 func (s *NamespaceImageStateMap) Set(namespace string, imageName string, lastPull int, version string) bool {
+	if s.NamespaceImages == nil {
+		s.NamespaceImages = map[string]*NamespaceImageState{}
+	}
 	_, found := s.NamespaceImages[namespace]
 	if !found {
 		imageState := &NamespaceImageState{}
@@ -85,6 +101,9 @@ func (s *NamespaceImageStateMap) Set(namespace string, imageName string, lastPul
 }
 
 func (s *NamespaceImageState) Get(imageName string) *ImageState {
+	if s.Images == nil {
+		return nil
+	}
 	val, found := s.Images[imageName]
 	if !found {
 		return &ImageState{}
@@ -93,6 +112,9 @@ func (s *NamespaceImageState) Get(imageName string) *ImageState {
 }
 
 func (s *NamespaceImageStateMap) Get(namespace string) *NamespaceImageState {
+	if s.NamespaceImages == nil {
+		return nil
+	}
 	namespaceImageState, found := s.NamespaceImages[namespace]
 	if !found {
 		return &NamespaceImageState{}
@@ -138,44 +160,32 @@ func (state *ImageState) GetLibertyVersion() string {
 	return state.LibertyVersion
 }
 
-// // Precondiiton: state.ImageName == otherState.ImageName
-// func (state *ImageState) Max(otherState *ImageState) (*ImageState, bool) {
-// 	if otherState == nil {
-// 		return state, false
-// 	}
-// 	if state.ImageLastPull >= otherState.ImageLastPull {
-// 		return state, false
-// 	}
-// 	if CompareLibertyVersion(state.LibertyVersion, otherState.LibertyVersion) >= 0 {
-// 		return state, false
-// 	}
-// 	return otherState, true
-// }
+func (state *ImageState) GetImageDriftSeconds() int {
+	return globalImageState.ClusterLastPull - state.ImageLastPull
+}
 
-func readOrCreateState() {
+func readOrCreateState() *NamespaceImageStateMap {
 	if globalImageState == nil {
 		state, err := readStateFromDisk()
 		if err == nil {
-			globalImageState = state
-			return
+			return state
 		}
 	}
-	globalImageState = &NamespaceImageStateMap{}
+	return &NamespaceImageStateMap{}
 }
 
-func SetLatestImageState(newLastPull int, newVersion string) bool {
+func SetLatestImageState(newLastPull int, newVersion string) error {
 	globalImageStateLock.Lock()
 	defer globalImageStateLock.Unlock()
-	readOrCreateState()
-	globalImageState.LatestImage = &ImageState{ImageLastPull: newLastPull, LibertyVersion: newVersion}
-	return writeStateToDisk(globalImageState) == nil
+	globalImageState.SetLatestImage(newLastPull, newVersion)
+	globalImageState.ClusterLastPull = max(globalImageState.ClusterLastPull, newLastPull)
+	return writeStateToDisk(globalImageState)
 }
 
-// Returns true if the latest image state was updated false otherwise
+// Returns true if the image state was updated false otherwise
 func SetImageState(namespace string, newImageName string, newLastPull int, newVersion string) bool {
 	globalImageStateLock.Lock()
 	defer globalImageStateLock.Unlock()
-	readOrCreateState()
 	if globalImageState.Set(namespace, newImageName, newLastPull, newVersion) {
 		return writeStateToDisk(globalImageState) == nil
 	}
@@ -185,18 +195,16 @@ func SetImageState(namespace string, newImageName string, newLastPull int, newVe
 func GetLatestImageState() *ImageState {
 	globalImageStateLock.Lock()
 	defer globalImageStateLock.Unlock()
-	readOrCreateState()
 	if globalImageState.LatestImage == nil {
 		return &ImageState{}
 	}
 	return globalImageState.LatestImage
 }
 
-// Returns a pointer to the latest image pull state stored in persistence or creates a new state
+// Returns a pointer to the image state stored in persistence or creates a new state
 func GetImageState(namespace string, imageName string) *ImageState {
 	globalImageStateLock.Lock()
 	defer globalImageStateLock.Unlock()
-	readOrCreateState()
 	img := globalImageState.Get(namespace).Get(imageName)
 	if img != nil {
 		return img
@@ -207,24 +215,15 @@ func GetImageState(namespace string, imageName string) *ImageState {
 func GetLatestImageLastPull() int {
 	globalImageStateLock.Lock()
 	defer globalImageStateLock.Unlock()
-	readOrCreateState()
 	if globalImageState.LatestImage == nil {
-		return -1
+		globalImageState.LatestImage = &ImageState{}
 	}
 	return globalImageState.LatestImage.ImageLastPull
-}
-
-func GetLatestImageDriftSeconds() int {
-	globalImageStateLock.Lock()
-	defer globalImageStateLock.Unlock()
-	readOrCreateState()
-	return globalImageState.ClusterLastPull - globalImageState.LatestImage.ImageLastPull
 }
 
 // Calculates the time drift in seconds between when imageName was last pulled against the most recently pulled image
 func GetNamespaceLastPull(namespace string) int {
 	globalImageStateLock.Lock()
 	defer globalImageStateLock.Unlock()
-	readOrCreateState()
 	return globalImageState.Get(namespace).NamespaceLastPull
 }
