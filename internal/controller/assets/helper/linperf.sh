@@ -20,8 +20,9 @@
 # --cpu-threshold=<value> triggers a data collection when the specified CPU threshold is reached.
 # --check-cpu-interval=<value> checks a process's CPU usage at interval in seconds. Default is 30.
 # --disable-irix-mode caps CPU usage at 100% in this script.
-# --disable-collecting-ifconfig to disable collecting ifconfig
-# --disable-collecting-hostname to disable collecting hostname
+# --disable-collecting-ifconfig disables collecting ifconfig
+# --disable-collecting-hostname disables collecting hostname
+# --clean-up-javacores removes javacores after archiving (includes any created during execution)
 #
 # Example with some options against a Java PID:
 # A javacore/thread dump every 5 seconds, running for 30 seconds:
@@ -50,8 +51,8 @@ CHECK_CPU_INTERVAL=30   # How often the script should check a process's CPU usag
                         # It only works with -c <value> or --cpu-threshold=<value>.
 MONITOR_ONLY=0          # Monitoring trigering events only with no data created.
                         # It only works with -c <value> or --cpu-threshold=<value>. Default=0
-KEEP_QUIET=0            # To disable the end print message, change to 1. Default=0
-ALLOW_STATS=0           # To collect OS data without provided PIDs, change to 1. Default=0
+KEEP_QUIET=0            # Disable the end print message, change to 1. Default=0
+ALLOW_STATS=0           # Collect OS data without provided PIDs, change to 1. Default=0
 ROOT_ACCESS_REQUIRED=1        # Default=1 to require root for running the script.
 DISABLE_COLLECTING_IFCONFIG=0 # Default=0 to collect ifconfig info
 DISABLE_COLLECTING_HOSTNAME=0 # Default=0 to collect hostname info
@@ -62,7 +63,7 @@ DISABLE_COLLECTING_HOSTNAME=0 # Default=0 to collect hostname info
 #   that may not be useful towards resolving the issue.  This becomes a problem
 #   when the process of collecting data obscures the real issue.
 ###############################################################################
-SCRIPT_VERSION=2025.04.14
+SCRIPT_VERSION=2025.09.19
 START_DAY="$(date +%Y%m%d)"
 START_TIME="$(date +%H%M%S)"
 
@@ -109,11 +110,16 @@ while [ $# -gt 0 ]; do
     # Disable root requirement
     --ignore-root ) ROOT_ACCESS_REQUIRED=0; shift 1;;
 
+    # Clean up javacores after tarring. 
+    --clean-up-javacores ) CLEAN_UP_JAVACORES=1; shift 1;;
+
     [0-9]* ) provided_pids="$provided_pids $1"; shift 1;;
 
     * ) echo "Unknown option: $1"; exit 1;;
   esac
 done
+# echo "$monitor_log_file $match_trace $provided_pids"
+# exit 1
 #############################################
 # If PIDs are not provided, the script exits.
 #############################################
@@ -223,9 +229,9 @@ log()
   if [ -z "${DISABLE_SCREEN_OUTPUT}" ] && [ -n "$1" ] && [ $MONITOR_ONLY -ne 1 ] && [ -z "${HIDE_STAMP}" ]; then
     printf "%s\t%s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$1" | tee -a screen.out
   elif [ -n "${DISABLE_SCREEN_OUTPUT}" ] && [ -n "${HIDE_STAMP}" ] && [ -n "$1" ]; then
-    echo "$1"
+    printf "%s\n" "$1"
   elif [ -n "${HIDE_STAMP}" ] && [ -n "$1" ]; then
-    echo "$1" | tee -a screen.out 
+    printf "%s\n" "$1" | tee -a screen.out 
   elif [ -n "$1" ]; then
     printf "%s\t%s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$1"
   fi
@@ -526,7 +532,13 @@ log "Final netstat snapshot complete."
 # Other data collection #
 #########################
 log "Collecting other data."
-dmesg > dmesg.out 2>&1
+dmesg="dmesg.out"
+if ! dmesg > /dev/null 2>&1; then
+  dmesg=""
+  log "dmesg data unavailable due to access restrictions (normal in containers/non-root)."
+else
+  dmesg > dmesg.out 2>&1
+fi
 df -hk > df-hk.out 2>&1
 
 # Terminate TOP processes created by this script.
@@ -542,18 +554,36 @@ trap 'kill $top_pids 2>/dev/null' EXIT
 log "Preparing for packaging and cleanup..."
 sleep 5
 
+CleanUpJavacores()
+{
+  # $1 - directory path
+  # $2 - javacore files
+  if [ -n "$CLEAN_UP_JAVACORES" ]; then
+    log "Cleaning up the javacores in $1"
+    for file in $2; do
+      local full_path="$1/$file"
+      if [ -f "$full_path" ]; then
+        rm "$full_path" && log "Removed: $full_path " || log "Failed to remove: $full_path"
+      else
+        log "File not found to remove: $full_path"
+      fi
+    done
+  fi
+}
+
 # Tar javacores
 tarred_javacores_string=""
 pids_not_found_javacores="$no_longer_running_pids"
 TarJavacores()
 {
-  #scriptdir=$(pwd)
-  # $1 - directory
-  # $2 - javacore filenames
+  # $1 - directory path
+  # $2 - javacore files
   # $3 - PID
   (cd ''"$1"'' && tar -cf ''"$OUTPUT_DIR/javacore.$3.tar"'' $2)
-  temp_javacores_string="$tarred_javacores_string javacore.$3.tar "
+  local temp_javacores_string="$tarred_javacores_string javacore.$3.tar "
   tarred_javacores_string=$temp_javacores_string
+  # Remove the javacores if --clean-up-javacores is used.
+  CleanUpJavacores "$1" "$2"
 }
 if [ -z "$disable_kill" ]; then
   for pid in $pids
@@ -588,7 +618,7 @@ screen_out="screen.out"
 if [ -n "${DISABLE_SCREEN_OUTPUT}" ]; then
   screen_out=""
 fi
-files_string="netstat.out vmstat.out ps.aux.out ps.out ps.threads.out top.out $screen_out dmesg.out whoami.out df-hk.out uptime.out $tarred_javacores_string $ifconfig_file"
+files_string="netstat.out vmstat.out ps.aux.out ps.out ps.threads.out top.out $screen_out $dmesg whoami.out df-hk.out uptime.out $tarred_javacores_string $ifconfig_file"
 for pid in $pids
 do
   temp_string="topdashH.$pid.out"
@@ -603,7 +633,7 @@ log "$(echo $files_string | sed 's/  / /g' | sed 's/ *$//')"
 
 tar -cf ../$DIR_NAME.tar $files_string
 if [ $? -ne 0 ]; then
-  echo $(date '+%Y-%m-%d %H:%M:%S') "\tDue to above tar issue, the mentioned files in $DIR_NAME are not removed."
+  printf "%s\t%s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "Due to above tar issue, the mentioned files in $DIR_NAME are not removed."
   dir_end_message="$OUTPUT_DIR"
 else
   gzip ../$DIR_NAME.tar
@@ -613,16 +643,15 @@ fi
 # Check if the current directory is empty before removing it.
 # Otherwise, print out message and the output dir will not be removed.
 if [ -n "$(ls -A)" ]; then
-  echo $(date '+%Y-%m-%d %H:%M:%S') "\tFailed to remove the temporary $DIR_NAME directory."
+  printf "%s\t%s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "Failed to remove the temporary $DIR_NAME directory."
 else
   cd ..
   rm -r $DIR_NAME
-  echo $(date '+%Y-%m-%d %H:%M:%S') "\tTemporary directory $DIR_NAME removed."
+  printf "%s\t%s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "Temporary directory $DIR_NAME removed."
   dir_end_message="$OUTPUT_DIR.tar.gz"
 fi
 
-echo $(date '+%Y-%m-%d %H:%M:%S') "\tlinperf script complete."
-
+printf "%s\t%s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "linperf script complete."
 if [ $KEEP_QUIET -eq 0 ]; then
   # Define colors and width
   YELLOW_BG="$(tput setaf 0)$(tput setab 3)"
