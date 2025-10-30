@@ -37,7 +37,7 @@ func createLTPAKeys(password string, passwordKey *string) ([]byte, error) {
 	params := []string{}
 	params = append(params, SECURITY_UTILITY_CREATE_LTPA_KEYS)
 	params = append(params, fmt.Sprintf("--file=%s", tmpFilePath))
-	params = append(params, fmt.Sprintf("--passwordEncoding=%s", "aes")) // use aes encoding
+	params = append(params, fmt.Sprintf("--passwordEncoding=%s", "aes-128")) // use aes encoding
 	if passwordKey != nil && len(*passwordKey) > 0 {
 		params = append(params, fmt.Sprintf("--passwordKey=%s", *passwordKey))
 	}
