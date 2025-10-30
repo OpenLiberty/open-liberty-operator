@@ -63,7 +63,7 @@ DISABLE_COLLECTING_HOSTNAME=0 # Default=0 to collect hostname info
 #   that may not be useful towards resolving the issue.  This becomes a problem
 #   when the process of collecting data obscures the real issue.
 ###############################################################################
-SCRIPT_VERSION=2025.09.xx
+SCRIPT_VERSION=2025.09.19
 START_DAY="$(date +%Y%m%d)"
 START_TIME="$(date +%H%M%S)"
 
