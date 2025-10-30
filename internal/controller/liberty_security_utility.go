@@ -15,7 +15,7 @@ const SECURITY_UTILITY_OUTPUT_FOLDER = "liberty/output"
 func encode(password string, passwordKey *string) ([]byte, error) {
 	params := []string{}
 	params = append(params, SECURITY_UTILITY_ENCODE)
-	params = append(params, fmt.Sprintf("--encoding=%s", "aes"))
+	params = append(params, fmt.Sprintf("--encoding=%s", "aes-128"))
 	if passwordKey != nil && len(*passwordKey) > 0 {
 		params = append(params, fmt.Sprintf("--key=%s", *passwordKey))
 	}
