@@ -14,7 +14,6 @@ import (
 	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
 	oputils "github.com/application-stacks/runtime-component-operator/utils"
-	godigest "github.com/opencontainers/go-digest"
 
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
@@ -1123,7 +1122,7 @@ func (r *ReconcileOpenLiberty) deletePVC(reqLogger logr.Logger, pvcName string, 
 	}
 }
 
-func (r *ReconcileOpenLiberty) getDockerImageMetadata(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, imageRef imagev1.DockerImageReference) (godigest.Digest, *runtime.RawExtension, error) {
+func (r *ReconcileOpenLiberty) getDockerImageMetadata(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, imageRef imagev1.DockerImageReference) (string, *runtime.RawExtension, error) {
 	olappSecrets := []corev1.Secret{}
 	var pullSecret *corev1.Secret
 	if olapp.GetPullSecret() != nil {
@@ -1179,14 +1178,18 @@ func (r *ReconcileOpenLiberty) pullLibertyVersionFromManifest(reqLogger logr.Log
 	}
 	// To prevent leaking credentials, don't attempt to pull an image that is not namespace bounded
 	if namespace != "" {
-		manifestDigest, dockerImageMetadata, err := r.getDockerImageMetadata(reqLogger, instance, image)
+		idOrDigest, dockerImageMetadata, err := r.getDockerImageMetadata(reqLogger, instance, image)
 		if err == nil {
 			// Get liberty version from the labels
 			libertyVersion := lutils.ParseLibertyVersionFromDockerImageMetadata(dockerImageMetadata)
 			if libertyVersion == "" {
 				return "", "", fmt.Errorf("Could not parse Liberty version field from Docker image metadata; version was not found in any of the labels: %s", strings.Join(lutils.ValidLibertyVersionLabels, ", "))
 			}
-			return fmt.Sprintf("%s@%s", name, manifestDigest), libertyVersion, nil
+			imageName := name
+			if idOrDigest != "" {
+				imageName = fmt.Sprintf("%s@%s", name, idOrDigest)
+			}
+			return imageName, libertyVersion, nil
 		}
 		return "", "", err
 	}
