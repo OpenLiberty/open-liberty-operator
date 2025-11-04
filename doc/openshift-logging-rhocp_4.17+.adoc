@@ -1,14 +1,14 @@
 # Application Logging on Red Hat OpenShift Container Platform (RHOCP) with Loki, Vector, and the RHOCP Cluster Observability Operator
 
-The following guide has been tested and is supported with Red Hat OpenShift Container Platform (RHOCP) version 4.17, 4.18 and 4.19.
+The following guide has been tested and is supported with Red Hat OpenShift Container Platform (RHOCP) version 4.17, 4.18, 4.19, and 4.20.
 
 Pod processes running in Kubernetes frequently produce logs. To effectively manage this log data and ensure no loss of log data occurs when a pod terminates, a log aggregation tool should be deployed on the Kubernetes cluster. Log aggregation tools help users persist, search, and visualize the log data that is gathered from the pods across the cluster. Log aggregation tools in the market today include:  EFK, LogDNA, Splunk, Datadog, IBM Operations Analytics, etc.  When considering log aggregation tools, enterprises make choices that are inclusive of their journey to cloud, both new cloud-native applications running in Kubernetes and their existing traditional IT choices.
 
-With the release of Logging 6.0 in RHOCP 4.17, the EFK stack is no longer supported. Logging 6.0 now manages log storage, collection, and visualization using Loki, Vector, and the Cluster Observability's new Logging UI Plugin. This guide describes the process of deploying the new stack using the Loki, RedHat OpenShift Logging, and Cluster Observability Operators. Use this stack to aggregate all container logs. After a successful installation, the Loki and log collector pods should reside inside the *openshift-logging* namespace of the cluster. Check out this link:https://docs.redhat.com/en/documentation/openshift_container_platform/4.16/html/logging/logging-6-0#log6x-upgrading-to-6[doc] for more information on the new changes introduced in Logging 6.0.
+With the release of Logging 6.0 in RHOCP 4.17, the EFK stack is no longer supported. Logging 6.0 now manages log storage, collection, and visualization using Loki, Vector, and the Cluster Observability's new Logging UI Plugin. This guide describes the process of deploying the new stack using the Loki, RedHat OpenShift Logging, and Cluster Observability Operators. Use this stack to aggregate all container logs. After a successful installation, the Loki and log collector pods should reside inside the *openshift-logging* namespace of the cluster. Check out this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.3/html/upgrading_logging/upgrading-to-logging-6#changes-in-logging-6_upgrading-to-logging-6[doc] for more information on the new changes introduced in Logging 6.0.
 
 ## Setup LokiStack and Cluster Log Forwarding 
 
-Follow this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.2/html/about_openshift_logging/quick-start[guide] to set up LokiStack and a ClusterLogForwarder in the `openshift-logging` namespace.
+Follow this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.3/html/about_openshift_logging/quick-start[guide] to set up LokiStack and a ClusterLogForwarder in the `openshift-logging` namespace.
 
 After the LokiStack and ClusterLogForwarder deployments are completed, you should see the following pods running in the openshift-logging namespace.
 
@@ -38,7 +38,7 @@ collector-z75z5                                1/1     Running   0          3h16
 
 ## Tips
 
-You can configure LokiStack and the CustomLogForwarder according to your needs. Check out this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.2/html/configuring_logging/configuring-lokistack-storage[doc] for how to configure LokiStack storage, and this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.2/html/configuring_logging/configuring-log-forwarding[doc] for how to configure log fowarding.
+You can configure LokiStack and the CustomLogForwarder according to your needs. Check out this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.3/html/configuring_logging/configuring-lokistack-storage[doc] for how to configure LokiStack storage, and this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.3/html/configuring_logging/configuring-log-forwarding[doc] for how to configure log fowarding.
 
 ### Object storage
 
