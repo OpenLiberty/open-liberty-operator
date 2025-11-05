@@ -108,7 +108,7 @@ Deploy the Cluster Log Forwarder instance with the following command:
 oc create -f cluster-logging-forwarder.yaml
 ----
 
-For more information on parsing JSON logs in RHOCP, see the the OpenShift guide link:++https://docs.openshift.com/container-platform/4.16/observability/logging/log_collection_forwarding/cluster-logging-enabling-json-logging.html++[Enabling JSON logging].
+For more information on parsing JSON logs in RHOCP, see the OpenShift guide link:++https://docs.redhat.com/en/documentation/openshift_container_platform/4.16/html/logging/log-collection-and-forwarding#cluster-logging-enabling-json-logging++[Enabling JSON logging].
 
 ## View application logs in Kibana
 
