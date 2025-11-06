@@ -41,7 +41,7 @@ var log = logf.Log.WithName("openliberty_utils")
 
 // Status References
 const StatusReferenceLibertyVersion = "libertyVersion"
-const StatusReferenceLibertyVersionRetries = "libertyVersionRetries"
+const StatusReferenceLibertyVersionLastPull = "libertyVersionLastPull"
 
 var ValidLibertyVersionLabels = []string{"liberty.version", "io.openliberty.version", "org.opencontainers.image.version", "version"}
 
@@ -184,14 +184,10 @@ func Validate(olapp *olv1.OpenLibertyApplication) (bool, error) {
 }
 
 const (
-	FlagDelimiterSpace                              = " "
-	FlagDelimiterEquals                             = "="
-	OpConfigPerformanceDataMaxWorkers               = "performanceDataMaxWorkers"
-	OpConfigImageVersionChecks                      = "imageVersionChecks"
-	OpConfigImagePullRetries                        = "imagePullRetries"
-	OpConfigImageVersionLatestOptimized             = "imageVersionLatestOptimized"
-	OpConfigImageVersionLatestPullRefreshSeconds    = "imageVersionLatestPullRefreshSeconds"
-	OpConfigImageVersionLatestDriftThresholdSeconds = "imageVersionLatestDriftThresholdSeconds"
+	FlagDelimiterSpace                = " "
+	FlagDelimiterEquals               = "="
+	OpConfigPerformanceDataMaxWorkers = "performanceDataMaxWorkers"
+	OpConfigImageVersionChecks        = "imageVersionChecks"
 )
 
 var DefaultLibertyOpConfig *sync.Map
@@ -200,10 +196,6 @@ func init() {
 	DefaultLibertyOpConfig = &sync.Map{}
 	DefaultLibertyOpConfig.Store(OpConfigPerformanceDataMaxWorkers, "10")
 	DefaultLibertyOpConfig.Store(OpConfigImageVersionChecks, "true")
-	DefaultLibertyOpConfig.Store(OpConfigImagePullRetries, "3")
-	DefaultLibertyOpConfig.Store(OpConfigImageVersionLatestOptimized, "true")
-	DefaultLibertyOpConfig.Store(OpConfigImageVersionLatestPullRefreshSeconds, "86400")
-	DefaultLibertyOpConfig.Store(OpConfigImageVersionLatestDriftThresholdSeconds, "129600")
 }
 
 func parseFlag(key, value, delimiter string) string {

@@ -134,8 +134,18 @@ func (s *NamespaceCredentialsContext) GetDockerImageMetadata(ctx context.Context
 		imageRefName = imageRef.ID
 		idOrDigest = imageRef.ID
 	} else {
+		// set the sub manifest for image validation
 		manifestDigest = manifest.References()[0].Digest
-		idOrDigest = string(manifestDigest)
+
+		// if the manifest list digest exists, set this as the .status.imageReference
+		_, payload, err := manifest.Payload()
+		if err == nil {
+			payloadDigest := godigest.FromBytes(payload)
+			idOrDigest = string(payloadDigest)
+		} else {
+			// otherwise, use the sub manifest as the .status.imageReference
+			idOrDigest = string(manifestDigest)
+		}
 	}
 
 	blobStore := repo.Blobs(ctx)

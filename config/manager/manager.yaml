@@ -94,15 +94,11 @@ spec:
           - name: scratch
             mountPath: /liberty/output
             subPath: create-ltpa-keys
-          - name: cache
-            mountPath: /liberty/cache
           - name: socket
             mountPath: /tmp
             subPath: operator.sock
       volumes:
         - name: scratch
-          emptyDir: {}
-        - name: cache
           emptyDir: {}
         - name: socket
           emptyDir: {}
