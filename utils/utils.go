@@ -3,7 +3,6 @@ package utils
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
@@ -22,8 +21,6 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -43,13 +40,10 @@ var log = logf.Log.WithName("openliberty_utils")
 const StatusReferenceLibertyVersion = "libertyVersion"
 const StatusReferenceLibertyVersionLastPull = "libertyVersionLastPull"
 
-var ValidLibertyVersionLabels = []string{"liberty.version", "io.openliberty.version", "org.opencontainers.image.version", "version"}
-
 // Constant Values
 const serviceabilityMountPath = "/serviceability"
 const ssoEnvVarPrefix = "SEC_SSO_"
 const OperandVersion = "1.5.0"
-const LatestLibertyImage = "icr.io/appcafe/open-liberty:latest"
 
 // LTPA constants
 const LTPAServerXMLSuffix = "-managed-ltpa-server-xml"
@@ -1279,33 +1273,6 @@ func IsValidOperandVersion(version string) bool {
 	return true
 }
 
-// Returns true if version is a valid Liberty version string and false otherwise
-func IsValidLibertyVersion(version string) bool {
-	args := strings.Split(version, ".")
-	if len(args) != 4 {
-		return false
-	}
-
-	// year should be a number
-	_, err := strconv.Atoi(args[0])
-	if err != nil {
-		return false
-	}
-
-	// 2nd and 3rd args should be "0"
-	if args[1] != "0" || args[2] != "0" {
-		return false
-	}
-
-	// month should be a number
-	_, err = strconv.Atoi(args[3])
-	if err != nil {
-		return false
-	}
-
-	return true
-}
-
 func CompareOperandVersion(a string, b string) int {
 	arrA := strings.Split(a[1:], "_")
 	arrB := strings.Split(b[1:], "_")
@@ -1333,27 +1300,4 @@ func CompareLibertyVersion(a string, b string) int {
 		}
 	}
 	return 0
-}
-
-func ParseLibertyVersionFromDockerImageMetadata(dockerImageMetadata *runtime.RawExtension) string {
-	if dockerImageMetadata == nil {
-		return ""
-	}
-	unstructuredImageMeta := &unstructured.Unstructured{}
-	if err := json.Unmarshal(dockerImageMetadata.Raw, unstructuredImageMeta); err != nil {
-		return ""
-	}
-	if imageLabels, found, err := unstructured.NestedFieldNoCopy(unstructuredImageMeta.Object, "Config", "Labels"); err == nil && found {
-		imageLabelsMap, isMap := imageLabels.(map[string]interface{})
-		if !isMap {
-			return ""
-		}
-		for _, validLibertyVersionLabel := range ValidLibertyVersionLabels {
-			if version, versionFound := imageLabelsMap[validLibertyVersionLabel]; versionFound && IsValidLibertyVersion(version.(string)) {
-				return version.(string)
-			}
-		}
-	}
-	// No version found
-	return ""
 }

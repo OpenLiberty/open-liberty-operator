@@ -1,10 +1,11 @@
-package utils
+package image
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -30,6 +31,8 @@ import (
 const (
 	NilLibertyVersion = "0.0.0.0"
 )
+
+var ValidLibertyVersionLabels = []string{"liberty.version", "io.openliberty.version", "org.opencontainers.image.version", "version"}
 
 type NamespaceCredentialsContext struct {
 	transport         http.RoundTripper
@@ -266,4 +269,54 @@ func validateDigest(manifest distribution.Manifest, digest godigest.Digest) erro
 		return fmt.Errorf("Failed to validate integrity of the digest; using media type %s the expected digest %s does not match digest parsed %s", mediaType, digest, payloadDigest)
 	}
 	return nil
+}
+
+func ParseLibertyVersionFromDockerImageMetadata(dockerImageMetadata *runtime.RawExtension) string {
+	if dockerImageMetadata == nil {
+		return ""
+	}
+	unstructuredImageMeta := &unstructured.Unstructured{}
+	if err := json.Unmarshal(dockerImageMetadata.Raw, unstructuredImageMeta); err != nil {
+		return ""
+	}
+	if imageLabels, found, err := unstructured.NestedFieldNoCopy(unstructuredImageMeta.Object, "Config", "Labels"); err == nil && found {
+		imageLabelsMap, isMap := imageLabels.(map[string]interface{})
+		if !isMap {
+			return ""
+		}
+		for _, validLibertyVersionLabel := range ValidLibertyVersionLabels {
+			if version, versionFound := imageLabelsMap[validLibertyVersionLabel]; versionFound && IsValidLibertyVersion(version.(string)) {
+				return version.(string)
+			}
+		}
+	}
+	// No version found
+	return ""
+}
+
+// Returns true if version is a valid Liberty version string and false otherwise
+func IsValidLibertyVersion(version string) bool {
+	args := strings.Split(version, ".")
+	if len(args) != 4 {
+		return false
+	}
+
+	// year should be a number
+	_, err := strconv.Atoi(args[0])
+	if err != nil {
+		return false
+	}
+
+	// 2nd and 3rd args should be "0"
+	if args[1] != "0" || args[2] != "0" {
+		return false
+	}
+
+	// month should be a number
+	_, err = strconv.Atoi(args[3])
+	if err != nil {
+		return false
+	}
+
+	return true
 }
