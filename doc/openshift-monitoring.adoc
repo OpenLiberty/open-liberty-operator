@@ -1,6 +1,6 @@
 # Application Monitoring on Red Hat OpenShift Container Platform (RHOCP) with Prometheus and Grafana
 
-The following guide has been tested and is supported with Red Hat OpenShift Container Platform (RHOCP) versions 4.12, 4.14, 4.16, 4.17, 4.18, 4.19, and 4.20.
+The following guide has been tested and is supported with Red Hat OpenShift Container Platform (RHOCP) versions 4.16, 4.17, 4.18, 4.19, and 4.20.
 
 ## Prerequisites
 
@@ -8,9 +8,9 @@ Prior to installing application monitoring on RHOCP, ensure that there is a runn
 
 This guide assumes a running application has been deployed to the RHOCP cluster inside a project/namespace called `myapp`, and that its Prometheus metrics endpoint is exposed on path `/metrics`.
 
-# Application Monitoring on RHOCP 4.12+
+# Application Monitoring on RHOCP 4.16+
 
-In RHOCP 4.12+, application monitoring can be set up by enabling monitoring for user-defined projects without the need to install an additional monitoring solution. This solution will deploy a second Prometheus Operator instance inside the `openshift-user-workload-monitoring` namespace that is configured to monitor all namespaces excluding the `openshift-` prefixed namespaces already monitored by the cluster's default platform monitoring.
+In RHOCP 4.16+, application monitoring can be set up by enabling monitoring for user-defined projects without the need to install an additional monitoring solution. This solution will deploy a second Prometheus Operator instance inside the `openshift-user-workload-monitoring` namespace that is configured to monitor all namespaces excluding the `openshift-` prefixed namespaces already monitored by the cluster's default platform monitoring.
 
 There is no separate Grafana deployment that comes with enabling user-defined monitoring and the existing Grafana instance provided with the default monitoring stack is read-only, so a community-powered Grafana Operator must be installed later to create custom dashboards for viewing your metrics.
 
