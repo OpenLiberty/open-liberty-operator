@@ -312,6 +312,7 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplic
 		{Name: "WLP_LOGGING_CONSOLE_SOURCE", Value: "message,accessLog,ffdc,audit"},
 		{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: "json"},
 	}
+	replacementEnv := []corev1.EnvVar{}
 
 	if la.GetServiceability() != nil {
 		logDirMountPath := fmt.Sprintf("%s/%s/%s/logs", serviceabilityMountPath, la.GetNamespace(), "$(SERVICEABILITY_HOSTNAME)")
@@ -331,14 +332,12 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplic
 		startupCheckInterval := "100ms"
 		if la.Spec.Probes != nil {
 			if la.Spec.Probes.CheckInterval != nil && len(*la.Spec.Probes.CheckInterval) > 0 {
-				// Lightly guard against user setting checkInterval to 0, 0ms, or 0s because isFileBasedProbesEnabled() returned true
-				configCheckInterval := *la.Spec.Probes.CheckInterval
-				if configCheckInterval != "0" && configCheckInterval != "0ms" && configCheckInterval != "0s" {
-					checkInterval = configCheckInterval
-				}
+				checkInterval = *la.Spec.Probes.CheckInterval
+				replacementEnv = append(replacementEnv, corev1.EnvVar{Name: "MP_HEALTH_CHECK_INTERVAL", Value: checkInterval})
 			}
 			if la.Spec.Probes.StartupCheckInterval != nil && len(*la.Spec.Probes.StartupCheckInterval) > 0 {
 				startupCheckInterval = *la.Spec.Probes.StartupCheckInterval
+				replacementEnv = append(replacementEnv, corev1.EnvVar{Name: "MP_HEALTH_STARTUP_CHECK_INTERVAL", Value: checkInterval})
 			}
 		}
 
@@ -353,7 +352,15 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplic
 		targetEnv = append(targetEnv, corev1.EnvVar{Name: "SEC_IMPORT_K8S_CERTS", Value: "true"})
 	}
 
+	// replacementEnv overrides any existing env within the env list
 	envList := pts.Spec.Containers[0].Env
+	for _, v := range replacementEnv {
+		if envVar, found := findEnvVar(v.Name, envList); found {
+			envVar.Value = v.Value
+		}
+	}
+
+	// targetEnv appends any unset env into the env list
 	for _, v := range targetEnv {
 		if _, found := findEnvVar(v.Name, envList); !found {
 			pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, v)
