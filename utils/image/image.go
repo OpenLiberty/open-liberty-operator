@@ -103,7 +103,7 @@ func (s *NamespaceCredentialsContext) Repository(
 	return importCtx.Repository(ctx, defRef.RegistryURL(), defRef.RepositoryName(), insecure)
 }
 
-func (s *NamespaceCredentialsContext) GetDockerImageMetadata(ctx context.Context, imageRef imagev1.DockerImageReference, pullSecret *corev1.Secret, insecure bool) (string, *runtime.RawExtension, error) {
+func (s *NamespaceCredentialsContext) GetContainerImageMetadata(ctx context.Context, imageRef imagev1.DockerImageReference, pullSecret *corev1.Secret, insecure bool) (string, *runtime.RawExtension, error) {
 	imageMetadata := &runtime.RawExtension{}
 	repo, err := s.Repository(ctx, imageRef, pullSecret, insecure)
 	if err != nil {
@@ -213,7 +213,7 @@ func createSchema2Image(ctx context.Context, blobStore distribution.BlobStore, i
 		if err != nil {
 			return fmt.Errorf("Failed to get schema2 digest from blob for ref %s; %v", imageRefName, err)
 		}
-		if err := createUnstructuredDockerImage(deserializedManifest, manifestDigest, imageMetadata, blob); err != nil {
+		if err := createUnstructuredContainerImage(deserializedManifest, manifestDigest, imageMetadata, blob); err != nil {
 			return err
 		}
 		return nil
@@ -227,7 +227,7 @@ func createOCIImage(ctx context.Context, blobStore distribution.BlobStore, image
 		if err != nil {
 			return fmt.Errorf("Failed to get ocischema digest from blob for ref %s; %v", imageRefName, err)
 		}
-		if err := createUnstructuredDockerImage(deserializedManifest, manifestDigest, imageMetadata, blob); err != nil {
+		if err := createUnstructuredContainerImage(deserializedManifest, manifestDigest, imageMetadata, blob); err != nil {
 			return err
 		}
 		return nil
@@ -235,25 +235,25 @@ func createOCIImage(ctx context.Context, blobStore distribution.BlobStore, image
 	return fmt.Errorf("Failed to parse OCI manifest")
 }
 
-func createUnstructuredDockerImage(manifest distribution.Manifest, digest godigest.Digest, metadata *runtime.RawExtension, blob []byte) error {
+func createUnstructuredContainerImage(manifest distribution.Manifest, digest godigest.Digest, metadata *runtime.RawExtension, blob []byte) error {
 	if err := validateDigest(manifest, digest); err != nil {
 		return err
 	}
 	digestRefName := digest.String()
-	dockerImage := &unstructured.Unstructured{}
-	dockerImage.SetKind("DockerImage")
-	dockerImage.SetAPIVersion("image.openshift.io/1.0")
+	containerImage := &unstructured.Unstructured{}
+	containerImage.SetKind("ContainerImage")
+	containerImage.SetAPIVersion("image.openshift.io/1.0")
 	blobMap := map[string]interface{}{}
 	if err := json.Unmarshal(blob, &blobMap); err != nil {
-		return fmt.Errorf("Failed to unmarshal docker image metadata blobMap for ref %s; %v", digestRefName, err)
+		return fmt.Errorf("Failed to unmarshal container image metadata blobMap for ref %s; %v", digestRefName, err)
 	}
 
-	if err := unstructured.SetNestedField(dockerImage.Object, blobMap["config"], "Config"); err != nil {
-		return fmt.Errorf("Failed to marshal docker image metadata blobMap config for ref %s; %v", digestRefName, err)
+	if err := unstructured.SetNestedField(containerImage.Object, blobMap["config"], "Config"); err != nil {
+		return fmt.Errorf("Failed to marshal container image metadata blobMap config for ref %s; %v", digestRefName, err)
 	}
-	rawBytes, err := json.Marshal(dockerImage.Object)
+	rawBytes, err := json.Marshal(containerImage.Object)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal docker image metadata objectMap for ref %s; %v", digestRefName, err)
+		return fmt.Errorf("Failed to marshal container image metadata objectMap for ref %s; %v", digestRefName, err)
 	}
 	metadata.Raw = rawBytes
 	return nil
@@ -271,12 +271,12 @@ func validateDigest(manifest distribution.Manifest, digest godigest.Digest) erro
 	return nil
 }
 
-func ParseLibertyVersionFromDockerImageMetadata(dockerImageMetadata *runtime.RawExtension) string {
-	if dockerImageMetadata == nil {
+func ParseLibertyVersionFromContainerImageMetadata(imageMetadata *runtime.RawExtension) string {
+	if imageMetadata == nil {
 		return ""
 	}
 	unstructuredImageMeta := &unstructured.Unstructured{}
-	if err := json.Unmarshal(dockerImageMetadata.Raw, unstructuredImageMeta); err != nil {
+	if err := json.Unmarshal(imageMetadata.Raw, unstructuredImageMeta); err != nil {
 		return ""
 	}
 	if imageLabels, found, err := unstructured.NestedFieldNoCopy(unstructuredImageMeta.Object, "Config", "Labels"); err == nil && found {

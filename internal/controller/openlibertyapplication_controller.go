@@ -241,7 +241,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	versionTakenFromImageStream := false
 	image, err := imageutil.ParseDockerImageReference(instance.Spec.ApplicationImage)
 	if err != nil {
-		reqLogger.Error(err, "The .spec.applicationImage does not have a valid docker image reference")
+		reqLogger.Error(err, "The .spec.applicationImage does not have a valid container image reference")
 	}
 	isTagName := imageutil.JoinImageStreamTag(image.Name, image.Tag)
 	isTagNamespace := image.Namespace
@@ -260,7 +260,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				instance.Status.ImageReference = image.DockerImageReference
 			}
 			if !skipLibertyVersionChecks {
-				libertyVersion := libertyimage.ParseLibertyVersionFromDockerImageMetadata(&isTag.Image.DockerImageMetadata)
+				libertyVersion := libertyimage.ParseLibertyVersionFromContainerImageMetadata(&isTag.Image.DockerImageMetadata)
 				if libertyVersion == "" {
 					reqLogger.Info("Could not parse Liberty version field from ImageStream metadata; version was not found in any of the labels: " + strings.Join(libertyimage.ValidLibertyVersionLabels, ", "))
 					instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyimage.NilLibertyVersion)
@@ -326,7 +326,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		if !versionTakenFromImageStream && (libertyVersion == "" || int(float64(secondsSinceLastPull)/60) >= imageVersionChecksRefreshIntervalMinutes) {
 			pulledManifestDigest, pulledLibertyVersion, err := r.pullLibertyVersionFromManifest(reqLogger, instance, instance.Spec.ApplicationImage, image, isTagNamespace)
 			if err != nil {
-				reqLogger.Error(err, "Couldn't get docker image metadata - unauthorized or image does not exist")
+				reqLogger.Error(err, "Could not get container image metadata - unauthorized or image does not exist")
 				instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyimage.NilLibertyVersion)
 				r.ManageError(err, common.StatusConditionTypeWarning, instance)
 			} else {
@@ -1075,7 +1075,7 @@ func (r *ReconcileOpenLiberty) deletePVC(reqLogger logr.Logger, pvcName string, 
 	}
 }
 
-func (r *ReconcileOpenLiberty) getDockerImageMetadata(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, imageRef imagev1.DockerImageReference) (string, *runtime.RawExtension, error) {
+func (r *ReconcileOpenLiberty) getContainerImageMetadata(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, imageRef imagev1.DockerImageReference) (string, *runtime.RawExtension, error) {
 	olappSecrets := []corev1.Secret{}
 	var pullSecret *corev1.Secret
 	if olapp.GetPullSecret() != nil {
@@ -1091,7 +1091,7 @@ func (r *ReconcileOpenLiberty) getDockerImageMetadata(reqLogger logr.Logger, ola
 		}
 		olappSecrets = append(olappSecrets, *pullSecret)
 	}
-	return libertyimage.NewNamespaceCredentialsContext(reqLogger, olappSecrets, olapp.GetNamespace()).GetDockerImageMetadata(context.TODO(), imageRef, pullSecret, false)
+	return libertyimage.NewNamespaceCredentialsContext(reqLogger, olappSecrets, olapp.GetNamespace()).GetContainerImageMetadata(context.TODO(), imageRef, pullSecret, false)
 }
 
 func (r *ReconcileOpenLiberty) checkLibertyVersionGuards(instance *openlibertyv1.OpenLibertyApplication) error {
@@ -1127,12 +1127,12 @@ func (r *ReconcileOpenLiberty) pullLibertyVersionFromManifest(reqLogger logr.Log
 	}
 	// To prevent leaking credentials, don't attempt to pull an image that is not namespace bounded
 	if namespace != "" {
-		idOrDigest, dockerImageMetadata, err := r.getDockerImageMetadata(reqLogger, instance, image)
+		idOrDigest, imageMetadata, err := r.getContainerImageMetadata(reqLogger, instance, image)
 		if err == nil {
 			// Get liberty version from the labels
-			libertyVersion := libertyimage.ParseLibertyVersionFromDockerImageMetadata(dockerImageMetadata)
+			libertyVersion := libertyimage.ParseLibertyVersionFromContainerImageMetadata(imageMetadata)
 			if libertyVersion == "" {
-				return "", "", fmt.Errorf("Could not parse Liberty version field from Docker image metadata; version was not found in any of the labels: %s", strings.Join(libertyimage.ValidLibertyVersionLabels, ", "))
+				return "", "", fmt.Errorf("Could not parse Liberty version field from the container image metadata; version was not found in any of the labels: %s", strings.Join(libertyimage.ValidLibertyVersionLabels, ", "))
 			}
 			imageName := name
 			if idOrDigest != "" {
@@ -1142,5 +1142,5 @@ func (r *ReconcileOpenLiberty) pullLibertyVersionFromManifest(reqLogger logr.Log
 		}
 		return "", "", err
 	}
-	return "", "", fmt.Errorf("Blocked from getting docker image metadata because the image is missing a namespace record")
+	return "", "", fmt.Errorf("Blocked from getting the container image metadata because the image is missing a namespace record")
 }
