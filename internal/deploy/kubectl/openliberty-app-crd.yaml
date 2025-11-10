@@ -1983,14 +1983,6 @@ spec:
                 description: Expose the application externally via a Route, a Knative
                   Route or an Ingress resource.
                 type: boolean
-              importPolicy:
-                description: Policy for importing container image manifests.
-                properties:
-                  insecure:
-                    description: Insecure is true if the server may bypass certificate
-                      verification or connect directly over HTTP during image import.
-                    type: boolean
-                type: object
               initContainers:
                 description: List of containers to run before other containers in
                   a pod.

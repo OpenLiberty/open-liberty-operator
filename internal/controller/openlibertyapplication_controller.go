@@ -1088,11 +1088,7 @@ func (r *ReconcileOpenLiberty) getDockerImageMetadata(reqLogger logr.Logger, ola
 		}
 		olappSecrets = append(olappSecrets, *pullSecret)
 	}
-	insecure := false
-	if olapp.GetImportPolicy() != nil && olapp.GetImportPolicy().GetInsecure() != nil {
-		insecure = *olapp.GetImportPolicy().GetInsecure()
-	}
-	return libertyimage.NewNamespaceCredentialsContext(reqLogger, olappSecrets, olapp.GetNamespace()).GetDockerImageMetadata(context.TODO(), imageRef, pullSecret, insecure)
+	return libertyimage.NewNamespaceCredentialsContext(reqLogger, olappSecrets, olapp.GetNamespace()).GetDockerImageMetadata(context.TODO(), imageRef, pullSecret, false)
 }
 
 func (r *ReconcileOpenLiberty) checkLibertyVersionGuards(instance *openlibertyv1.OpenLibertyApplication) error {

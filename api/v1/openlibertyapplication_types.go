@@ -165,16 +165,6 @@ type OpenLibertyApplicationSpec struct {
 	// DNS settings for the application pod.
 	// +operator-sdk:csv:customresourcedefinitions:order=35,type=spec,displayName="DNS"
 	DNS *OpenLibertyApplicationDNS `json:"dns,omitempty"`
-
-	// Policy for importing container image manifests.
-	// +operator-sdk:csv:customresourcedefinitions:order=36,type=spec,displayName="Import Policy",xDescriptors="urn:alm:descriptor:com.tectonic.ui:importPolicy"
-	ImportPolicy *OpenLibertyManifestImportPolicy `json:"importPolicy,omitempty"`
-}
-
-type OpenLibertyManifestImportPolicy struct {
-	// Insecure is true if the server may bypass certificate verification or connect directly over HTTP during image import.
-	// +operator-sdk:csv:customresourcedefinitions:order=1,type=spec,displayName="Insecure",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
-	Insecure *bool `json:"insecure,omitempty"`
 }
 
 // Defines the DNS
@@ -1343,15 +1333,6 @@ func (d *OpenLibertyApplicationDNS) GetPolicy() *corev1.DNSPolicy {
 
 func (d *OpenLibertyApplicationDNS) GetConfig() *corev1.PodDNSConfig {
 	return d.PodDNSConfig
-}
-
-// GetImportPolicy returns image manifest import policy
-func (cr *OpenLibertyApplication) GetImportPolicy() *OpenLibertyManifestImportPolicy {
-	return cr.Spec.ImportPolicy
-}
-
-func (p *OpenLibertyManifestImportPolicy) GetInsecure() *bool {
-	return p.Insecure
 }
 
 // Initialize sets default values
