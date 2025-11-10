@@ -178,10 +178,11 @@ func Validate(olapp *olv1.OpenLibertyApplication) (bool, error) {
 }
 
 const (
-	FlagDelimiterSpace                = " "
-	FlagDelimiterEquals               = "="
-	OpConfigPerformanceDataMaxWorkers = "performanceDataMaxWorkers"
-	OpConfigImageVersionChecks        = "imageVersionChecks"
+	FlagDelimiterSpace                               = " "
+	FlagDelimiterEquals                              = "="
+	OpConfigPerformanceDataMaxWorkers                = "performanceDataMaxWorkers"
+	OpConfigImageVersionChecks                       = "imageVersionChecks"
+	OpConfigImageVersionChecksRefreshIntervalMinutes = "imageVersionChecksRefreshIntervalMinutes"
 )
 
 var DefaultLibertyOpConfig *sync.Map
@@ -190,6 +191,7 @@ func init() {
 	DefaultLibertyOpConfig = &sync.Map{}
 	DefaultLibertyOpConfig.Store(OpConfigPerformanceDataMaxWorkers, "10")
 	DefaultLibertyOpConfig.Store(OpConfigImageVersionChecks, "true")
+	DefaultLibertyOpConfig.Store(OpConfigImageVersionChecksRefreshIntervalMinutes, "720")
 }
 
 func parseFlag(key, value, delimiter string) string {
