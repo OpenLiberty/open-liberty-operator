@@ -972,6 +972,12 @@ func CustomizeLibertyFileMountXML(mountingPasswordKeySecret *corev1.Secret, moun
 	return nil
 }
 
+func IsLibertyVersionCheckNeeded(instance *olv1.OpenLibertyApplication) bool {
+	isFileBasedProbesEnabled := IsFileBasedProbesEnabled(instance)
+	// add more conditions for liberty version checking here
+	return isFileBasedProbesEnabled // || ...
+}
+
 func IsFileBasedProbesEnabled(instance *olv1.OpenLibertyApplication) bool {
 	return instance.Spec.Probes != nil && instance.Spec.Probes.EnableFileBased != nil && *instance.Spec.Probes.EnableFileBased
 }

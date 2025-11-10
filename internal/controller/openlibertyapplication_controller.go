@@ -226,13 +226,16 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		Namespace: instance.Namespace,
 	}
 
-	skipLibertyVersionChecks := common.LoadFromConfig(common.Config, lutils.OpConfigImageVersionChecks) == "false"
+	skipLibertyVersionChecks := common.LoadFromConfig(common.Config, lutils.OpConfigImageVersionChecks) == "false" || !lutils.IsLibertyVersionCheckNeeded(instance)
 	imageReferenceOld := instance.Status.ImageReference
 	instance.Status.ImageReference = instance.Spec.ApplicationImage
 
 	if !skipLibertyVersionChecks && imageReferenceOld != instance.Status.ImageReference {
 		// clear the liberty version field if the image has changed
 		lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.StatusReferenceLibertyVersion)
+	} else if skipLibertyVersionChecks {
+		lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.StatusReferenceLibertyVersion)
+		lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.StatusReferenceLibertyVersionLastPull)
 	}
 
 	versionTakenFromImageStream := false
