@@ -32,7 +32,7 @@ const (
 	NilLibertyVersion = "0.0.0.0"
 )
 
-var ValidLibertyVersionLabels = []string{"liberty.version", "io.openliberty.version", "org.opencontainers.image.version", "version"}
+var ValidLibertyVersionLabels = []string{"liberty.version", "io.openliberty.version", "com.ibm.websphere.liberty.version", "org.opencontainers.image.version", "version"}
 
 type NamespaceCredentialsContext struct {
 	transport         http.RoundTripper
