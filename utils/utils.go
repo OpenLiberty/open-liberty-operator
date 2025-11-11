@@ -1055,20 +1055,14 @@ func patchFileBasedProbe(instance *olv1.OpenLibertyApplication, defaultProbe *co
 	return instanceProbe
 }
 
-func CustomizeFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLibertyApplication) {
-	if !IsFileBasedProbesEnabled(instance) {
-		if instance.Spec.Probes == nil {
-			return
-		}
-		// Reset probe if file-based settings were previously configured
-		instance.Spec.Probes.Startup = clearFileBasedProbe(instance.Spec.Probes.Startup)
-		instance.Spec.Probes.Liveness = clearFileBasedProbe(instance.Spec.Probes.Liveness)
-		instance.Spec.Probes.Readiness = clearFileBasedProbe(instance.Spec.Probes.Readiness)
+func CustomizePodSpecFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLibertyApplication) {
+	appContainer := rcoutils.GetAppContainer(pts.Spec.Containers)
+	if appContainer == nil || !IsFileBasedProbesEnabled(instance) {
 		return
 	}
-	instance.Spec.Probes.Startup = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultStartupProbe(instance), instance.Spec.Probes.Startup, StartupProbeFileBasedScriptName, StartupProbeFileName)
-	instance.Spec.Probes.Liveness = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultLivenessProbe(instance), instance.Spec.Probes.Liveness, LivenessProbeFileBasedScriptName, LivenessProbeFileName)
-	instance.Spec.Probes.Readiness = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultReadinessProbe(instance), instance.Spec.Probes.Readiness, ReadinessProbeFileBasedScriptName, ReadinessProbeFileName)
+	appContainer.StartupProbe = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultStartupProbe(instance), instance.Spec.Probes.Startup, StartupProbeFileBasedScriptName, StartupProbeFileName)
+	appContainer.LivenessProbe = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultLivenessProbe(instance), instance.Spec.Probes.Liveness, LivenessProbeFileBasedScriptName, LivenessProbeFileName)
+	appContainer.ReadinessProbe = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultReadinessProbe(instance), instance.Spec.Probes.Readiness, ReadinessProbeFileBasedScriptName, ReadinessProbeFileName)
 }
 
 // Converts a file name into a lowercase word separated string
