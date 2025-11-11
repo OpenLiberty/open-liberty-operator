@@ -19,7 +19,7 @@ require (
 	k8s.io/apimachinery v0.33.3
 	k8s.io/client-go v0.33.3
 	k8s.io/kubectl v0.33.3
-	k8s.io/kubernetes v1.33.3
+	k8s.io/kubernetes v1.33.4
 	knative.dev/serving v0.44.0
 	sigs.k8s.io/controller-runtime v0.19.7
 )
