@@ -2,7 +2,7 @@
 FROM registry.access.redhat.com/ubi9-minimal:latest as builder
 ARG GO_PLATFORM=amd64
 ARG GO_VERSION_ARG
-ARG LIBERTY_VERSION=25.0.0.1
+ARG LIBERTY_VERSION=25.0.0.9
 ENV PATH=$PATH:/usr/local/go/bin
 RUN microdnf -y install tar gzip unzip
 
@@ -47,7 +47,7 @@ FROM icr.io/appcafe/ibm-semeru-runtimes:open-21-jre-ubi9-minimal
 ARG USER_ID=65532
 ARG GROUP_ID=65532
 
-ARG VERSION_LABEL=1.5.0
+ARG VERSION_LABEL=1.5.1
 ARG RELEASE_LABEL=XX
 ARG VCS_REF=0123456789012345678901234567890123456789
 ARG VCS_URL="https://github.com/OpenLiberty/open-liberty-operator"

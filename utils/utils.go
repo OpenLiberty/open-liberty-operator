@@ -43,7 +43,7 @@ const StatusReferenceLibertyVersionLastPull = "libertyVersionLastPull"
 // Constant Values
 const serviceabilityMountPath = "/serviceability"
 const ssoEnvVarPrefix = "SEC_SSO_"
-const OperandVersion = "1.5.0"
+const OperandVersion = "1.5.1"
 
 // LTPA constants
 const LTPAServerXMLSuffix = "-managed-ltpa-server-xml"
@@ -248,6 +248,7 @@ func GetLinperfCmd(encodedAttrs, podName, podNamespace string) string {
 	linperfCmdArgs = append(linperfCmdArgs, parseFlag("-j", decodedLinperfAttrs["interval"], FlagDelimiterSpace))
 
 	linperfCmdArgs = append(linperfCmdArgs, "--ignore-root")
+	linperfCmdArgs = append(linperfCmdArgs, "--clean-up-javacores")
 	linperfCmd := strings.Join(linperfCmdArgs, FlagDelimiterSpace)
 
 	requiredCLIs := []string{"netstat", "ps", "dmesg", "tput", "ifconfig", "vmstat", "top", "uptime", "hostname"}
