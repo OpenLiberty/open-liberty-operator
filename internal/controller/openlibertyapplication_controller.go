@@ -313,7 +313,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			imageVersionChecksRefreshIntervalMinutes = 720 // defaults to one pull every 12 hours
 		}
 		secondsSinceLastPull := 0
-		if instance.Spec.ApplicationImage != instance.Status.ImageReference {
+		if libertyVersion == libertyimage.NilLibertyVersion || !(strings.Contains(instance.Spec.ApplicationImage, "@sha") && instance.Spec.ApplicationImage == instance.Status.ImageReference) {
 			libertyVersionLastPullString := instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersionLastPull]
 			libertyVersionLastPull, err := strconv.Atoi(libertyVersionLastPullString)
 			// get the time in seconds since the last latest image pull
