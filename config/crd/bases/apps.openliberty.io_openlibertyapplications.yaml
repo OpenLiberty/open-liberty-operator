@@ -9669,6 +9669,8 @@ spec:
                   instance completely reconciled by the Operator.
                 format: int64
                 type: integer
+              pulledImageReference:
+                type: string
               reconcileInterval:
                 description: The reconciliation interval in seconds.
                 format: int32

@@ -498,11 +498,12 @@ type SemeruCompilerStatus struct {
 type OpenLibertyApplicationStatus struct {
 	// +listType=atomic
 	// +operator-sdk:csv:customresourcedefinitions:type=status,displayName="Status Conditions",xDescriptors="urn:alm:descriptor:io.kubernetes.conditions"
-	Conditions     []StatusCondition `json:"conditions,omitempty"`
-	Endpoints      []StatusEndpoint  `json:"endpoints,omitempty"`
-	RouteAvailable *bool             `json:"routeAvailable,omitempty"`
-	ImageReference string            `json:"imageReference,omitempty"`
-	Versions       StatusVersions    `json:"versions,omitempty"`
+	Conditions           []StatusCondition `json:"conditions,omitempty"`
+	Endpoints            []StatusEndpoint  `json:"endpoints,omitempty"`
+	RouteAvailable       *bool             `json:"routeAvailable,omitempty"`
+	ImageReference       string            `json:"imageReference,omitempty"`
+	PulledImageReference string            `json:"pulledImageReference,omitempty"`
+	Versions             StatusVersions    `json:"versions,omitempty"`
 
 	// +operator-sdk:csv:customresourcedefinitions:order=61,type=status,displayName="Service Binding"
 	Binding *corev1.LocalObjectReference `json:"binding,omitempty"`
