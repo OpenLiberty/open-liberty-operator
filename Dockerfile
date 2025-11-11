@@ -47,7 +47,7 @@ FROM icr.io/appcafe/ibm-semeru-runtimes:open-21-jre-ubi9-minimal
 ARG USER_ID=65532
 ARG GROUP_ID=65532
 
-ARG VERSION_LABEL=1.5.1
+ARG VERSION_LABEL=1.5.2
 ARG RELEASE_LABEL=XX
 ARG VCS_REF=0123456789012345678901234567890123456789
 ARG VCS_URL="https://github.com/OpenLiberty/open-liberty-operator"
