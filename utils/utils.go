@@ -337,7 +337,7 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplic
 			}
 			if la.Spec.Probes.StartupCheckInterval != nil && len(*la.Spec.Probes.StartupCheckInterval) > 0 {
 				startupCheckInterval = *la.Spec.Probes.StartupCheckInterval
-				replacementEnv = append(replacementEnv, corev1.EnvVar{Name: "MP_HEALTH_STARTUP_CHECK_INTERVAL", Value: checkInterval})
+				replacementEnv = append(replacementEnv, corev1.EnvVar{Name: "MP_HEALTH_STARTUP_CHECK_INTERVAL", Value: startupCheckInterval})
 			}
 		}
 
