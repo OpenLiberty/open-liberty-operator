@@ -117,21 +117,22 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+	var warnings *[]oputils.StatusWarning = nil
 
 	if err = common.CheckValidValue(common.Config, common.OpConfigReconcileIntervalMinimum, OperatorName); err != nil {
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 	}
 
 	if err = common.CheckValidValue(common.Config, common.OpConfigReconcileIntervalPercentage, OperatorName); err != nil {
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 	}
 
 	if err = common.CheckValidValue(common.Config, common.OpConfigReconcileIntervalFailureMaximum, OperatorName); err != nil {
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 	}
 
 	if err = common.CheckValidValue(common.Config, common.OpConfigReconcileIntervalSuccessMaximum, OperatorName); err != nil {
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 	}
 
 	if instance.Status.Versions.Reconciled == "1.4.1" {
@@ -142,13 +143,13 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		})
 		if err != nil {
 			reqLogger.Error(err, "Failed to reconcile ConfigMap")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		}
 	}
 
 	isKnativeSupported, err := r.IsGroupVersionSupported(servingv1.SchemeGroupVersion.String(), "Service")
 	if err != nil {
-		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 	} else if !isKnativeSupported && instance.Spec.CreateKnativeService != nil && *instance.Spec.CreateKnativeService {
 		reqLogger.V(1).Info(fmt.Sprintf("%s is not supported on the cluster", servingv1.SchemeGroupVersion.String()))
 	}
@@ -157,7 +158,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// not managed by this operator
 	err = oputils.CheckForNameConflicts("OpenLibertyApplication", instance.Name, instance.Namespace, r.GetClient(), request, isKnativeSupported)
 	if err != nil {
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 	}
 
 	// Check if the OpenLibertyApplication instance is marked to be deleted, which is
@@ -193,7 +194,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// If there's any validation error, don't bother with requeuing
 	if err != nil {
 		reqLogger.Error(err, "Error validating OpenLibertyApplication")
-		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		return reconcile.Result{}, nil
 	}
 
@@ -201,7 +202,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// If there's any validation error, don't bother with requeuing
 	if err != nil {
 		reqLogger.Error(err, "Error validating OpenLibertyApplication")
-		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		return reconcile.Result{}, nil
 	}
 
@@ -214,7 +215,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	err = r.GetClient().Update(context.TODO(), instance)
 	if err != nil {
 		reqLogger.Error(err, "Error updating OpenLibertyApplication")
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 	}
 
 	// if currentGen == 1 {
@@ -283,14 +284,14 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			})
 			if err != nil {
 				reqLogger.Error(err, "Failed to reconcile ServiceAccount")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+				return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 			}
 		} else {
 			serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
 			err = r.DeleteResource(serviceAccount)
 			if err != nil {
 				reqLogger.Error(err, "Failed to delete ServiceAccount")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+				return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 			}
 		}
 	}
@@ -299,7 +300,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// or setting up knative. Otherwise the pods can go into an ImagePullBackOff loop
 	saErr := oputils.ServiceAccountPullSecretExists(instance, r.GetClient())
 	if saErr != nil {
-		return r.ManageError(saErr, common.StatusConditionTypeReconciled, instance)
+		return r.ManageErrorWithWarnings(saErr, common.StatusConditionTypeReconciled, instance, warnings)
 	}
 
 	if !skipLibertyVersionChecks {
@@ -326,9 +327,8 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		if !versionTakenFromImageStream && (libertyVersion == "" || int(float64(secondsSinceLastPull)/60) >= imageVersionChecksRefreshIntervalMinutes) {
 			pulledManifestDigest, pulledLibertyVersion, err := r.pullLibertyVersionFromManifest(reqLogger, instance, instance.Spec.ApplicationImage, image, isTagNamespace)
 			if err != nil {
-				reqLogger.Error(err, "Could not get container image metadata - unauthorized or image does not exist")
+				reqLogger.Error(err, "Failed to pull container image metadata; unauthorized or the image does not exist")
 				instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyimage.NilLibertyVersion)
-				r.ManageError(err, common.StatusConditionTypeWarning, instance)
 			} else {
 				libertyVersion = pulledLibertyVersion
 				if pulledManifestDigest != "" {
@@ -339,8 +339,20 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			}
 		}
 
+		if warnings == nil {
+			warnings = &[]oputils.StatusWarning{}
+		}
+		// add a warning that displays to the user when the Liberty version couldn't be parsed
+		*warnings = append(*warnings, oputils.StatusWarning{
+			GetCondition: func(ba common.BaseComponent) bool {
+				libVersion := ba.GetStatus().GetReferences()[lutils.StatusReferenceLibertyVersion]
+				return libVersion == libertyimage.NilLibertyVersion || libVersion == ""
+			},
+			Message: "Failed to pull container image metadata; unauthorized or the image does not exist",
+		})
+
 		if err := r.checkLibertyVersionGuards(instance); err != nil {
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		}
 	}
 
@@ -350,7 +362,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	if r.isLTPAKeySharingEnabled(instance) {
 		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, LTPA_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		}
 		ltpaMetadataList = leaderMetadataList.(*lutils.LTPAMetadataList)
 		if ltpaMetadataList != nil && len(ltpaMetadataList.Items) == 2 {
@@ -364,7 +376,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	if r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata) {
 		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		}
 		passwordEncryptionMetadataList = leaderMetadataList.(*lutils.PasswordEncryptionMetadataList)
 		if passwordEncryptionMetadataList != nil && len(passwordEncryptionMetadataList.Items) == 1 {
@@ -374,7 +386,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		// error if the password encryption key sharing is enabled but the Secret is not found
 		passwordEncryptionSecretName := lutils.PasswordEncryptionKeyRootName + passwordEncryptionMetadata.Name
 		err := errors.Wrapf(fmt.Errorf("Secret %q not found", passwordEncryptionSecretName), "Secret for Password Encryption was not found. Create a secret named %q in namespace %q with the encryption key specified in data field %q.", passwordEncryptionSecretName, instance.GetNamespace(), "passwordEncryptionKey")
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 	}
 
 	if imageReferenceOld != instance.Status.ImageReference {
@@ -385,7 +397,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		err = r.UpdateStatus(instance)
 		if err != nil {
 			reqLogger.Error(err, "Error updating Open Liberty application status")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		}
 	}
 
@@ -396,7 +408,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	err, message, areCompletedSemeruInstancesMarkedToBeDeleted := r.reconcileSemeruCompiler(instance)
 	if err != nil {
 		reqLogger.Error(err, message)
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 	}
 	// If semeru compiler is enabled, make sure its ready
 	if r.isSemeruEnabled(instance) {
@@ -405,7 +417,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		err = r.areSemeruCompilerResourcesReady(instance)
 		if err != nil {
 			reqLogger.Error(err, message)
-			return r.ManageError(err, common.StatusConditionTypeResourcesReady, instance)
+			return r.ManageErrorWithWarnings(err, common.StatusConditionTypeResourcesReady, instance, warnings)
 		}
 	}
 
@@ -422,7 +434,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		err = r.DeleteResources(resources)
 		if err != nil {
 			reqLogger.Error(err, "Failed to clean up non-Knative resources")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		}
 
 		if ok, _ := r.IsGroupVersionSupported(networkingv1.SchemeGroupVersion.String(), "Ingress"); ok {
@@ -434,7 +446,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			err = r.DeleteResource(route)
 			if err != nil {
 				reqLogger.Error(err, "Failed to clean up non-Knative resource Route")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+				return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 			}
 		}
 		if isKnativeSupported {
@@ -447,14 +459,14 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 			if err != nil {
 				reqLogger.Error(err, "Failed to reconcile Knative Service")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+				return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 			}
 			instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 			instance.Status.Versions.Reconciled = lutils.OperandVersion
 			reqLogger.Info("Reconcile OpenLibertyApplication - completed")
-			return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
+			return r.ManageSuccessWithWarnings(common.StatusConditionTypeReconciled, instance, warnings)
 		}
-		return r.ManageError(errors.New("failed to reconcile Knative service as operator could not find Knative CRDs"), common.StatusConditionTypeReconciled, instance)
+		return r.ManageErrorWithWarnings(errors.New("failed to reconcile Knative service as operator could not find Knative CRDs"), common.StatusConditionTypeReconciled, instance, warnings)
 	}
 
 	if isKnativeSupported {
@@ -462,14 +474,14 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		err = r.DeleteResource(ksvc)
 		if err != nil {
 			reqLogger.Error(err, "Failed to delete Knative Service")
-			r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		}
 	}
 
 	useCertmanager, err := r.GenerateSvcCertSecret(ba, OperatorShortName, "Open Liberty Operator", OperatorName)
 	if err != nil {
 		reqLogger.Error(err, "Failed to reconcile CertManager Certificate")
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 	}
 	if ba.GetService().GetCertificateSecretRef() != nil {
 		ba.GetStatus().SetReference(common.StatusReferenceCertSecretName, *ba.GetService().GetCertificateSecretRef())
@@ -492,13 +504,13 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	})
 	if err != nil {
 		reqLogger.Error(err, "Failed to reconcile Service")
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 	}
 
 	if (ba.GetManageTLS() == nil || *ba.GetManageTLS()) &&
 		ba.GetStatus().GetReferences()[common.StatusReferenceCertSecretName] == "" {
-		return r.ManageError(errors.New("Failed to generate TLS certificate. Ensure cert-manager is installed and running"),
-			common.StatusConditionTypeReconciled, instance)
+		return r.ManageErrorWithWarnings(errors.New("Failed to generate TLS certificate. Ensure cert-manager is installed and running"),
+			common.StatusConditionTypeReconciled, instance, warnings)
 	}
 
 	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: defaultMeta}
@@ -512,12 +524,12 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		})
 		if err != nil {
 			reqLogger.Error(err, "Failed to reconcile network policy")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		}
 	} else {
 		if err := r.DeleteResource(networkPolicy); err != nil {
 			reqLogger.Error(err, "Failed to delete network policy")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		}
 	}
 
@@ -527,7 +539,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: pvcName, Namespace: instance.Namespace}, &corev1.PersistentVolumeClaim{})
 			if err != nil && kerrors.IsNotFound(err) {
 				reqLogger.Error(err, "Failed to find PersistentVolumeClaim "+pvcName+" in namespace "+instance.Namespace)
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+				return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 			}
 		} else {
 			err = r.CreateOrUpdate(lutils.CreateServiceabilityPVC(instance), nil, func() error {
@@ -535,7 +547,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			})
 			if err != nil {
 				reqLogger.Error(err, "Failed to create PersistentVolumeClaim for Serviceability")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+				return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 			}
 		}
 	} else {
@@ -544,35 +556,35 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 	err = r.ReconcileBindings(instance)
 	if err != nil {
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 	}
 
 	// Manage the shared password encryption key Secret if it exists
 	message, encryptionSecretName, passwordEncryptionKeyLastRotation, err := r.reconcilePasswordEncryptionKey(instance, passwordEncryptionMetadata)
 	if err != nil {
 		reqLogger.Error(err, message)
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 	}
 
 	// Create and manage the shared LTPA keys Secret if the feature is enabled
 	message, ltpaSecretName, ltpaKeysLastRotation, err := r.reconcileLTPAKeys(instance, ltpaKeysMetadata)
 	if err != nil {
 		reqLogger.Error(err, message)
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 	}
 
 	// get the last key-related rotation time as a string to be used by reconcileLTPAConfig for non-leaders to yield (blocking) to the LTPA config leader
 	lastKeyRelatedRotation, err := lutils.GetMaxTime(passwordEncryptionKeyLastRotation, ltpaKeysLastRotation)
 	if err != nil {
 		reqLogger.Error(err, message)
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 	}
 
 	// Using the LTPA keys and config metadata, create and manage the shared LTPA Liberty server XML if the feature is enabled
 	message, ltpaXMLSecretName, err := r.reconcileLTPAConfig(instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
 	if err != nil {
 		reqLogger.Error(err, message)
-		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 	}
 
 	if instance.Spec.StatefulSet != nil {
@@ -582,7 +594,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 		if err != nil {
 			reqLogger.Error(err, "Failed to delete Deployment")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		}
 		svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: instance.Name + "-headless", Namespace: instance.Namespace}}
 		err = r.CreateOrUpdate(svc, instance, func() error {
@@ -593,7 +605,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		})
 		if err != nil {
 			reqLogger.Error(err, "Failed to reconcile headless Service")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		}
 
 		statefulSet := &appsv1.StatefulSet{ObjectMeta: defaultMeta}
@@ -675,7 +687,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		})
 		if err != nil {
 			reqLogger.Error(err, "Failed to reconcile StatefulSet")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		}
 
 	} else {
@@ -684,7 +696,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		err = r.DeleteResource(statefulSet)
 		if err != nil {
 			reqLogger.Error(err, "Failed to delete Statefulset")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		}
 
 		// Delete StatefulSet if exists
@@ -693,7 +705,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 		if err != nil {
 			reqLogger.Error(err, "Failed to delete headless Service")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		}
 		deploy := &appsv1.Deployment{ObjectMeta: defaultMeta}
 		err = r.CreateOrUpdate(deploy, instance, func() error {
@@ -772,7 +784,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		})
 		if err != nil {
 			reqLogger.Error(err, "Failed to reconcile Deployment")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		}
 
 	}
@@ -786,20 +798,20 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 		if err != nil {
 			reqLogger.Error(err, "Failed to reconcile HorizontalPodAutoscaler")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		}
 	} else {
 		hpa := &autoscalingv2.HorizontalPodAutoscaler{ObjectMeta: defaultMeta}
 		err = r.DeleteResource(hpa)
 		if err != nil {
 			reqLogger.Error(err, "Failed to delete HorizontalPodAutoscaler")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		}
 	}
 
 	if ok, err := r.IsGroupVersionSupported(routev1.SchemeGroupVersion.String(), "Route"); err != nil {
 		reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", routev1.SchemeGroupVersion.String()))
-		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 	} else if ok {
 		if instance.Spec.Expose != nil && *instance.Spec.Expose {
 			if oputils.ShouldDeleteRoute(ba) {
@@ -808,7 +820,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				err = r.DeleteResource(route)
 				if err != nil {
 					reqLogger.Error(err, "Failed to delete Route")
-					return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+					return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 				}
 			}
 			route := &routev1.Route{ObjectMeta: defaultMeta}
@@ -823,7 +835,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			})
 			if err != nil {
 				reqLogger.Error(err, "Failed to reconcile Route")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+				return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 			}
 
 		} else {
@@ -831,14 +843,14 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			err = r.DeleteResource(route)
 			if err != nil {
 				reqLogger.Error(err, "Failed to delete Route")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+				return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 			}
 		}
 	} else {
 
 		if ok, err := r.IsGroupVersionSupported(networkingv1.SchemeGroupVersion.String(), "Ingress"); err != nil {
 			reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", networkingv1.SchemeGroupVersion.String()))
-			r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		} else if ok {
 			if instance.Spec.Expose != nil && *instance.Spec.Expose {
 				ing := &networkingv1.Ingress{ObjectMeta: defaultMeta}
@@ -848,14 +860,14 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				})
 				if err != nil {
 					reqLogger.Error(err, "Failed to reconcile Ingress")
-					return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+					return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 				}
 			} else {
 				ing := &networkingv1.Ingress{ObjectMeta: defaultMeta}
 				err = r.DeleteResource(ing)
 				if err != nil {
 					reqLogger.Error(err, "Failed to delete Ingress")
-					return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+					return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 				}
 			}
 		}
@@ -863,12 +875,12 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 	if ok, err := r.IsGroupVersionSupported(prometheusv1.SchemeGroupVersion.String(), "ServiceMonitor"); err != nil {
 		reqLogger.Error(err, fmt.Sprintf("Failed to check if %s is supported", prometheusv1.SchemeGroupVersion.String()))
-		r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+		r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 	} else if ok {
 		if instance.Spec.Monitoring != nil && (instance.Spec.CreateKnativeService == nil || !*instance.Spec.CreateKnativeService) {
 			// Validate the monitoring endpoints' configuration before creating/updating the ServiceMonitor
 			if err := oputils.ValidatePrometheusMonitoringEndpoints(instance, r.GetClient(), instance.GetNamespace()); err != nil {
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+				return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 			}
 			sm := &prometheusv1.ServiceMonitor{ObjectMeta: defaultMeta}
 			err = r.CreateOrUpdate(sm, instance, func() error {
@@ -877,14 +889,14 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			})
 			if err != nil {
 				reqLogger.Error(err, "Failed to reconcile ServiceMonitor")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+				return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 			}
 		} else {
 			sm := &prometheusv1.ServiceMonitor{ObjectMeta: defaultMeta}
 			err = r.DeleteResource(sm)
 			if err != nil {
 				reqLogger.Error(err, "Failed to delete ServiceMonitor")
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+				return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 			}
 		}
 
@@ -896,14 +908,14 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	if areCompletedSemeruInstancesMarkedToBeDeleted && r.isOpenLibertyApplicationReady(instance) {
 		if err := r.deleteCompletedSemeruInstances(instance); err != nil {
 			reqLogger.Error(err, "Failed to delete completed Semeru instance")
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+			return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 		}
 	}
 
 	instance.Status.ObservedGeneration = instance.GetObjectMeta().GetGeneration()
 	instance.Status.Versions.Reconciled = lutils.OperandVersion
 	reqLogger.Info("Reconcile OpenLibertyApplication - completed")
-	return r.ManageSuccess(common.StatusConditionTypeReconciled, instance)
+	return r.ManageSuccessWithWarnings(common.StatusConditionTypeReconciled, instance, warnings)
 }
 
 func (r *ReconcileOpenLiberty) isOpenLibertyApplicationReady(ba common.BaseComponent) bool {
