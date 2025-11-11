@@ -1056,8 +1056,11 @@ func patchFileBasedProbe(instance *olv1.OpenLibertyApplication, defaultProbe *co
 }
 
 func CustomizePodSpecFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLibertyApplication) {
+	if !IsFileBasedProbesEnabled(instance) {
+		return
+	}
 	appContainer := rcoutils.GetAppContainer(pts.Spec.Containers)
-	if appContainer == nil || !IsFileBasedProbesEnabled(instance) {
+	if appContainer == nil {
 		return
 	}
 	appContainer.StartupProbe = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultStartupProbe(instance), instance.Spec.Probes.Startup, StartupProbeFileBasedScriptName, StartupProbeFileName)
