@@ -320,16 +320,31 @@ func verifyTests(tests []Test) error {
 
 func TestCompareOperandVersion(t *testing.T) {
 	tests := []Test{
-		{"same version", CompareOperandVersion("v0_0_0", "v0_0_0"), 0},
-		{"same version, multiple digits", CompareOperandVersion("v10_10_10", "v10_10_10"), 0},
-		{"same version, build tags", CompareOperandVersion("v2_0_0alpha", "v2_0_0alpha"), 0},
-		{"different patch version, build tags", CompareOperandVersion("v2_0_10alpha", "v2_0_2alpha"), 8},
-		{"different patch version, build tags, reversed", CompareOperandVersion("v2_0_2alpha", "v2_0_10alpha"), -8},
-		{"different patch version", CompareOperandVersion("v1_0_0", "v1_0_1"), -1},
-		{"different minor version", CompareOperandVersion("v1_0_0", "v1_1_0"), -1},
-		{"different major version", CompareOperandVersion("v2_0_0", "v1_0_0"), 1},
-		{"minor less than patch", CompareOperandVersion("v1_10_0", "v1_0_5"), 10},
-		{"major less than patch", CompareOperandVersion("v2_0_0", "v1_0_10"), 1},
+		{"same version", 0, CompareOperandVersion("v0_0_0", "v0_0_0")},
+		{"same version, multiple digits", 0, CompareOperandVersion("v10_10_10", "v10_10_10")},
+		{"same version, build tags", 0, CompareOperandVersion("v2_0_0alpha", "v2_0_0alpha")},
+		{"different patch version, build tags", 8, CompareOperandVersion("v2_0_10alpha", "v2_0_2alpha")},
+		{"different patch version, build tags, reversed", -8, CompareOperandVersion("v2_0_2alpha", "v2_0_10alpha")},
+		{"different patch version", -1, CompareOperandVersion("v1_0_0", "v1_0_1")},
+		{"different minor version", -1, CompareOperandVersion("v1_0_0", "v1_1_0")},
+		{"different major version", 1, CompareOperandVersion("v2_0_0", "v1_0_0")},
+		{"minor less than patch", 10, CompareOperandVersion("v1_10_0", "v1_0_5")},
+		{"major less than patch", 1, CompareOperandVersion("v2_0_0", "v1_0_10")},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestCompareLibertyVersion(t *testing.T) {
+	tests := []Test{
+		{"same version", 0, CompareLibertyVersion("25.0.0.1", "25.0.0.1")},
+		{"same version, multiple digits", 0, CompareLibertyVersion("25.0.0.12", "25.0.0.12")},
+		{"different year", -1, CompareLibertyVersion("25.0.0.1", "26.0.0.1")},
+		{"different year 2", 3, CompareLibertyVersion("25.0.0.1", "22.0.0.1")},
+		{"different month", -9, CompareLibertyVersion("25.0.0.1", "25.0.0.10")},
+		{"different month 2", 2, CompareLibertyVersion("25.0.0.3", "25.0.0.1")},
+		{"different year and month", 13, CompareLibertyVersion("22.0.0.1", "9.0.0.100")},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)

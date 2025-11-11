@@ -702,12 +702,12 @@ func (rcss *OpenLibertyApplicationStatefulSet) GetAnnotations() map[string]strin
 	return rcss.Annotations
 }
 
-// GetImageReference returns Docker image reference to be deployed by the CR
+// GetImageReference returns the container image reference to be deployed by the CR
 func (s *OpenLibertyApplicationStatus) GetImageReference() string {
 	return s.ImageReference
 }
 
-// SetImageReference sets Docker image reference on the status portion of the CR
+// SetImageReference sets the container image reference on the status portion of the CR
 func (s *OpenLibertyApplicationStatus) SetImageReference(imageReference string) {
 	s.ImageReference = imageReference
 }
