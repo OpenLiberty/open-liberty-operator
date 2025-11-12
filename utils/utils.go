@@ -36,10 +36,14 @@ import (
 
 var log = logf.Log.WithName("openliberty_utils")
 
+// Status References
+const StatusReferenceLibertyVersion = "libertyVersion"
+const StatusReferenceLibertyVersionLastPull = "libertyVersionLastPull"
+
 // Constant Values
 const serviceabilityMountPath = "/serviceability"
 const ssoEnvVarPrefix = "SEC_SSO_"
-const OperandVersion = "1.5.1"
+const OperandVersion = "1.5.2"
 
 // LTPA constants
 const LTPAServerXMLSuffix = "-managed-ltpa-server-xml"
@@ -59,6 +63,14 @@ const PasswordEncryptionKeyRootName = "wlp-password-encryption-key"
 const LocalPasswordEncryptionKeyRootName = "olo-wlp-password-encryption-key"
 const EncryptionKeyXMLFileName = "encryptionKey.xml"
 const EncryptionKeyMountXMLFileName = "encryptionKeyMount.xml"
+
+// File-based probe constants
+const StartupProbeFileBasedScriptName = "startupHealthCheck.sh"
+const LivenessProbeFileBasedScriptName = "livenessHealthCheck.sh"
+const ReadinessProbeFileBasedScriptName = "readinessHealthCheck.sh"
+const StartupProbeFileName = "started"
+const LivenessProbeFileName = "live"
+const ReadinessProbeFileName = "ready"
 
 type LTPAMetadata struct {
 	Kind       string
@@ -166,9 +178,11 @@ func Validate(olapp *olv1.OpenLibertyApplication) (bool, error) {
 }
 
 const (
-	FlagDelimiterSpace                = " "
-	FlagDelimiterEquals               = "="
-	OpConfigPerformanceDataMaxWorkers = "performanceDataMaxWorkers"
+	FlagDelimiterSpace                               = " "
+	FlagDelimiterEquals                              = "="
+	OpConfigPerformanceDataMaxWorkers                = "performanceDataMaxWorkers"
+	OpConfigImageVersionChecks                       = "imageVersionChecks"
+	OpConfigImageVersionChecksRefreshIntervalMinutes = "imageVersionChecksRefreshIntervalMinutes"
 )
 
 var DefaultLibertyOpConfig *sync.Map
@@ -176,6 +190,8 @@ var DefaultLibertyOpConfig *sync.Map
 func init() {
 	DefaultLibertyOpConfig = &sync.Map{}
 	DefaultLibertyOpConfig.Store(OpConfigPerformanceDataMaxWorkers, "10")
+	DefaultLibertyOpConfig.Store(OpConfigImageVersionChecks, "true")
+	DefaultLibertyOpConfig.Store(OpConfigImageVersionChecksRefreshIntervalMinutes, "720")
 }
 
 func parseFlag(key, value, delimiter string) string {
@@ -297,6 +313,7 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplic
 		{Name: "WLP_LOGGING_CONSOLE_SOURCE", Value: "message,accessLog,ffdc,audit"},
 		{Name: "WLP_LOGGING_CONSOLE_FORMAT", Value: "json"},
 	}
+	replacementEnv := []corev1.EnvVar{}
 
 	if la.GetServiceability() != nil {
 		logDirMountPath := fmt.Sprintf("%s/%s/%s/logs", serviceabilityMountPath, la.GetNamespace(), "$(SERVICEABILITY_HOSTNAME)")
@@ -311,12 +328,40 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplic
 		)
 	}
 
+	if IsFileBasedProbesEnabled(la) {
+		checkInterval := "5s"
+		startupCheckInterval := "100ms"
+		if la.Spec.Probes != nil {
+			if la.Spec.Probes.CheckInterval != nil && len(*la.Spec.Probes.CheckInterval) > 0 {
+				checkInterval = *la.Spec.Probes.CheckInterval
+				replacementEnv = append(replacementEnv, corev1.EnvVar{Name: "MP_HEALTH_CHECK_INTERVAL", Value: checkInterval})
+			}
+			if la.Spec.Probes.StartupCheckInterval != nil && len(*la.Spec.Probes.StartupCheckInterval) > 0 {
+				startupCheckInterval = *la.Spec.Probes.StartupCheckInterval
+				replacementEnv = append(replacementEnv, corev1.EnvVar{Name: "MP_HEALTH_STARTUP_CHECK_INTERVAL", Value: startupCheckInterval})
+			}
+		}
+
+		targetEnv = append(targetEnv,
+			corev1.EnvVar{Name: "MP_HEALTH_CHECK_INTERVAL", Value: checkInterval},
+			corev1.EnvVar{Name: "MP_HEALTH_STARTUP_CHECK_INTERVAL", Value: startupCheckInterval},
+		)
+	}
+
 	// If manageTLS is true or not set, and SEC_IMPORT_K8S_CERTS is not set then default it to "true"
 	if la.GetManageTLS() == nil || *la.GetManageTLS() {
 		targetEnv = append(targetEnv, corev1.EnvVar{Name: "SEC_IMPORT_K8S_CERTS", Value: "true"})
 	}
 
+	// replacementEnv overrides any existing env within the env list
 	envList := pts.Spec.Containers[0].Env
+	for _, v := range replacementEnv {
+		if envVar, found := findEnvVar(v.Name, envList); found {
+			envVar.Value = v.Value
+		}
+	}
+
+	// targetEnv appends any unset env into the env list
 	for _, v := range targetEnv {
 		if _, found := findEnvVar(v.Name, envList); !found {
 			pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, v)
@@ -935,6 +980,95 @@ func CustomizeLibertyFileMountXML(mountingPasswordKeySecret *corev1.Secret, moun
 	return nil
 }
 
+func IsLibertyVersionCheckNeeded(instance *olv1.OpenLibertyApplication) bool {
+	isFileBasedProbesEnabled := IsFileBasedProbesEnabled(instance)
+	// add more conditions for liberty version checking here
+	return isFileBasedProbesEnabled // || ...
+}
+
+func IsFileBasedProbesEnabled(instance *olv1.OpenLibertyApplication) bool {
+	return instance.Spec.Probes != nil && instance.Spec.Probes.EnableFileBased != nil && *instance.Spec.Probes.EnableFileBased
+}
+
+func clearFileBasedProbe(probe *corev1.Probe) *corev1.Probe {
+	if probe != nil && probe.Exec != nil && len(probe.Exec.Command) == 3 {
+		scriptCmd := probe.Exec.Command[2]
+		if strings.HasPrefix(scriptCmd, StartupProbeFileBasedScriptName) ||
+			strings.HasPrefix(scriptCmd, LivenessProbeFileBasedScriptName) ||
+			strings.HasPrefix(scriptCmd, ReadinessProbeFileBasedScriptName) {
+			probe = &corev1.Probe{}
+		}
+	}
+	return probe
+}
+
+func configureFileBasedProbeExec(instance *olv1.OpenLibertyApplication, probe *corev1.Probe, scriptName string, probeFile string) {
+	probe = getProbeWithoutHandlers(probe) // remove any preset handlers configured to this probe
+	probesConfig := instance.Spec.Probes
+	cmdList := []string{scriptName}
+	if scriptName == StartupProbeFileBasedScriptName {
+		// Set timeout seconds for the startup probe
+		timeoutSeconds := int32(1)
+		if probe.TimeoutSeconds > 0 {
+			timeoutSeconds = probe.TimeoutSeconds
+		}
+		cmdList = append(cmdList, fmt.Sprintf("-t %d", timeoutSeconds))
+	} else {
+		// Set period seconds for all other probes
+		periodSeconds := int32(10)
+		if probe.PeriodSeconds > 0 {
+			periodSeconds = probe.PeriodSeconds
+		}
+		cmdList = append(cmdList, fmt.Sprintf("-p %d", periodSeconds))
+	}
+	if probesConfig.FileDirectory != nil && len(*probesConfig.FileDirectory) > 0 {
+		fileDirectory := strings.TrimRight(*probesConfig.FileDirectory, "/")
+		if len(fileDirectory) > 0 {
+			cmdList = append(cmdList, fmt.Sprintf("-f %s/%s", fileDirectory, probeFile))
+		}
+	}
+	probe.Exec = &corev1.ExecAction{
+		Command: []string{"/bin/sh", "-c", strings.Join(cmdList, FlagDelimiterSpace)},
+	}
+}
+
+func getProbeWithoutHandlers(probe *corev1.Probe) *corev1.Probe {
+	probe = getOrInitProbe(probe)
+	probe.ProbeHandler = corev1.ProbeHandler{}
+	return probe
+}
+
+func getOrInitProbe(probe *corev1.Probe) *corev1.Probe {
+	if probe == nil {
+		return &corev1.Probe{}
+	}
+	return probe
+}
+
+func patchFileBasedProbe(instance *olv1.OpenLibertyApplication, defaultProbe *corev1.Probe, instanceProbe *corev1.Probe, scriptName string, probeFile string) *corev1.Probe {
+	defaultProbe = getOrInitProbe(defaultProbe)
+	instanceProbe = getOrInitProbe(instanceProbe)
+	isExecConfigured := instanceProbe.Exec != nil
+	instanceProbe = rcoutils.CustomizeProbeDefaults(instanceProbe, defaultProbe)
+	if !isExecConfigured {
+		configureFileBasedProbeExec(instance, instanceProbe, scriptName, probeFile)
+	}
+	return instanceProbe
+}
+
+func CustomizePodSpecFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLibertyApplication) {
+	if !IsFileBasedProbesEnabled(instance) {
+		return
+	}
+	appContainer := rcoutils.GetAppContainer(pts.Spec.Containers)
+	if appContainer == nil {
+		return
+	}
+	appContainer.StartupProbe = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultStartupProbe(instance), instance.Spec.Probes.Startup, StartupProbeFileBasedScriptName, StartupProbeFileName)
+	appContainer.LivenessProbe = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultLivenessProbe(instance), instance.Spec.Probes.Liveness, LivenessProbeFileBasedScriptName, LivenessProbeFileName)
+	appContainer.ReadinessProbe = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultReadinessProbe(instance), instance.Spec.Probes.Readiness, ReadinessProbeFileBasedScriptName, ReadinessProbeFileName)
+}
+
 // Converts a file name into a lowercase word separated string
 // Example: managedLTPASecret.xml -> managed-ltpa-secret-xml
 func parseMountName(fileName string) string {
@@ -1156,6 +1290,22 @@ func CompareOperandVersion(a string, b string) int {
 	arrA := strings.Split(a[1:], "_")
 	arrB := strings.Split(b[1:], "_")
 	for i := range arrA {
+		intA, _ := strconv.ParseInt(GetFirstNumberFromString(arrA[i]), 10, 64)
+		intB, _ := strconv.ParseInt(GetFirstNumberFromString(arrB[i]), 10, 64)
+		if intA != intB {
+			return int(intA - intB)
+		}
+	}
+	return 0
+}
+
+func CompareLibertyVersion(a string, b string) int {
+	arrA := strings.Split(a, ".")
+	arrB := strings.Split(b, ".")
+	for i := range arrA {
+		if i == 1 || i == 2 {
+			continue
+		}
 		intA, _ := strconv.ParseInt(GetFirstNumberFromString(arrA[i]), 10, 64)
 		intB, _ := strconv.ParseInt(GetFirstNumberFromString(arrB[i]), 10, 64)
 		if intA != intB {
