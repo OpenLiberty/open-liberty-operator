@@ -12,8 +12,8 @@ github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 h1:TngWCqHvy9oXAN6lEV
 github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5/go.mod h1:lmUJ/7eu/Q8D7ML55dXQrVaamCz2vxCfdQBasLZfHKk=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
-github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20251111221342-5f702d054164 h1:4m2CfQS4zYVyqqE+G3Ea7heIvycwXuL3pizOpsuOOR0=
-github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20251111221342-5f702d054164/go.mod h1:Hs5AbE9J+rLM34IAc75X7dtxnrzFg2AvG1XYLcX/ApU=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20251112192657-d3827b10fc11 h1:RDvxia2FkqLIuQYgboUdzKXF7Iwunai22FE5QwjCv1o=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20251112192657-d3827b10fc11/go.mod h1:Hs5AbE9J+rLM34IAc75X7dtxnrzFg2AvG1XYLcX/ApU=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
