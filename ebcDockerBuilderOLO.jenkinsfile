@@ -89,7 +89,7 @@ def gitCloneAndStash() {
       dir('websphere-liberty-operator-sps-config') {
          git branch: "main", url: "git@github.ibm.com:websphere-operators-sps/websphere-liberty-operator-sps-config.git"
          sh "git checkout ${COMMON_OPERATORS_BRANCH}"
-         }
+      }
       sh "mkdir open-liberty-operator/operators"
       sh "cp -rf websphere-liberty-operator-sps-config/scripts open-liberty-operator/operators/scripts"
    }
