@@ -14,7 +14,7 @@ import (
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/distribution/distribution/v3/registry/client/auth"
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/registry"
 	dockerregistry "github.com/docker/docker/registry"
 	"github.com/go-logr/logr"
 	godigest "github.com/opencontainers/go-digest"
@@ -91,7 +91,7 @@ func (s *NamespaceCredentialsContext) Repository(
 
 	var credentials auth.CredentialStore = registryclient.NoCredentials
 	if auths, found := keyring.Lookup(defRef.String()); found {
-		credentials = dockerregistry.NewStaticCredentialStore(&types.AuthConfig{
+		credentials = dockerregistry.NewStaticCredentialStore(&registry.AuthConfig{
 			Username: auths[0].Username,
 			Password: auths[0].Password,
 		})
