@@ -27,6 +27,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 	_ "k8s.io/kubectl/pkg/cmd/cp"
+	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -305,8 +306,7 @@ func ExecuteCommandInContainer(config *rest.Config, podName, podNamespace, conta
 	return stderr.String(), nil
 }
 
-// CustomizeLibertyEnv adds configured env variables appending configured liberty settings
-func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, client client.Client) error {
+func createLibertyEnv(la *olv1.OpenLibertyApplication, client client.Client) ([]corev1.EnvVar, []corev1.EnvVar, error) {
 	// ENV variables have already been set, check if they exist before setting defaults
 	targetEnv := []corev1.EnvVar{
 		{Name: "WLP_LOGGING_CONSOLE_LOGLEVEL", Value: "info"},
@@ -353,6 +353,30 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplic
 		targetEnv = append(targetEnv, corev1.EnvVar{Name: "SEC_IMPORT_K8S_CERTS", Value: "true"})
 	}
 
+	/*
+		if la.GetService() != nil && la.GetService().GetCertificateSecretRef() != nil {
+			if err := addSecretResourceVersionAsEnvVar(pts, la, client, *la.GetService().GetCertificateSecretRef(), "SERVICE_CERT"); err != nil {
+				return targetEnv, replacementEnv, err
+			}
+		}
+
+		if la.GetRoute() != nil && la.GetRoute().GetCertificateSecretRef() != nil {
+			if err := addSecretResourceVersionAsEnvVar(pts, la, client, *la.GetRoute().GetCertificateSecretRef(), "ROUTE_CERT"); err != nil {
+				return targetEnv, replacementEnv, err
+			}
+		}
+	*/
+
+	return targetEnv, replacementEnv, nil
+}
+
+// CustomizeLibertyEnv adds configured env variables appending configured liberty settings
+func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, client client.Client) error {
+	targetEnv, replacementEnv, err := createLibertyEnv(la, client)
+	if err != nil {
+		return err
+	}
+
 	// replacementEnv overrides any existing env within the env list
 	envList := pts.Spec.Containers[0].Env
 	for _, v := range replacementEnv {
@@ -367,20 +391,32 @@ func CustomizeLibertyEnv(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplic
 			pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, v)
 		}
 	}
+	return nil
+}
 
-	/*
-		if la.GetService() != nil && la.GetService().GetCertificateSecretRef() != nil {
-			if err := addSecretResourceVersionAsEnvVar(pts, la, client, *la.GetService().GetCertificateSecretRef(), "SERVICE_CERT"); err != nil {
-				return err
-			}
-		}
+func CustomizeKnativeServiceLibertyEnv(ksvc *servingv1.Service, la *olv1.OpenLibertyApplication, client client.Client) error {
+	if ksvc == nil || len(ksvc.Spec.Template.Spec.Containers) == 0 {
+		return nil
+	}
+	targetEnv, replacementEnv, err := createLibertyEnv(la, client)
+	if err != nil {
+		return err
+	}
 
-		if la.GetRoute() != nil && la.GetRoute().GetCertificateSecretRef() != nil {
-			if err := addSecretResourceVersionAsEnvVar(pts, la, client, *la.GetRoute().GetCertificateSecretRef(), "ROUTE_CERT"); err != nil {
-				return err
-			}
+	// replacementEnv overrides any existing env within the env list
+	envList := ksvc.Spec.Template.Spec.Containers[0].Env
+	for _, v := range replacementEnv {
+		if envVar, found := findEnvVar(v.Name, envList); found {
+			envVar.Value = v.Value
 		}
-	*/
+	}
+
+	// targetEnv appends any unset env into the env list
+	for _, v := range targetEnv {
+		if _, found := findEnvVar(v.Name, envList); !found {
+			ksvc.Spec.Template.Spec.Containers[0].Env = append(ksvc.Spec.Template.Spec.Containers[0].Env, v)
+		}
+	}
 
 	return nil
 }
@@ -987,19 +1023,10 @@ func IsLibertyVersionCheckNeeded(instance *olv1.OpenLibertyApplication) bool {
 }
 
 func IsFileBasedProbesEnabled(instance *olv1.OpenLibertyApplication) bool {
-	return instance.Spec.Probes != nil && instance.Spec.Probes.EnableFileBased != nil && *instance.Spec.Probes.EnableFileBased
-}
-
-func clearFileBasedProbe(probe *corev1.Probe) *corev1.Probe {
-	if probe != nil && probe.Exec != nil && len(probe.Exec.Command) == 3 {
-		scriptCmd := probe.Exec.Command[2]
-		if strings.HasPrefix(scriptCmd, StartupProbeFileBasedScriptName) ||
-			strings.HasPrefix(scriptCmd, LivenessProbeFileBasedScriptName) ||
-			strings.HasPrefix(scriptCmd, ReadinessProbeFileBasedScriptName) {
-			probe = &corev1.Probe{}
-		}
+	if instance.Spec.Probes == nil || instance.Spec.Probes.EnableFileBased == nil || !*instance.Spec.Probes.EnableFileBased {
+		return false
 	}
-	return probe
+	return instance.Spec.Probes.OpenLibertyApplicationProbes.Startup != nil || instance.Spec.Probes.OpenLibertyApplicationProbes.Liveness != nil || instance.Spec.Probes.OpenLibertyApplicationProbes.Readiness != nil
 }
 
 func configureFileBasedProbeExec(instance *olv1.OpenLibertyApplication, probe *corev1.Probe, scriptName string, probeFile string) {
@@ -1045,10 +1072,11 @@ func getOrInitProbe(probe *corev1.Probe) *corev1.Probe {
 	return probe
 }
 
+// Creates a Probe with file-based health checks using the defaults defined in defaultProbe
 func patchFileBasedProbe(instance *olv1.OpenLibertyApplication, defaultProbe *corev1.Probe, instanceProbe *corev1.Probe, scriptName string, probeFile string) *corev1.Probe {
 	defaultProbe = getOrInitProbe(defaultProbe)
 	instanceProbe = getOrInitProbe(instanceProbe)
-	isExecConfigured := instanceProbe.Exec != nil
+	isExecConfigured := instanceProbe.Exec != nil // this flag allows the user to override the ExecAction object to bring their own custom file-based health check
 	instanceProbe = rcoutils.CustomizeProbeDefaults(instanceProbe, defaultProbe)
 	if !isExecConfigured {
 		configureFileBasedProbeExec(instance, instanceProbe, scriptName, probeFile)
@@ -1056,17 +1084,41 @@ func patchFileBasedProbe(instance *olv1.OpenLibertyApplication, defaultProbe *co
 	return instanceProbe
 }
 
+// Modifies the PodTemplateSpec to use Liberty file-based health checks in the "app" container
 func CustomizePodSpecFileBasedProbes(pts *corev1.PodTemplateSpec, instance *olv1.OpenLibertyApplication) {
 	if !IsFileBasedProbesEnabled(instance) {
 		return
 	}
 	appContainer := rcoutils.GetAppContainer(pts.Spec.Containers)
+	customizeFileBasedProbes(appContainer, instance)
+}
+
+// Modifies the Knative Service instance to use Liberty file-based health checks in the "user-container" container
+func CustomizeKnativeServiceFileBasedProbes(ksvc *servingv1.Service, instance *olv1.OpenLibertyApplication) {
+	if !IsFileBasedProbesEnabled(instance) {
+		return
+	}
+	if len(ksvc.Spec.Template.Spec.Containers) == 0 {
+		return
+	}
+	appContainer := &ksvc.Spec.Template.Spec.Containers[0]
+	customizeFileBasedProbes(appContainer, instance)
+}
+
+// A helper function to customize Liberty file-based health checks on top of the MicroProfile probe defaults in GetDefaultStartupProbe
+func customizeFileBasedProbes(appContainer *corev1.Container, instance *olv1.OpenLibertyApplication) {
 	if appContainer == nil {
 		return
 	}
-	appContainer.StartupProbe = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultStartupProbe(instance), instance.Spec.Probes.Startup, StartupProbeFileBasedScriptName, StartupProbeFileName)
-	appContainer.LivenessProbe = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultLivenessProbe(instance), instance.Spec.Probes.Liveness, LivenessProbeFileBasedScriptName, LivenessProbeFileName)
-	appContainer.ReadinessProbe = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultReadinessProbe(instance), instance.Spec.Probes.Readiness, ReadinessProbeFileBasedScriptName, ReadinessProbeFileName)
+	if instance.Spec.Probes.OpenLibertyApplicationProbes.Startup != nil {
+		appContainer.StartupProbe = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultStartupProbe(instance), instance.Spec.Probes.Startup, StartupProbeFileBasedScriptName, StartupProbeFileName)
+	}
+	if instance.Spec.Probes.OpenLibertyApplicationProbes.Liveness != nil {
+		appContainer.LivenessProbe = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultLivenessProbe(instance), instance.Spec.Probes.Liveness, LivenessProbeFileBasedScriptName, LivenessProbeFileName)
+	}
+	if instance.Spec.Probes.OpenLibertyApplicationProbes.Readiness != nil {
+		appContainer.ReadinessProbe = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultReadinessProbe(instance), instance.Spec.Probes.Readiness, ReadinessProbeFileBasedScriptName, ReadinessProbeFileName)
+	}
 }
 
 // Converts a file name into a lowercase word separated string

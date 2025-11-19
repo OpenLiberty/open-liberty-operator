@@ -231,13 +231,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	imageReferenceOld := instance.Status.ImageReference
 	instance.Status.ImageReference = instance.Spec.ApplicationImage
 
-	if skipLibertyVersionChecks || imageReferenceOld != instance.Status.ImageReference {
-		// clear the liberty version field if the image has changed
-		lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.StatusReferenceLibertyVersion)
-		lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.StatusReferenceLibertyVersionLastPull)
-		instance.Status.PulledImageReference = ""
-	}
-
 	versionTakenFromImageStream := false
 	image, err := imageutil.ParseDockerImageReference(instance.Spec.ApplicationImage)
 	if err != nil {
@@ -258,9 +251,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			image := isTag.Image
 			if image.DockerImageReference != "" {
 				instance.Status.ImageReference = image.DockerImageReference
-				if !skipLibertyVersionChecks {
-					instance.Status.PulledImageReference = image.DockerImageReference
-				}
 			}
 			if !skipLibertyVersionChecks {
 				libertyVersion := libertyimage.ParseLibertyVersionFromContainerImageMetadata(&isTag.Image.DockerImageMetadata)
@@ -282,11 +272,21 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 					})
 				} else if instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != libertyVersion {
 					instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyVersion)
-					instance.Status.SetReference(lutils.StatusReferenceLibertyVersionLastPull, fmt.Sprint(time.Now().UTC().Unix()))
+					if instance.Status.PulledImageReference != instance.Status.ImageReference {
+						instance.Status.PulledImageReference = instance.Status.ImageReference
+						instance.Status.SetReference(lutils.StatusReferenceLibertyVersionLastPull, fmt.Sprint(time.Now().UTC().Unix()))
+					}
 				}
 			}
 			versionTakenFromImageStream = true
 		}
+	}
+
+	if skipLibertyVersionChecks || (!versionTakenFromImageStream && imageReferenceOld != instance.Status.ImageReference) {
+		// clear the liberty version field if the image has changed
+		lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.StatusReferenceLibertyVersion)
+		lutils.RemoveMapElementByKey(instance.Status.GetReferences(), lutils.StatusReferenceLibertyVersionLastPull)
+		instance.Status.PulledImageReference = ""
 	}
 
 	// Reconcile ServiceAccount before pulling images
@@ -471,6 +471,11 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			ksvc := &servingv1.Service{ObjectMeta: defaultMeta}
 			err = r.CreateOrUpdate(ksvc, instance, func() error {
 				oputils.CustomizeKnativeService(ksvc, instance)
+				lutils.CustomizeKnativeServiceFileBasedProbes(ksvc, instance)
+				if err := lutils.CustomizeKnativeServiceLibertyEnv(ksvc, instance, r.GetClient()); err != nil {
+					reqLogger.Error(err, "Failed to reconcile Knative Service Liberty env, error: "+err.Error())
+					return err
+				}
 				return nil
 			})
 
