@@ -176,7 +176,7 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `probes.liveness` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request++[Kubernetes liveness probe] that controls when Kubernetes needs to restart the pod.
 | `probes.readiness`   | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes++[Kubernetes readiness probe] that controls when the pod is ready to receive traffic.
 | `probes.startup` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes++[Kubernetes startup probe] that controls when Kubernetes needs to startup the pod on its first initialization.
-| `probes.enableFileBased` | A Boolean that overrides probe settings to check for health check files in the Liberty container's filesystem. Requires Liberty images 25.0.0.6 or later. For examples, see link:#configure-file-based-probes[Configure file-based probes with mpHealth-4.0].
+| `probes.enableFileBased` | A Boolean to enable file-based health checks within the `/output/health` folder of the Liberty container. Requires Liberty images 25.0.0.6 or later with `mpHealth-4.0` installed. For examples, see link:#configure-file-based-probes[Configure file-based probes with mpHealth-4.0].
 | `probes.checkInterval` | The interval at which the Liberty runtime queries to update the file-based health check files. The value is a number followed by an optional time unit of `ms` for milliseconds or `s` for seconds. Only used when `.spec.probes.enableFiledBased` is set to `true`. Defaults to `5s`.
 | `probes.startupCheckInterval` | The interval at which the Liberty runtime will query until an UP status is resolved and the health check file is created. The value is a number followed by an optional time unit of `ms` for milliseconds or `s` for seconds. If no time unit is specified for a value, the value is in milliseconds by default. Only used when `.spec.probes.enableFiledBased` is set to `true`. Defaults to `100ms`.
 
@@ -1395,7 +1395,7 @@ File-based probes are not enabled in applications by default.
 
 - The Liberty image specified at `.spec.applicationImage` requires the `mpHealth-4.0` feature to be installed on a Liberty server running version `25.0.0.6` or higher.
 
-- To enable a file-based probe with the default values, set `enableFileBased` to `true` and the probe parameters to `{}`. The following example enables all 3 probes to use file-based default values.
+- To enable a file-based probe with the default values set `enableFileBased` to `true` and the probe parameters to `{}`. The following example enables all 3 probes to use file-based default values.
 
 [source,yaml]
 ----
@@ -1407,7 +1407,7 @@ spec:
     readiness: {}
 ----
 
-The file-based startup, liveness and readiness probes inherits the same defaults (without `httpGet` probing) as outlined in the link:#configure-probes[Configure probes] section.
+The file-based startup, liveness and readiness probes inherits the same defaults (without setting `httpGet`) as outlined in the link:#configure-probes[Configure probes] section.
 
 Once enabled, the Liberty Operator configures the application to monitor files within the `/output/health` directory of the container.
 
