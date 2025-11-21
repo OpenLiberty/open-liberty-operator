@@ -176,7 +176,7 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `probes.liveness` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request++[Kubernetes liveness probe] that controls when Kubernetes needs to restart the pod.
 | `probes.readiness`   | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes++[Kubernetes readiness probe] that controls when the pod is ready to receive traffic.
 | `probes.startup` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes++[Kubernetes startup probe] that controls when Kubernetes needs to startup the pod on its first initialization.
-| `probes.enableFileBased` | A Boolean that overrides probe settings to check for health check files in the Liberty container's filesystem. Requires Liberty images 25.0.0.6 or later. For examples, see link:#configure-probes[Configure probes].
+| `probes.enableFileBased` | A Boolean that overrides probe settings to check for health check files in the Liberty container's filesystem. Requires Liberty images 25.0.0.6 or later. For examples, see link:#configure-file-based-probes[Configure file-based probes with mpHealth-4.0].
 | `pullPolicy` | The policy used when pulling the image.  One of: `Always`, `Never`, and `IfNotPresent`.
 | `pullSecret` | If using a registry that requires authentication, the name of the secret containing credentials.
 | `replicas` | The static number of desired replica pods that run simultaneously.
@@ -481,6 +481,7 @@ Open Liberty Operator builds upon link:#common-component-documentation[component
 * link:#monitor-resources[Monitor resources] (`.spec.monitoring`)
 * link:#specify-multiple-service-ports[Specify multiple service ports] (`.spec.service.port*` and `.spec.monitoring.endpoints`)
 * link:#configure-probes[Configure probes] (`.spec.probes`)
+* link:#configure-file-based-probes[Configure file-based probes with mpHealth-4.0] (`.spec.probes.enableFileBased`)
 * link:#deploy-serverless-applications-with-knative[Deploy serverless applications with Knative] (`.spec.createKnativeService`)
 * link:#expose-applications-externally[Expose applications externally] (`.spec.expose`, `.spec.createKnativeService`, `.spec.route`)
 * link:#allowing-or-limiting-incoming-traffic[Allowing or limiting incoming traffic] (`.spec.networkPolicy`)
@@ -1432,7 +1433,7 @@ spec:
     startupCheckInterval: 100ms
 ----
 
-To align with the behavior of non-file-based probes, the Liberty server should check and update the `live`, `ready`, and/or `started` files faster than it takes Kubernetes to perform a single probe. We recommend a buffer so that the check intervals maintain the property of `interval * 1.5 <= periodSeconds`. In this case, the OpenLibertyApplication probes have a default `periodSeconds` of `10` which satisfies the constraint with check intervals of `5s` and `100ms`. Beware when modifying the `periodSeconds`, `checkInterval` and/or `startupCheckInterval` to maintain this constraint accordingly in order to avoid unexpected pod downtimes.
+To align with the behavior of non-file-based probes, the Liberty server should check the `live`, `ready`, and/or `started` files faster than it takes Kubernetes to perform a single probe. We recommend a buffer so that the check intervals maintain the property of `interval * 1.5 <= periodSeconds`. In this case, the OpenLibertyApplication probes have a default `periodSeconds` of `10` which satisfies the constraint with check intervals of `5s` and `100ms`. Beware when modifying the `periodSeconds`, `checkInterval` and/or `startupCheckInterval` to maintain this constraint accordingly in order to avoid unexpected pod downtimes.
 
 [source,yaml]
 ----
