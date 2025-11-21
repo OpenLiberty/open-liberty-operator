@@ -1029,9 +1029,8 @@ func IsFileBasedProbesEnabled(instance *olv1.OpenLibertyApplication) bool {
 	return instance.Spec.Probes.OpenLibertyApplicationProbes.Startup != nil || instance.Spec.Probes.OpenLibertyApplicationProbes.Liveness != nil || instance.Spec.Probes.OpenLibertyApplicationProbes.Readiness != nil
 }
 
-func configureFileBasedProbeExec(instance *olv1.OpenLibertyApplication, probe *corev1.Probe, scriptName string, probeFile string) {
+func configureFileBasedProbeExec(probe *corev1.Probe, scriptName string, probeFile string) {
 	probe = getProbeWithoutHandlers(probe) // remove any preset handlers configured to this probe
-	probesConfig := instance.Spec.Probes
 	cmdList := []string{scriptName}
 	if scriptName == StartupProbeFileBasedScriptName {
 		// Set timeout seconds for the startup probe
@@ -1047,12 +1046,6 @@ func configureFileBasedProbeExec(instance *olv1.OpenLibertyApplication, probe *c
 			periodSeconds = probe.PeriodSeconds
 		}
 		cmdList = append(cmdList, fmt.Sprintf("-p %d", periodSeconds))
-	}
-	if probesConfig.FileDirectory != nil && len(*probesConfig.FileDirectory) > 0 {
-		fileDirectory := strings.TrimRight(*probesConfig.FileDirectory, "/")
-		if len(fileDirectory) > 0 {
-			cmdList = append(cmdList, fmt.Sprintf("-f %s/%s", fileDirectory, probeFile))
-		}
 	}
 	probe.Exec = &corev1.ExecAction{
 		Command: []string{"/bin/sh", "-c", strings.Join(cmdList, FlagDelimiterSpace)},
@@ -1073,13 +1066,13 @@ func getOrInitProbe(probe *corev1.Probe) *corev1.Probe {
 }
 
 // Creates a Probe with file-based health checks using the defaults defined in defaultProbe
-func patchFileBasedProbe(instance *olv1.OpenLibertyApplication, defaultProbe *corev1.Probe, instanceProbe *corev1.Probe, scriptName string, probeFile string) *corev1.Probe {
+func patchFileBasedProbe(defaultProbe *corev1.Probe, instanceProbe *corev1.Probe, scriptName string, probeFile string) *corev1.Probe {
 	defaultProbe = getOrInitProbe(defaultProbe)
 	instanceProbe = getOrInitProbe(instanceProbe)
 	isExecConfigured := instanceProbe.Exec != nil // this flag allows the user to override the ExecAction object to bring their own custom file-based health check
 	instanceProbe = rcoutils.CustomizeProbeDefaults(instanceProbe, defaultProbe)
 	if !isExecConfigured {
-		configureFileBasedProbeExec(instance, instanceProbe, scriptName, probeFile)
+		configureFileBasedProbeExec(instanceProbe, scriptName, probeFile)
 	}
 	return instanceProbe
 }
@@ -1111,13 +1104,13 @@ func customizeFileBasedProbes(appContainer *corev1.Container, instance *olv1.Ope
 		return
 	}
 	if instance.Spec.Probes.OpenLibertyApplicationProbes.Startup != nil {
-		appContainer.StartupProbe = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultStartupProbe(instance), instance.Spec.Probes.Startup, StartupProbeFileBasedScriptName, StartupProbeFileName)
+		appContainer.StartupProbe = patchFileBasedProbe(instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultStartupProbe(instance), instance.Spec.Probes.Startup, StartupProbeFileBasedScriptName, StartupProbeFileName)
 	}
 	if instance.Spec.Probes.OpenLibertyApplicationProbes.Liveness != nil {
-		appContainer.LivenessProbe = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultLivenessProbe(instance), instance.Spec.Probes.Liveness, LivenessProbeFileBasedScriptName, LivenessProbeFileName)
+		appContainer.LivenessProbe = patchFileBasedProbe(instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultLivenessProbe(instance), instance.Spec.Probes.Liveness, LivenessProbeFileBasedScriptName, LivenessProbeFileName)
 	}
 	if instance.Spec.Probes.OpenLibertyApplicationProbes.Readiness != nil {
-		appContainer.ReadinessProbe = patchFileBasedProbe(instance, instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultReadinessProbe(instance), instance.Spec.Probes.Readiness, ReadinessProbeFileBasedScriptName, ReadinessProbeFileName)
+		appContainer.ReadinessProbe = patchFileBasedProbe(instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultReadinessProbe(instance), instance.Spec.Probes.Readiness, ReadinessProbeFileBasedScriptName, ReadinessProbeFileName)
 	}
 }
 

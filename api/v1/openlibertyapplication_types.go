@@ -211,16 +211,12 @@ type OpenLibertyApplicationProbesConfig struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=100,type=spec,displayName="Enable File Based",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
 	EnableFileBased *bool `json:"enableFileBased,omitempty"`
 
-	// The Liberty container directory used to track file-based health checks for the 'live', 'ready', and 'started' files. Only used when .spec.probes.enableFiledBased is set to true. Defaults to /output/health.
-	// +operator-sdk:csv:customresourcedefinitions:order=101,type=spec,displayName="File Directory",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
-	FileDirectory *string `json:"fileDirectory,omitempty"`
-
 	// The interval at which the Liberty runtime queries to update the file-based health check files. The value is a number followed by an optional time unit of ms for milliseconds or s for seconds. Only used when .spec.probes.enableFiledBased is set to true. Defaults to 5s.
-	// +operator-sdk:csv:customresourcedefinitions:order=102,type=spec,displayName="Check Interval",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	// +operator-sdk:csv:customresourcedefinitions:order=101,type=spec,displayName="Check Interval",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	CheckInterval *string `json:"checkInterval,omitempty"`
 
 	// The interval at which the Liberty runtime will query until an UP status is resolved and the health check file is created. The value is a number followed by an optional time unit of ms for milliseconds or s for seconds. If no time unit is specified for a value, the value is in milliseconds by default. Only used when .spec.probes.enableFiledBased is set to true. Defaults to 100ms.
-	// +operator-sdk:csv:customresourcedefinitions:order=103,type=spec,displayName="Startup Check Interval",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	// +operator-sdk:csv:customresourcedefinitions:order=102,type=spec,displayName="Startup Check Interval",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	StartupCheckInterval *string `json:"startupCheckInterval,omitempty"`
 }
 
