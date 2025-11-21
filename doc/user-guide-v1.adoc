@@ -1472,6 +1472,8 @@ pull secret can not be used to provide registry credentials to Knative Services.
 
 For details on how to configure Knative for tasks such as enabling HTTPS connections and setting up a custom domain, see the link:++https://knative.dev/docs/serving/++[Knative documentation].
 
+NOTE: If you are using Red Hat OpenShift Serverless, the Knative Serving sidecar container can only connect to the application container over h2c or HTTP connections. One workaround is to set `.spec.manageTLS` to `false` in the OpenLibertyApplication CR instance and to expose an HTTP port in the Liberty application's server.xml such as `<httpEndpoint id="defaultHttpEndpoint" host="*" httpPort="9080" httpsPort="-1"/>`.  
+
 Autoscaling fields in `OpenLibertyApplication` are not used to configure Knative Pod Autoscaler (KPA). To learn how to configure KPA, see link:++https://knative.dev/docs/serving/configuring-the-autoscaler/++[Configuring the Autoscaler].
 
 [[expose-applications-externally]]
