@@ -1404,7 +1404,7 @@ spec:
     readiness: {}
 ----
 
-The file-based startup, liveness, and readiness probes inherits the same defaults (without `httpGet` probing) as outlined in the link:#configure-probes[Configure probes] section.
+The file-based startup, liveness and readiness probes inherits the same defaults (without `httpGet` probing) as outlined in the link:#configure-probes[Configure probes] section.
 
 Once enabled, the Liberty Operator configures the application to monitor files within the `/output/health` directory of the container.
 
@@ -1419,7 +1419,7 @@ drwxrwx---. 1 default    root 65 Nov 21 16:07 ..
 -rw-r-----. 1 1000730000 root  0 Nov 21 16:07 started
 ----
 
-Every few seconds the Liberty server (using `mpHealth-4.0`) may create/update the `live`, `ready`, and/or `started` files to a newly adjusted timestamp to indicate an **UP** status. The interval at which Liberty checks these files can be modified using the `.spec.probes.checkInterval` and `.spec.probes.startupCheckInterval` fields. By default, these check intervals are set to `5s` and `100ms`, respectively. 
+Every few seconds the Liberty server (using `mpHealth-4.0`) may create/update the `live`, `ready` and/or `started` files to a newly adjusted timestamp to indicate an **UP** status. The interval at which Liberty checks these files can be modified using the `.spec.probes.checkInterval` and `.spec.probes.startupCheckInterval` fields. By default, these check intervals are set to `5s` and `100ms`, respectively. 
 
 [source,yaml]
 ----
@@ -1433,7 +1433,7 @@ spec:
     startupCheckInterval: 100ms
 ----
 
-To align with the behavior of non-file-based probes, the Liberty server should check the `live`, `ready`, and/or `started` files faster than it takes Kubernetes to perform a single probe. We recommend a buffer so that the check intervals maintain the property of `interval * 1.5 <= periodSeconds`. In this case, the OpenLibertyApplication probes have a default `periodSeconds` of `10` which satisfies the constraint with check intervals of `5s` and `100ms`. Beware when modifying the `periodSeconds`, `checkInterval` and/or `startupCheckInterval` to maintain this constraint accordingly in order to avoid unexpected pod downtimes.
+To align with the behavior of non-file-based probes, the Liberty server should check the `live`, `ready` and/or `started` files faster than it takes Kubernetes to perform a single probe. We recommend a buffer so that the check intervals maintain the property of `interval * 1.5 <= periodSeconds`. In this case, the OpenLibertyApplication probes have a default `periodSeconds` of `10` which satisfies the constraint with check intervals of `5s` and `100ms`. Beware when modifying the `periodSeconds`, `checkInterval` and/or `startupCheckInterval` to maintain this constraint accordingly in order to avoid unexpected pod downtimes.
 
 [source,yaml]
 ----
