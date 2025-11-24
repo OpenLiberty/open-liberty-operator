@@ -12,6 +12,7 @@ import (
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
 	tree "github.com/OpenLiberty/open-liberty-operator/utils/tree"
+	"github.com/application-stacks/runtime-component-operator/common"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -267,7 +268,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 		} else {
 			currentPasswordEncryptionKey = nil
 		}
-		rawLTPAKeysStringData, err := createLTPAKeys(password, currentPasswordEncryptionKey)
+		rawLTPAKeysStringData, err := createLTPAKeys(password, currentPasswordEncryptionKey, common.LoadFromConfig(common.Config, lutils.OpConfigPasswordEncodingType))
 		if err != nil {
 			return "", "", "", err
 		}
@@ -432,7 +433,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 			} else {
 				currentPasswordEncryptionKey = nil
 			}
-			encodedPassword, err := encode(password, currentPasswordEncryptionKey)
+			encodedPassword, err := encode(password, currentPasswordEncryptionKey, common.LoadFromConfig(common.Config, lutils.OpConfigPasswordEncodingType))
 			if err != nil {
 				return "", err
 			}

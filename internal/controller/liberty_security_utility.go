@@ -12,10 +12,12 @@ const SECURITY_UTILITY_ENCODE = "encode"
 const SECURITY_UTILITY_CREATE_LTPA_KEYS = "createLTPAKeys"
 const SECURITY_UTILITY_OUTPUT_FOLDER = "liberty/output"
 
-func encode(password string, passwordKey *string) ([]byte, error) {
+var validPasswordEncodingTypes = []string{"aes", "aes-128"}
+
+func encode(password string, passwordKey *string, passwordEncodingType string) ([]byte, error) {
 	params := []string{}
 	params = append(params, SECURITY_UTILITY_ENCODE)
-	params = append(params, fmt.Sprintf("--encoding=%s", "aes"))
+	params = append(params, fmt.Sprintf("--encoding=%s", parsePasswordEncodingType(passwordEncodingType)))
 	if passwordKey != nil && len(*passwordKey) > 0 {
 		params = append(params, fmt.Sprintf("--key=%s", *passwordKey))
 	}
@@ -23,7 +25,7 @@ func encode(password string, passwordKey *string) ([]byte, error) {
 	return callSecurityUtility(params)
 }
 
-func createLTPAKeys(password string, passwordKey *string) ([]byte, error) {
+func createLTPAKeys(password string, passwordKey *string, passwordEncodingType string) ([]byte, error) {
 	tmpFileName := fmt.Sprintf("ltpa-keys-%s.keys", utils.GetRandomAlphanumeric(15))
 	tmpFilePath := fmt.Sprintf("%s/%s", SECURITY_UTILITY_OUTPUT_FOLDER, tmpFileName)
 
@@ -37,7 +39,7 @@ func createLTPAKeys(password string, passwordKey *string) ([]byte, error) {
 	params := []string{}
 	params = append(params, SECURITY_UTILITY_CREATE_LTPA_KEYS)
 	params = append(params, fmt.Sprintf("--file=%s", tmpFilePath))
-	params = append(params, fmt.Sprintf("--passwordEncoding=%s", "aes")) // use aes encoding
+	params = append(params, fmt.Sprintf("--passwordEncoding=%s", parsePasswordEncodingType(passwordEncodingType))) // use aes encoding
 	if passwordKey != nil && len(*passwordKey) > 0 {
 		params = append(params, fmt.Sprintf("--passwordKey=%s", *passwordKey))
 	}
@@ -53,6 +55,16 @@ func createLTPAKeys(password string, passwordKey *string) ([]byte, error) {
 	// delete the key
 	callDeleteFile(tmpFilePath)
 	return bytesOut, err
+}
+
+// Returns the password encoding type to use for Liberty security utility encode and createLTPAKeys. Defaults to "aes" when invalid or undefined.
+func parsePasswordEncodingType(passwordEncodingType string) string {
+	for _, validType := range validPasswordEncodingTypes {
+		if validType == passwordEncodingType {
+			return validType
+		}
+	}
+	return "aes"
 }
 
 // func callMkdir(folderPath string) {
