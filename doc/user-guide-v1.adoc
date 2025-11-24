@@ -1391,9 +1391,9 @@ spec:
 
 Starting in Liberty Operator version 1.5.2, a new Boolean field, `.spec.probes.enableFileBased`, allows you to set file-based health checks using the link:++https://openliberty.io/docs/latest/health-check-microservices.html#_microprofile_health_v4_0++[MicroProfile Health 4.0 feature].
 
-File-based probes are not enabled in applications by default.
+File-based probes are not enabled in applications by default. (Liberty Operator defaults to using HTTP GET probes)
 
-- The Liberty image specified at `.spec.applicationImage` requires the `mpHealth-4.0` feature to be installed on a Liberty server running version `25.0.0.6` or higher.
+- The Liberty image specified at `.spec.applicationImage` requires the `mpHealth-4.0` feature to be installed and enabled on a Liberty server running version `25.0.0.6` or higher.
 
 - To enable a file-based probe with the default values set `enableFileBased` to `true` and the probe parameters to `{}`. The following example enables all 3 probes to use file-based default values.
 
