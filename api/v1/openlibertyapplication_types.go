@@ -845,7 +845,10 @@ func (cr *OpenLibertyApplication) GetManageTLS() *bool {
 }
 
 func (cr *OpenLibertyApplication) GetManagedPort() int {
-	if cr.GetManageTLS() != nil && *cr.GetManageTLS() {
+	if cr.GetService() != nil && cr.GetService().GetPort() != 0 {
+		return int(cr.GetService().GetPort())
+	}
+	if cr.GetManageTLS() == nil || *cr.GetManageTLS() {
 		return 9443
 	}
 	return 9080
