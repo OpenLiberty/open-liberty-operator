@@ -224,15 +224,15 @@ type OpenLibertyApplicationProbesConfig struct {
 type OpenLibertyApplicationProbes struct {
 	// Periodic probe of container liveness. Container will be restarted if the probe fails.
 	// +operator-sdk:csv:customresourcedefinitions:order=49,type=spec,displayName="Liveness Probe"
-	Liveness *corev1.Probe `json:"liveness,omitempty"`
+	Liveness *common.BaseComponentProbe `json:"liveness,omitempty"`
 
 	// Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails.
 	// +operator-sdk:csv:customresourcedefinitions:order=50,type=spec,displayName="Readiness Probe"
-	Readiness *corev1.Probe `json:"readiness,omitempty"`
+	Readiness *common.BaseComponentProbe `json:"readiness,omitempty"`
 
 	// Probe to determine successful initialization. If specified, other probes are not executed until this completes successfully.
 	// +operator-sdk:csv:customresourcedefinitions:order=51,type=spec,displayName="Startup Probe"
-	Startup *corev1.Probe `json:"startup,omitempty"`
+	Startup *common.BaseComponentProbe `json:"startup,omitempty"`
 }
 
 // Configure pods to run on particular Nodes.
@@ -780,18 +780,18 @@ func (cr *OpenLibertyApplication) GetProbes() common.BaseComponentProbes {
 }
 
 // GetLivenessProbe returns liveness probe
-func (p *OpenLibertyApplicationProbes) GetLivenessProbe() *corev1.Probe {
-	return p.Liveness
+func (p *OpenLibertyApplicationProbes) GetLivenessProbe(ba common.BaseComponent) *corev1.Probe {
+	return common.ConvertBaseComponentProbeToCoreProbe(p.Liveness, p.GetDefaultLivenessProbe(ba))
 }
 
 // GetReadinessProbe returns readiness probe
-func (p *OpenLibertyApplicationProbes) GetReadinessProbe() *corev1.Probe {
-	return p.Readiness
+func (p *OpenLibertyApplicationProbes) GetReadinessProbe(ba common.BaseComponent) *corev1.Probe {
+	return common.ConvertBaseComponentProbeToCoreProbe(p.Readiness, p.GetDefaultReadinessProbe(ba))
 }
 
 // GetStartupProbe returns startup probe
-func (p *OpenLibertyApplicationProbes) GetStartupProbe() *corev1.Probe {
-	return p.Startup
+func (p *OpenLibertyApplicationProbes) GetStartupProbe(ba common.BaseComponent) *corev1.Probe {
+	return common.ConvertBaseComponentProbeToCoreProbe(p.Startup, p.GetDefaultStartupProbe(ba))
 }
 
 // GetDefaultLivenessProbe returns default values for liveness probe
@@ -842,6 +842,20 @@ func (cr *OpenLibertyApplication) GetManageLTPA() *bool {
 // GetManageTLS returns deployment's node and pod affinity settings
 func (cr *OpenLibertyApplication) GetManageTLS() *bool {
 	return cr.Spec.ManageTLS
+}
+
+func (cr *OpenLibertyApplication) GetManagedPort() int {
+	if cr.GetManageTLS() != nil && *cr.GetManageTLS() {
+		return 9443
+	}
+	return 9080
+}
+
+func (cr *OpenLibertyApplication) GetManagedScheme() corev1.URIScheme {
+	if cr.GetManageTLS() != nil && *cr.GetManageTLS() {
+		return corev1.URISchemeHTTPS
+	}
+	return corev1.URISchemeHTTP
 }
 
 // GetEnv returns slice of environment variables
@@ -1367,11 +1381,7 @@ func (cr *OpenLibertyApplication) Initialize() {
 	}
 
 	if cr.Spec.Service.Port == 0 {
-		if cr.Spec.ManageTLS == nil || *cr.Spec.ManageTLS {
-			cr.Spec.Service.Port = 9443
-		} else {
-			cr.Spec.Service.Port = 9080
-		}
+		cr.Spec.Service.Port = int32(cr.GetManagedPort())
 	}
 
 	// If TargetPorts on Serviceports are not set, default them to the Port value in the CR

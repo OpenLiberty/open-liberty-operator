@@ -403,17 +403,17 @@ func (in *OpenLibertyApplicationProbes) DeepCopyInto(out *OpenLibertyApplication
 	*out = *in
 	if in.Liveness != nil {
 		in, out := &in.Liveness, &out.Liveness
-		*out = new(corev1.Probe)
+		*out = new(common.BaseComponentProbe)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.Readiness != nil {
 		in, out := &in.Readiness, &out.Readiness
-		*out = new(corev1.Probe)
+		*out = new(common.BaseComponentProbe)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.Startup != nil {
 		in, out := &in.Startup, &out.Startup
-		*out = new(corev1.Probe)
+		*out = new(common.BaseComponentProbe)
 		(*in).DeepCopyInto(*out)
 	}
 }
