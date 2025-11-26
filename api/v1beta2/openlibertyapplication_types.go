@@ -539,17 +539,17 @@ func (cr *OpenLibertyApplication) GetProbes() common.BaseComponentProbes {
 }
 
 // GetLivenessProbe returns liveness probe
-func (p *OpenLibertyApplicationProbes) GetLivenessProbe() *corev1.Probe {
+func (p *OpenLibertyApplicationProbes) GetLivenessProbe(ba common.BaseComponent) *corev1.Probe {
 	return p.Liveness
 }
 
 // GetReadinessProbe returns readiness probe
-func (p *OpenLibertyApplicationProbes) GetReadinessProbe() *corev1.Probe {
+func (p *OpenLibertyApplicationProbes) GetReadinessProbe(ba common.BaseComponent) *corev1.Probe {
 	return p.Readiness
 }
 
 // GetStartupProbe returns startup probe
-func (p *OpenLibertyApplicationProbes) GetStartupProbe() *corev1.Probe {
+func (p *OpenLibertyApplicationProbes) GetStartupProbe(ba common.BaseComponent) *corev1.Probe {
 	return p.Startup
 }
 

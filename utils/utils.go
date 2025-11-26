@@ -1105,14 +1105,15 @@ func customizeFileBasedProbes(appContainer *corev1.Container, instance *olv1.Ope
 	if appContainer == nil {
 		return
 	}
-	if instance.Spec.Probes.OpenLibertyApplicationProbes.Startup != nil {
-		appContainer.StartupProbe = patchFileBasedProbe(instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultStartupProbe(instance), instance.Spec.Probes.Startup, StartupProbeFileBasedScriptName, StartupProbeFileName)
+	probes := instance.Spec.Probes.OpenLibertyApplicationProbes
+	if probes.Startup != nil {
+		appContainer.StartupProbe = patchFileBasedProbe(probes.GetDefaultStartupProbe(instance), probes.GetStartupProbe(instance), StartupProbeFileBasedScriptName, StartupProbeFileName)
 	}
-	if instance.Spec.Probes.OpenLibertyApplicationProbes.Liveness != nil {
-		appContainer.LivenessProbe = patchFileBasedProbe(instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultLivenessProbe(instance), instance.Spec.Probes.Liveness, LivenessProbeFileBasedScriptName, LivenessProbeFileName)
+	if probes.Liveness != nil {
+		appContainer.LivenessProbe = patchFileBasedProbe(probes.GetDefaultLivenessProbe(instance), probes.GetLivenessProbe(instance), LivenessProbeFileBasedScriptName, LivenessProbeFileName)
 	}
-	if instance.Spec.Probes.OpenLibertyApplicationProbes.Readiness != nil {
-		appContainer.ReadinessProbe = patchFileBasedProbe(instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultReadinessProbe(instance), instance.Spec.Probes.Readiness, ReadinessProbeFileBasedScriptName, ReadinessProbeFileName)
+	if probes.Readiness != nil {
+		appContainer.ReadinessProbe = patchFileBasedProbe(probes.GetDefaultReadinessProbe(instance), probes.GetReadinessProbe(instance), ReadinessProbeFileBasedScriptName, ReadinessProbeFileName)
 	}
 }
 
