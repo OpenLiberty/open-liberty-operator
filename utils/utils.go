@@ -14,6 +14,7 @@ import (
 	"math/rand/v2"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
+	"github.com/application-stacks/runtime-component-operator/common"
 	rcoutils "github.com/application-stacks/runtime-component-operator/utils"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
@@ -1072,7 +1073,7 @@ func patchFileBasedProbe(defaultProbe *corev1.Probe, instanceProbe *corev1.Probe
 	defaultProbe = getOrInitProbe(defaultProbe)
 	instanceProbe = getOrInitProbe(instanceProbe)
 	isExecConfigured := instanceProbe.Exec != nil // this flag allows the user to override the ExecAction object to bring their own custom file-based health check
-	instanceProbe = rcoutils.CustomizeProbeDefaults(instanceProbe, defaultProbe)
+	instanceProbe = common.CustomizeProbeDefaults(instanceProbe, defaultProbe)
 	if !isExecConfigured {
 		configureFileBasedProbeExec(instanceProbe, scriptName, probeFile)
 	}
@@ -1107,13 +1108,13 @@ func customizeFileBasedProbes(appContainer *corev1.Container, instance *olv1.Ope
 	}
 	probes := instance.Spec.Probes.OpenLibertyApplicationProbes
 	if probes.Startup != nil {
-		appContainer.StartupProbe = patchFileBasedProbe(probes.GetDefaultStartupProbe(instance), probes.GetStartupProbe(instance), StartupProbeFileBasedScriptName, StartupProbeFileName)
+		appContainer.StartupProbe = patchFileBasedProbe(probes.GetDefaultStartupProbe(instance), probes.GetStartupProbe(), StartupProbeFileBasedScriptName, StartupProbeFileName)
 	}
 	if probes.Liveness != nil {
-		appContainer.LivenessProbe = patchFileBasedProbe(probes.GetDefaultLivenessProbe(instance), probes.GetLivenessProbe(instance), LivenessProbeFileBasedScriptName, LivenessProbeFileName)
+		appContainer.LivenessProbe = patchFileBasedProbe(probes.GetDefaultLivenessProbe(instance), probes.GetLivenessProbe(), LivenessProbeFileBasedScriptName, LivenessProbeFileName)
 	}
 	if probes.Readiness != nil {
-		appContainer.ReadinessProbe = patchFileBasedProbe(probes.GetDefaultReadinessProbe(instance), probes.GetReadinessProbe(instance), ReadinessProbeFileBasedScriptName, ReadinessProbeFileName)
+		appContainer.ReadinessProbe = patchFileBasedProbe(probes.GetDefaultReadinessProbe(instance), probes.GetReadinessProbe(), ReadinessProbeFileBasedScriptName, ReadinessProbeFileName)
 	}
 }
 
