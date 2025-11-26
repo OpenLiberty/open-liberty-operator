@@ -4431,7 +4431,7 @@ spec:
                       be restarted if the probe fails.
                     properties:
                       exec:
-                        description: Exec specifies the action to take.
+                        description: Exec specifies a command to execute in the container.
                         properties:
                           command:
                             description: |-
@@ -4452,9 +4452,7 @@ spec:
                         format: int32
                         type: integer
                       grpc:
-                        description: |-
-                          GRPC specifies an action involving a GRPC port.
-                          This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                        description: GRPC specifies a GRPC HealthCheckRequest.
                         properties:
                           port:
                             description: Port number of the gRPC service. Number must
@@ -4473,7 +4471,7 @@ spec:
                         - port
                         type: object
                       httpGet:
-                        description: HTTPGet specifies the http request to perform.
+                        description: HTTPGet specifies an HTTP GET request to perform.
                         properties:
                           host:
                             description: |-
@@ -4500,6 +4498,7 @@ spec:
                               - value
                               type: object
                             type: array
+                            x-kubernetes-list-type: atomic
                           path:
                             description: Path to access on the HTTP server.
                             type: string
@@ -4517,6 +4516,8 @@ spec:
                               Scheme to use for connecting to the host.
                               Defaults to HTTP.
                             type: string
+                        required:
+                        - port
                         type: object
                       initialDelaySeconds:
                         description: |-
@@ -4537,8 +4538,7 @@ spec:
                         format: int32
                         type: integer
                       tcpSocket:
-                        description: TCPSocket specifies an action involving a TCP
-                          port.
+                        description: TCPSocket specifies a connection to a TCP port.
                         properties:
                           host:
                             description: 'Optional: Host name to connect to, defaults
@@ -4583,7 +4583,7 @@ spec:
                       will be removed from service endpoints if the probe fails.
                     properties:
                       exec:
-                        description: Exec specifies the action to take.
+                        description: Exec specifies a command to execute in the container.
                         properties:
                           command:
                             description: |-
@@ -4604,9 +4604,7 @@ spec:
                         format: int32
                         type: integer
                       grpc:
-                        description: |-
-                          GRPC specifies an action involving a GRPC port.
-                          This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                        description: GRPC specifies a GRPC HealthCheckRequest.
                         properties:
                           port:
                             description: Port number of the gRPC service. Number must
@@ -4625,7 +4623,7 @@ spec:
                         - port
                         type: object
                       httpGet:
-                        description: HTTPGet specifies the http request to perform.
+                        description: HTTPGet specifies an HTTP GET request to perform.
                         properties:
                           host:
                             description: |-
@@ -4652,6 +4650,7 @@ spec:
                               - value
                               type: object
                             type: array
+                            x-kubernetes-list-type: atomic
                           path:
                             description: Path to access on the HTTP server.
                             type: string
@@ -4669,6 +4668,8 @@ spec:
                               Scheme to use for connecting to the host.
                               Defaults to HTTP.
                             type: string
+                        required:
+                        - port
                         type: object
                       initialDelaySeconds:
                         description: |-
@@ -4689,8 +4690,7 @@ spec:
                         format: int32
                         type: integer
                       tcpSocket:
-                        description: TCPSocket specifies an action involving a TCP
-                          port.
+                        description: TCPSocket specifies a connection to a TCP port.
                         properties:
                           host:
                             description: 'Optional: Host name to connect to, defaults
@@ -4736,7 +4736,7 @@ spec:
                       successfully.
                     properties:
                       exec:
-                        description: Exec specifies the action to take.
+                        description: Exec specifies a command to execute in the container.
                         properties:
                           command:
                             description: |-
@@ -4757,9 +4757,7 @@ spec:
                         format: int32
                         type: integer
                       grpc:
-                        description: |-
-                          GRPC specifies an action involving a GRPC port.
-                          This is a beta field and requires enabling GRPCContainerProbe feature gate.
+                        description: GRPC specifies a GRPC HealthCheckRequest.
                         properties:
                           port:
                             description: Port number of the gRPC service. Number must
@@ -4778,7 +4776,7 @@ spec:
                         - port
                         type: object
                       httpGet:
-                        description: HTTPGet specifies the http request to perform.
+                        description: HTTPGet specifies an HTTP GET request to perform.
                         properties:
                           host:
                             description: |-
@@ -4805,6 +4803,7 @@ spec:
                               - value
                               type: object
                             type: array
+                            x-kubernetes-list-type: atomic
                           path:
                             description: Path to access on the HTTP server.
                             type: string
@@ -4822,6 +4821,8 @@ spec:
                               Scheme to use for connecting to the host.
                               Defaults to HTTP.
                             type: string
+                        required:
+                        - port
                         type: object
                       initialDelaySeconds:
                         description: |-
@@ -4842,8 +4843,7 @@ spec:
                         format: int32
                         type: integer
                       tcpSocket:
-                        description: TCPSocket specifies an action involving a TCP
-                          port.
+                        description: TCPSocket specifies a connection to a TCP port.
                         properties:
                           host:
                             description: 'Optional: Host name to connect to, defaults
