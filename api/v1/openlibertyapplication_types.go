@@ -855,10 +855,7 @@ func (cr *OpenLibertyApplication) GetManagedPort() int {
 }
 
 func (cr *OpenLibertyApplication) GetManagedScheme() corev1.URIScheme {
-	if cr.GetManageTLS() == nil || *cr.GetManageTLS() {
-		return corev1.URISchemeHTTPS
-	}
-	return corev1.URISchemeHTTP
+	return corev1.URISchemeHTTPS
 }
 
 // GetEnv returns slice of environment variables
