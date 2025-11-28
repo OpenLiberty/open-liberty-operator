@@ -854,10 +854,6 @@ func (cr *OpenLibertyApplication) GetManagedPort() int {
 	return 9080
 }
 
-func (cr *OpenLibertyApplication) GetManagedScheme() corev1.URIScheme {
-	return corev1.URISchemeHTTPS
-}
-
 // GetEnv returns slice of environment variables
 func (cr *OpenLibertyApplication) GetEnv() []corev1.EnvVar {
 	return cr.Spec.Env
