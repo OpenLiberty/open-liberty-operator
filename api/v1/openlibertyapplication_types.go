@@ -861,6 +861,7 @@ func (cr *OpenLibertyApplication) GetDisableTopologyRouting() *bool {
 	return nil
 }
 
+// GetManagedPort returns the application's CR managed port
 func (cr *OpenLibertyApplication) GetManagedPort() int {
 	if cr.GetService() != nil && cr.GetService().GetPort() != 0 {
 		return int(cr.GetService().GetPort())
@@ -871,6 +872,7 @@ func (cr *OpenLibertyApplication) GetManagedPort() int {
 	return 9080
 }
 
+// GetManagedScheme returns the application's CR managed scheme
 func (cr *OpenLibertyApplication) GetManagedScheme() corev1.URIScheme {
 	if cr.GetManageTLS() == nil || *cr.GetManageTLS() {
 		return corev1.URISchemeHTTPS
