@@ -14,6 +14,7 @@ import (
 	"math/rand/v2"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
+	"github.com/application-stacks/runtime-component-operator/common"
 	rcoutils "github.com/application-stacks/runtime-component-operator/utils"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
@@ -69,9 +70,6 @@ const EncryptionKeyMountXMLFileName = "encryptionKeyMount.xml"
 const StartupProbeFileBasedScriptName = "startupHealthCheck.sh"
 const LivenessProbeFileBasedScriptName = "livenessHealthCheck.sh"
 const ReadinessProbeFileBasedScriptName = "readinessHealthCheck.sh"
-const StartupProbeFileName = "started"
-const LivenessProbeFileName = "live"
-const ReadinessProbeFileName = "ready"
 
 type LTPAMetadata struct {
 	Kind       string
@@ -1031,7 +1029,7 @@ func IsFileBasedProbesEnabled(instance *olv1.OpenLibertyApplication) bool {
 	return instance.Spec.Probes.OpenLibertyApplicationProbes.Startup != nil || instance.Spec.Probes.OpenLibertyApplicationProbes.Liveness != nil || instance.Spec.Probes.OpenLibertyApplicationProbes.Readiness != nil
 }
 
-func configureFileBasedProbeExec(probe *corev1.Probe, scriptName string, probeFile string) {
+func configureFileBasedProbeExec(probe *corev1.Probe, scriptName string) {
 	probe = getProbeWithoutHandlers(probe) // remove any preset handlers configured to this probe
 	cmdList := []string{scriptName}
 	if scriptName == StartupProbeFileBasedScriptName {
@@ -1068,13 +1066,13 @@ func getOrInitProbe(probe *corev1.Probe) *corev1.Probe {
 }
 
 // Creates a Probe with file-based health checks using the defaults defined in defaultProbe
-func patchFileBasedProbe(defaultProbe *corev1.Probe, instanceProbe *corev1.Probe, scriptName string, probeFile string) *corev1.Probe {
+func patchFileBasedProbe(defaultProbe *corev1.Probe, instanceProbe *corev1.Probe, scriptName string) *corev1.Probe {
 	defaultProbe = getOrInitProbe(defaultProbe)
 	instanceProbe = getOrInitProbe(instanceProbe)
 	isExecConfigured := instanceProbe.Exec != nil // this flag allows the user to override the ExecAction object to bring their own custom file-based health check
-	instanceProbe = rcoutils.CustomizeProbeDefaults(instanceProbe, defaultProbe)
+	instanceProbe = common.CustomizeProbeDefaults(instanceProbe, defaultProbe)
 	if !isExecConfigured {
-		configureFileBasedProbeExec(instanceProbe, scriptName, probeFile)
+		configureFileBasedProbeExec(instanceProbe, scriptName)
 	}
 	return instanceProbe
 }
@@ -1105,14 +1103,15 @@ func customizeFileBasedProbes(appContainer *corev1.Container, instance *olv1.Ope
 	if appContainer == nil {
 		return
 	}
-	if instance.Spec.Probes.OpenLibertyApplicationProbes.Startup != nil {
-		appContainer.StartupProbe = patchFileBasedProbe(instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultStartupProbe(instance), instance.Spec.Probes.Startup, StartupProbeFileBasedScriptName, StartupProbeFileName)
+	probes := instance.Spec.Probes.OpenLibertyApplicationProbes
+	if probes.Startup != nil {
+		appContainer.StartupProbe = patchFileBasedProbe(probes.GetDefaultStartupProbe(instance), probes.GetStartupProbe(), StartupProbeFileBasedScriptName)
 	}
-	if instance.Spec.Probes.OpenLibertyApplicationProbes.Liveness != nil {
-		appContainer.LivenessProbe = patchFileBasedProbe(instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultLivenessProbe(instance), instance.Spec.Probes.Liveness, LivenessProbeFileBasedScriptName, LivenessProbeFileName)
+	if probes.Liveness != nil {
+		appContainer.LivenessProbe = patchFileBasedProbe(probes.GetDefaultLivenessProbe(instance), probes.GetLivenessProbe(), LivenessProbeFileBasedScriptName)
 	}
-	if instance.Spec.Probes.OpenLibertyApplicationProbes.Readiness != nil {
-		appContainer.ReadinessProbe = patchFileBasedProbe(instance.Spec.Probes.OpenLibertyApplicationProbes.GetDefaultReadinessProbe(instance), instance.Spec.Probes.Readiness, ReadinessProbeFileBasedScriptName, ReadinessProbeFileName)
+	if probes.Readiness != nil {
+		appContainer.ReadinessProbe = patchFileBasedProbe(probes.GetDefaultReadinessProbe(instance), probes.GetReadinessProbe(), ReadinessProbeFileBasedScriptName)
 	}
 }
 
