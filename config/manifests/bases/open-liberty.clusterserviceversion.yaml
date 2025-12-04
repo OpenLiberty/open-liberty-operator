@@ -424,6 +424,10 @@ spec:
         path: monitoring.endpoints
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:endpointList
+      - description: The list of hosts and IPs that will be inejcted into the application
+          pod's hosts file
+        displayName: Host Aliases
+        path: hostAliases
       - description: Controls which nodes the pod are scheduled to run on, based on
           labels on the node.
         displayName: Node Affinity

@@ -165,6 +165,10 @@ type OpenLibertyApplicationSpec struct {
 	// DNS settings for the application pod.
 	// +operator-sdk:csv:customresourcedefinitions:order=35,type=spec,displayName="DNS"
 	DNS *OpenLibertyApplicationDNS `json:"dns,omitempty"`
+
+	// The list of hosts and IPs that will be inejcted into the application pod's hosts file
+	// +operator-sdk:csv:customresourcedefinitions:order=36,type=spec,displayName="Host Aliases"
+	HostAliases []corev1.HostAlias `json:"hostAliases,omitempty"`
 }
 
 // Defines the DNS
@@ -1330,6 +1334,10 @@ func (d *OpenLibertyApplicationDNS) GetPolicy() *corev1.DNSPolicy {
 
 func (d *OpenLibertyApplicationDNS) GetConfig() *corev1.PodDNSConfig {
 	return d.PodDNSConfig
+}
+
+func (cr *OpenLibertyApplication) GetHostAliases() []corev1.HostAlias {
+	return cr.Spec.HostAliases
 }
 
 // Initialize sets default values
