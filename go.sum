@@ -6,6 +6,8 @@ github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuy
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20251120112423-05f65c81aa36 h1:fweyU4TX3vSrbWecLy6FYjIgnoybPdoJbOiZsoV+iDw=
 github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20251120112423-05f65c81aa36/go.mod h1:Hs5AbE9J+rLM34IAc75X7dtxnrzFg2AvG1XYLcX/ApU=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20251204180254-1ccb32f60589 h1:oURgG664at9aK0yhgarnQVWwo7Sw9uGjnoN9LsA9b2Y=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20251204180254-1ccb32f60589/go.mod h1:Hs5AbE9J+rLM34IAc75X7dtxnrzFg2AvG1XYLcX/ApU=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
