@@ -878,9 +878,13 @@ func (in *OpenLibertyApplicationSpec) DeepCopyInto(out *OpenLibertyApplicationSp
 	}
 	if in.HostAliases != nil {
 		in, out := &in.HostAliases, &out.HostAliases
-		*out = make([]corev1.HostAlias, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
+		*out = new([]corev1.HostAlias)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]corev1.HostAlias, len(*in))
+			for i := range *in {
+				(*in)[i].DeepCopyInto(&(*out)[i])
+			}
 		}
 	}
 }

@@ -168,7 +168,7 @@ type OpenLibertyApplicationSpec struct {
 
 	// The list of hosts and IPs that will be inejcted into the application pod's hosts file
 	// +operator-sdk:csv:customresourcedefinitions:order=36,type=spec,displayName="Host Aliases"
-	HostAliases []corev1.HostAlias `json:"hostAliases,omitempty"`
+	HostAliases *[]corev1.HostAlias `json:"hostAliases,omitempty"`
 }
 
 // Defines the DNS
@@ -1336,7 +1336,7 @@ func (d *OpenLibertyApplicationDNS) GetConfig() *corev1.PodDNSConfig {
 	return d.PodDNSConfig
 }
 
-func (cr *OpenLibertyApplication) GetHostAliases() []corev1.HostAlias {
+func (cr *OpenLibertyApplication) GetHostAliases() *[]corev1.HostAlias {
 	return cr.Spec.HostAliases
 }
 
