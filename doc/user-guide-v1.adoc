@@ -438,6 +438,9 @@ data:
   reconcileIntervalMinimum: '5'
   certManagerCACertDuration: 8766h
   performanceDataMaxWorkers: '10'
+  imageVersionChecks: 'true'
+  imageVersionChecksRefreshIntervalMinutes: '720'
+  passwordEncodingType: aes
 ----
 
 And here is the set of descriptions corresponding to each configurable field.
@@ -448,7 +451,10 @@ And here is the set of descriptions corresponding to each configurable field.
 | `certManagerCACertDuration` |	The cert-manager issued CA certificate's duration before expiry in link:++https://pkg.go.dev/time#ParseDuration++[Go time.Duration] string format. The default value is 8766h (1 year). To learn more about this field see link:#generating-certificates-with-certificate-manager[Generating certificates with certificate manager].
 | `certManagerCertDuration`   | The cert-manager issued service certificate's duration before expiry in link:++https://pkg.go.dev/time#ParseDuration++[Go time.Duration] string format. The default value is 2160h (90 days). To learn more about this field see link:#generating-certificates-with-certificate-manager[Generating certificates with certificate manager].
 | `defaultHostname`   | The default hostname for the OpenLibertyApplication Route or Ingress URL when .spec.expose is set to true. To learn more about this field see link:#expose-applications-externally[Expose applications externally (`.spec.expose`, `.spec.createKnativeService`, `.spec.route`)].
+| `imageVersionChecks` | The boolean parameter that determines whether the Operator should pull and evaluate the Liberty version of the `.spec.applicationImage`. The default value is  _true_. 
+| `imageVersionChecksRefreshIntervalMinutes` | The amount of minutes that the Operator will wait until re-validating the Liberty version of a tagged image in `.spec.applicationImage`. This flag does not apply to ID-based images.   
 | `operatorLogLevel` | The log level for the Liberty operator. The default value is `info`, other options are `warning`, `fine`, `finer`, `finest`. The log level can be dynamically modified and takes effect immediately.
+| `passwordEncodingType` | The encoding type to encode the LTPA keys password with when `.spec.manageLTPA` is set to _true_. The default value is `aes` (aes-256) , another option is `aes-128`.
 | `reconcileIntervalMinimum` | The default value of the minimum reconciliation interval in seconds is _5_. The operator runs the reconciliation loop every reconciliation interval seconds for each instance. If an instance's status conditions remain unchanged, the reconciliation interval increases to reduce the reconciliation frequency. The interval increases based on the base reconciliation interval and specified increase percentage. For more information on the operator's reconciliation frequency, see link:#viewing-reconciliation-frequency-in-the-status[Viewing reconciliation frequency in the status].
 | `reconcileIntervalIncreasePercentage` | When the reconciliation interval increases, the increase is calculated as a specified percentage of the current interval. The default value is _50_. To disable the reconciliation interval increase, set the value to _0_.
 | `reconcileIntervalFailureMaximum` | The maximum reconciliation interval value in seconds for repeated failures in the status. The default value is _240_.
