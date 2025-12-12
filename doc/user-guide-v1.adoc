@@ -814,6 +814,11 @@ Open Liberty operator can generate and manage an LTPA key for applications. By d
 
 A single LTPA key is used per each namespace and is shared with microservices and applications in a namespace. A password is generated and encrypted to secure the LTPA key. The LTPA key and the password are stored in a Kubernetes Secret resource with the `app.kubernetes.io/name=olo-managed-ltpa label`.
 
+NOTE: In WebSphere Liberty operator 1.5.2 and above, AES-256 is the default encoding type for all newly generated LTPA keys and for encrypting their passwords.
+Existing LTPA keys remain with AES-128 encryption and continue to work. You can revoke LTPA keys to switch to the AES-256 encoding type. +
+ +
+A new configuration option `passwordEncodingType` is provided in the link:++https://github.com/OpenLiberty/open-liberty-operator/blob/main/doc/user-guide-v1.adoc#operator-configmap++[Operator ConfigMap] that you can enable to force AES-128 for all new deployments and LTPA keys across all namespaces managed by the WebSphere Liberty operator.
+
 To revoke the LTPA key, delete the Kubernetes Secret resource with the `app.kubernetes.io/name=olo-managed-ltpa` label in the namespace. A new LTPA key and password is then generated and used with applications in the namespace. When `.spec.manageLTPA` is enabled with `.spec.managePasswordEncryption`, the Liberty Operator encrypts the password of the LTPA key with the specified password encryption key. For more information on LTPA, see link:https://openliberty.io/docs/latest/single-sign-on.html#_ltpa[Single sign-on (SSO)].
 
 NOTE: LTPA support from Liberty Operator version 1.3 continues to work as before. The LTPA key that is generated with Liberty Operator version 1.3 remains used. +
