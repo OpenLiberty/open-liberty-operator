@@ -178,43 +178,36 @@ spec:
       - description: The name of the social login configuration for display.
         displayName: Display Name
         path: sso.oidc[0].displayName
-      - description: The service account to use for deploying the application. A service
-          account is automatically created if this is not specifed.
-        displayName: Service Account
-        path: serviceAccount
+      - description: List of Secrets to use to pull images from one or more specified
+          repositories. It is not required if the cluster is configured with a global
+          image pull secret.
+        displayName: Pull Secrets
+        path: pullSecrets
+      - description: Specifies whether the UserInfo endpoint is contacted.
+        displayName: User Info Endpoint Enabled
+        path: sso.oidc[0].userInfoEndpointEnabled
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Deprecated. .spec.serviceAccount.name should be used instead.
           If both are specified, .spec.serviceAccount.name will override this.
         displayName: Service Account Name
         path: serviceAccountName
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:hidden
-      - description: Specifies whether the UserInfo endpoint is contacted.
-        displayName: User Info Endpoint Enabled
-        path: sso.oidc[0].userInfoEndpointEnabled
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Create Knative resources and use Knative serving.
-        displayName: Create Knative Service
-        path: createKnativeService
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Specifies the name of the claim. Use its value as the subject
           realm.
         displayName: Realm Name Attribute
         path: sso.oidc[0].realmNameAttribute
-      - description: Expose the application externally via a Route, a Knative Route
-          or an Ingress resource.
-        displayName: Expose
-        path: expose
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: The service account to use for deploying the application. A service
+          account is automatically created if this is not specifed.
+        displayName: Service Account
+        path: serviceAccount
       - description: Specifies one or more scopes to request.
         displayName: Scope
         path: sso.oidc[0].scope
-      - description: Enable management of password encryption key sharing amongst
-          Liberty containers. Defaults to false.
-        displayName: Manage Password Encryption
-        path: managePasswordEncryption
+      - description: Create Knative resources and use Knative serving.
+        displayName: Create Knative Service
+        path: createKnativeService
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: The port exposed by the container.
@@ -225,10 +218,10 @@ spec:
       - description: Specifies the required authentication method.
         displayName: Token Endpoint Auth Method
         path: sso.oidc[0].tokenEndpointAuthMethod
-      - description: Enable management of LTPA key sharing amongst Liberty containers.
-          Defaults to false.
-        displayName: Manage LTPA
-        path: manageLTPA
+      - description: Expose the application externally via a Route, a Knative Route
+          or an Ingress resource.
+        displayName: Expose
+        path: expose
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - displayName: Service Type
@@ -241,9 +234,10 @@ spec:
         path: sso.oidc[0].hostNameVerificationEnabled
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Enable management of TLS certificates. Defaults to true.
-        displayName: Manage TLS
-        path: manageTLS
+      - description: Enable management of password encryption key sharing amongst
+          Liberty containers. Defaults to false.
+        displayName: Manage Password Encryption
+        path: managePasswordEncryption
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Node proxies this port into your service.
@@ -251,19 +245,22 @@ spec:
         path: service.nodePort
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:number
-      - description: Number of pods to create. Defaults to 1. Not applicable when
-          .spec.autoscaling or .spec.createKnativeService is specified.
-        displayName: Replicas
-        path: replicas
+      - description: Enable management of LTPA key sharing amongst Liberty containers.
+          Defaults to false.
+        displayName: Manage LTPA
+        path: manageLTPA
         x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:podCount
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: The name for the port exposed by the container.
         displayName: Port Name
         path: service.portName
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
-      - displayName: Auto Scaling
-        path: autoscaling
+      - description: Enable management of TLS certificates. Defaults to true.
+        displayName: Manage TLS
+        path: manageTLS
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Annotations to be added to the service.
         displayName: Service Annotations
         path: service.annotations
@@ -274,19 +271,20 @@ spec:
         path: service.certificate.annotations
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Resource requests and limits for the application container.
-        displayName: Resource Requirements
-        path: resources
+      - description: Number of pods to create. Defaults to 1. Not applicable when
+          .spec.autoscaling or .spec.createKnativeService is specified.
+        displayName: Replicas
+        path: replicas
         x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
+        - urn:alm:descriptor:com.tectonic.ui:podCount
       - description: The port that the operator assigns to containers inside pods.
           Defaults to the value of .spec.service.port.
         displayName: Target Port
         path: service.targetPort
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:number
-      - displayName: Probes
-        path: probes
+      - displayName: Auto Scaling
+        path: autoscaling
       - description: 'A name of a secret that already contains TLS key, certificate
           and CA to be mounted in the pod. The following keys are valid in the secret:
           ca.crt, tls.crt, and tls.key.'
@@ -294,32 +292,33 @@ spec:
         path: service.certificateSecretRef
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
-      - displayName: Deployment
-        path: deployment
+      - description: Resource requests and limits for the application container.
+        displayName: Resource Requirements
+        path: resources
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
       - description: Configure service certificate.
         displayName: Service Certificate
         path: service.certificate
+      - displayName: Probes
+        path: probes
       - description: An array consisting of service ports.
         displayName: Ports
         path: service.ports
-      - displayName: StatefulSet
-        path: statefulSet
-      - displayName: Service
-        path: service
+      - displayName: Deployment
+        path: deployment
       - description: Expose the application as a bindable service. Defaults to false.
         displayName: Bindable
         path: service.bindable
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - displayName: Route
-        path: route
       - description: Configure service session affinity.
         displayName: Session Affinity
         path: service.sessionAffinity
-      - description: Configures the Semeru Cloud Compiler to handle Just-In-Time (JIT)
-          compilation requests from the application.
-        displayName: Semeru Cloud Compiler
-        path: semeruCloudCompiler
+      - displayName: StatefulSet
+        path: statefulSet
+      - displayName: Service
+        path: service
       - description: Setting to maintain session affinity. Must be ClientIP or None.
           Defaults to None.
         displayName: Session Affinity Type
@@ -332,57 +331,63 @@ spec:
         path: deployment.updateStrategy
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:updateStrategy
-      - displayName: Network Policy
-        path: networkPolicy
+      - displayName: Route
+        path: route
       - description: Configurations of session affinity.
         displayName: Config
         path: service.sessionAffinity.config
-      - displayName: Serviceability
-        path: serviceability
-      - displayName: Single Sign-On
-        path: sso
+      - description: Configures the Semeru Cloud Compiler to handle Just-In-Time (JIT)
+          compilation requests from the application.
+        displayName: Semeru Cloud Compiler
+        path: semeruCloudCompiler
+      - displayName: Network Policy
+        path: networkPolicy
       - description: Specifies the strategy to replace old StatefulSet pods with new
           pods.
         displayName: StatefulSet Update Strategy
         path: statefulSet.updateStrategy
-      - displayName: Monitoring
-        path: monitoring
+      - displayName: Serviceability
+        path: serviceability
       - displayName: Storage
         path: statefulSet.storage
-      - description: An array of environment variables for the application container.
-        displayName: Environment Variables
-        path: env
+      - displayName: Single Sign-On
+        path: sso
       - description: A convenient field to set the size of the persisted storage.
         displayName: Storage Size
         path: statefulSet.storage.size
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
-      - description: List of sources to populate environment variables in the application
-          container.
-        displayName: Environment Variables from Sources
-        path: envFrom
+      - displayName: Monitoring
+        path: monitoring
       - description: A convenient field to request the storage class of the persisted
           storage. The name can not be specified or updated after the storage is created.
         displayName: Storage Class Name
         path: statefulSet.storage.className
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: An array of environment variables for the application container.
+        displayName: Environment Variables
+        path: env
       - description: The directory inside the container where this persisted storage
           will be bound to.
         displayName: Storage Mount Path
         path: statefulSet.storage.mountPath
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Represents a volume with data that is accessible to the application
+      - description: List of sources to populate environment variables in the application
           container.
-        displayName: Volumes
-        path: volumes
+        displayName: Environment Variables from Sources
+        path: envFrom
       - description: A YAML object that represents a volumeClaimTemplate component
           of a StatefulSet.
         displayName: Storage Volume Claim Template
         path: statefulSet.storage.volumeClaimTemplate
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:PersistentVolumeClaim
+      - description: Represents a volume with data that is accessible to the application
+          container.
+        displayName: Volumes
+        path: volumes
       - description: Represents where to mount the volumes into the application container.
         displayName: Volume Mounts
         path: volumeMounts
@@ -395,9 +400,20 @@ spec:
         path: sidecarContainers
       - displayName: Affinity
         path: affinity
+      - description: Labels to set on ServiceMonitor.
+        displayName: Monitoring Labels
+        path: monitoring.labels
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       - description: Security context for the application container.
         displayName: Security Context
         path: securityContext
+      - description: A YAML snippet representing an array of Endpoint component from
+          ServiceMonitor.
+        displayName: Monitoring Endpoints
+        path: monitoring.endpoints
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:endpointList
       - displayName: Topology Spread Constraints
         path: topologySpreadConstraints
       - description: Disable information about services being injected into the application
@@ -406,36 +422,25 @@ spec:
         path: disableServiceLinks
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Labels to set on ServiceMonitor.
-        displayName: Monitoring Labels
-        path: monitoring.labels
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Tolerations to be added to application pods. Tolerations allow
-          the scheduler to schedule pods on nodes with matching taints.
-        displayName: Tolerations
-        path: tolerations
-      - description: DNS settings for the application pod.
-        displayName: DNS
-        path: dns
-      - description: A YAML snippet representing an array of Endpoint component from
-          ServiceMonitor.
-        displayName: Monitoring Endpoints
-        path: monitoring.endpoints
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:endpointList
       - description: Controls which nodes the pod are scheduled to run on, based on
           labels on the node.
         displayName: Node Affinity
         path: affinity.nodeAffinity
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:nodeAffinity
+      - description: Tolerations to be added to application pods. Tolerations allow
+          the scheduler to schedule pods on nodes with matching taints.
+        displayName: Tolerations
+        path: tolerations
       - description: Controls the nodes the pod are scheduled to run on, based on
           labels on the pods that are already running on the node.
         displayName: Pod Affinity
         path: affinity.podAffinity
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:podAffinity
+      - description: DNS settings for the application pod.
+        displayName: DNS
+        path: dns
       - description: Enables the ability to prevent running a pod on the same node
           as another pod.
         displayName: Pod Anti Affinity
