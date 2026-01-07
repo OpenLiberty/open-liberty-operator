@@ -95,6 +95,11 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		ns = r.watchNamespaces[0]
 	}
 
+	// This reconcile context is cancelled right before the Reconcile function terminates or when the parent context ctx is cancelled (such as in operator leader election), whichever happens first.
+	// Resources that require cleanup may use this context to hook into program execution before a function return.
+	recCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	configMap, err := r.GetOpConfigMap(OperatorName, ns)
 	if err != nil {
 		reqLogger.Info("Failed to get open-liberty-operator config map, error: " + err.Error())
@@ -295,7 +300,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		if serviceAccountName == "" {
 			serviceAccount := &corev1.ServiceAccount{ObjectMeta: defaultMeta}
 			err = r.CreateOrUpdate(serviceAccount, instance, func() error {
-				return oputils.CustomizeServiceAccount(serviceAccount, instance, r.GetClient())
+				return oputils.CustomizeServiceAccount(recCtx, serviceAccount, instance, r.GetClient())
 			})
 			if err != nil {
 				reqLogger.Error(err, "Failed to reconcile ServiceAccount")
@@ -313,7 +318,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 	// Check if the ServiceAccount has a valid pull secret before creating the deployment/statefulset
 	// or setting up knative. Otherwise the pods can go into an ImagePullBackOff loop
-	saErr := oputils.ServiceAccountPullSecretExists(instance, r.GetClient())
+	saErr := oputils.ServiceAccountPullSecretExists(recCtx, instance, r.GetClient())
 	if saErr != nil {
 		return r.ManageErrorWithWarnings(saErr, common.StatusConditionTypeReconciled, instance, warnings)
 	}
@@ -422,7 +427,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// Otherwise, delete the Semeru Compiler deployment and service.
 	message := "Start Semeru Compiler reconcile"
 	reqDebugLogger.Info(message)
-	err, message, areCompletedSemeruInstancesMarkedToBeDeleted := r.reconcileSemeruCompiler(instance)
+	err, message, areCompletedSemeruInstancesMarkedToBeDeleted := r.reconcileSemeruCompiler(recCtx, instance)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
@@ -500,7 +505,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 	}
 
-	useCertmanager, err := r.GenerateSvcCertSecret(ba, OperatorShortName, "Open Liberty Operator", OperatorName)
+	useCertmanager, err := r.GenerateSvcCertSecret(recCtx, ba, OperatorShortName, "Open Liberty Operator", OperatorName)
 	if err != nil {
 		reqLogger.Error(err, "Failed to reconcile CertManager Certificate")
 		return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
@@ -576,7 +581,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		r.deletePVC(reqLogger, instance.Name+"-serviceability", instance.Namespace)
 	}
 
-	err = r.ReconcileBindings(instance)
+	err = r.ReconcileBindings(recCtx, instance)
 	if err != nil {
 		return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 	}
@@ -643,7 +648,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 
 			statefulSet.Spec.Template.Spec.Containers[0].Args = r.getSemeruJavaOptions(instance)
 
-			if err := oputils.CustomizePodWithSVCCertificate(&statefulSet.Spec.Template, instance, r.GetClient()); err != nil {
+			if err := oputils.CustomizePodWithSVCCertificate(recCtx, &statefulSet.Spec.Template, instance, r.GetClient()); err != nil {
 				return err
 			}
 
@@ -740,7 +745,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			}
 			deploy.Spec.Template.Spec.Containers[0].Args = r.getSemeruJavaOptions(instance)
 
-			if err := oputils.CustomizePodWithSVCCertificate(&deploy.Spec.Template, instance, r.GetClient()); err != nil {
+			if err := oputils.CustomizePodWithSVCCertificate(recCtx, &deploy.Spec.Template, instance, r.GetClient()); err != nil {
 				return err
 			}
 			lutils.CustomizeLibertyAnnotations(&deploy.Spec.Template, instance)
@@ -901,7 +906,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	} else if ok {
 		if instance.Spec.Monitoring != nil && (instance.Spec.CreateKnativeService == nil || !*instance.Spec.CreateKnativeService) {
 			// Validate the monitoring endpoints' configuration before creating/updating the ServiceMonitor
-			if err := oputils.ValidatePrometheusMonitoringEndpoints(instance, r.GetClient(), instance.GetNamespace()); err != nil {
+			if err := oputils.ValidatePrometheusMonitoringEndpoints(recCtx, instance, r.GetClient(), instance.GetNamespace()); err != nil {
 				return r.ManageErrorWithWarnings(err, common.StatusConditionTypeReconciled, instance, warnings)
 			}
 			sm := &prometheusv1.ServiceMonitor{ObjectMeta: defaultMeta}

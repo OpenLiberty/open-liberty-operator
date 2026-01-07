@@ -49,7 +49,7 @@ const (
 )
 
 // Create the Deployment and Service objects for a Semeru Compiler used by an Open Liberty Application
-func (r *ReconcileOpenLiberty) reconcileSemeruCompiler(ola *openlibertyv1.OpenLibertyApplication) (error, string, bool) {
+func (r *ReconcileOpenLiberty) reconcileSemeruCompiler(recCtx context.Context, ola *openlibertyv1.OpenLibertyApplication) (error, string, bool) {
 	compilerMeta := metav1.ObjectMeta{
 		Name:      getSemeruCompilerNameWithGeneration(ola),
 		Namespace: ola.GetNamespace(),
@@ -88,11 +88,11 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCompiler(ola *openlibertyv1.OpenLi
 
 		//create certmanager issuer and certificate if necessary
 		if cmPresent {
-			err = r.GenerateCMIssuer(ola.Namespace, OperatorShortName, "Open Liberty Operator", OperatorName)
+			err = r.GenerateCMIssuer(recCtx, ola.Namespace, OperatorShortName, "Open Liberty Operator", OperatorName)
 			if err != nil {
 				return err, "Failed to reconcile Certificate Issuer", false
 			}
-			err = r.reconcileSemeruCMCertificate(ola)
+			err = r.reconcileSemeruCMCertificate(recCtx, ola)
 			if err != nil {
 				return err, "Failed to reconcile Semeru Compiler Certificate", false
 			}
@@ -436,7 +436,7 @@ func reconcileSemeruService(svc *corev1.Service, ola *openlibertyv1.OpenLibertyA
 
 }
 
-func (r *ReconcileOpenLiberty) reconcileSemeruCMCertificate(ola *openlibertyv1.OpenLibertyApplication) error {
+func (r *ReconcileOpenLiberty) reconcileSemeruCMCertificate(recCtx context.Context, ola *openlibertyv1.OpenLibertyApplication) error {
 	svcCert := &certmanagerv1.Certificate{}
 	svcCert.Name = getSemeruCompilerNameWithGeneration(ola)
 	svcCert.Namespace = ola.GetNamespace()
@@ -464,7 +464,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCMCertificate(ola *openlibertyv1.O
 			svcCert.Spec.IssuerRef.Name = customIssuer.Name
 		}
 
-		rVersion, _ := utils.GetIssuerResourceVersion(r.GetClient(), svcCert)
+		rVersion, _ := utils.GetIssuerResourceVersion(recCtx, r.GetClient(), svcCert)
 		if svcCert.Spec.SecretTemplate == nil {
 			svcCert.Spec.SecretTemplate = &certmanagerv1.CertificateSecretTemplate{
 				Annotations: map[string]string{},
