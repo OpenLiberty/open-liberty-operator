@@ -104,7 +104,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2025-12-08T17:02:43Z"
+    createdAt: "2026-01-29T19:28:13Z"
     description: Deploy and manage containerized Liberty applications
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "true"
@@ -420,6 +420,12 @@ spec:
           compilation requests from the application.
         displayName: Semeru Cloud Compiler
         path: semeruCloudCompiler
+      - description: Disables topology aware annotations from being added to the Service.
+          Defaults to false.
+        displayName: Disable Topology
+        path: service.disableTopology
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Setting to maintain session affinity. Must be ClientIP or None.
           Defaults to None.
         displayName: Session Affinity Type
