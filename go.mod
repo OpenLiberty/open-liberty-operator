@@ -3,7 +3,7 @@ module github.com/OpenLiberty/open-liberty-operator
 go 1.25
 
 require (
-	github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20251208162659-852f55862db5
+	github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260211145838-70e7fbd8c119
 	github.com/cert-manager/cert-manager v1.16.5
 	github.com/distribution/distribution/v3 v3.0.0
 	github.com/docker/docker v27.5.0+incompatible
@@ -70,6 +70,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
+	github.com/klauspost/cpuid/v2 v2.0.12 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
@@ -92,6 +93,7 @@ require (
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
+	github.com/zeebo/blake3 v0.2.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.62.0 // indirect
 	go.opentelemetry.io/otel v1.37.0 // indirect
