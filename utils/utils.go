@@ -355,20 +355,6 @@ func createLibertyEnv(la *olv1.OpenLibertyApplication, client client.Client) ([]
 		targetEnv = append(targetEnv, corev1.EnvVar{Name: "SEC_IMPORT_K8S_CERTS", Value: "true"})
 	}
 
-	/*
-		if la.GetService() != nil && la.GetService().GetCertificateSecretRef() != nil {
-			if err := addSecretResourceVersionAsEnvVar(pts, la, client, *la.GetService().GetCertificateSecretRef(), "SERVICE_CERT"); err != nil {
-				return targetEnv, replacementEnv, err
-			}
-		}
-
-		if la.GetRoute() != nil && la.GetRoute().GetCertificateSecretRef() != nil {
-			if err := addSecretResourceVersionAsEnvVar(pts, la, client, *la.GetRoute().GetCertificateSecretRef(), "ROUTE_CERT"); err != nil {
-				return targetEnv, replacementEnv, err
-			}
-		}
-	*/
-
 	return targetEnv, replacementEnv, nil
 }
 
@@ -450,15 +436,13 @@ func GetSecretLastRotationAsLabelMap(la *olv1.OpenLibertyApplication, client cli
 	}, nil
 }
 
-func AddSecretResourceVersionAsEnvVar(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, client client.Client, secretName string, envNamePrefix string) error {
+func AddSecretHashAsAnnotation(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, client client.Client, secretName string) error {
 	secret := &corev1.Secret{}
 	err := client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: la.GetNamespace()}, secret)
 	if err != nil {
 		return errors.Wrapf(err, "Secret %q was not found in namespace %q", secretName, la.GetNamespace())
 	}
-	pts.Spec.Containers[0].Env = append(pts.Spec.Containers[0].Env, corev1.EnvVar{
-		Name:  envNamePrefix + "_SECRET_RESOURCE_VERSION",
-		Value: secret.ResourceVersion})
+	pts.ObjectMeta.Annotations[la.GetGroupName()+"/secret-"+secretName] = rcoutils.HashData(secret.Data)
 	return nil
 }
 
@@ -879,10 +863,7 @@ func CustomizeEnvSSO(pts *corev1.PodTemplateSpec, instance *olv1.OpenLibertyAppl
 		}
 	}
 
-	secretRev := corev1.EnvVar{
-		Name:  "SSO_SECRET_REV",
-		Value: ssoSecret.ResourceVersion}
-	ssoEnv = append(ssoEnv, secretRev)
+	AddSecretHashAsAnnotation(pts, instance, client, ssoSecret.GetName())
 
 	envList := pts.Spec.Containers[0].Env
 	for _, v := range ssoEnv {

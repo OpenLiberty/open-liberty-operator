@@ -662,8 +662,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts,
 					getSemeruCertVolumeMount(instance))
 				semeruTLSSecretName := instance.Status.SemeruCompiler.TLSSecretName
-				err := lutils.AddSecretResourceVersionAsEnvVar(&statefulSet.Spec.Template, instance, r.GetClient(),
-					semeruTLSSecretName, "SEMERU_TLS")
+				err := lutils.AddSecretHashAsAnnotation(&statefulSet.Spec.Template, instance, r.GetClient(), semeruTLSSecretName)
 				if err != nil {
 					return err
 				}
@@ -759,8 +758,8 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				deploy.Spec.Template.Spec.Containers[0].VolumeMounts = append(deploy.Spec.Template.Spec.Containers[0].VolumeMounts,
 					getSemeruCertVolumeMount(instance))
 				semeruTLSSecretName := instance.Status.SemeruCompiler.TLSSecretName
-				err := lutils.AddSecretResourceVersionAsEnvVar(&deploy.Spec.Template, instance, r.GetClient(),
-					semeruTLSSecretName, "SEMERU_TLS")
+				err := lutils.AddSecretHashAsAnnotation(&deploy.Spec.Template, instance, r.GetClient(),
+					semeruTLSSecretName)
 				if err != nil {
 					return err
 				}
