@@ -83,3 +83,5 @@ tags
 bin
 vendor
 liberty/**
+# To allow the file to be copied into this repo during a build
+olo.secrets.baseline
