@@ -352,7 +352,8 @@ spec:
       - description: An array of environment variables for the application container.
         displayName: Environment Variables
         path: env
-      - description: A convenient field to set the size of the persisted storage.
+      - description: 'A convenient field to set the size of the persisted storage.
+          (ex: 1Gi)'
         displayName: Storage Size
         path: statefulSet.storage.size
         x-descriptors:
@@ -799,7 +800,8 @@ spec:
           be added to the pods.
         displayName: Sidecar Containers
         path: sidecarContainers
-      - description: A convenient field to set the size of the persisted storage.
+      - description: 'A convenient field to set the size of the persisted storage.
+          (ex: 1Gi)'
         displayName: Storage Size
         path: statefulSet.storage.size
         x-descriptors:

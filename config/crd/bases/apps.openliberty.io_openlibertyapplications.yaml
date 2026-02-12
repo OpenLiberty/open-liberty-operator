@@ -5418,8 +5418,8 @@ spec:
                   gathering server memory dumps and server traces.
                 properties:
                   size:
-                    description: A convenient field to request the size of the persisted
-                      storage to use for serviceability.
+                    description: 'A convenient field to request the size of the persisted
+                      storage to use for serviceability. (ex: 1Gi)'
                     pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                     type: string
                   storageClassName:
@@ -7022,8 +7022,8 @@ spec:
                           persisted storage will be bound to.
                         type: string
                       size:
-                        description: A convenient field to set the size of the persisted
-                          storage.
+                        description: 'A convenient field to set the size of the persisted
+                          storage. (ex: 1Gi)'
                         pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                         type: string
                       volumeClaimTemplate:
@@ -14008,8 +14008,8 @@ spec:
                   gathering server memory dumps and server traces.
                 properties:
                   size:
-                    description: A convenient field to request the size of the persisted
-                      storage to use for serviceability.
+                    description: 'A convenient field to request the size of the persisted
+                      storage to use for serviceability. (ex: 1Gi)'
                     pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                     type: string
                   storageClassName:
@@ -15606,8 +15606,8 @@ spec:
                           persisted storage will be bound to.
                         type: string
                       size:
-                        description: A convenient field to set the size of the persisted
-                          storage.
+                        description: 'A convenient field to set the size of the persisted
+                          storage. (ex: 1Gi)'
                         pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                         type: string
                       volumeClaimTemplate:
