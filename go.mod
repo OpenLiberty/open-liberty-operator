@@ -3,7 +3,7 @@ module github.com/OpenLiberty/open-liberty-operator
 go 1.25
 
 require (
-	github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20251208162659-852f55862db5
+	github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260219161120-3608e7b30edc
 	github.com/cert-manager/cert-manager v1.16.5
 	github.com/distribution/distribution/v3 v3.0.0
 	github.com/docker/docker v27.5.0+incompatible
@@ -70,6 +70,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
+	github.com/klauspost/cpuid/v2 v2.0.12 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
@@ -124,6 +125,7 @@ require (
 	k8s.io/utils v0.0.0-20241210054802-24370beab758 // indirect
 	knative.dev/networking v0.0.0-20250716125000-edb1a4a0c863 // indirect
 	knative.dev/pkg v0.0.0-20250817152444-53ed1d53d232 // indirect
+	lukechampine.com/blake3 v1.4.1 // indirect
 	sigs.k8s.io/gateway-api v1.1.0 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/kustomize/api v0.19.0 // indirect
