@@ -848,6 +848,14 @@ func (cr *OpenLibertyApplication) GetManageTLS() *bool {
 	return cr.Spec.ManageTLS
 }
 
+// GetDisableTopology returns whether topology annotations are disabled for the service
+func (cr *OpenLibertyApplication) GetDisableTopology() *bool {
+	if cr.Spec.Service != nil {
+		return cr.Spec.Service.DisableTopology
+	}
+	return nil
+}
+
 // GetEnv returns slice of environment variables
 func (cr *OpenLibertyApplication) GetEnv() []corev1.EnvVar {
 	return cr.Spec.Env
@@ -1170,14 +1178,6 @@ func (s *OpenLibertyApplicationService) GetSessionAffinity() common.BaseComponen
 		return nil
 	}
 	return s.SessionAffinity
-}
-
-// GetDisableTopology returns whether topology annotations are disabled for the service
-func (s *OpenLibertyApplicationService) GetDisableTopology() *bool {
-	if s.DisableTopology == nil {
-		return nil
-	}
-	return s.DisableTopology
 }
 
 // GetType returns the session affinity type for the service
