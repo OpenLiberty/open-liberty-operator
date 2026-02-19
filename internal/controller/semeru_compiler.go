@@ -415,7 +415,7 @@ func reconcileSemeruService(svc *corev1.Service, ola *openlibertyv1.OpenLibertyA
 	var timeout int32 = 86400
 	svc.Labels = getLabels(ola)
 	svc.Spec.Selector = getSelectors(ola)
-	utils.CustomizeServiceAnnotations(svc)
+	utils.CustomizeServiceAnnotations(svc, ola.GetDisableTopology())
 	if len(svc.Spec.Ports) == 0 {
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{})
 	}
