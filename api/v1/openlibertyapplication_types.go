@@ -334,6 +334,10 @@ type OpenLibertyApplicationService struct {
 	// Configure service session affinity.
 	// +operator-sdk:csv:customresourcedefinitions:order=19,type=spec
 	SessionAffinity *OpenLibertyApplicationServiceSessionAffinity `json:"sessionAffinity,omitempty"`
+
+	// Disables topology aware annotations from being added to the Service. Defaults to false.
+	// +operator-sdk:csv:customresourcedefinitions:order=20,type=spec,displayName="Disable Topology",xDescriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	DisableTopology *bool `json:"disableTopology,omitempty"`
 }
 
 // Configure service session affinity
@@ -842,6 +846,14 @@ func (cr *OpenLibertyApplication) GetManageLTPA() *bool {
 // GetManageTLS returns deployment's node and pod affinity settings
 func (cr *OpenLibertyApplication) GetManageTLS() *bool {
 	return cr.Spec.ManageTLS
+}
+
+// GetDisableTopology returns whether topology annotations are disabled for the service
+func (cr *OpenLibertyApplication) GetDisableTopology() *bool {
+	if cr.Spec.Service != nil {
+		return cr.Spec.Service.DisableTopology
+	}
+	return nil
 }
 
 // GetEnv returns slice of environment variables
