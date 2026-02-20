@@ -184,45 +184,47 @@ func hasLTPAConfigResourceSuffixesEnv(instance *olv1.OpenLibertyApplication) (st
 }
 
 // Create or use an existing LTPA Secret identified by LTPA metadata for the OpenLibertyApplication instance
-func (r *ReconcileOpenLiberty) reconcileLTPAKeys(instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata) (string, string, string, error) {
+func (r *ReconcileOpenLiberty) reconcileLTPAKeys(instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata) (string, string, string, error, error) {
 	ltpaSecretName := ""
 	ltpaKeysLastRotation := ""
+	var warning error
 	if r.isLTPAKeySharingEnabled(instance) {
-		ltpaSecretNameTemp, ltpaKeysLastRotationTemp, _, err := r.generateLTPAKeys(instance, ltpaKeysMetadata)
+		ltpaSecretNameTemp, ltpaKeysLastRotationTemp, _, err, warning := r.generateLTPAKeys(instance, ltpaKeysMetadata)
 		ltpaKeysLastRotation = ltpaKeysLastRotationTemp
 		ltpaSecretName = ltpaSecretNameTemp
 		if err != nil {
-			return "Failed to generate the shared LTPA keys Secret", ltpaSecretName, ltpaKeysLastRotation, err
+			return "Failed to generate the shared LTPA keys Secret", ltpaSecretName, ltpaKeysLastRotation, err, warning
 		}
 	} else {
 		err := r.RemoveLeaderTrackerReference(instance, LTPA_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
-			return "Failed to remove leader tracking reference to the LTPA keys", ltpaSecretName, ltpaKeysLastRotation, err
+			return "Failed to remove leader tracking reference to the LTPA keys", ltpaSecretName, ltpaKeysLastRotation, err, nil
 		}
 	}
-	return "", ltpaSecretName, ltpaKeysLastRotation, nil
+	return "", ltpaSecretName, ltpaKeysLastRotation, nil, warning
 }
 
 // Create or use an existing LTPA Secret identified by LTPA metadata for the OpenLibertyApplication instance
-func (r *ReconcileOpenLiberty) reconcileLTPAConfig(instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, ltpaKeysLastRotation string, lastKeyRelatedRotation string) (string, string, error) {
+func (r *ReconcileOpenLiberty) reconcileLTPAConfig(instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, ltpaKeysLastRotation string, lastKeyRelatedRotation string) (string, string, error, error) {
 	var err error
 	var ltpaXMLSecretName string
+	var warning error
 	if r.isLTPAKeySharingEnabled(instance) {
-		ltpaXMLSecretName, err = r.generateLTPAConfig(instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
+		ltpaXMLSecretName, err, warning = r.generateLTPAConfig(instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
 		if err != nil {
-			return "Failed to generate the shared LTPA config Secret", ltpaXMLSecretName, err
+			return "Failed to generate the shared LTPA config Secret", ltpaXMLSecretName, err, warning
 		}
 	} else {
 		err := r.RemoveLeaderTrackerReference(instance, LTPA_RESOURCE_SHARING_FILE_NAME)
 		if err != nil {
-			return "Failed to remove leader tracking reference to the LTPA config", "", err
+			return "Failed to remove leader tracking reference to the LTPA config", "", err, nil
 		}
 	}
-	return "", ltpaXMLSecretName, nil
+	return "", ltpaXMLSecretName, nil, nil
 }
 
 // Generates the LTPA keys file and returns the name of the Secret storing its metadata
-func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata) (string, string, string, error) {
+func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata) (string, string, string, error, error) {
 	// Initialize LTPA resources
 	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{Name: ""}
 
@@ -248,38 +250,47 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 	if err != nil && kerrors.IsNotFound(err) {
 		leaderName, thisInstanceIsLeader, _, err := r.reconcileLeader(instance, ltpaMetadata, LTPA_RESOURCE_SHARING_FILE_NAME, true)
 		if err != nil {
-			return "", "", leaderName, err
+			return "", "", leaderName, err, nil
 		}
 		// If this instance is not the leader, exit the reconcile loop
 		if !thisInstanceIsLeader {
-			return "", "", leaderName, fmt.Errorf("Waiting for OpenLibertyApplication instance '%s' to generate the shared LTPA keys file for the namespace '%s'.", leaderName, instance.Namespace)
+			return "", "", leaderName, fmt.Errorf("Waiting for OpenLibertyApplication instance '%s' to generate the shared LTPA keys file for the namespace '%s'.", leaderName, instance.Namespace), nil
 		}
 
-		// Check the password encryption key
-		passwordEncryptionKey, encryptionSecretLastRotation, encryptionKeySharingEnabled, err := r.getInternalPasswordEncryptionKeyState(instance, passwordEncryptionMetadata)
+		// Check the aes/password encryption key
+		encryptionKey, encryptionSecretLastRotation, encryptionKeySharingEnabled, usingAES, err, warning := r.getInternalEncryptionKeyState(instance, passwordEncryptionMetadata)
 		if encryptionKeySharingEnabled && err != nil {
-			return "", "", "", err
+			return "", "", "", err, warning
 		}
 
 		password := lutils.GetRandomAlphanumeric(15)
+
 		var currentPasswordEncryptionKey *string
-		if len(passwordEncryptionKey) > 0 {
-			currentPasswordEncryptionKey = &passwordEncryptionKey
+		if !usingAES && len(encryptionKey) > 0 {
+			currentPasswordEncryptionKey = &encryptionKey
 		} else {
 			currentPasswordEncryptionKey = nil
 		}
-		rawLTPAKeysStringData, err := createLTPAKeys(password, currentPasswordEncryptionKey, common.LoadFromConfig(common.Config, lutils.OpConfigPasswordEncodingType))
+
+		var currentAESEncryptionKey *string
+		if usingAES && len(encryptionKey) > 0 {
+			currentAESEncryptionKey = &encryptionKey
+		} else {
+			currentAESEncryptionKey = nil
+		}
+
+		rawLTPAKeysStringData, err := createLTPAKeys(password, currentPasswordEncryptionKey, currentAESEncryptionKey, common.LoadFromConfig(common.Config, lutils.OpConfigPasswordEncodingType))
 		if err != nil {
-			return "", "", "", err
+			return "", "", "", err, warning
 		}
 		ltpaKeysStringData, err := base64.StdEncoding.DecodeString(string(rawLTPAKeysStringData))
 		if err != nil {
-			return "", "", "", err
+			return "", "", "", err, warning
 		}
 
 		ltpaSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaMetadata.PathIndex
 		ltpaSecret.Data = make(map[string][]byte)
-		if passwordEncryptionKey != "" && encryptionSecretLastRotation != "" {
+		if encryptionKey != "" && encryptionSecretLastRotation != "" {
 			ltpaSecret.Data["encryptionSecretLastRotation"] = []byte(encryptionSecretLastRotation)
 		}
 		lastRotation := strconv.FormatInt(time.Now().Unix(), 10)
@@ -290,22 +301,22 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 		if err := r.CreateOrUpdate(ltpaSecret, nil, func() error {
 			return nil
 		}); err != nil {
-			return "", "", "", err
+			return "", "", "", err, warning
 		}
-		return ltpaSecret.Name, lastRotation, leaderName, nil
+		return ltpaSecret.Name, lastRotation, leaderName, nil, warning
 	} else if err != nil {
-		return "", "", "", err
+		return "", "", "", err, nil
 	}
 	leaderName, _, _, err := r.reconcileLeader(instance, ltpaMetadata, LTPA_RESOURCE_SHARING_FILE_NAME, true)
 	if err != nil {
-		return "", "", leaderName, err
+		return "", "", leaderName, err, nil
 	}
 	lastRotation := string(ltpaSecret.Data["lastRotation"])
-	return ltpaSecret.Name, lastRotation, leaderName, nil
+	return ltpaSecret.Name, lastRotation, leaderName, nil, nil
 }
 
 // Generates the LTPA keys file and returns the name of the Secret storing its metadata
-func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, ltpaKeysLastRotation string, lastKeyRelatedRotation string) (string, error) {
+func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, ltpaKeysLastRotation string, lastKeyRelatedRotation string) (string, error, error) {
 	ltpaXMLSecret := &corev1.Secret{}
 	ltpaXMLSecretRootName := OperatorShortName + lutils.LTPAServerXMLSuffix
 	ltpaXMLSecret.Name = ltpaXMLSecretRootName + ltpaConfigMetadata.Name
@@ -326,47 +337,47 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaSecret.Name, Namespace: ltpaSecret.Namespace}, ltpaSecret)
 	if err != nil {
 		if !kerrors.IsNotFound(err) {
-			return ltpaXMLSecret.Name, err
+			return ltpaXMLSecret.Name, err, nil
 		}
 		leaderName, thisInstanceIsLeader, _, err := r.reconcileLeader(instance, ltpaKeysMetadata, LTPA_RESOURCE_SHARING_FILE_NAME, false) // false, since this function should not elect leader for LTPA keys generation
 		if err != nil {
-			return ltpaXMLSecret.Name, err
+			return ltpaXMLSecret.Name, err, nil
 		}
 		// If this instance is not the leader, exit the reconcile loop
 		if !thisInstanceIsLeader {
-			return ltpaXMLSecret.Name, fmt.Errorf("Waiting for OpenLibertyApplication instance '%s' to generate the shared LTPA keys file for the namespace '%s'.", leaderName, instance.Namespace)
+			return ltpaXMLSecret.Name, fmt.Errorf("Waiting for OpenLibertyApplication instance '%s' to generate the shared LTPA keys file for the namespace '%s'.", leaderName, instance.Namespace), nil
 		}
-		return ltpaXMLSecret.Name, fmt.Errorf("An unknown error has occurred generating the LTPA Secret for namespace '%s'.", instance.Namespace)
+		return ltpaXMLSecret.Name, fmt.Errorf("An unknown error has occurred generating the LTPA Secret for namespace '%s'.", instance.Namespace), nil
 	}
 
 	// LTPA config leader starts here
 	leaderName, thisInstanceIsLeader, _, err := r.reconcileLeader(instance, ltpaConfigMetadata, LTPA_RESOURCE_SHARING_FILE_NAME, true)
 	if err != nil {
-		return ltpaXMLSecret.Name, err
+		return ltpaXMLSecret.Name, err, nil
 	}
 	if !thisInstanceIsLeader {
 		err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaXMLSecret.Name, Namespace: ltpaXMLSecret.Namespace}, ltpaXMLSecret)
 		if err != nil {
 			if kerrors.IsNotFound(err) {
-				return ltpaXMLSecret.Name, fmt.Errorf("Waiting for OpenLibertyApplication instance '%s' to generate the shared LTPA config for the namespace '%s'.", leaderName, instance.Namespace)
+				return ltpaXMLSecret.Name, fmt.Errorf("Waiting for OpenLibertyApplication instance '%s' to generate the shared LTPA config for the namespace '%s'.", leaderName, instance.Namespace), nil
 			}
-			return ltpaXMLSecret.Name, err
+			return ltpaXMLSecret.Name, err, nil
 		}
 		// check that the last rotation label has been set
 		lastRotationLabel, found := ltpaXMLSecret.Labels[lutils.GetLastRotationLabelKey(LTPA_CONFIG_RESOURCE_SHARING_FILE_NAME)]
 		if !found {
 			// the label was not found, but the LTPA config leader is responsible for updating this label
-			return ltpaXMLSecret.Name, fmt.Errorf("Waiting for OpenLibertyApplication instance '%s' to update the shared LTPA config for the namespace '%s'.", leaderName, instance.Namespace)
+			return ltpaXMLSecret.Name, fmt.Errorf("Waiting for OpenLibertyApplication instance '%s' to update the shared LTPA config for the namespace '%s'.", leaderName, instance.Namespace), nil
 		}
 		// non-leaders should only stop yielding (blocking) to the leader if the Liberty XML Secret has been updated to a later time than lastKeyRelatedRotation
 		lastRotationUpdated, err := lutils.CompareStringTimeGreaterThanOrEqual(lastRotationLabel, lastKeyRelatedRotation)
 		if err != nil {
-			return ltpaXMLSecret.Name, err
+			return ltpaXMLSecret.Name, err, nil
 		}
 		if lastRotationUpdated {
-			return ltpaXMLSecret.Name, nil
+			return ltpaXMLSecret.Name, nil, nil
 		}
-		return ltpaXMLSecret.Name, fmt.Errorf("Waiting for OpenLibertyApplication instance '%s' to update the shared LTPA config for the namespace '%s'.", leaderName, instance.Namespace)
+		return ltpaXMLSecret.Name, fmt.Errorf("Waiting for OpenLibertyApplication instance '%s' to update the shared LTPA config for the namespace '%s'.", leaderName, instance.Namespace), nil
 	}
 
 	ltpaConfigSecret := &corev1.Secret{}
@@ -386,11 +397,11 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 	if err != nil && kerrors.IsNotFound(err) {
 		leaderName, thisInstanceIsLeader, _, err := r.reconcileLeader(instance, ltpaConfigMetadata, LTPA_RESOURCE_SHARING_FILE_NAME, true)
 		if err != nil {
-			return ltpaXMLSecret.Name, err
+			return ltpaXMLSecret.Name, err, nil
 		}
 		// If this instance is not the leader, exit the reconcile loop
 		if !thisInstanceIsLeader {
-			return ltpaXMLSecret.Name, fmt.Errorf("Waiting for OpenLibertyApplication instance '%s' to generate the shared LTPA password Secret for the namespace '%s'.", leaderName, instance.Namespace)
+			return ltpaXMLSecret.Name, fmt.Errorf("Waiting for OpenLibertyApplication instance '%s' to generate the shared LTPA password Secret for the namespace '%s'.", leaderName, instance.Namespace), nil
 		}
 
 		// 1,3,3 patch - if rawPassword field is not present, create the Secret directly or delete LTPA Secret when user attempts to use password encryption
@@ -401,7 +412,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 				// Whereas 1,4,0 and greater the LTPA Secrets are unencrypted in field .data.rawPassword
 				// generateLTPAKeys() MUST continue to set the rawPassword field, otherwise a create/delete loop will occur here when password encryption is enabled
 				if err := r.DeleteResource(ltpaSecret); err != nil {
-					return ltpaXMLSecret.Name, err
+					return ltpaXMLSecret.Name, err, nil
 				}
 			} else {
 				defaultLTPASecretPassword, foundPassword := ltpaSecret.Data["password"]
@@ -413,7 +424,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 					ltpaConfigSecret.Labels = lutils.GetRequiredLabels(ltpaConfigSecretRootName, ltpaConfigSecret.Name)
 					ltpaConfigSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaConfigMetadata.PathIndex
 					if err := r.CreateOrUpdate(ltpaConfigSecret, nil, func() error { return nil }); err != nil {
-						return ltpaXMLSecret.Name, err
+						return ltpaXMLSecret.Name, err, nil
 					}
 				}
 			}
@@ -421,27 +432,35 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 		} else { // otherwise, create the LTPA Config
 			password := string(ltpaSecret.Data["rawPassword"])
 
-			// Check the password encryption key
-			passwordEncryptionKey, encryptionSecretLastRotation, encryptionKeySharingEnabled, err := r.getInternalPasswordEncryptionKeyState(instance, passwordEncryptionMetadata)
+			// Check the aes/password encryption key
+			encryptionKey, encryptionSecretLastRotation, encryptionKeySharingEnabled, usingAES, err, warning := r.getInternalEncryptionKeyState(instance, passwordEncryptionMetadata)
 			if encryptionKeySharingEnabled && err != nil {
-				return "", err
+				return "", err, warning
 			}
 
 			var currentPasswordEncryptionKey *string
-			if len(passwordEncryptionKey) > 0 {
-				currentPasswordEncryptionKey = &passwordEncryptionKey
+			if !usingAES && len(encryptionKey) > 0 {
+				currentPasswordEncryptionKey = &encryptionKey
 			} else {
 				currentPasswordEncryptionKey = nil
 			}
-			encodedPassword, err := encode(password, currentPasswordEncryptionKey, common.LoadFromConfig(common.Config, lutils.OpConfigPasswordEncodingType))
+
+			var currentAESEncryptionKey *string
+			if usingAES && len(encryptionKey) > 0 {
+				currentAESEncryptionKey = &encryptionKey
+			} else {
+				currentAESEncryptionKey = nil
+			}
+
+			encodedPassword, err := encode(password, currentPasswordEncryptionKey, currentAESEncryptionKey, common.LoadFromConfig(common.Config, lutils.OpConfigPasswordEncodingType))
 			if err != nil {
-				return "", err
+				return "", err, warning
 			}
 
 			ltpaConfigSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaConfigMetadata.PathIndex
 			ltpaConfigSecret.Data = make(map[string][]byte)
-			if passwordEncryptionKey != "" && encryptionSecretLastRotation != "" {
-				ltpaConfigSecret.Data["encryptionKeyLastRotation"] = []byte(encryptionSecretLastRotation)
+			if encryptionKey != "" && encryptionSecretLastRotation != "" {
+				ltpaConfigSecret.Data["encryptionSecretLastRotation"] = []byte(encryptionSecretLastRotation)
 			}
 			ltpaConfigSecret.Data["lastRotation"] = []byte(ltpaSecret.Data["lastRotation"])
 			ltpaConfigSecret.Data["password"] = encodedPassword
@@ -449,11 +468,11 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 			if err := r.CreateOrUpdate(ltpaConfigSecret, nil, func() error {
 				return nil
 			}); err != nil {
-				return "", err
+				return "", err, warning
 			}
 		}
 	} else if err != nil {
-		return ltpaXMLSecret.Name, err
+		return ltpaXMLSecret.Name, err, nil
 	}
 
 	// if the LTPA password is outdated from the LTPA Secret, delete the LTPA password
@@ -462,37 +481,38 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 		// lastRotation field is not present so the Secret was not initialized correctly
 		err := r.DeleteResource(ltpaConfigSecret)
 		if err != nil {
-			return ltpaXMLSecret.Name, err
+			return ltpaXMLSecret.Name, err, nil
 		}
 		if !found {
-			return ltpaXMLSecret.Name, fmt.Errorf("the LTPA password does not contain field 'lastRotation'")
+			return ltpaXMLSecret.Name, fmt.Errorf("the LTPA password does not contain field 'lastRotation'"), nil
 		}
-		return ltpaXMLSecret.Name, fmt.Errorf("the LTPA password is out of sync with the generated LTPA Secret; waiting for a new LTPA password to be generated")
+		return ltpaXMLSecret.Name, fmt.Errorf("the LTPA password is out of sync with the generated LTPA Secret; waiting for a new LTPA password to be generated"), nil
 	}
 
 	// if using encryption key, check if the key has been rotated and requires a regeneration of the LTPA keyed password
 	if isPasswordEncryptionKeySharing {
-		internalEncryptionKeySecret, err := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata)
+		encryptionSecret, _, _, err, warning := r.getValidInternalEncryptionKey(instance, passwordEncryptionMetadata)
 		if err != nil {
-			return ltpaXMLSecret.Name, err
+			return "", err, warning
 		}
-		lastRotation, found := internalEncryptionKeySecret.Data["lastRotation"]
+
+		lastRotation, found := encryptionSecret.Data["lastRotation"]
 		if !found {
 			// lastRotation field is not present so the Secret was not initialized correctly
-			err := r.DeleteResource(internalEncryptionKeySecret)
+			err := r.DeleteResource(encryptionSecret)
 			if err != nil {
-				return ltpaXMLSecret.Name, err
+				return ltpaXMLSecret.Name, err, nil
 			}
-			return ltpaXMLSecret.Name, fmt.Errorf("the internal encryption key secret does not contain field 'lastRotation'")
+			return ltpaXMLSecret.Name, fmt.Errorf("the internal encryption key secret does not contain field 'lastRotation'"), nil
 		}
 
 		if encryptionKeyLastRotation, found := ltpaConfigSecret.Data["encryptionKeyLastRotation"]; found {
 			if string(encryptionKeyLastRotation) != string(lastRotation) {
 				err := r.DeleteResource(ltpaConfigSecret)
 				if err != nil {
-					return ltpaXMLSecret.Name, err
+					return ltpaXMLSecret.Name, err, nil
 				}
-				return ltpaXMLSecret.Name, fmt.Errorf("the encryption key has been modified; waiting for a new LTPA password to be generated")
+				return ltpaXMLSecret.Name, fmt.Errorf("the encryption key has been modified; waiting for a new LTPA password to be generated"), nil
 			}
 		}
 	}
@@ -501,19 +521,19 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 	// This server.xml will be mounted in /config/configDropins/overrides/ltpaKeysMount.xml
 	serverXMLMountSecretErr := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaXMLMountSecret.Name, Namespace: ltpaXMLMountSecret.Namespace}, ltpaXMLMountSecret)
 	if serverXMLMountSecretErr != nil && !kerrors.IsNotFound(serverXMLMountSecretErr) {
-		return ltpaXMLSecret.Name, serverXMLMountSecretErr
+		return ltpaXMLSecret.Name, serverXMLMountSecretErr, nil
 	}
 	if err := r.CreateOrUpdate(ltpaXMLMountSecret, nil, func() error {
 		mountDir := strings.Replace(lutils.SecureMountPath+"/"+lutils.LTPAKeysXMLFileName, "/output", "${server.output.dir}", 1)
 		return lutils.CustomizeLibertyFileMountXML(ltpaXMLMountSecret, lutils.LTPAKeysMountXMLFileName, mountDir)
 	}); err != nil {
-		return ltpaXMLSecret.Name, err
+		return ltpaXMLSecret.Name, err, nil
 	}
 
 	// Create/update the Liberty Server XML Secret
 	serverXMLSecretErr := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaXMLSecret.Name, Namespace: ltpaXMLSecret.Namespace}, ltpaXMLSecret)
 	if serverXMLSecretErr != nil && !kerrors.IsNotFound(serverXMLSecretErr) {
-		return ltpaXMLSecret.Name, serverXMLSecretErr
+		return ltpaXMLSecret.Name, serverXMLSecretErr, nil
 	}
 	// NOTE: Update is important here for compatibility with an operator upgrade from version 1,3,3 that did not use ltpaXMLMountSecret
 	if err := r.CreateOrUpdate(ltpaXMLSecret, nil, func() error {
@@ -536,9 +556,9 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 		ltpaXMLSecret.Labels[lutils.GetLastRotationLabelKey(LTPA_CONFIG_RESOURCE_SHARING_FILE_NAME)] = strconv.Itoa(latestRotationTime)
 		return lutils.CustomizeLTPAServerXML(ltpaXMLSecret, instance, string(ltpaConfigSecret.Data["password"]))
 	}); err != nil {
-		return ltpaXMLSecret.Name, err
+		return ltpaXMLSecret.Name, err, nil
 	}
-	return ltpaXMLSecret.Name, nil
+	return ltpaXMLSecret.Name, nil, nil
 }
 
 func (r *ReconcileOpenLiberty) isLTPAKeySharingEnabled(instance *olv1.OpenLibertyApplication) bool {

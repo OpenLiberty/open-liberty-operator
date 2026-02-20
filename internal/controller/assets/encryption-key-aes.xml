@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<server>
+    <variable name="wlp.aes.encryption.key" value="WLP_AES_ENCRYPTION_KEY" />
+</server>
