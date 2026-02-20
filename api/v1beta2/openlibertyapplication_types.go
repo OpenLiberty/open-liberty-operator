@@ -258,7 +258,7 @@ type OpenLibertyApplicationStatefulSet struct {
 
 // Defines settings of persisted storage for StatefulSets.
 type OpenLibertyApplicationStorage struct {
-	// A convenient field to set the size of the persisted storage.
+	// A convenient field to set the size of the persisted storage. (ex: 1Gi)
 	// +kubebuilder:validation:Pattern=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
 	// +operator-sdk:csv:customresourcedefinitions:order=25,type=spec,displayName="Storage Size",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	Size string `json:"size,omitempty"`
@@ -290,7 +290,7 @@ type OpenLibertyApplicationMonitoring struct {
 
 // Specifies serviceability-related operations, such as gathering server memory dumps and server traces.
 type OpenLibertyApplicationServiceability struct {
-	// A convenient field to request the size of the persisted storage to use for serviceability.
+	// A convenient field to request the size of the persisted storage to use for serviceability. (ex: 1Gi)
 	// +kubebuilder:validation:Pattern=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
 	Size string `json:"size,omitempty"`
 
