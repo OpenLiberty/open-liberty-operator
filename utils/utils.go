@@ -337,11 +337,11 @@ func createLibertyEnv(la *olv1.OpenLibertyApplication, client client.Client) ([]
 		checkInterval := "5s"
 		startupCheckInterval := "100ms"
 		if la.Spec.Probes != nil {
-			if la.Spec.Probes.CheckInterval != nil && len(*la.Spec.Probes.CheckInterval) > 0 {
+			if la.Spec.Probes.CheckInterval != nil && *la.Spec.Probes.CheckInterval != "" {
 				checkInterval = *la.Spec.Probes.CheckInterval
 				replacementEnv = append(replacementEnv, corev1.EnvVar{Name: "MP_HEALTH_CHECK_INTERVAL", Value: checkInterval})
 			}
-			if la.Spec.Probes.StartupCheckInterval != nil && len(*la.Spec.Probes.StartupCheckInterval) > 0 {
+			if la.Spec.Probes.StartupCheckInterval != nil && *la.Spec.Probes.StartupCheckInterval != "" {
 				startupCheckInterval = *la.Spec.Probes.StartupCheckInterval
 				replacementEnv = append(replacementEnv, corev1.EnvVar{Name: "MP_HEALTH_STARTUP_CHECK_INTERVAL", Value: startupCheckInterval})
 			}

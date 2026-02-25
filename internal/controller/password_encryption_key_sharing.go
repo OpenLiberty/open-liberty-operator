@@ -35,18 +35,30 @@ func (r *ReconcileOpenLiberty) reconcileEncryptionKey(instance *olv1.OpenLiberty
 		}
 		if thisInstanceIsLeader {
 			// Is there a password encryption key to duplicate for internal use?
-			if err := r.mirrorEncryptionKeySecretState(instance, passwordEncryptionMetadata, r.hasUserAESEncryptionKeySecret, r.hasInternalAESEncryptionKeySecret, AESEncryptionKey); err != nil {
-				return "Failed to process the password encryption key (aes) Secret", "", "", err
-			}
 			if err := r.mirrorEncryptionKeySecretState(instance, passwordEncryptionMetadata, r.hasUserEncryptionKeySecret, r.hasInternalEncryptionKeySecret, PasswordEncryptionKey); err != nil {
-				return "Failed to process the password encryption key (password) Secret", "", "", err
+				// Mirror the aes encryption key if exists
+				if aesErr := r.mirrorEncryptionKeySecretState(instance, passwordEncryptionMetadata, r.hasUserAESEncryptionKeySecret, r.hasInternalAESEncryptionKeySecret, AESEncryptionKey); aesErr != nil {
+					// This is when both the password encrpytion key and aes encryption key could not be found
+					return "Failed to process the password encryption key Secret", "", "", err
+				}
+				// Here the aes encryption key was found and we can passthrough to reconciling the keys
+				return r.reconcileAESEncryptionKey(instance, passwordEncryptionMetadata, thisInstanceIsLeader, leaderName)
+			} else {
+				// Here the password encryption key was found, but we still want to mirror the aes encryption key (allowing failures)
+				// before reconciling the password encryption key
+				if err := r.mirrorEncryptionKeySecretState(instance, passwordEncryptionMetadata, r.hasUserAESEncryptionKeySecret, r.hasInternalAESEncryptionKeySecret, AESEncryptionKey); err == nil {
+					return r.reconcileAESEncryptionKey(instance, passwordEncryptionMetadata, thisInstanceIsLeader, leaderName)
+				}
+				return r.reconcilePasswordEncryptionKey(instance, passwordEncryptionMetadata, thisInstanceIsLeader, leaderName)
 			}
 		}
+		// Give internal AES key the higher precedence (allowing failures)
 		aesEncryptionErrMessage, aesEncryptionSecretName, aesEncryptionLastRotation, err := r.reconcileAESEncryptionKey(instance, passwordEncryptionMetadata, thisInstanceIsLeader, leaderName)
 		if err == nil {
 			// no error so return the aes encryption key
 			return aesEncryptionErrMessage, aesEncryptionSecretName, aesEncryptionLastRotation, err
 		}
+		// Otherwise fallback to the password encryption key
 		return r.reconcilePasswordEncryptionKey(instance, passwordEncryptionMetadata, thisInstanceIsLeader, leaderName)
 	} else {
 		err := r.RemoveLeaderTrackerReference(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
@@ -66,7 +78,7 @@ func (r *ReconcileOpenLiberty) reconcileAESEncryptionKey(instance *olv1.OpenLibe
 			return "Failed to get the password encryption key Secret because " + AESEncryptionKey + " key is missing", "", "", err
 		}
 		// Is the password encryption key field in the Secret valid?
-		if encryptionKey := string(encryptionSecret.Data[AESEncryptionKey]); len(encryptionKey) > 0 {
+		if encryptionKey := string(encryptionSecret.Data[AESEncryptionKey]); encryptionKey != "" {
 			// non-leaders should still be able to pass this process to return the encryption secret name
 			if thisInstanceIsLeader {
 				// Create the Liberty config that will mount into the pods
@@ -95,7 +107,7 @@ func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(instance *olv1.Ope
 			return "Failed to get the password encryption key Secret because " + PasswordEncryptionKey + " key is missing", "", "", err
 		}
 		// Is the password encryption key field in the Secret valid?
-		if encryptionKey := string(encryptionSecret.Data[PasswordEncryptionKey]); len(encryptionKey) > 0 {
+		if encryptionKey := string(encryptionSecret.Data[PasswordEncryptionKey]); encryptionKey != "" {
 			// non-leaders should still be able to pass this process to return the encryption secret name
 			if thisInstanceIsLeader {
 				// Create the Liberty config that will mount into the pods
@@ -193,8 +205,9 @@ func (r *ReconcileOpenLiberty) isPasswordEncryptionKeySharingEnabled(instance *o
 
 func (r *ReconcileOpenLiberty) isUsingPasswordEncryptionKeySharing(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) bool {
 	if r.isPasswordEncryptionKeySharingEnabled(instance) {
-		_, _, err := r.hasUserEncryptionKeySecret(instance, passwordEncryptionMetadata)
-		return err == nil
+		_, _, passwordErr := r.hasUserEncryptionKeySecret(instance, passwordEncryptionMetadata)
+		_, _, aesErr := r.hasUserAESEncryptionKeySecret(instance, passwordEncryptionMetadata)
+		return passwordErr == nil || aesErr == nil
 	}
 	return false
 }
@@ -215,19 +228,19 @@ func (r *ReconcileOpenLiberty) getEncryptionKeyData(encryptionSecret *corev1.Sec
 	return encryptionKey, encryptionSecretLastRotation, true
 }
 
-func (r *ReconcileOpenLiberty) getValidInternalEncryptionKey(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (*corev1.Secret, bool, bool, error, error) {
+func (r *ReconcileOpenLiberty) getValidInternalEncryptionKey(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (*corev1.Secret, bool, bool, error) {
 	sharingEnabled := r.isPasswordEncryptionKeySharingEnabled(instance)
 	if !sharingEnabled {
-		return nil, sharingEnabled, false, nil, nil
+		return nil, sharingEnabled, false, nil
 	}
 
 	aesSecret, aesFound, err := r.hasInternalAESEncryptionKeySecret(instance, passwordEncryptionMetadata)
 	if aesFound && err != nil {
-		return nil, sharingEnabled, aesFound, err, nil
+		return nil, sharingEnabled, aesFound, err
 	}
 	passwordSecret, passwordFound, err := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata)
 	if passwordFound && err != nil {
-		return nil, sharingEnabled, aesFound, err, nil
+		return nil, sharingEnabled, aesFound, err
 	}
 
 	_, _, aesValid := r.getEncryptionKeyData(aesSecret, AESEncryptionKey)
@@ -237,28 +250,28 @@ func (r *ReconcileOpenLiberty) getValidInternalEncryptionKey(instance *olv1.Open
 	passwordFoundAndValid := passwordFound && passwordValid
 	if aesFoundAndValid && passwordFoundAndValid {
 		// use AES but provide a warning that password should be deleted
-		return aesSecret, sharingEnabled, aesFound, fmt.Errorf("to avoid unexpected app downtime from Secret instability delete Secret wlp-password-encryption-key to continue using wlp-aes-encryption-key"), nil
+		return aesSecret, sharingEnabled, aesFound, fmt.Errorf("to avoid unexpected app downtime from Secret instability delete Secret wlp-password-encryption-key to continue using wlp-aes-encryption-key")
 	} else if passwordFoundAndValid {
 		// use password
-		return passwordSecret, sharingEnabled, aesFound, nil, nil
+		return passwordSecret, sharingEnabled, aesFound, nil
 	} else if aesFoundAndValid {
-		return aesSecret, sharingEnabled, aesFound, nil, nil
+		return aesSecret, sharingEnabled, aesFound, nil
 	}
 
 	// if aes/password were found but not valid then return a warning
 	if aesFound {
-		return nil, sharingEnabled, aesFound, fmt.Errorf("the wlp-aes-encryption-key Secret was found but contained an invalid field"), err
+		return nil, sharingEnabled, aesFound, fmt.Errorf("the wlp-aes-encryption-key Secret was found but contained an invalid field")
 	} else if passwordFound {
-		return nil, sharingEnabled, aesFound, fmt.Errorf("the wlp-password-encryption-key Secret was found but contained an invalid field"), err
+		return nil, sharingEnabled, aesFound, fmt.Errorf("the wlp-password-encryption-key Secret was found but contained an invalid field")
 	}
 	// do not error if aes and password were not found
-	return nil, sharingEnabled, aesFound, nil, nil
+	return nil, sharingEnabled, aesFound, nil
 }
 
-func (r *ReconcileOpenLiberty) getInternalEncryptionKeyState(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (string, string, bool, bool, error, error) {
-	encryptionSecret, sharingEnabled, usingAES, err, warning := r.getValidInternalEncryptionKey(instance, passwordEncryptionMetadata)
+func (r *ReconcileOpenLiberty) getInternalEncryptionKeyState(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (string, string, bool, bool, error) {
+	encryptionSecret, sharingEnabled, usingAES, err := r.getValidInternalEncryptionKey(instance, passwordEncryptionMetadata)
 	if !sharingEnabled {
-		return "", "", sharingEnabled, false, nil, nil
+		return "", "", sharingEnabled, false, nil
 	}
 	matchedKey := ""
 	if usingAES {
@@ -269,9 +282,23 @@ func (r *ReconcileOpenLiberty) getInternalEncryptionKeyState(instance *olv1.Open
 
 	key, lastRotation, valid := r.getEncryptionKeyData(encryptionSecret, matchedKey)
 	if valid {
-		return key, lastRotation, sharingEnabled, usingAES, err, warning
+		return key, lastRotation, sharingEnabled, usingAES, err
 	}
-	return "", "", sharingEnabled, false, fmt.Errorf("a password encryption key Secret was either not found or misconfigured"), nil
+	return "", "", sharingEnabled, false, fmt.Errorf("a password encryption key Secret was either not found or misconfigured")
+}
+
+func (r *ReconcileOpenLiberty) getEncryptionKeyNameFromRef(secretNameRef string, passwordEncryptionMetadataName string) (string, string) {
+	keySecretName := ""
+	dataFieldName := ""
+	if strings.HasPrefix(secretNameRef, lutils.LocalAESEncryptionKeyRootName) {
+		keySecretName = lutils.AESEncryptionKeyRootName
+		dataFieldName = AESEncryptionKey
+	} else {
+		keySecretName = lutils.PasswordEncryptionKeyRootName
+		dataFieldName = PasswordEncryptionKey
+	}
+	keySecretName += passwordEncryptionMetadataName
+	return keySecretName, dataFieldName
 }
 
 // Returns the Secret that contains the aes encryption key used internally by the operator
@@ -321,24 +348,25 @@ func (r *ReconcileOpenLiberty) mirrorEncryptionKeySecretState(instance *olv1.Ope
 	syncedKey string) error {
 	userEncryptionSecret, userEncryptionFound, userEncryptionSecretErr := hasUserSecretFunc(instance, passwordEncryptionMetadata)
 	// Error if there was an issue getting the userEncryptionSecret
-	if !userEncryptionFound {
+	if userEncryptionFound && userEncryptionSecretErr != nil {
 		return userEncryptionSecretErr
 	}
 	internalEncryptionSecret, internalEncryptionFound, internalEncryptionSecretErr := hasInternalSecretFunc(instance, passwordEncryptionMetadata)
 	// Error if there was an issue getting the internalEncryptionSecret
-	if !internalEncryptionFound {
+	if internalEncryptionFound && internalEncryptionSecretErr != nil {
 		return internalEncryptionSecretErr
 	}
 	// Case 0: no user encryption secret, no internal encryption secret: secrets already mirrored
-	// Case 1: no user encryption secret, internal encryption secret exists: so delete internalEncryptionSecret
+	// Case 1: no user encryption secret, internal encryption secret exists
 	if !userEncryptionFound {
 		if !internalEncryptionFound {
-			return nil
+			return fmt.Errorf("failed to get internal encryption key secret")
 		} else {
 			if err := r.DeleteResource(internalEncryptionSecret); err != nil {
 				return err
 			}
 		}
+		return fmt.Errorf("failed to get encryption key secret")
 	}
 
 	// Case 2: user encryption secret exists, no internal secret: Create internalEncryptionSecret
