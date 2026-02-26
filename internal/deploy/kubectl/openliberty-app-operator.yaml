@@ -317,6 +317,7 @@ spec:
           successThreshold: 1
           timeoutSeconds: 10
         name: manager
+        ports: []
         readinessProbe:
           failureThreshold: 3
           httpGet:

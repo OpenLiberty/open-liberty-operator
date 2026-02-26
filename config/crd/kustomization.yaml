@@ -12,15 +12,11 @@ resources:
 patches:
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.
 # patches here are for enabling the conversion webhook for each CRD
-#- patches/webhook_in_runtimecomponents.yaml
-#- patches/webhook_in_runtimeoperations.yaml
+#- patches/webhook_in_openlibertyapplications.yaml
+#- patches/webhook_in_openlibertydumps.yaml
+#- patches/webhook_in_openlibertyperformancedata.yaml
+#- patches/webhook_in_openlibertytraces.yaml
 # +kubebuilder:scaffold:crdkustomizewebhookpatch
-
-# [CERTMANAGER] To enable webhook, uncomment all the sections with [CERTMANAGER] prefix.
-# patches here are for enabling the CA injection for each CRD
-#- patches/cainjection_in_runtimecomponents.yaml
-#- patches/cainjection_in_runtimeoperations.yaml
-# +kubebuilder:scaffold:crdkustomizecainjectionpatch
 
 - path: patches/preserveUnknownFields_openlibertyapplications.yaml
 - path: patches/preserveUnknownFields_openlibertydumps.yaml

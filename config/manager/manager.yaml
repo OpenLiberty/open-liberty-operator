@@ -73,6 +73,7 @@ spec:
             value: icr.io/appcafe/open-liberty/samples/getting-started@sha256:80a28b6a71ec02369cc13f621e4c3cca0d63b1977be76e15dabbfba48411107f
           - name: RELATED_IMAGE_OPEN_LIBERTY_OPERATOR
             value: OPERATOR_IMAGE
+        ports: []
         securityContext:
           allowPrivilegeEscalation: false
           privileged: false
