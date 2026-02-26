@@ -490,14 +490,14 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 
 	// if using encryption key, check if the key has been rotated and requires a regeneration of the LTPA keyed password
 	if isPasswordEncryptionKeySharing {
-		encryptionSecret, _, _, err := r.getValidInternalEncryptionKey(instance, passwordEncryptionMetadata)
+		internalEncryptionSecret, _, _, err := r.getValidInternalEncryptionKey(instance, passwordEncryptionMetadata)
 		if err != nil {
 			return "", err
 		}
-		lastRotation, found := encryptionSecret.Data["lastRotation"]
+		lastRotation, found := internalEncryptionSecret.Data["lastRotation"]
 		if !found {
 			// lastRotation field is not present so the Secret was not initialized correctly
-			err := r.DeleteResource(encryptionSecret)
+			err := r.DeleteResource(internalEncryptionSecret)
 			if err != nil {
 				return ltpaXMLSecret.Name, err
 			}
