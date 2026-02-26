@@ -596,7 +596,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	// Manage the shared password encryption key Secret if it exists
-	message, encryptionSecretName, encryptionSecretLastRotation, err := r.reconcileEncryptionKey(instance, passwordEncryptionMetadata)
+	message, encryptionSecretName, encryptionKeyLastRotation, err := r.reconcileEncryptionKey(instance, passwordEncryptionMetadata)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -610,7 +610,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	// get the last key-related rotation time as a string to be used by reconcileLTPAConfig for non-leaders to yield (blocking) to the LTPA config leader
-	lastKeyRelatedRotation, err := lutils.GetMaxTime(encryptionSecretLastRotation, ltpaKeysLastRotation)
+	lastKeyRelatedRotation, err := lutils.GetMaxTime(encryptionKeyLastRotation, ltpaKeysLastRotation)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)

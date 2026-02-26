@@ -256,7 +256,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 		}
 
 		// Check the aes/password encryption key
-		encryptionKey, encryptionSecretLastRotation, encryptionKeySharingEnabled, usingAES, err := r.getInternalEncryptionKeyState(instance, passwordEncryptionMetadata)
+		encryptionKey, encryptionKeyLastRotation, encryptionKeySharingEnabled, usingAES, err := r.getInternalEncryptionKeyState(instance, passwordEncryptionMetadata)
 		if encryptionKeySharingEnabled && err != nil {
 			return "", "", "", err
 		}
@@ -288,9 +288,9 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 
 		ltpaSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaMetadata.PathIndex
 		ltpaSecret.Data = make(map[string][]byte)
-		// if keyExists && encryptionKeyLastRotation != "" {
-		// 	ltpaSecret.Data["encryptionKeyLastRotation"] = []byte(encryptionKeyLastRotation)
-		// }
+		if keyExists && encryptionKeyLastRotation != "" {
+			ltpaSecret.Data["encryptionKeyLastRotation"] = []byte(encryptionKeyLastRotation)
+		}
 		lastRotation := strconv.FormatInt(time.Now().Unix(), 10)
 		ltpaSecret.Data["lastRotation"] = []byte(lastRotation)
 		ltpaSecret.Data["rawPassword"] = []byte(password)
@@ -431,7 +431,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 			password := string(ltpaSecret.Data["rawPassword"])
 
 			// Check the aes/password encryption key
-			encryptionKey, encryptionSecretLastRotation, encryptionKeySharingEnabled, usingAES, err := r.getInternalEncryptionKeyState(instance, passwordEncryptionMetadata)
+			encryptionKey, encryptionKeyLastRotation, encryptionKeySharingEnabled, usingAES, err := r.getInternalEncryptionKeyState(instance, passwordEncryptionMetadata)
 			if encryptionKeySharingEnabled && err != nil {
 				return "", err
 			}
@@ -458,8 +458,8 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 
 			ltpaConfigSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaConfigMetadata.PathIndex
 			ltpaConfigSecret.Data = make(map[string][]byte)
-			if keyExists && encryptionSecretLastRotation != "" {
-				ltpaConfigSecret.Data["encryptionKeyLastRotation"] = []byte(encryptionSecretLastRotation)
+			if keyExists && encryptionKeyLastRotation != "" {
+				ltpaConfigSecret.Data["encryptionKeyLastRotation"] = []byte(encryptionKeyLastRotation)
 			}
 			ltpaConfigSecret.Data["lastRotation"] = []byte(ltpaSecret.Data["lastRotation"])
 			ltpaConfigSecret.Data["password"] = encodedPassword
@@ -503,8 +503,8 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 			}
 			return ltpaXMLSecret.Name, fmt.Errorf("the internal encryption key secret does not contain field 'lastRotation'")
 		}
-		if encryptionSecretLastRotation, found := ltpaConfigSecret.Data["encryptionKeyLastRotation"]; found {
-			if string(encryptionSecretLastRotation) != string(lastRotation) {
+		if encryptionKeyLastRotation, found := ltpaConfigSecret.Data["encryptionKeyLastRotation"]; found {
+			if string(encryptionKeyLastRotation) != string(lastRotation) {
 				err := r.DeleteResource(ltpaConfigSecret)
 				if err != nil {
 					return ltpaXMLSecret.Name, err
@@ -542,12 +542,12 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 		}
 		latestRotationTime = lastRotationTime
 		if encryptionKeyLastRotation, found := ltpaConfigSecret.Data["encryptionKeyLastRotation"]; found {
-			encryptionSecretLastRotationTime, err := strconv.Atoi(string(encryptionKeyLastRotation))
+			encryptionKeyLastRotationTime, err := strconv.Atoi(string(encryptionKeyLastRotation))
 			if err != nil {
 				return fmt.Errorf("failed to convert encryption key last rotation time from string to integer")
 			}
-			if encryptionSecretLastRotationTime >= latestRotationTime {
-				latestRotationTime = encryptionSecretLastRotationTime
+			if encryptionKeyLastRotationTime >= latestRotationTime {
+				latestRotationTime = encryptionKeyLastRotationTime
 			}
 		}
 		ltpaXMLSecret.Labels[lutils.GetLastRotationLabelKey(LTPA_CONFIG_RESOURCE_SHARING_FILE_NAME)] = strconv.Itoa(latestRotationTime)

@@ -214,18 +214,18 @@ func (r *ReconcileOpenLiberty) isUsingPasswordEncryptionKeySharing(instance *olv
 
 func (r *ReconcileOpenLiberty) getEncryptionKeyData(encryptionSecret *corev1.Secret, matchedKey string) (string, string, bool) {
 	encryptionKey := ""
-	encryptionSecretLastRotation := ""
+	encryptionKeyLastRotation := ""
 	if key, found := encryptionSecret.Data[matchedKey]; found {
 		encryptionKey = string(key)
 	}
 	if lastRotation, found := encryptionSecret.Data["lastRotation"]; found {
-		encryptionSecretLastRotation = string(lastRotation)
+		encryptionKeyLastRotation = string(lastRotation)
 	}
-	if encryptionKey == "" || encryptionSecretLastRotation == "" {
+	if encryptionKey == "" || encryptionKeyLastRotation == "" {
 		// don't need to delete this misconfigured Secret because mirrorEncryptionKeySecretState will create/update it later
 		return "", "", false
 	}
-	return encryptionKey, encryptionSecretLastRotation, true
+	return encryptionKey, encryptionKeyLastRotation, true
 }
 
 func (r *ReconcileOpenLiberty) getValidInternalEncryptionKey(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (*corev1.Secret, bool, bool, error) {
