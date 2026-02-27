@@ -249,8 +249,8 @@ func (r *ReconcileOpenLiberty) getValidInternalEncryptionKey(instance *olv1.Open
 	aesFoundAndValid := aesFound && aesValid
 	passwordFoundAndValid := passwordFound && passwordValid
 	if aesFoundAndValid && passwordFoundAndValid {
-		// use AES but provide a warning that password should be deleted
-		return aesSecret, sharingEnabled, aesFound, fmt.Errorf("to avoid unexpected app downtime from Secret instability delete Secret wlp-password-encryption-key to continue using wlp-aes-encryption-key")
+		// use AES
+		return aesSecret, sharingEnabled, aesFound, nil
 	} else if passwordFoundAndValid {
 		// use password
 		return passwordSecret, sharingEnabled, aesFound, nil
