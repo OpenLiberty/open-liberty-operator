@@ -1,6 +1,7 @@
 package v1beta2
 
 import (
+	"sort"
 	"time"
 
 	"github.com/application-stacks/runtime-component-operator/common"
@@ -1127,6 +1128,17 @@ func (s *OpenLibertyApplicationStatus) SetCondition(c common.StatusCondition) {
 	if !found {
 		s.Conditions = append(s.Conditions, *condition)
 	}
+
+	// Re-sort conditions to prioritize 'Ready' condition
+	sort.Slice(s.Conditions, func(i, j int) bool {
+		if s.Conditions[i].GetType() == common.StatusConditionTypeReady {
+			return true
+		}
+		if s.Conditions[j].GetType() == common.StatusConditionTypeReady {
+			return false
+		}
+		return s.Conditions[i].GetType() < s.Conditions[j].GetType()
+	})
 }
 
 func (s *OpenLibertyApplicationStatus) UnsetCondition(c common.StatusCondition) {
