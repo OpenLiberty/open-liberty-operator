@@ -4,6 +4,8 @@ github.com/MakeNowJust/heredoc v1.0.0 h1:cXCdzVdstXyiTqTvfqk9SDHpKNjxuom+DOlyEeQ
 github.com/MakeNowJust/heredoc v1.0.0/go.mod h1:mG5amYoWBHf8vpLOuehzbGGw0EHxpZZ6lCpQ4fNJ8LE=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260302192152-1333e552957f h1:lVO3vnAroJRJySfJl/fit9X76uZ+nvyb1NRG+W5gmvo=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260302192152-1333e552957f/go.mod h1:al0TqSm6Kyv1nLfnijFjgKK/zYjfPwOwfOkTQ8KLIVU=
 github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260302213528-834371a247f8 h1:JVvtduCnlrgGciOyjaBMZP9Js4tnA9gN2idtRKglYlU=
 github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260302213528-834371a247f8/go.mod h1:pmfannSJv1Tby0uSPXLPg3A+mC1WahsMJTNa2oU3SHk=
 github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260302225551-61112530e8d8 h1:JiTR5TRp0m0XSc9ISQbvFPABjbLtGDJOjT+sEOGgsnk=
