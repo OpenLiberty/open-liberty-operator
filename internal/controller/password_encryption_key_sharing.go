@@ -212,6 +212,22 @@ func (r *ReconcileOpenLiberty) isUsingPasswordEncryptionKeySharing(instance *olv
 	return false
 }
 
+func (r *ReconcileOpenLiberty) isUsingAESPasswordEncryptionKeySharing(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) bool {
+	if r.isPasswordEncryptionKeySharingEnabled(instance) {
+		_, _, aesErr := r.hasUserAESEncryptionKeySecret(instance, passwordEncryptionMetadata)
+		return aesErr == nil
+	}
+	return false
+}
+
+func (r *ReconcileOpenLiberty) isUsingPlainPasswordEncryptionKeySharing(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) bool {
+	if r.isPasswordEncryptionKeySharingEnabled(instance) {
+		_, _, passwordErr := r.hasUserEncryptionKeySecret(instance, passwordEncryptionMetadata)
+		return passwordErr == nil
+	}
+	return false
+}
+
 func (r *ReconcileOpenLiberty) getEncryptionKeyData(encryptionSecret *corev1.Secret, matchedKey string) (string, string, bool) {
 	encryptionKey := ""
 	encryptionKeyLastRotation := ""
@@ -303,22 +319,38 @@ func (r *ReconcileOpenLiberty) getEncryptionKeyNameFromRef(secretNameRef string,
 
 // Returns the Secret that contains the aes encryption key used internally by the operator
 func (r *ReconcileOpenLiberty) hasInternalAESEncryptionKeySecret(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (*corev1.Secret, bool, error) {
-	return r.getSecret(instance, lutils.LocalAESEncryptionKeyRootName+passwordEncryptionMetadata.Name+"-internal")
+	metaName := ""
+	if passwordEncryptionMetadata != nil {
+		metaName = passwordEncryptionMetadata.Name
+	}
+	return r.getSecret(instance, lutils.LocalAESEncryptionKeyRootName+metaName+"-internal")
 }
 
 // Returns the Secret that contains the aes encryption key provided by the user
 func (r *ReconcileOpenLiberty) hasUserAESEncryptionKeySecret(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (*corev1.Secret, bool, error) {
-	return r.getSecret(instance, lutils.AESEncryptionKeyRootName+passwordEncryptionMetadata.Name)
+	metaName := ""
+	if passwordEncryptionMetadata != nil {
+		metaName = passwordEncryptionMetadata.Name
+	}
+	return r.getSecret(instance, lutils.AESEncryptionKeyRootName+metaName)
 }
 
 // Returns the Secret that contains the password encryption key used internally by the operator
 func (r *ReconcileOpenLiberty) hasInternalEncryptionKeySecret(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (*corev1.Secret, bool, error) {
-	return r.getSecret(instance, lutils.LocalPasswordEncryptionKeyRootName+passwordEncryptionMetadata.Name+"-internal")
+	metaName := ""
+	if passwordEncryptionMetadata != nil {
+		metaName = passwordEncryptionMetadata.Name
+	}
+	return r.getSecret(instance, lutils.LocalPasswordEncryptionKeyRootName+metaName+"-internal")
 }
 
 // Returns the Secret that contains the password encryption key provided by the user
 func (r *ReconcileOpenLiberty) hasUserEncryptionKeySecret(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (*corev1.Secret, bool, error) {
-	return r.getSecret(instance, lutils.PasswordEncryptionKeyRootName+passwordEncryptionMetadata.Name)
+	metaName := ""
+	if passwordEncryptionMetadata != nil {
+		metaName = passwordEncryptionMetadata.Name
+	}
+	return r.getSecret(instance, lutils.PasswordEncryptionKeyRootName+metaName)
 }
 
 // Returns true if a user secret is mirrored to a corresponding "<user>-internal" secret

@@ -1018,6 +1018,8 @@ func CustomizeLibertyFileMountXML(mountingPasswordKeySecret *corev1.Secret, moun
 	return nil
 }
 
+// Returns true if a Liberty version check is required before reconciling the app to completion and false otherwise
+// This is to inform users who are trying to use an operator feature that isn't supported on their Liberty image
 func IsLibertyVersionCheckNeeded(instance *olv1.OpenLibertyApplication) bool {
 	isFileBasedProbesEnabled := IsFileBasedProbesEnabled(instance)
 	// add more conditions for liberty version checking here

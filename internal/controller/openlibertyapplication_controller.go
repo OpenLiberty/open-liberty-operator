@@ -226,7 +226,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		Namespace: instance.Namespace,
 	}
 
-	skipLibertyVersionChecks := common.LoadFromConfig(common.Config, lutils.OpConfigImageVersionChecks) == "false" || !lutils.IsLibertyVersionCheckNeeded(instance)
+	skipLibertyVersionChecks := common.LoadFromConfig(common.Config, lutils.OpConfigImageVersionChecks) == "false" || !r.IsLibertyVersionCheckNeeded(instance)
 	imageReferenceOld := instance.Status.ImageReference
 	instance.Status.ImageReference = instance.Spec.ApplicationImage
 
@@ -1083,6 +1083,17 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 	}).Complete(r)
 }
 
+// Checks if Liberty version checks are needed from the CR instance and any runtime specific checks
+func (r *ReconcileOpenLiberty) IsLibertyVersionCheckNeeded(instance *openlibertyv1.OpenLibertyApplication) bool {
+	if lutils.IsLibertyVersionCheckNeeded(instance) {
+		return true
+	}
+	if instance.Spec.ManageLTPA != nil && *instance.Spec.ManageLTPA && r.isUsingAESPasswordEncryptionKeySharing(instance, nil) && !r.isUsingPlainPasswordEncryptionKeySharing(instance, nil) {
+		return true
+	}
+	return false
+}
+
 func getMonitoringEnabledLabelName(ba common.BaseComponent) string {
 	return "monitor." + ba.GetGroupName() + "/enabled"
 }
@@ -1152,6 +1163,12 @@ func (r *ReconcileOpenLiberty) checkLibertyVersionGuards(instance *openlibertyv1
 		isFileBasedProbesAllowed := lutils.CompareLibertyVersion(libertyVersion, "25.0.0.6") >= 0
 		if !isFileBasedProbesAllowed {
 			return fmt.Errorf("Could not set .spec.probes.enableFileBased because the detected Liberty version is not running version 25.0.0.6 or higher")
+		}
+	}
+	if instance.Spec.ManageLTPA != nil && *instance.Spec.ManageLTPA && r.isUsingAESPasswordEncryptionKeySharing(instance, nil) && !r.isUsingPlainPasswordEncryptionKeySharing(instance, nil) {
+		isAESPasswordEncryptionKeyAllowed := lutils.CompareLibertyVersion(libertyVersion, "25.0.0.12") >= 0
+		if !isAESPasswordEncryptionKeyAllowed {
+			return fmt.Errorf("The LTPA key creation depends on an encryption feature that is not supported. Could not set .spec.managePasswordEncryption with Secret 'wlp-aes-encryption-key' because the detected Liberty version is not running version 25.0.0.12 or higher")
 		}
 	}
 	return nil
