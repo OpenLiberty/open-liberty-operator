@@ -612,8 +612,8 @@ func (in *OpenLibertyApplicationService) DeepCopyInto(out *OpenLibertyApplicatio
 		*out = new(OpenLibertyApplicationServiceSessionAffinity)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.DisableTopology != nil {
-		in, out := &in.DisableTopology, &out.DisableTopology
+	if in.DisableTopologyRouting != nil {
+		in, out := &in.DisableTopologyRouting, &out.DisableTopologyRouting
 		*out = new(bool)
 		**out = **in
 	}
