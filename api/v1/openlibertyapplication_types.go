@@ -849,7 +849,7 @@ func (cr *OpenLibertyApplication) GetManageTLS() *bool {
 	return cr.Spec.ManageTLS
 }
 
-// GetDisableTopologyRouting returns whether topology annotations are disabled for the service
+// GetDisableTopologyRouting returns whether topology aware routing annotations are disabled for the service
 func (cr *OpenLibertyApplication) GetDisableTopologyRouting() *bool {
 	if cr.Spec.Service != nil {
 		return cr.Spec.Service.DisableTopologyRouting
