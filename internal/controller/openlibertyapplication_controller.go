@@ -1158,13 +1158,16 @@ func (r *ReconcileOpenLiberty) checkLibertyVersionGuards(instance *openlibertyv1
 		// the liberty version couldn't be determined
 		return nil
 	}
-	// Only allow file-based health checks on Liberty container images 25.0.0.6+
+	// Only allow file-based health checks on Liberty container images >=25.0.0.6
+	// See https://openliberty.io/blog/2025/06/17/25.0.0.6.html for additional context
 	if lutils.IsFileBasedProbesEnabled(instance) {
 		isFileBasedProbesAllowed := lutils.CompareLibertyVersion(libertyVersion, "25.0.0.6") >= 0
 		if !isFileBasedProbesAllowed {
 			return fmt.Errorf("Could not set .spec.probes.enableFileBased because the detected Liberty version is not running version 25.0.0.6 or higher")
 		}
 	}
+	// Only allow LTPA key creation with a BYO AES-256 encryption key on Liberty container images >=25.0.0.12
+	// See https://openliberty.io/blog/2025/12/02/25.0.0.12.html#aes256 for additional context
 	if instance.Spec.ManageLTPA != nil && *instance.Spec.ManageLTPA && r.isUsingAESPasswordEncryptionKeySharing(instance, nil) && !r.isUsingPlainPasswordEncryptionKeySharing(instance, nil) {
 		isAESPasswordEncryptionKeyAllowed := lutils.CompareLibertyVersion(libertyVersion, "25.0.0.12") >= 0
 		if !isAESPasswordEncryptionKeyAllowed {
