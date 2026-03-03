@@ -399,7 +399,7 @@ type OpenLibertyApplicationStatefulSet struct {
 
 // Defines settings of persisted storage for StatefulSets.
 type OpenLibertyApplicationStorage struct {
-	// A convenient field to set the size of the persisted storage. (ex: 1Gi)
+	// A convenient field to set the size of the persisted storage. (e.g. 1Gi)
 	// +kubebuilder:validation:Pattern=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
 	// +operator-sdk:csv:customresourcedefinitions:order=25,type=spec,displayName="Storage Size",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	Size string `json:"size,omitempty"`
