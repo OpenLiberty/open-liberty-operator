@@ -459,6 +459,7 @@ spec:
         displayName: Environment Variables
         path: env
       - description: A convenient field to set the size of the persisted storage.
+          (e.g. 1Gi)
         displayName: Storage Size
         path: statefulSet.storage.size
         x-descriptors:
