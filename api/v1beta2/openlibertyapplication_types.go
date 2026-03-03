@@ -291,7 +291,7 @@ type OpenLibertyApplicationMonitoring struct {
 
 // Specifies serviceability-related operations, such as gathering server memory dumps and server traces.
 type OpenLibertyApplicationServiceability struct {
-	// A convenient field to request the size of the persisted storage to use for serviceability. (ex: 1Gi)
+	// A convenient field to request the size of the persisted storage to use for serviceability.
 	// +kubebuilder:validation:Pattern=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
 	Size string `json:"size,omitempty"`
 
