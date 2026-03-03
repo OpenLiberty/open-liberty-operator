@@ -5423,7 +5423,7 @@ spec:
                 properties:
                   size:
                     description: 'A convenient field to request the size of the persisted
-                      storage to use for serviceability. (ex: 1Gi)'
+                      storage to use for serviceability. (e.g. 1Gi)'
                     pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                     type: string
                   storageClassName:
@@ -14013,7 +14013,7 @@ spec:
                 properties:
                   size:
                     description: 'A convenient field to request the size of the persisted
-                      storage to use for serviceability. (ex: 1Gi)'
+                      storage to use for serviceability. (e.g. 1Gi)'
                     pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                     type: string
                   storageClassName:
