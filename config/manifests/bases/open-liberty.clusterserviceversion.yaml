@@ -307,13 +307,15 @@ spec:
         path: service.bindable
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - displayName: StatefulSet
+        path: statefulSet
+      - displayName: Service
+        path: service
       - description: Configure service session affinity.
         displayName: Session Affinity
         path: service.sessionAffinity
-      - description: Configures the Semeru Cloud Compiler to handle Just-In-Time (JIT)
-          compilation requests from the application.
-        displayName: Semeru Cloud Compiler
-        path: semeruCloudCompiler
+      - displayName: Route
+        path: route
       - description: Disable topology aware routing annotations from being added to
           the Service. Defaults to false.
         displayName: Disable Topology Routing
