@@ -167,7 +167,7 @@ type OpenLibertyApplicationSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:order=37,type=spec,displayName="DNS"
 	DNS *OpenLibertyApplicationDNS `json:"dns,omitempty"`
 
-	// The list of hosts and IPs that will be inejcted into the application pod's hosts file
+	// The list of hostnames and IPs that will be injected into the application pod's hosts file
 	// +operator-sdk:csv:customresourcedefinitions:order=36,type=spec,displayName="Host Aliases"
 	HostAliases *[]corev1.HostAlias `json:"hostAliases,omitempty"`
 }
