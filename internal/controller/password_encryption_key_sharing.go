@@ -264,14 +264,12 @@ func (r *ReconcileOpenLiberty) getValidInternalEncryptionKey(instance *olv1.Open
 
 	aesFoundAndValid := aesFound && aesValid
 	passwordFoundAndValid := passwordFound && passwordValid
-	if aesFoundAndValid && passwordFoundAndValid {
+	if aesFoundAndValid {
 		// use AES
 		return aesSecret, sharingEnabled, aesFound, nil
 	} else if passwordFoundAndValid {
 		// use password
 		return passwordSecret, sharingEnabled, aesFound, nil
-	} else if aesFoundAndValid {
-		return aesSecret, sharingEnabled, aesFound, nil
 	}
 
 	// if aes/password were found but not valid then return a warning
