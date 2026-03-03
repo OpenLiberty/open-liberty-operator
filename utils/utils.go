@@ -60,10 +60,13 @@ const overridesMountPath = "/config/configDropins/overrides"
 // Password encryption constants
 const ManagedEncryptionServerXML = "-managed-encryption-server-xml"
 const ManagedEncryptionMountServerXML = "-managed-encryption-mount-server-xml"
-const PasswordEncryptionKeyRootName = "wlp-password-encryption-key"
-const LocalPasswordEncryptionKeyRootName = "olo-wlp-password-encryption-key"
 const EncryptionKeyXMLFileName = "encryptionKey.xml"
 const EncryptionKeyMountXMLFileName = "encryptionKeyMount.xml"
+
+const PasswordEncryptionKeyRootName = "wlp-password-encryption-key"
+const LocalPasswordEncryptionKeyRootName = "olo-wlp-password-encryption-key"
+const AESEncryptionKeyRootName = "wlp-aes-encryption-key"
+const LocalAESEncryptionKeyRootName = "olo-wlp-aes-encryption-key"
 
 // File-based probe constants
 const StartupProbeFileBasedScriptName = "startupHealthCheck.sh"
@@ -334,11 +337,11 @@ func createLibertyEnv(la *olv1.OpenLibertyApplication, client client.Client) ([]
 		checkInterval := "5s"
 		startupCheckInterval := "100ms"
 		if la.Spec.Probes != nil {
-			if la.Spec.Probes.CheckInterval != nil && len(*la.Spec.Probes.CheckInterval) > 0 {
+			if la.Spec.Probes.CheckInterval != nil && *la.Spec.Probes.CheckInterval != "" {
 				checkInterval = *la.Spec.Probes.CheckInterval
 				replacementEnv = append(replacementEnv, corev1.EnvVar{Name: "MP_HEALTH_CHECK_INTERVAL", Value: checkInterval})
 			}
-			if la.Spec.Probes.StartupCheckInterval != nil && len(*la.Spec.Probes.StartupCheckInterval) > 0 {
+			if la.Spec.Probes.StartupCheckInterval != nil && *la.Spec.Probes.StartupCheckInterval != "" {
 				startupCheckInterval = *la.Spec.Probes.StartupCheckInterval
 				replacementEnv = append(replacementEnv, corev1.EnvVar{Name: "MP_HEALTH_STARTUP_CHECK_INTERVAL", Value: startupCheckInterval})
 			}
@@ -963,11 +966,24 @@ func MountSecretAsVolume(pts *corev1.PodTemplateSpec, secretName string, volumeM
 	}
 }
 
-func CustomizeEncryptionKeyXML(managedEncryptionXMLSecret *corev1.Secret, encryptionKey string) error {
+func CustomizeAESEncryptionKeyXML(managedEncryptionXMLSecret *corev1.Secret, encryptionKey string) error {
 	if managedEncryptionXMLSecret.StringData == nil {
 		managedEncryptionXMLSecret.StringData = make(map[string]string)
 	}
-	serverXML, err := os.ReadFile("internal/controller/assets/encryption.xml")
+	serverXML, err := os.ReadFile("internal/controller/assets/encryption-key-aes.xml")
+	if err != nil {
+		return err
+	}
+	severXMLString := strings.Replace(string(serverXML), "WLP_AES_ENCRYPTION_KEY", encryptionKey, 1)
+	managedEncryptionXMLSecret.StringData[EncryptionKeyXMLFileName] = severXMLString
+	return nil
+}
+
+func CustomizePasswordEncryptionKeyXML(managedEncryptionXMLSecret *corev1.Secret, encryptionKey string) error {
+	if managedEncryptionXMLSecret.StringData == nil {
+		managedEncryptionXMLSecret.StringData = make(map[string]string)
+	}
+	serverXML, err := os.ReadFile("internal/controller/assets/encryption-key-password.xml")
 	if err != nil {
 		return err
 	}
@@ -1002,6 +1018,8 @@ func CustomizeLibertyFileMountXML(mountingPasswordKeySecret *corev1.Secret, moun
 	return nil
 }
 
+// Returns true if a Liberty version check is required before reconciling the app to completion and false otherwise
+// This is to inform users who are trying to use an operator feature that isn't supported on their Liberty image
 func IsLibertyVersionCheckNeeded(instance *olv1.OpenLibertyApplication) bool {
 	isFileBasedProbesEnabled := IsFileBasedProbesEnabled(instance)
 	// add more conditions for liberty version checking here
