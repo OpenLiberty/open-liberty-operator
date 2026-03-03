@@ -423,6 +423,10 @@ spec:
         path: monitoring.endpoints
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:endpointList
+      - description: The list of hostnames and IPs that will be injected into the
+          application pod's hosts file
+        displayName: Host Aliases
+        path: hostAliases
       - description: Tolerations to be added to application pods. Tolerations allow
           the scheduler to schedule pods on nodes with matching taints.
         displayName: Tolerations
