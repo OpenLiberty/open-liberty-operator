@@ -407,7 +407,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 	// Copy the securityContext from the OpenLibertyApplcation CR
 	deploy.Spec.Template.Spec.Containers[0].SecurityContext = utils.GetSecurityContext(ola)
 
-	lutils.AddSecretResourceVersionAsEnvVar(&deploy.Spec.Template, ola, r.GetClient(), ola.Status.SemeruCompiler.TLSSecretName, "TLS")
+	lutils.AddSecretHashAsAnnotation(&deploy.Spec.Template, ola, r.GetClient(), ola.Status.SemeruCompiler.TLSSecretName)
 }
 
 func reconcileSemeruService(svc *corev1.Service, ola *openlibertyv1.OpenLibertyApplication) {
@@ -415,7 +415,7 @@ func reconcileSemeruService(svc *corev1.Service, ola *openlibertyv1.OpenLibertyA
 	var timeout int32 = 86400
 	svc.Labels = getLabels(ola)
 	svc.Spec.Selector = getSelectors(ola)
-	utils.CustomizeServiceAnnotations(svc)
+	utils.CustomizeServiceAnnotations(svc, ola.GetDisableTopologyRouting())
 	if len(svc.Spec.Ports) == 0 {
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{})
 	}

@@ -93,7 +93,7 @@ func CopyFolderToPodAndRunScript(config *rest.Config, srcFolder string, destFold
 
 	command := []string{"tar", "-xf", "-"}
 	destDir := path.Dir(destFolder)
-	if len(destDir) > 0 {
+	if destDir != "" {
 		command = append(command, "-C", destDir)
 	}
 	tarCmd := strings.Join(command, utils.FlagDelimiterSpace)
