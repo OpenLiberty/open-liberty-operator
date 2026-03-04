@@ -453,7 +453,13 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 
 			encodedPassword, err := encode(password, currentPasswordEncryptionKey, currentAESEncryptionKey, common.LoadFromConfig(common.Config, lutils.OpConfigPasswordEncodingType))
 			if err != nil {
-				return "", errors.Wrapf(err, "failed to encode the password encryption key")
+				var encodeErrorMessage string
+				if usingAES {
+					encodeErrorMessage = "failed to encode using the aes encryption key, verify the provided key in Secret 'wlp-aes-encryption-key' is a valid base64 encoded AES-256 key"
+				} else {
+					encodeErrorMessage = "failed to encode using the password encryption key"
+				}
+				return "", errors.Wrapf(err, encodeErrorMessage)
 			}
 
 			ltpaConfigSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaConfigMetadata.PathIndex
