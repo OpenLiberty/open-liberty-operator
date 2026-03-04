@@ -13,7 +13,6 @@ import (
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
 	tree "github.com/OpenLiberty/open-liberty-operator/utils/tree"
 	"github.com/application-stacks/runtime-component-operator/common"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -459,7 +458,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 				} else {
 					encodeErrorMessage = "failed to encode using the password encryption key"
 				}
-				return "", errors.Wrapf(err, encodeErrorMessage)
+				return "", fmt.Errorf("%s: %+v", encodeErrorMessage, err)
 			}
 
 			ltpaConfigSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaConfigMetadata.PathIndex
