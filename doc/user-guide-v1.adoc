@@ -868,7 +868,7 @@ spec:
 The Liberty Operator handles mounting the password encryption key into the application pod and enables the necessary Liberty server configuration to use it.
 
 
-Starting in v1.6.0+, you can also bring your own AES-256 key to use for password encryption. To enable password encryption support using an AES-256 key, create a Secret named `wlp-aes-encryption-key` in the same namespace as the OpenLibertyApplication CR instance. Within the secret, the encryption key must be specified by using `aesEncryptionKey` in Base64-encoded format. More information on how to generate your own AES-256 key is described in the link:https://openliberty.io/blog/2025/12/02/25.0.0.12.html#aes256[Bring your own AES-256 key, and support for FIPS 140-3 with IBM Semeru Runtimes in 25.0.0.12] blog post.
+Starting in v1.6.0 and Liberty version 25.0.0.12, you can also bring your own AES-256 key to use for password encryption. To enable password encryption support using an AES-256 key, create a Secret named `wlp-aes-encryption-key` in the same namespace as the OpenLibertyApplication CR instance. Within the secret, the encryption key must be specified by using `aesEncryptionKey` in Base64-encoded format. More information on how to generate your own AES-256 key is described in the link:https://openliberty.io/blog/2025/12/02/25.0.0.12.html#aes256[Bring your own AES-256 key, and support for FIPS 140-3 with IBM Semeru Runtimes in 25.0.0.12] blog post.
 
 [source,yaml]
 ----
