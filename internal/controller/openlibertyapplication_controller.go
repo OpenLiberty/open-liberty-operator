@@ -1141,17 +1141,26 @@ func (r *ReconcileOpenLiberty) getContainerImageMetadata(reqLogger logr.Logger, 
 	olappSecrets := []corev1.Secret{}
 	var pullSecret *corev1.Secret
 	if olapp.GetPullSecret() != nil {
-		pullSecret = &corev1.Secret{}
-		if err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: *olapp.GetPullSecret(), Namespace: olapp.GetNamespace()}, pullSecret); err != nil {
-			if kerrors.IsNotFound(err) {
-				reqLogger.Info("The instance pull secret specified does not exist")
-				pullSecret = nil
-			} else {
-				reqLogger.Error(err, "Failed to get the instance pull secret")
-				return "", nil, fmt.Errorf("Failed to get the instance pull secret: %v", err)
-			}
+		pullSecretString := *olapp.GetPullSecret()
+		pullSecretNames := []string{}
+		if strings.Contains(pullSecretString, ",") {
+			pullSecretNames = strings.Split(pullSecretString, ",")
+		} else {
+			pullSecretNames = append(pullSecretNames, pullSecretString)
 		}
-		olappSecrets = append(olappSecrets, *pullSecret)
+		for _, pullSecretName := range pullSecretNames {
+			pullSecret = &corev1.Secret{}
+			if err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: pullSecretName, Namespace: olapp.GetNamespace()}, pullSecret); err != nil {
+				if kerrors.IsNotFound(err) {
+					reqLogger.Info("The instance pull secret specified does not exist")
+					pullSecret = nil
+				} else {
+					reqLogger.Error(err, "Failed to get the instance pull secret")
+					return "", nil, fmt.Errorf("Failed to get the instance pull secret: %v", err)
+				}
+			}
+			olappSecrets = append(olappSecrets, *pullSecret)
+		}
 	}
 	return libertyimage.NewNamespaceCredentialsContext(reqLogger, olappSecrets, olapp.GetNamespace()).GetContainerImageMetadata(context.TODO(), imageRef, pullSecret, false)
 }
