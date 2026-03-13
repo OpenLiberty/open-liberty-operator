@@ -253,25 +253,28 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 			}
 			if !skipLibertyVersionChecks {
 				libertyVersion := libertyimage.ParseLibertyVersionFromContainerImageMetadata(&isTag.Image.DockerImageMetadata)
+				warningMessage := "Could not parse Liberty version field from ImageStream metadata; version was not found in any of the labels: " + strings.Join(libertyimage.ValidLibertyVersionLabels, ", ")
 				if libertyVersion == "" {
-					warningMessage := "Could not parse Liberty version field from ImageStream metadata; version was not found in any of the labels: " + strings.Join(libertyimage.ValidLibertyVersionLabels, ", ")
 					reqLogger.Info(warningMessage)
 					instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyimage.NilLibertyVersion)
 					instance.Status.SetReference(lutils.StatusReferenceLibertyVersionLastPull, fmt.Sprint(time.Now().UTC().Unix()))
 					// add a warning that displays to the user when the Liberty version couldn't be parsed
-					r.SetStatusWarnings(append(r.GetStatusWarnings(), oputils.StatusWarning{
+					r.AddStatusWarning(oputils.StatusWarning{
 						GetCondition: func(ba common.BaseComponent) bool {
 							libVersion := ba.GetStatus().GetReferences()[lutils.StatusReferenceLibertyVersion]
 							return libVersion == libertyimage.NilLibertyVersion
 						},
 						Message: warningMessage,
-					}))
+					})
 				} else if instance.Status.GetReferences()[lutils.StatusReferenceLibertyVersion] != libertyVersion {
 					instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyVersion)
 					if instance.Status.PulledImageReference != instance.Status.ImageReference {
 						instance.Status.PulledImageReference = instance.Status.ImageReference
 						instance.Status.SetReference(lutils.StatusReferenceLibertyVersionLastPull, fmt.Sprint(time.Now().UTC().Unix()))
 					}
+					r.DeleteStatusWarning(warningMessage)
+				} else {
+					r.DeleteStatusWarning(warningMessage)
 				}
 			}
 			versionTakenFromImageStream = true
@@ -335,11 +338,20 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 
 		// Get liberty version if the reference is not set or if secondsSinceLastPull >= 60*imageVersionChecksRefreshIntervalMinutes
+		failedToPullContainerMessage := "Failed to pull container image metadata; unauthorized or the image does not exist"
 		if libertyVersion == "" || int(float64(secondsSinceLastPull)/60) >= imageVersionChecksRefreshIntervalMinutes {
 			pulledManifestDigest, pulledLibertyVersion, err := r.pullLibertyVersionFromManifest(reqLogger, instance, instance.Spec.ApplicationImage, image, isTagNamespace)
 			if err != nil {
-				reqLogger.Error(err, "Failed to pull container image metadata; unauthorized or the image does not exist")
+				reqLogger.Error(err, failedToPullContainerMessage)
 				instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyimage.NilLibertyVersion)
+				// add a warning that displays to the user when the Liberty version couldn't be parsed
+				r.AddStatusWarning(oputils.StatusWarning{
+					GetCondition: func(ba common.BaseComponent) bool {
+						libVersion := ba.GetStatus().GetReferences()[lutils.StatusReferenceLibertyVersion]
+						return libVersion == libertyimage.NilLibertyVersion
+					},
+					Message: failedToPullContainerMessage,
+				})
 			} else {
 				libertyVersion = pulledLibertyVersion
 				if pulledManifestDigest != "" {
@@ -347,17 +359,9 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				}
 				instance.Status.SetReference(lutils.StatusReferenceLibertyVersion, libertyVersion)
 				instance.Status.SetReference(lutils.StatusReferenceLibertyVersionLastPull, fmt.Sprint(time.Now().UTC().Unix()))
+				r.DeleteStatusWarning(failedToPullContainerMessage)
 			}
 		}
-
-		// add a warning that displays to the user when the Liberty version couldn't be parsed
-		r.SetStatusWarnings(append(r.GetStatusWarnings(), oputils.StatusWarning{
-			GetCondition: func(ba common.BaseComponent) bool {
-				libVersion := ba.GetStatus().GetReferences()[lutils.StatusReferenceLibertyVersion]
-				return libVersion == libertyimage.NilLibertyVersion || libVersion == ""
-			},
-			Message: "Failed to pull container image metadata; unauthorized or the image does not exist",
-		}))
 	}
 
 	if !skipLibertyVersionChecks {
@@ -406,13 +410,13 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		_, passwordFound, _ := r.hasUserEncryptionKeySecret(instance, passwordEncryptionMetadata)
 		_, aesFound, _ := r.hasUserAESEncryptionKeySecret(instance, passwordEncryptionMetadata)
 		if passwordFound && aesFound {
-			r.SetStatusWarnings(append(r.GetStatusWarnings(), oputils.StatusWarning{
+			r.AddStatusWarning(oputils.StatusWarning{
 				GetCondition: func(ba common.BaseComponent) bool {
 					// manually delete the warning in the else blocks to avoid checking the secret every time
 					return true
 				},
 				Message: cannotUseBothKeysMessage,
-			}))
+			})
 		} else {
 			r.DeleteStatusWarning(cannotUseBothKeysMessage)
 		}
