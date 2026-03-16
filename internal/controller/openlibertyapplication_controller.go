@@ -1157,7 +1157,7 @@ func (r *ReconcileOpenLiberty) getContainerImageMetadata(reqLogger logr.Logger, 
 					pullSecret = nil
 				} else {
 					reqLogger.Error(err, fmt.Sprintf("Failed to get the instance pull secret %s", pullSecretName))
-					return "", nil, fmt.Errorf("Failed to get the instance pull secret: %v", err)
+					return "", nil, fmt.Errorf("Failed to get the instance pull secret %s: %v", pullSecretName, err)
 				}
 			}
 			if pullSecret != nil {
