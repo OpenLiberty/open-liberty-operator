@@ -1141,21 +1141,6 @@ func (r *ReconcileOpenLiberty) deletePVC(reqLogger logr.Logger, pvcName string, 
 func (r *ReconcileOpenLiberty) getContainerImageMetadata(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, imageRef imagev1.DockerImageReference) (string, *runtime.RawExtension, error) {
 	olappSecrets := []corev1.Secret{}
 
-	// check the OpenShift global pull secret for inclusion
-	if r.isClusterWide && r.IsOpenShift() {
-		globalPullSecretName := "pull-secret"
-		globalPullSecretNamespace := "openshift-config"
-		globalPullSecret := &corev1.Secret{}
-		globalPullSecret.Name = globalPullSecretName
-		globalPullSecret.Namespace = globalPullSecretNamespace
-		err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: globalPullSecretName, Namespace: globalPullSecretNamespace}, globalPullSecret)
-		if err == nil {
-			olappSecrets = append(olappSecrets, *globalPullSecret)
-		} else if !kerrors.IsNotFound(err) {
-			return "", nil, fmt.Errorf("Failed to get the OpenShift global pull secret: %v", err)
-		}
-	}
-
 	// check the CR-configured pull secrets
 	var pullSecret *corev1.Secret
 	if olapp.GetPullSecret() != nil {
@@ -1174,6 +1159,21 @@ func (r *ReconcileOpenLiberty) getContainerImageMetadata(reqLogger logr.Logger, 
 			if pullSecret != nil {
 				olappSecrets = append(olappSecrets, *pullSecret)
 			}
+		}
+	}
+
+	// check the OpenShift global pull secret for inclusion
+	if r.isClusterWide && r.IsOpenShift() {
+		globalPullSecretName := "pull-secret"
+		globalPullSecretNamespace := "openshift-config"
+		globalPullSecret := &corev1.Secret{}
+		globalPullSecret.Name = globalPullSecretName
+		globalPullSecret.Namespace = globalPullSecretNamespace
+		err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: globalPullSecretName, Namespace: globalPullSecretNamespace}, globalPullSecret)
+		if err == nil {
+			olappSecrets = append(olappSecrets, *globalPullSecret)
+		} else if !kerrors.IsNotFound(err) {
+			return "", nil, fmt.Errorf("Failed to get the OpenShift global pull secret: %v", err)
 		}
 	}
 	return libertyimage.NewNamespaceCredentialsContext(reqLogger, olappSecrets, olapp.GetNamespace()).GetContainerImageMetadata(context.TODO(), imageRef, pullSecret, false)
