@@ -51,6 +51,7 @@ type ReconcileOpenLiberty struct {
 	oputils.ReconcilerBase
 	Log             logr.Logger
 	watchNamespaces []string
+	isClusterWide   bool
 }
 
 const applicationFinalizer = "finalizer.openlibertyapplications.apps.openliberty.io"
@@ -992,33 +993,33 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 	for _, ns := range watchNamespaces {
 		watchNamespacesMap[ns] = true
 	}
-	isClusterWide := oputils.IsClusterWide(watchNamespaces)
+	r.isClusterWide = oputils.IsClusterWide(watchNamespaces)
 
 	pred := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// Ignore updates to CR status in which case metadata.Generation does not change
-			return e.ObjectOld.GetGeneration() != e.ObjectNew.GetGeneration() && (isClusterWide || watchNamespacesMap[e.ObjectNew.GetNamespace()])
+			return e.ObjectOld.GetGeneration() != e.ObjectNew.GetGeneration() && (r.isClusterWide || watchNamespacesMap[e.ObjectNew.GetNamespace()])
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
-			return isClusterWide || watchNamespacesMap[e.Object.GetNamespace()]
+			return r.isClusterWide || watchNamespacesMap[e.Object.GetNamespace()]
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			return isClusterWide || watchNamespacesMap[e.Object.GetNamespace()]
+			return r.isClusterWide || watchNamespacesMap[e.Object.GetNamespace()]
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
-			return isClusterWide || watchNamespacesMap[e.Object.GetNamespace()]
+			return r.isClusterWide || watchNamespacesMap[e.Object.GetNamespace()]
 		},
 	}
 
 	predSubResource := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return (isClusterWide || watchNamespacesMap[e.ObjectOld.GetNamespace()])
+			return (r.isClusterWide || watchNamespacesMap[e.ObjectOld.GetNamespace()])
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
 			return false
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			return isClusterWide || watchNamespacesMap[e.Object.GetNamespace()]
+			return r.isClusterWide || watchNamespacesMap[e.Object.GetNamespace()]
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
 			return false
@@ -1028,13 +1029,13 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 	predSubResWithGenCheck := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// Ignore updates to CR status in which case metadata.Generation does not change
-			return (isClusterWide || watchNamespacesMap[e.ObjectOld.GetNamespace()]) && e.ObjectOld.GetGeneration() != e.ObjectNew.GetGeneration()
+			return (r.isClusterWide || watchNamespacesMap[e.ObjectOld.GetNamespace()]) && e.ObjectOld.GetGeneration() != e.ObjectNew.GetGeneration()
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
 			return false
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			return isClusterWide || watchNamespacesMap[e.Object.GetNamespace()]
+			return r.isClusterWide || watchNamespacesMap[e.Object.GetNamespace()]
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
 			return false
@@ -1141,7 +1142,7 @@ func (r *ReconcileOpenLiberty) getContainerImageMetadata(reqLogger logr.Logger, 
 	olappSecrets := []corev1.Secret{}
 
 	// check the OpenShift global pull secret for inclusion
-	if len(r.watchNamespaces) == 0 && r.IsOpenShift() {
+	if r.isClusterWide && r.IsOpenShift() {
 		globalPullSecretName := "pull-secret"
 		globalPullSecretNamespace := "openshift-config"
 		globalPullSecret := &corev1.Secret{}
