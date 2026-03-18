@@ -1140,7 +1140,7 @@ func (r *ReconcileOpenLiberty) deletePVC(reqLogger logr.Logger, pvcName string, 
 func (r *ReconcileOpenLiberty) getContainerImageMetadata(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, imageRef imagev1.DockerImageReference) (string, *runtime.RawExtension, error) {
 	olappSecrets := []corev1.Secret{}
 
-	// check the OpenShift global pull secret for inclusion and allow errors if it doesn't exist
+	// check the OpenShift global pull secret for inclusion
 	if len(r.watchNamespaces) == 0 && r.IsOpenShift() {
 		globalPullSecretName := "pull-secret"
 		globalPullSecretNamespace := "openshift-config"
@@ -1150,6 +1150,8 @@ func (r *ReconcileOpenLiberty) getContainerImageMetadata(reqLogger logr.Logger, 
 		err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: globalPullSecretName, Namespace: globalPullSecretNamespace}, globalPullSecret)
 		if err == nil {
 			olappSecrets = append(olappSecrets, *globalPullSecret)
+		} else if !kerrors.IsNotFound(err) {
+			return "", nil, fmt.Errorf("Failed to get the global OpenShift pull secret: %v", err)
 		}
 	}
 
