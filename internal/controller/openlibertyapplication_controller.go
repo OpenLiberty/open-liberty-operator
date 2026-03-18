@@ -1151,7 +1151,7 @@ func (r *ReconcileOpenLiberty) getContainerImageMetadata(reqLogger logr.Logger, 
 		if err == nil {
 			olappSecrets = append(olappSecrets, *globalPullSecret)
 		} else if !kerrors.IsNotFound(err) {
-			return "", nil, fmt.Errorf("Failed to get the global OpenShift pull secret: %v", err)
+			return "", nil, fmt.Errorf("Failed to get the OpenShift global pull secret: %v", err)
 		}
 	}
 
