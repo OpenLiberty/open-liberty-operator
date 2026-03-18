@@ -3,7 +3,7 @@ module github.com/OpenLiberty/open-liberty-operator
 go 1.26
 
 require (
-	github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260306040218-27cdcb5746cc
+	github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260318005646-e267e0c1cb83
 	github.com/cert-manager/cert-manager v1.19.4
 	github.com/distribution/distribution/v3 v3.0.0
 	github.com/docker/docker v27.5.0+incompatible

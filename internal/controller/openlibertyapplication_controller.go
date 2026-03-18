@@ -1141,15 +1141,8 @@ func (r *ReconcileOpenLiberty) getContainerImageMetadata(reqLogger logr.Logger, 
 	olappSecrets := []corev1.Secret{}
 	var pullSecret *corev1.Secret
 	if olapp.GetPullSecret() != nil {
-		pullSecretString := strings.TrimSpace(*olapp.GetPullSecret())
-		pullSecretNames := []string{}
-		if strings.Contains(pullSecretString, ",") {
-			pullSecretNames = strings.Split(pullSecretString, ",")
-		} else {
-			pullSecretNames = append(pullSecretNames, pullSecretString)
-		}
+		pullSecretNames := oputils.DecodeStringToList(*olapp.GetPullSecret())
 		for _, pullSecretName := range pullSecretNames {
-			pullSecretName = strings.TrimSpace(pullSecretName)
 			pullSecret = &corev1.Secret{}
 			if err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: pullSecretName, Namespace: olapp.GetNamespace()}, pullSecret); err != nil {
 				if kerrors.IsNotFound(err) {
