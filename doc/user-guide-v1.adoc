@@ -887,14 +887,7 @@ spec:
 
 The Liberty operator handles mounting the password encryption key into the application pod and enables the necessary Liberty server configuration to use it. You are responsible for encrypting any passwords that you specify with the encryption key that you provided in the previous section.
 
-
 When `.spec.manageLTPA` is enabled with `.spec.managePasswordEncryption`, the Liberty operator encrypts the password of the LTPA key with the password encryption key that you specified.
-
-When `wlp-aes-encryption-key` Secret is defined, it takes precedence over `wlp-password-encryption-key` Secret.
-To avoid triggering false application rollouts during Secret downtime, ensure only one of `wlp-aes-encryption-key` or `wlp-password-encryption-key` is defined in the cluster.
-
-
-When `.spec.manageLTPA` is enabled with `.spec.managePasswordEncryption`, the Liberty Operator encrypts the password of the LTPA key with the password encryption key you specified.
 
 NOTE: You must encrypt all other passwords that are in a Liberty server configuration that use AES encryption by using the password encryption key that you specified in the secret that you specified in the previous section. Liberty servers cannot decrypt the passwords if the passwords are not encrypted. For more information about how to obfuscate passwords for Liberty, see the link:https://openliberty.io/docs/latest/reference/command/securityUtility-encode.html[`securityUtility encode` command].
 
