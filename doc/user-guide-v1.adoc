@@ -858,7 +858,7 @@ metadata:
   name: wlp-aes-encryption-key
 type: Opaque
 stringData:
-  passwordEncryptionKey: random-base64-aes256-key
+  aesEncryptionKey: random-base64-aes256-key
 ----
 
 Alternately, to enable password encryption support, you can create a secret named `wlp-password-encryption-key` in the same namespace as the OpenLibertyApplication CR instance. Within the secret, the encryption key must be specified by using `passwordEncryptionKey`. 
