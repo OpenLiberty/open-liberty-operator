@@ -964,55 +964,57 @@ func MountSecretAsVolume(pts *corev1.PodTemplateSpec, secretName string, volumeM
 	}
 }
 
-func CustomizeAESEncryptionKeyXML(managedEncryptionXMLSecret *corev1.Secret, encryptionKey string) error {
-	if managedEncryptionXMLSecret.StringData == nil {
-		managedEncryptionXMLSecret.StringData = make(map[string]string)
+func CustomizeAESEncryptionKeyXML(managedEncryptionXMLSecret *common.LockedBufferSecret, encryptionKey []byte) error {
+	if managedEncryptionXMLSecret.LockedData == nil {
+		managedEncryptionXMLSecret.LockedData = make(common.SecretMap)
 	}
 	serverXML, err := os.ReadFile("internal/controller/assets/encryption-key-aes.xml")
 	if err != nil {
 		return err
 	}
-	severXMLString := strings.Replace(string(serverXML), "WLP_AES_ENCRYPTION_KEY", encryptionKey, 1)
-	managedEncryptionXMLSecret.StringData[EncryptionKeyXMLFileName] = severXMLString
+	serverXMLBytes := bytes.Replace(serverXML, []byte("WLP_AES_ENCRYPTION_KEY"), encryptionKey, 1)
+	managedEncryptionXMLSecret.LockedData.Set(EncryptionKeyXMLFileName, serverXMLBytes)
 	return nil
 }
 
-func CustomizePasswordEncryptionKeyXML(managedEncryptionXMLSecret *corev1.Secret, encryptionKey string) error {
-	if managedEncryptionXMLSecret.StringData == nil {
-		managedEncryptionXMLSecret.StringData = make(map[string]string)
+func CustomizePasswordEncryptionKeyXML(managedEncryptionXMLSecret *common.LockedBufferSecret, encryptionKey []byte) error {
+	if managedEncryptionXMLSecret.LockedData == nil {
+		managedEncryptionXMLSecret.LockedData = make(common.SecretMap)
 	}
 	serverXML, err := os.ReadFile("internal/controller/assets/encryption-key-password.xml")
 	if err != nil {
 		return err
 	}
-	severXMLString := strings.Replace(string(serverXML), "WLP_PASSWORD_ENCRYPTION_KEY", encryptionKey, 1)
-	managedEncryptionXMLSecret.StringData[EncryptionKeyXMLFileName] = severXMLString
+	serverXMLBytes := bytes.Replace(serverXML, []byte("WLP_PASSWORD_ENCRYPTION_KEY"), encryptionKey, 1)
+	managedEncryptionXMLSecret.LockedData.Set(EncryptionKeyXMLFileName, serverXMLBytes)
 	return nil
 }
 
-func CustomizeLTPAServerXML(xmlSecret *corev1.Secret, la *olv1.OpenLibertyApplication, encryptedPassword string) error {
-	xmlSecret.StringData = make(map[string]string)
+func CustomizeLTPAServerXML(xmlSecret *common.LockedBufferSecret, encryptedPassword []byte) error {
+	if xmlSecret.LockedData == nil {
+		xmlSecret.LockedData = make(common.SecretMap)
+	}
 	managedLTPADir := strings.Replace(SecureMountPath, "/output", "${server.output.dir}", 1)
 	serverXML, err := os.ReadFile("internal/controller/assets/ltpa.xml")
 	if err != nil {
 		return err
 	}
-	severXMLString := strings.Replace(string(serverXML), "LTPA_KEYS_FILE_NAME", managedLTPADir+"/"+LTPAKeysFileName, 1)
-	severXMLString = strings.Replace(severXMLString, "LTPA_KEYS_PASSWORD", encryptedPassword, 1)
-	xmlSecret.StringData[LTPAKeysXMLFileName] = severXMLString
+	serverXMLString := strings.Replace(string(serverXML), "LTPA_KEYS_FILE_NAME", managedLTPADir+"/"+LTPAKeysFileName, 1)
+	serverXMLBytes := bytes.Replace([]byte(serverXMLString), []byte("LTPA_KEYS_PASSWORD"), encryptedPassword, 1)
+	xmlSecret.LockedData.Set(LTPAKeysXMLFileName, serverXMLBytes)
 	return nil
 }
 
-func CustomizeLibertyFileMountXML(mountingPasswordKeySecret *corev1.Secret, mountXMLFileName string, fileLocation string) error {
-	if mountingPasswordKeySecret.StringData == nil {
-		mountingPasswordKeySecret.StringData = make(map[string]string)
+func CustomizeLibertyFileMountXML(mountingPasswordKeySecret *common.LockedBufferSecret, mountXMLFileName string, fileLocation string) error {
+	if mountingPasswordKeySecret.LockedData == nil {
+		mountingPasswordKeySecret.LockedData = make(common.SecretMap)
 	}
 	serverXML, err := os.ReadFile("internal/controller/assets/mount.xml")
 	if err != nil {
 		return err
 	}
-	severXMLString := strings.Replace(string(serverXML), "MOUNT_LOCATION", fileLocation, 1)
-	mountingPasswordKeySecret.StringData[mountXMLFileName] = severXMLString
+	serverXMLBytes := bytes.Replace(serverXML, []byte("MOUNT_LOCATION"), []byte(fileLocation), 1)
+	mountingPasswordKeySecret.LockedData.Set(mountXMLFileName, serverXMLBytes)
 	return nil
 }
 

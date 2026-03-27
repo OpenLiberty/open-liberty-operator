@@ -407,9 +407,9 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	// we should throw a warning if both the aes and password encryption key are defined
 	cannotUseBothKeysMessage := "cannot use both wlp-aes-encryption-key and wlp-password-encryption-key Secrets: choose one to prevent rotation conflicts"
 	if r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata) {
-		_, passwordFound, _ := r.hasUserEncryptionKeySecret(instance, passwordEncryptionMetadata)
-		_, aesFound, _ := r.hasUserAESEncryptionKeySecret(instance, passwordEncryptionMetadata)
-		if passwordFound && aesFound {
+		_, passwordErr := r.hasUserEncryptionKeySecret(instance, passwordEncryptionMetadata)
+		_, aesErr := r.hasUserAESEncryptionKeySecret(instance, passwordEncryptionMetadata)
+		if !kerrors.IsNotFound(passwordErr) && !kerrors.IsNotFound(aesErr) {
 			r.AddStatusWarning(oputils.StatusWarning{
 				GetCondition: func(ba common.BaseComponent) bool {
 					// manually delete the warning in the else blocks to avoid checking the secret every time
@@ -1144,21 +1144,23 @@ func (r *ReconcileOpenLiberty) getContainerImageMetadata(reqLogger logr.Logger, 
 		pullSecretNames := oputils.DecodeStringToList(*olapp.GetPullSecret())
 		for _, pullSecretName := range pullSecretNames {
 			pullSecret = &corev1.Secret{}
-			if err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: pullSecretName, Namespace: olapp.GetNamespace()}, pullSecret); err != nil {
-				if kerrors.IsNotFound(err) {
-					reqLogger.Info(fmt.Sprintf("The instance pull secret %s does not exist", pullSecretName))
-					pullSecret = nil
-				} else {
+			pullSecret.Name = pullSecretName
+			pullSecret.Namespace = olapp.GetNamespace()
+			err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: pullSecretName, Namespace: olapp.GetNamespace()}, pullSecret)
+			if err != nil {
+				if !kerrors.IsNotFound(err) {
 					reqLogger.Error(err, fmt.Sprintf("Failed to get the instance pull secret %s", pullSecretName))
 					return "", nil, fmt.Errorf("Failed to get the instance pull secret %s: %v", pullSecretName, err)
 				}
+				reqLogger.Info(fmt.Sprintf("The instance pull secret %s does not exist", pullSecretName))
+				break
 			}
 			if pullSecret != nil {
 				olappSecrets = append(olappSecrets, *pullSecret)
 			}
 		}
 	}
-	return libertyimage.NewNamespaceCredentialsContext(reqLogger, olappSecrets, olapp.GetNamespace()).GetContainerImageMetadata(context.TODO(), imageRef, pullSecret, false)
+	return libertyimage.NewNamespaceCredentialsContext(reqLogger, olappSecrets, olapp.GetNamespace()).GetContainerImageMetadata(context.TODO(), imageRef, false)
 }
 
 func (r *ReconcileOpenLiberty) checkLibertyVersionGuards(instance *openlibertyv1.OpenLibertyApplication) error {
