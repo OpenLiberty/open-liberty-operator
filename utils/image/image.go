@@ -62,7 +62,6 @@ func convertImageV1ToReferenceDockerImageReference(refIn imagev1.DockerImageRefe
 func (s *NamespaceCredentialsContext) Repository(
 	ctx context.Context,
 	refIn imagev1.DockerImageReference,
-	pullSecret *corev1.Secret,
 	insecure bool,
 ) (distribution.Repository, error) {
 	ref := convertImageV1ToReferenceDockerImageReference(refIn)
@@ -74,15 +73,6 @@ func (s *NamespaceCredentialsContext) Repository(
 	}
 
 	instanceKeyring := &credentialprovider.BasicDockerKeyring{}
-	if pullSecret != nil {
-		if config, err := credentialprovider.ReadDockerConfigFileFromBytes(pullSecret.Data[".dockerconfigjson"]); err != nil {
-			s.reqLogger.Info(fmt.Sprintf("Proceeding without instance pull secret credentials; pull secret is missing field .data.dockerconfigjson; %v", err))
-		} else {
-			instanceKeyring.Add(nil, config)
-			s.reqLogger.Info("Added pull secret config to the keyring")
-		}
-	}
-
 	keyring, err := secrets.MakeDockerKeyring(s.secrets, instanceKeyring)
 	if err != nil {
 		s.reqLogger.Error(err, "Failed to create docker keyring")
@@ -103,9 +93,9 @@ func (s *NamespaceCredentialsContext) Repository(
 	return importCtx.Repository(ctx, defRef.RegistryURL(), defRef.RepositoryName(), insecure)
 }
 
-func (s *NamespaceCredentialsContext) GetContainerImageMetadata(ctx context.Context, imageRef imagev1.DockerImageReference, pullSecret *corev1.Secret, insecure bool) (string, *runtime.RawExtension, error) {
+func (s *NamespaceCredentialsContext) GetContainerImageMetadata(ctx context.Context, imageRef imagev1.DockerImageReference, insecure bool) (string, *runtime.RawExtension, error) {
 	imageMetadata := &runtime.RawExtension{}
-	repo, err := s.Repository(ctx, imageRef, pullSecret, insecure)
+	repo, err := s.Repository(ctx, imageRef, insecure)
 	if err != nil {
 		return "", nil, fmt.Errorf("Failed to create a repository; %v", err)
 	}
