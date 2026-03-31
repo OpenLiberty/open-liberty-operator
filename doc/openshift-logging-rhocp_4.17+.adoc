@@ -101,7 +101,7 @@ image::images/app-logging-ocp-ui-plugin-4.17.png[See logs in OCP UI plugin]
 +
 [source, text]
 ----
-{ log_type="application" } | json | kubernetes_labels_logFormat="liberty" | line_format "[{{.structured_loglevel}}] {{.structured_message}}"
+{ log_type="application" } | json | structured_type="liberty_message" | line_format "[{{.structured_loglevel}}] {{.structured_message}}"
 ----
 image::images/app-logging-ocp-LogQL-4.17.png[Query logs using LogQL]
 
