@@ -1,6 +1,6 @@
 = Observability with Open Liberty
 
-The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in a Kubernetes environment. This document has been tested and is supported with Red Hat OpenShift Container Platform (RHOCP) versions 4.21, 4.20, 4.19, 4.18, 4.17, and 4.16.
+The following document covers various topics for configuring and integrating your Open Liberty runtime with monitoring tools in a Kubernetes environment. This document has been tested and is supported with Red Hat OpenShift Container Platform (RHOCP) versions 4.21, 4.20, 4.19, 4.18, and 4.16.
 
 == How to analyze Open Liberty logs
 
@@ -22,7 +22,7 @@ For effective management of logs emitted from applications, deploy your own Elas
 
 === Application logging with Loki and Vector
 
-Another choice for application logging with log aggregation is by using Loki and Vector. If you are deploying Loki and Vector on OpenShift, see the following link:openshift-logging-rhocp_4.17+.adoc[guide].
+Another choice for application logging with log aggregation is by using Loki and Vector. If you are deploying Loki and Vector on OpenShift, see the following link:openshift-logging-rhocp_4.18+.adoc[guide].
 
 === Parsing JSON logs for readability
 
