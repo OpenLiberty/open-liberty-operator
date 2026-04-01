@@ -161,6 +161,7 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `env`   | [[crd-spec-env]] An array of environment variables following the format of `{name, value}`, where value is a simple string. It may also follow the format of `{name, valueFrom}`, where valueFrom refers to a value in a `ConfigMap` or `Secret` resource. For examples, see link:#set-environment-variables-for-an-application-container[Set environment variables for an application container] and link:#override-console-logging-environment-variable-default-values[Override console logging environment variable default values].
 | `envFrom`   | An array of references to `ConfigMap` or `Secret` resources containing environment variables. Keys from `ConfigMap` or `Secret` resources become environment variable names in your container. For examples, see link:#set-environment-variables-for-an-application-container[Set environment variables for an application container].
 | `expose`   | A boolean that toggles the external exposure of this deployment via a Route or a Knative Route resource.
+| `hostAliases` | The list of hostnames and IPs that will be injected into the application pod's hosts file. For examples, see link:#configure-etchosts-spechostaliases[Configure /etc/hosts].
 | `initContainers` | The list of link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#container-v1-core++[Init Container] definitions.
 | `manageLTPA`  | A Boolean that enables management of Lightweight Third-Party Authentication (LTPA) key sharing among Liberty containers. The default is `false`. For more information, see link:#configuring-ltpa[Configuring Lightweight Third-Party Authentication (LTPA)].
 | `managePasswordEncryption` | Enable management of password encryption key sharing amongst Liberty containers. Defaults to false. For more information, see link:#manage-password-encryption[Managing Password Encryption].
@@ -181,7 +182,7 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `probes.startupCheckInterval` | The interval at which the Liberty runtime queries until the UP statuses for all three health check types are established during the startup and the health check files are created. The value is a number followed by an optional time unit of `ms` for milliseconds or `s` for seconds. If no time unit is specified for a value, the value is in milliseconds by default. Only used when `.spec.probes.enableFiledBased` is set to `true`. Defaults to `100ms`.
 
 | `pullPolicy` | The policy used when pulling the image.  One of: `Always`, `Never`, and `IfNotPresent`.
-| `pullSecret` | If using a registry that requires authentication, the name of the secret containing credentials.
+| `pullSecret` | If using a registry that requires authentication, the name or comma-separated list of the secrets containing credentials. (e.g. `secret1,secret2`)
 | `replicas` | The static number of desired replica pods that run simultaneously.
 | `resources.limits.cpu` | The upper limit of CPU core. Specify integers, fractions (e.g. `0.5`), or millicores values(e.g. `100m`, where `100m` is equivalent to `.1` core).
 | `resources.limits.memory` | The memory upper limit in bytes. Specify integers with suffixes: `E`, `P`, `T`, `G`, `M`, `K`, or power-of-two equivalents: `Ei`, `Pi`, `Ti`, `Gi`, `Mi`, `Ki`.
@@ -497,13 +498,15 @@ Open Liberty Operator builds upon link:#common-component-documentation[component
 * link:#bind-applications-with-operator-managed-backing-services[Bind applications with operator-managed backing services] (`.status.binding.name` and `.spec.service.bindable`)
 * link:#limit-a-pod-to-run-on-specified-nodes[Limit a pod to run on specified nodes] (`.spec.affinity`)
 * link:#constrain-how-pods-are-spread-between-nodes-and-zones-spectopologyspreadconstraints[Constrain how pods are spread between nodes and zones] (`.spec.topologySpreadConstraints`)
+* link:#disable-topology-aware-routing-annotations[Disable topology aware routing annotations] (`.spec.service.disableTopologyRouting`)
 * link:#configuring-transport-layer-security-tls-certificates[Configuring transport layer security (TLS) certificates]
 
   - link:#generating-certificates-with-certificate-manager[Generating certificates with certificate manager]
   - link:#generating-certificates-with-red-hat-openshift-service-ca[Generating certificates with Red Hat OpenShift service CA] (`.spec.service.annotations`)
   - link:#specifying-certificates-for-a-secret-route-and-service[Specifying certificates for a secret Route and Service] (`.spec.service.certificateSecretRef` and `.spec.route.certificateSecretRef`) 
-* link:#configure-tolerations-spectolerations[Configure tolerations (`.spec.tolerations`)]
-* link:#configure-dns-specdnspolicy-and-specdnsconfig[Configure DNS (`.spec.dns.policy` and `.spec.dns.config`)]
+* link:#configure-tolerations-spectolerations[Configure tolerations] (`.spec.tolerations`)
+* link:#configure-dns-specdnspolicy-and-specdnsconfig[Configure DNS] (`.spec.dns.policy` and `.spec.dns.config`)
+* link:#configure-etc-hosts-spechostaliases[Configure /etc/hosts] (`.spec.hostAliases`)
 
 === Override console logging environment variable default values (`.spec.env`) image:images/docs_openliberty_logo.png[OL,30] [[override-console-logging-environment-variable-default-values]]
 
@@ -841,9 +844,25 @@ Enable the link:++https://openliberty.io/docs/latest/reference/feature/appSecuri
 
 NOTE: Only available for operator version v1.4.0+
 
-The `managePasswordEncryption` function allows management of password encryption key sharing among Liberty containers. Encrypting a password makes it difficult for someone to recover a password without the password encryption key.
+The `managePasswordEncryption` function allows management of password encryption key sharing among Liberty containers. Encrypting a password makes it difficult for someone to recover a password without the password encryption key. 
 
-The Liberty Operator can manage password encryption key sharing among Liberty containers. To enable password encryption support, create a Secret named `wlp-password-encryption-key` in the same namespace as the OpenLibertyApplication CR instance. Within the secret, the encryption key must be specified by using `passwordEncryptionKey`. All CR instances that enable password encryption share the encryption key in the namespace.
+==== Specify your own encryption key
+
+The Liberty operator can manage password encryption key sharing among Liberty containers. Starting in 1.6.0 and Liberty 25.0.0.12, you can bring your own AES-256 key to use for password encryption. To enable password encryption support using an AES-256 key, create a secret named `wlp-aes-encryption-key` in the same namespace as the OpenLibertyApplication CR instance. Within the secret, the encryption key must be specified by using `aesEncryptionKey` in Base64-encoded format. More information on how to generate your own AES-256 key is described in link:https://openliberty.io/blog/2025/12/02/25.0.0.12.html#aes256[Supplying your own AES-256 key for password encryption]. 
+
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: wlp-aes-encryption-key
+type: Opaque
+stringData:
+  aesEncryptionKey: random-base64-aes256-key
+----
+
+Alternately, to enable password encryption support, you can create a secret named `wlp-password-encryption-key` in the same namespace as the OpenLibertyApplication CR instance. Within the secret, the encryption key must be specified by using `passwordEncryptionKey`. 
+
 [source,yaml]
 ----
 apiVersion: v1
@@ -855,6 +874,10 @@ stringData:
   passwordEncryptionKey: randomkey
 ----
 
+When the `wlp-aes-encryption-key` secret is defined, it takes precedence over `wlp-password-encryption-key` secret. To avoid triggering false application rollouts during secret downtime, ensure only one of `wlp-aes-encryption-key` or `wlp-password-encryption-key` is defined in the cluster. All CR instances that enable password encryption share the encryption key in the namespace.
+
+==== Configuring the Liberty operator to manage password encryption
+
 Set `.spec.managePasswordEncryption` to true in the CR.
 [source,yaml]
 ----
@@ -862,11 +885,11 @@ spec:
   managePasswordEncryption: true
 ----
 
-The Liberty Operator handles mounting the password encryption key into the application pod and enables the necessary Liberty server configuration to use it.
+The Liberty operator handles mounting the password encryption key into the application pod and enables the necessary Liberty server configuration to use it. You are responsible for encrypting any passwords that you specify with the encryption key that you provided in the previous section.
 
-When `.spec.manageLTPA` is enabled with `.spec.managePasswordEncryption`, the Liberty Operator encrypts the password of the LTPA key with the password encryption key you specified.
+When `.spec.manageLTPA` is enabled with `.spec.managePasswordEncryption`, the Liberty operator encrypts the password of the LTPA key with the password encryption key that you specified.
 
-NOTE: Encrypt all other passwords that are in a Liberty server configuration and uses AES encryption by using the password encryption key that you specify in the Secret named `wlp-password-encryption-key`. Liberty servers cannot decrypt the passwords if the passwords are not encrypted. For more information about how to obfuscate passwords for Liberty, see the link:https://openliberty.io/docs/latest/reference/command/securityUtility-encode.html[`securityUtility` encode command].
+NOTE: You must encrypt all other passwords that are in a Liberty server configuration that use AES encryption by using the password encryption key that you specified in the secret that you specified in the previous section. Liberty servers cannot decrypt the passwords if the passwords are not encrypted. For more information about how to obfuscate passwords for Liberty, see the link:https://openliberty.io/docs/latest/reference/command/securityUtility-encode.html[`securityUtility encode` command].
 
 [[managing-password-encryption-prereqs]]
 === Managing Password Encryption prerequisites
@@ -879,7 +902,7 @@ The Liberty server must allow configuration drop-ins. The following configuratio
 [[create-a-service-account]]
 === Configure a service account (`.spec.serviceAccount`)
 
-The operator can create a `ServiceAccount` resource when deploying an `OpenLibertyApplication` custom resource (CR). If `.spec.serviceAccount.name` is **not** specified in a CR, the operator creates a service account with the same name as the CR (e.g. `my-app`). In addition, this service account is dynamically updated when pull secret changes are detected in the CR field `.spec.pullSecret`.
+The operator can create a `ServiceAccount` resource when deploying an `OpenLibertyApplication` custom resource (CR). If `.spec.serviceAccount.name` is **not** specified in a CR, the operator creates a service account with the same name as the CR (e.g. `my-app`). The service account automatically updates when pull secret changes are detected in `.spec.pullSecret`. Multiple pull secrets can be specified using a comma-separated string (e.g. `secret1,secret2`).
 
 Alternatively, the operator can use a custom ServiceAccount that you provide. If `.spec.serviceAccount.name` is specified in a CR, the operator uses the service account as is (i.e. read-only) when provisioning new Pods. It is your responsibility to add any required image pull secrets to the service account when accessing images behind a private registry.
 
@@ -1821,6 +1844,32 @@ Alternatively, override each constraint manually by creating a new TopologySprea
 
 NOTE: When using the `disableOperatorDefaults: true` flag. If cluster-level default constraints are not enabled, by default, the K8s scheduler will use its own internal default Pod topology spread constraints as outlined in https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/#internal-default-constraints.
 
+[[disable-topology-aware-routing-annotations]]
+=== Disable topology aware routing annotations (`.spec.service.disableTopologyRouting`)
+
+By default, the operator will add topology aware routing to keep network traffic within the same zone where it originated by applying the `service.kubernetes.io/topology-mode` annotation to the Service object.
+
+[source, yaml]
+----
+kind: Service
+apiVersion: v1
+metadata:
+  annotations:
+    service.kubernetes.io/topology-mode: Auto
+  name: my-liberty-app
+----
+
+To remove the operator's default setting for topology aware routing you can set the `.spec.service.disableTopologyRouting` field to `true`.
+
+[source, yaml]
+----
+spec:
+  service:
+    disableTopologyRouting: true
+----
+
+
+
 [[configuring-transport-layer-security-tls-certificates]]
 === Configuring transport layer security (TLS) certificates 
 
@@ -1884,6 +1933,44 @@ spec:
 ----
 
 For more information on DNS, see link:https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/[the Kubernetes DNS documentation].
+
+[[configure-etc-hosts-spechostaliases]]
+=== Configure /etc/hosts (`.spec.hostAliases`)
+
+Host aliases can be added in the OpenLibertyApplication CR by using the `.spec.hostAliases` field.
+
+[source,yaml]
+----
+spec:
+  hostAliases:
+    - hostnames:
+        - test1.ibm.com
+        - test2.ibm.com
+      ip: 10.10.10.1
+    - hostnames:
+        - test3.ibm.com
+      ip: 10.10.10.2
+----
+
+The defined aliases will be reflected in each of the application pods' `/etc/hosts` file.
+
+[source,sh]
+----
+sh-5.1$ cat /etc/hosts
+# Kubernetes-managed hosts file.
+127.0.0.1       localhost
+::1     localhost ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+fe00::0 ip6-mcastprefix
+fe00::1 ip6-allnodes
+fe00::2 ip6-allrouters
+10.254.19.144   test1-5cccdd65-2qpzc
+
+# Entries added by HostAliases.
+10.10.10.1      test1.ibm.com   test2.ibm.com
+10.10.10.2      test3.ibm.com
+----
+
 
 [[configure-tolerations]]
 === Configure tolerations (`.spec.tolerations`)
