@@ -244,9 +244,20 @@ func GetLeaderTracker(instance *olv1.OpenLibertyApplication, operatorShortName s
 	}
 
 	if err != nil {
+		// Initialize leaderTracker if it's nil
+		if leaderTracker == nil {
+			leaderTracker = &common.LockedBufferSecret{}
+			leaderTracker.Name = leaderTrackerName
+			leaderTracker.Namespace = instance.GetNamespace()
+			leaderTracker.LockedData = make(common.SecretMap)
+		}
+		if leaderTracker.Labels == nil {
+			leaderTracker.Labels = make(map[string]string)
+		}
 		leaderTracker.Labels = GetRequiredLabels(leaderTracker.Name, "")
-		// return a default leaderTracker
-		return leaderTracker, nil, err
+		// return a default leaderTracker with empty tracker list
+		emptyTrackers := make([]LeaderTracker, 0)
+		return leaderTracker, &emptyTrackers, err
 	}
 	// Create the LeaderTracker array
 	leaderTrackers := make([]LeaderTracker, 0)
