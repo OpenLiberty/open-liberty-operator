@@ -10,8 +10,10 @@ import (
 	"time"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
+	"github.com/application-stacks/runtime-component-operator/common"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -162,42 +164,61 @@ func InsertIntoSortedLeaderTrackers(leaderTrackers *[]LeaderTracker, newLeader *
 	}
 }
 
-func CustomizeLeaderTracker(leaderTracker *corev1.Secret, trackerList *[]LeaderTracker) {
+func CustomizeLeaderTracker(leaderTracker *common.LockedBufferSecret, trackerList *[]LeaderTracker) {
 	if trackerList == nil {
-		leaderTracker.Data = make(map[string][]byte)
-		leaderTracker.Data[ResourceOwnersKey] = []byte("")
-		leaderTracker.Data[ResourcesKey] = []byte("")
-		leaderTracker.Data[ResourcePathIndicesKey] = []byte("")
-		leaderTracker.Data[ResourcePathsKey] = []byte("")
-		// leaderTracker.Data[ResourceSubleasesKey] = []byte("")
+		if leaderTracker.LockedData == nil {
+			leaderTracker.LockedData = make(common.SecretMap)
+		}
+		leaderTracker.LockedData.Set(ResourceOwnersKey, []byte(""))
+		leaderTracker.LockedData.Set(ResourcesKey, []byte(""))
+		leaderTracker.LockedData.Set(ResourcePathIndicesKey, []byte(""))
+		leaderTracker.LockedData.Set(ResourcePathsKey, []byte(""))
 		return
 	}
-	leaderTracker.Data = make(map[string][]byte)
-	// owners, names, pathIndices, paths, subleases := "", "", "", "", ""
-	owners, names, pathIndices, paths := "", "", "", ""
+	if leaderTracker.LockedData == nil {
+		leaderTracker.LockedData = make(common.SecretMap)
+	}
+
+	// pre-calculate size to prevent array reallocation when building the arrays
+	ownersSize, namesSize, pathIndicesSize, pathsSize := 0, 0, 0, 0
 	n := len(*trackerList)
 	for i, tracker := range *trackerList {
-		owners += tracker.Owner
-		names += tracker.Name
-		pathIndices += tracker.PathIndex
-		paths += tracker.Path
-		// subleases += tracker.Sublease
+		ownersSize += len(tracker.Owner)
+		namesSize += len(tracker.Name)
+		pathIndicesSize += len(tracker.PathIndex)
+		pathsSize += len(tracker.Path)
 		if i < n-1 {
-			owners += ","
-			names += ","
-			pathIndices += ","
-			paths += ","
-			// subleases += ","
+			ownersSize++
+			namesSize++
+			pathIndicesSize++
+			pathsSize++
 		}
 	}
-	leaderTracker.Data[ResourceOwnersKey] = []byte(owners)
-	leaderTracker.Data[ResourcesKey] = []byte(names)
-	leaderTracker.Data[ResourcePathIndicesKey] = []byte(pathIndices)
-	leaderTracker.Data[ResourcePathsKey] = []byte(paths)
-	// leaderTracker.Data[ResourceSubleasesKey] = []byte(subleases)
+
+	ownersBytes := make([]byte, 0, ownersSize)
+	namesBytes := make([]byte, 0, namesSize)
+	pathIndicesBytes := make([]byte, 0, pathIndicesSize)
+	pathsBytes := make([]byte, 0, pathsSize)
+
+	for i, tracker := range *trackerList {
+		ownersBytes = append(ownersBytes, []byte(tracker.Owner)...)
+		namesBytes = append(namesBytes, []byte(tracker.Name)...)
+		pathIndicesBytes = append(pathIndicesBytes, []byte(tracker.PathIndex)...)
+		pathsBytes = append(pathsBytes, []byte(tracker.Path)...)
+		if i < n-1 {
+			ownersBytes = append(ownersBytes, ',')
+			namesBytes = append(namesBytes, ',')
+			pathIndicesBytes = append(pathIndicesBytes, ',')
+			pathsBytes = append(pathsBytes, ',')
+		}
+	}
+	leaderTracker.LockedData.Set(ResourceOwnersKey, ownersBytes)
+	leaderTracker.LockedData.Set(ResourcesKey, namesBytes)
+	leaderTracker.LockedData.Set(ResourcePathIndicesKey, pathIndicesBytes)
+	leaderTracker.LockedData.Set(ResourcePathsKey, pathsBytes)
 }
 
-func GetLeaderTracker(instance *olv1.OpenLibertyApplication, operatorShortName string, leaderTrackerType string, client client.Client) (*corev1.Secret, *[]LeaderTracker, error) {
+func GetLeaderTracker(instance *olv1.OpenLibertyApplication, operatorShortName string, leaderTrackerType string, client client.Client) (*common.LockedBufferSecret, *[]LeaderTracker, error) {
 	leaderMutex, mutexFound := LeaderTrackerMutexes.Load(leaderTrackerType)
 	if !mutexFound {
 		return nil, nil, fmt.Errorf("Could not retrieve %s leader tracker's mutex when attempting to get. Exiting.", leaderTrackerType)
@@ -205,24 +226,40 @@ func GetLeaderTracker(instance *olv1.OpenLibertyApplication, operatorShortName s
 	leaderMutex.(*sync.Mutex).Lock()
 	defer leaderMutex.(*sync.Mutex).Unlock()
 
-	leaderTracker := &corev1.Secret{}
-	leaderTracker.Name = operatorShortName + "-managed-leader-tracking-" + leaderTrackerType
-	leaderTracker.Namespace = instance.GetNamespace()
-	leaderTracker.Labels = GetRequiredLabels(leaderTracker.Name, "")
-	if err := client.Get(context.TODO(), types.NamespacedName{Name: leaderTracker.Name, Namespace: leaderTracker.Namespace}, leaderTracker); err != nil {
+	leaderTrackerName := operatorShortName + "-managed-leader-tracking-" + leaderTrackerType
+	leaderTracker, err := common.GetSecret(client, leaderTrackerName, instance.GetNamespace())
+
+	if err == nil {
+		// Get the actual Secret object to access its Data field
+		actualSecret := &corev1.Secret{}
+		if getErr := client.Get(context.TODO(), types.NamespacedName{Name: leaderTrackerName, Namespace: instance.GetNamespace()}, actualSecret); getErr == nil {
+			if leaderTracker.LockedData == nil {
+				leaderTracker.LockedData = make(common.SecretMap)
+			}
+			// Copy Data -> LockedData
+			for key, value := range actualSecret.Data {
+				leaderTracker.LockedData.Set(key, value)
+			}
+		}
+	}
+
+	if err != nil {
+		leaderTracker.Labels = GetRequiredLabels(leaderTracker.Name, "")
 		// return a default leaderTracker
 		return leaderTracker, nil, err
 	}
 	// Create the LeaderTracker array
 	leaderTrackers := make([]LeaderTracker, 0)
-	owners, ownersFound := leaderTracker.Data[ResourceOwnersKey]
-	names, namesFound := leaderTracker.Data[ResourcesKey]
-	pathIndices, pathIndicesFound := leaderTracker.Data[ResourcePathIndicesKey]
-	paths, pathsFound := leaderTracker.Data[ResourcePathsKey]
-	// subleases, subleasesFound := leaderTracker.Data[ResourceSubleasesKey]
+	owners, ownersFound := leaderTracker.LockedData.Get(ResourceOwnersKey)
+	names, namesFound := leaderTracker.LockedData.Get(ResourcesKey)
+	pathIndices, pathIndicesFound := leaderTracker.LockedData.Get(ResourcePathIndicesKey)
+	paths, pathsFound := leaderTracker.LockedData.Get(ResourcePathsKey)
+
+	// subleases, subleasesFound := leaderTracker.LockedData.Get(ResourceSubleasesKey)
 	// If flags are out of sync, delete the leader tracker
 	if ownersFound != namesFound || pathIndicesFound != pathsFound || namesFound != pathIndicesFound { // || pathIndicesFound != subleasesFound {
-		if err := client.Delete(context.TODO(), leaderTracker); err != nil {
+		leaderTrackerObject := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: leaderTracker.GetName(), Namespace: leaderTracker.GetNamespace()}}
+		if err := client.Delete(context.TODO(), leaderTrackerObject); err != nil {
 			return nil, nil, err
 		}
 		return nil, nil, fmt.Errorf("the resource tracker is out of sync and has been deleted")
@@ -242,7 +279,8 @@ func GetLeaderTracker(instance *olv1.OpenLibertyApplication, operatorShortName s
 	// numSubleases := len(subleasesList)
 	// check for array length equivalence
 	if numOwners != numNames || numNames != numPathIndices || numPathIndices != numPaths { // || numPaths != numSubleases {
-		if err := client.Delete(context.TODO(), leaderTracker); err != nil {
+		leaderTrackerObject := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: leaderTracker.GetName(), Namespace: leaderTracker.GetNamespace()}}
+		if err := client.Delete(context.TODO(), leaderTrackerObject); err != nil {
 			return nil, nil, err
 		}
 		return nil, nil, fmt.Errorf("the resource tracker does not have array length equivalence and has been deleted")

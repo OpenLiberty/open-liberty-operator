@@ -152,8 +152,7 @@ func (r *ReconcileOpenLiberty) reconcileSemeruCompiler(ola *openlibertyv1.OpenLi
 		}
 
 		//TLS Secret
-		semeruTLSSecret := &corev1.Secret{}
-		err = r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ola.Status.SemeruCompiler.TLSSecretName, Namespace: ola.Namespace}, semeruTLSSecret)
+		err = common.CheckSecret(r.GetClient(), ola.Status.SemeruCompiler.TLSSecretName, ola.GetNamespace())
 		if err != nil {
 			return err, "Failed to reconcile Semeru Compiler TLS Secret", false
 		}

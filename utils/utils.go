@@ -411,8 +411,7 @@ func CustomizeKnativeServiceLibertyEnv(ksvc *servingv1.Service, la *olv1.OpenLib
 }
 
 func GetSecretLastRotationLabel(la *olv1.OpenLibertyApplication, client client.Client, secretName string, sharedResourceName string) (map[string]string, error) {
-	secret := &corev1.Secret{}
-	err := client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: la.GetNamespace()}, secret)
+	secret, err := common.GetSecret(client, secretName, la.GetNamespace())
 	if err != nil {
 		return nil, errors.Wrapf(err, "Secret %q was not found in namespace %q", secretName, la.GetNamespace())
 	}
@@ -427,26 +426,27 @@ func GetSecretLastRotationLabel(la *olv1.OpenLibertyApplication, client client.C
 }
 
 func GetSecretLastRotationAsLabelMap(la *olv1.OpenLibertyApplication, client client.Client, secretName string, sharedResourceName string) (map[string]string, error) {
-	secret := &corev1.Secret{}
-	err := client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: la.GetNamespace()}, secret)
+	secret, err := common.GetSecret(client, secretName, la.GetNamespace())
+	defer secret.Destroy()
 	if err != nil {
 		return nil, errors.Wrapf(err, "Secret %q was not found in namespace %q", secretName, la.GetNamespace())
 	}
+	lastRotationBytes, _ := secret.LockedData.Get("lastRotation")
 	return map[string]string{
-		GetLastRotationLabelKey(sharedResourceName): string(secret.Data["lastRotation"]),
+		GetLastRotationLabelKey(sharedResourceName): string(lastRotationBytes),
 	}, nil
 }
 
 func AddSecretHashAsAnnotation(pts *corev1.PodTemplateSpec, la *olv1.OpenLibertyApplication, client client.Client, secretName string) error {
-	secret := &corev1.Secret{}
-	err := client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: la.GetNamespace()}, secret)
+	secret, err := common.GetSecret(client, secretName, la.GetNamespace())
+	defer secret.Destroy()
 	if err != nil {
 		return errors.Wrapf(err, "Secret %q was not found in namespace %q", secretName, la.GetNamespace())
 	}
 	if pts.ObjectMeta.Annotations == nil {
 		pts.ObjectMeta.Annotations = make(map[string]string)
 	}
-	pts.ObjectMeta.Annotations[la.GetGroupName()+"/secret-"+secretName] = rcoutils.HashData(secret.Data)
+	pts.ObjectMeta.Annotations[la.GetGroupName()+"/secret-"+secretName] = rcoutils.HashLockedData(secret.LockedData)
 	return nil
 }
 

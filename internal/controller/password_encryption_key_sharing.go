@@ -72,6 +72,7 @@ func (r *ReconcileOpenLiberty) reconcileEncryptionKey(instance *olv1.OpenLiberty
 func (r *ReconcileOpenLiberty) reconcileAESEncryptionKey(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, thisInstanceIsLeader bool, leaderName string) (string, string, string, error) {
 	// Does the namespace already have a password encryption key sharing Secret?
 	encryptionSecret, err := r.hasInternalAESEncryptionKeySecret(instance, passwordEncryptionMetadata)
+	defer encryptionSecret.Destroy()
 	if err == nil {
 		// Return err if the password encryption key does not exist
 		if _, found := encryptionSecret.LockedData.Get(AESEncryptionKey); !found {
@@ -102,6 +103,7 @@ func (r *ReconcileOpenLiberty) reconcileAESEncryptionKey(instance *olv1.OpenLibe
 func (r *ReconcileOpenLiberty) reconcilePasswordEncryptionKey(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, thisInstanceIsLeader bool, leaderName string) (string, string, string, error) {
 	// Does the namespace already have a password encryption key sharing Secret?
 	encryptionSecret, err := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata)
+	defer encryptionSecret.Destroy()
 	if err == nil {
 		// Return err if the password encryption key does not exist
 		if _, found := encryptionSecret.LockedData[PasswordEncryptionKey]; !found {
@@ -255,11 +257,14 @@ func (r *ReconcileOpenLiberty) getValidInternalEncryptionKey(instance *olv1.Open
 	aesSecret, err := r.hasInternalAESEncryptionKeySecret(instance, passwordEncryptionMetadata)
 	aesFound := !kerrors.IsNotFound(err)
 	if aesFound && err != nil {
+		aesSecret.Destroy()
 		return nil, sharingEnabled, aesFound, err
 	}
 	passwordSecret, err := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata)
 	passwordFound := !kerrors.IsNotFound(err)
 	if passwordFound && err != nil {
+		aesSecret.Destroy()
+		passwordSecret.Destroy()
 		return nil, sharingEnabled, aesFound, err
 	}
 
@@ -268,29 +273,54 @@ func (r *ReconcileOpenLiberty) getValidInternalEncryptionKey(instance *olv1.Open
 
 	aesFoundAndValid := aesFound && aesValid
 	passwordFoundAndValid := passwordFound && passwordValid
+
 	if aesFoundAndValid {
-		// use AES
+		// Destroy the secret we're NOT returning
+		passwordSecret.Destroy()
 		return aesSecret, sharingEnabled, aesFound, nil
 	} else if passwordFoundAndValid {
-		// use password
+		// Destroy the secret we're NOT returning
+		aesSecret.Destroy()
 		return passwordSecret, sharingEnabled, aesFound, nil
 	}
 
 	// if aes/password were found but not valid then return a warning
 	if aesFound {
+		aesSecret.Destroy()
+		passwordSecret.Destroy()
 		return nil, sharingEnabled, aesFound, fmt.Errorf("the wlp-aes-encryption-key Secret was found but contained an invalid field")
 	} else if passwordFound {
+		aesSecret.Destroy()
+		passwordSecret.Destroy()
 		return nil, sharingEnabled, aesFound, fmt.Errorf("the wlp-password-encryption-key Secret was found but contained an invalid field")
 	}
-	// do not error if aes and password were not found
+
+	aesSecret.Destroy()
+	passwordSecret.Destroy()
 	return nil, sharingEnabled, aesFound, nil
 }
 
-func (r *ReconcileOpenLiberty) getInternalEncryptionKeyState(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) ([]byte, []byte, bool, bool, error) {
+func (r *ReconcileOpenLiberty) getInternalEncryptionKeyState(instance *olv1.OpenLibertyApplication, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (*common.LockedBufferSecret, bool, bool, error) {
 	encryptionSecret, sharingEnabled, usingAES, err := r.getValidInternalEncryptionKey(instance, passwordEncryptionMetadata)
+
 	if !sharingEnabled {
-		return []byte{}, []byte{}, sharingEnabled, false, nil
+		if encryptionSecret != nil {
+			encryptionSecret.Destroy()
+		}
+		return nil, sharingEnabled, false, nil
 	}
+
+	if err != nil {
+		if encryptionSecret != nil {
+			encryptionSecret.Destroy()
+		}
+		return nil, sharingEnabled, false, err
+	}
+
+	if encryptionSecret == nil {
+		return nil, sharingEnabled, false, fmt.Errorf("a password encryption key Secret was either not found or misconfigured")
+	}
+
 	matchedKey := ""
 	if usingAES {
 		matchedKey = AESEncryptionKey
@@ -298,11 +328,15 @@ func (r *ReconcileOpenLiberty) getInternalEncryptionKeyState(instance *olv1.Open
 		matchedKey = PasswordEncryptionKey
 	}
 
-	key, lastRotation, valid := r.getEncryptionKeyData(encryptionSecret, matchedKey)
+	_, _, valid := r.getEncryptionKeyData(encryptionSecret, matchedKey)
+
 	if !valid {
-		return []byte{}, []byte{}, sharingEnabled, false, fmt.Errorf("a password encryption key Secret was either not found or misconfigured")
+		encryptionSecret.Destroy()
+		return nil, sharingEnabled, false, fmt.Errorf("a password encryption key Secret was either not found or misconfigured")
 	}
-	return key, lastRotation, sharingEnabled, usingAES, err
+
+	// Return the secret - caller is responsible for destroying it
+	return encryptionSecret, sharingEnabled, usingAES, err
 }
 
 func (r *ReconcileOpenLiberty) getEncryptionKeyNameFromRef(secretNameRef string, passwordEncryptionMetadataName string) (string, string) {
@@ -381,12 +415,14 @@ func (r *ReconcileOpenLiberty) mirrorEncryptionKeySecretState(instance *olv1.Ope
 	hasInternalSecretFunc func(*olv1.OpenLibertyApplication, *lutils.PasswordEncryptionMetadata) (*common.LockedBufferSecret, error),
 	syncedKey string) error {
 	userEncryptionSecret, userEncryptionSecretErr := hasUserSecretFunc(instance, passwordEncryptionMetadata)
+	defer userEncryptionSecret.Destroy()
 	userEncryptionFound := !kerrors.IsNotFound(userEncryptionSecretErr)
 	// Error if there was an issue getting the userEncryptionSecret
 	if userEncryptionFound && userEncryptionSecretErr != nil {
 		return userEncryptionSecretErr
 	}
 	internalEncryptionSecret, internalEncryptionSecretErr := hasInternalSecretFunc(instance, passwordEncryptionMetadata)
+	defer internalEncryptionSecret.Destroy()
 	internalEncryptionFound := !kerrors.IsNotFound(internalEncryptionSecretErr)
 	// Error if there was an issue getting the internalEncryptionSecret
 	if internalEncryptionFound && internalEncryptionSecretErr != nil {
@@ -419,10 +455,12 @@ func (r *ReconcileOpenLiberty) mirrorEncryptionKeySecretState(instance *olv1.Ope
 		return fmt.Errorf("could not get user encryption key data for %s", syncedKey)
 	}
 	if subtle.ConstantTimeCompare(internalPasswordEncryptionKey, userPasswordEncryptionKey) != 1 {
-		internalEncryptionSecret.LockedData[syncedKey].Copy(userPasswordEncryptionKey)
-		internalEncryptionSecret.LockedData["lastRotation"].Copy([]byte(fmt.Sprint(time.Now().Unix())))
+		internalEncryptionSecret.LockedData.SetCopy(syncedKey, userPasswordEncryptionKey)
+		internalEncryptionSecret.LockedData.Set("lastRotation", []byte(fmt.Sprint(time.Now().Unix())))
 	}
-	return r.CreateOrUpdateSecret(internalEncryptionSecret, nil)
+	objCleanup, err := r.CreateOrUpdateSecret(internalEncryptionSecret, nil, func() error { return nil })
+	defer objCleanup()
+	return err
 }
 
 // Creates the Liberty XML to mount the password encryption keys Secret into the application pods
@@ -444,7 +482,9 @@ func (r *ReconcileOpenLiberty) createPasswordEncryptionKeyLibertyConfig(instance
 	if err := lutils.CustomizePasswordEncryptionKeyXML(encryptionXMLSecret, encryptionKey); err != nil {
 		return err
 	}
-	if err := r.CreateOrUpdateSecret(encryptionXMLSecret, nil); err != nil {
+	objCleanup, err := r.CreateOrUpdateSecret(encryptionXMLSecret, nil, func() error { return nil })
+	defer objCleanup()
+	if err != nil {
 		return err
 	}
 
@@ -461,7 +501,9 @@ func (r *ReconcileOpenLiberty) createPasswordEncryptionKeyLibertyConfig(instance
 
 	mountDir := strings.Replace(lutils.SecureMountPath+"/"+lutils.EncryptionKeyXMLFileName, "/output", "${server.output.dir}", 1)
 	lutils.CustomizeLibertyFileMountXML(mountingXMLSecret, lutils.EncryptionKeyMountXMLFileName, mountDir)
-	if err := r.CreateOrUpdateSecret(mountingXMLSecret, nil); err != nil {
+	objCleanup, err = r.CreateOrUpdateSecret(mountingXMLSecret, nil, func() error { return nil })
+	defer objCleanup()
+	if err != nil {
 		return err
 	}
 	return nil
@@ -487,7 +529,9 @@ func (r *ReconcileOpenLiberty) createAESEncryptionKeyLibertyConfig(instance *olv
 	if err := lutils.CustomizeAESEncryptionKeyXML(encryptionXMLSecret, encryptionKey); err != nil {
 		return err
 	}
-	if err := r.CreateOrUpdateSecret(encryptionXMLSecret, nil); err != nil {
+	objCleanup, err := r.CreateOrUpdateSecret(encryptionXMLSecret, nil, func() error { return nil })
+	defer objCleanup()
+	if err != nil {
 		return err
 	}
 
@@ -505,10 +549,11 @@ func (r *ReconcileOpenLiberty) createAESEncryptionKeyLibertyConfig(instance *olv
 	if err := lutils.CustomizeLibertyFileMountXML(mountingXMLSecret, lutils.EncryptionKeyMountXMLFileName, mountDir); err != nil {
 		return err
 	}
-	if err := r.CreateOrUpdateSecret(mountingXMLSecret, nil); err != nil {
+	objCleanup, err = r.CreateOrUpdateSecret(mountingXMLSecret, nil, func() error { return nil })
+	defer objCleanup()
+	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
