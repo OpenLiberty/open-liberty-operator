@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -309,9 +310,29 @@ func verifyReconcile(res reconcile.Result, err error) error {
 	return nil
 }
 
+func deepEqualWithByteSlices(actual, expected interface{}) bool {
+	actualMap, actualIsMap := actual.(map[string][]byte)
+	expectedMap, expectedIsMap := expected.(map[string][]byte)
+
+	if actualIsMap && expectedIsMap {
+		if len(actualMap) != len(expectedMap) {
+			return false
+		}
+		for key, expectedVal := range expectedMap {
+			actualVal, exists := actualMap[key]
+			if !exists || !bytes.Equal(actualVal, expectedVal) {
+				return false
+			}
+		}
+		return true
+	}
+
+	return reflect.DeepEqual(actual, expected)
+}
+
 func verifyTests(tests []Test) error {
 	for _, tt := range tests {
-		if !reflect.DeepEqual(tt.actual, tt.expected) {
+		if !deepEqualWithByteSlices(tt.actual, tt.expected) {
 			return fmt.Errorf("%s test expected: (%v) actual: (%v)", tt.test, tt.expected, tt.actual)
 		}
 	}

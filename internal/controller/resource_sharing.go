@@ -9,7 +9,7 @@ import (
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	lutils "github.com/OpenLiberty/open-liberty-operator/utils"
 	tree "github.com/OpenLiberty/open-liberty-operator/utils/tree"
-	corev1 "k8s.io/api/core/v1"
+	"github.com/application-stacks/runtime-component-operator/common"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -60,7 +60,7 @@ func (r *ReconcileOpenLiberty) reconcileLeader(instance *olv1.OpenLibertyApplica
 	return r.reconcileLeaderWithState(instance, leaderTracker, leaderTrackers, leaderMetadata, shouldElectNewLeader, leaderTrackerType)
 }
 
-func (r *ReconcileOpenLiberty) reconcileLeaderWithState(instance *olv1.OpenLibertyApplication, leaderTracker *corev1.Secret, leaderTrackers *[]lutils.LeaderTracker, leaderMetadata lutils.LeaderTrackerMetadata, shouldElectNewLeader bool, leaderTrackerType string) (string, bool, string, error) {
+func (r *ReconcileOpenLiberty) reconcileLeaderWithState(instance *olv1.OpenLibertyApplication, leaderTracker *common.LockedBufferSecret, leaderTrackers *[]lutils.LeaderTracker, leaderMetadata lutils.LeaderTrackerMetadata, shouldElectNewLeader bool, leaderTrackerType string) (string, bool, string, error) {
 	initialLeaderIndex := -1
 	for i, tracker := range *leaderTrackers {
 		if tracker.Name == leaderMetadata.GetName() {
@@ -192,6 +192,9 @@ func (r *ReconcileOpenLiberty) reconcileLeaderTracker(instance *olv1.OpenLiberty
 	leaderTracker, _, err := lutils.GetLeaderTracker(instance, OperatorShortName, leaderTrackerType, r.GetClient())
 	// If the Leader Tracker is missing, create from scratch
 	if err != nil && kerrors.IsNotFound(err) {
+		if leaderTracker.Labels == nil {
+			leaderTracker.Labels = make(map[string]string)
+		}
 		leaderTracker.Labels[lutils.LeaderVersionLabel] = latestOperandVersion
 		leaderTracker.ResourceVersion = ""
 		leaderTrackers, err := r.createNewLeaderTrackerList(instance, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, assetsFolder)
@@ -209,7 +212,7 @@ func (r *ReconcileOpenLiberty) reconcileLeaderTracker(instance *olv1.OpenLiberty
 	return nil
 }
 
-func (r *ReconcileOpenLiberty) SaveLeaderTracker(leaderTracker *corev1.Secret, trackerList *[]lutils.LeaderTracker, leaderTrackerType string) error {
+func (r *ReconcileOpenLiberty) SaveLeaderTracker(leaderTracker *common.LockedBufferSecret, trackerList *[]lutils.LeaderTracker, leaderTrackerType string) error {
 	leaderMutex, mutexFound := lutils.LeaderTrackerMutexes.Load(leaderTrackerType)
 	if !mutexFound {
 		return fmt.Errorf("Could not get %s leader tracker's mutex when attempting to save. Exiting.", leaderTrackerType)
@@ -217,24 +220,28 @@ func (r *ReconcileOpenLiberty) SaveLeaderTracker(leaderTracker *corev1.Secret, t
 	leaderMutex.(*sync.Mutex).Lock()
 	defer leaderMutex.(*sync.Mutex).Unlock()
 
-	return r.CreateOrUpdate(leaderTracker, nil, func() error {
-		lutils.CustomizeLeaderTracker(leaderTracker, trackerList)
-		return nil
-	})
+	lutils.CustomizeLeaderTracker(leaderTracker, trackerList)
+
+	objCleanup, err := r.CreateOrUpdateSecret(leaderTracker, nil, func() error { return nil })
+	defer objCleanup()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (r *ReconcileOpenLiberty) DeleteLeaderTracker(leaderTracker *corev1.Secret, leaderTrackerType string) error {
+func (r *ReconcileOpenLiberty) DeleteLeaderTracker(leaderTracker *common.LockedBufferSecret, leaderTrackerType string) error {
 	leaderMutex, mutexFound := lutils.LeaderTrackerMutexes.Load(leaderTrackerType)
 	if !mutexFound {
 		return fmt.Errorf("Could not get %s leader tracker's mutex when attempting to delete. Exiting.", leaderTrackerType)
 	}
 	leaderMutex.(*sync.Mutex).Lock()
 	defer leaderMutex.(*sync.Mutex).Unlock()
-	return r.DeleteResource(leaderTracker)
+	return r.DeleteSecretResource(leaderTracker)
 }
 
 // Removes the instance as leader if instance is the leader and if no leaders are being tracked then delete the leader tracking Secret
-func (r *ReconcileOpenLiberty) RemoveLeader(instance *olv1.OpenLibertyApplication, leaderTracker *corev1.Secret, leaderTrackers *[]lutils.LeaderTracker, leaderTrackerType string) error {
+func (r *ReconcileOpenLiberty) RemoveLeader(instance *olv1.OpenLibertyApplication, leaderTracker *common.LockedBufferSecret, leaderTrackers *[]lutils.LeaderTracker, leaderTrackerType string) error {
 	changeDetected := false
 	noOwners := true
 	// If the instance is being tracked, remove it

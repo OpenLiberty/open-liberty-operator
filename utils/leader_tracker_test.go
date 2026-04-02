@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	openlibertyv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
+	"github.com/application-stacks/runtime-component-operator/common"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -19,7 +20,7 @@ import (
 )
 
 func TestCustomizeLeaderTrackerNil(t *testing.T) {
-	leaderTracker := &corev1.Secret{}
+	leaderTracker := &common.LockedBufferSecret{}
 	leaderTracker.Name = "leader-tracker-test"
 
 	CustomizeLeaderTracker(leaderTracker, nil)
@@ -30,8 +31,11 @@ func TestCustomizeLeaderTrackerNil(t *testing.T) {
 	expectedLeaderTrackerData[ResourcePathIndicesKey] = []byte("")
 	expectedLeaderTrackerData[ResourcePathsKey] = []byte("")
 
+	leaderTrackerObject := &corev1.Secret{}
+	common.CopySecret(leaderTracker, leaderTrackerObject)
+
 	tests := []Test{
-		{"nil leader tracker list", expectedLeaderTrackerData, leaderTracker.Data},
+		{"nil leader tracker list", expectedLeaderTrackerData, leaderTrackerObject.Data},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -39,7 +43,7 @@ func TestCustomizeLeaderTrackerNil(t *testing.T) {
 }
 
 func TestCustomizeLeaderTrackerEmpty(t *testing.T) {
-	leaderTracker := &corev1.Secret{}
+	leaderTracker := &common.LockedBufferSecret{}
 	leaderTracker.Name = "leader-tracker-test"
 
 	trackerList := make([]LeaderTracker, 0)
@@ -51,8 +55,11 @@ func TestCustomizeLeaderTrackerEmpty(t *testing.T) {
 	expectedLeaderTrackerData[ResourcePathIndicesKey] = []byte("")
 	expectedLeaderTrackerData[ResourcePathsKey] = []byte("")
 
+	leaderTrackerObject := &corev1.Secret{}
+	common.CopySecret(leaderTracker, leaderTrackerObject)
+
 	tests := []Test{
-		{"empty leader tracker list", expectedLeaderTrackerData, leaderTracker.Data},
+		{"empty leader tracker list", expectedLeaderTrackerData, leaderTrackerObject.Data},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -60,7 +67,7 @@ func TestCustomizeLeaderTrackerEmpty(t *testing.T) {
 }
 
 func TestCustomizeLeaderTrackerSingle(t *testing.T) {
-	leaderTracker := &corev1.Secret{}
+	leaderTracker := &common.LockedBufferSecret{}
 	leaderTracker.Name = "leader-tracker-test"
 
 	ref1LeaderTracker := createMock1LeaderTracker()
@@ -75,8 +82,11 @@ func TestCustomizeLeaderTrackerSingle(t *testing.T) {
 	expectedLeaderTrackerData[ResourcePathIndicesKey] = []byte(ref1LeaderTracker.PathIndex)
 	expectedLeaderTrackerData[ResourcePathsKey] = []byte(ref1LeaderTracker.Path)
 
+	leaderTrackerObject := &corev1.Secret{}
+	common.CopySecret(leaderTracker, leaderTrackerObject)
+
 	tests := []Test{
-		{"single entry leader tracker", expectedLeaderTrackerData, leaderTracker.Data},
+		{"single entry leader tracker", expectedLeaderTrackerData, leaderTrackerObject.Data},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -84,7 +94,7 @@ func TestCustomizeLeaderTrackerSingle(t *testing.T) {
 }
 
 func TestCustomizeLeaderTrackerMultiple(t *testing.T) {
-	leaderTracker := &corev1.Secret{}
+	leaderTracker := &common.LockedBufferSecret{}
 	leaderTracker.Name = "leader-tracker-test"
 
 	ref1LeaderTracker, ref2LeaderTracker := createMock1LeaderTracker(), createMock2LeaderTracker()
@@ -100,8 +110,11 @@ func TestCustomizeLeaderTrackerMultiple(t *testing.T) {
 	expectedLeaderTrackerData[ResourcePathIndicesKey] = []byte(fmt.Sprintf("%s,%s", ref1LeaderTracker.PathIndex, ref2LeaderTracker.PathIndex))
 	expectedLeaderTrackerData[ResourcePathsKey] = []byte(fmt.Sprintf("%s,%s", ref1LeaderTracker.Path, ref2LeaderTracker.Path))
 
+	leaderTrackerObject := &corev1.Secret{}
+	common.CopySecret(leaderTracker, leaderTrackerObject)
+
 	tests := []Test{
-		{"multiple entry leader tracker", expectedLeaderTrackerData, leaderTracker.Data},
+		{"multiple entry leader tracker", expectedLeaderTrackerData, leaderTrackerObject.Data},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
@@ -114,8 +127,11 @@ func TestCustomizeLeaderTrackerMultiple(t *testing.T) {
 	expectedLeaderTrackerData[ResourcePathIndicesKey] = []byte(ref2LeaderTracker.PathIndex)
 	expectedLeaderTrackerData[ResourcePathsKey] = []byte(ref2LeaderTracker.Path)
 
+	leaderTrackerObject = &corev1.Secret{}
+	common.CopySecret(leaderTracker, leaderTrackerObject)
+
 	tests = []Test{
-		{"remove entry leader tracker", expectedLeaderTrackerData, leaderTracker.Data},
+		{"remove entry leader tracker", expectedLeaderTrackerData, leaderTrackerObject.Data},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
