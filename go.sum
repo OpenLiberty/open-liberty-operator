@@ -6,6 +6,16 @@ github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuy
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260327225429-709a9040fc8a h1:01GkoNWIYJozWZ3i+m2xB7i4vm5CCShJxJpG0474vrY=
 github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260327225429-709a9040fc8a/go.mod h1:8uT4+lcM6553yJjUAhDQ9Md5c1Klf7zubAClxmeqeNE=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260330195439-9b8b59cbbf54 h1:r0OOVkqhHczsVreZpVrL5MJ7lCTUMXq6eMChWAg7iMY=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260330195439-9b8b59cbbf54/go.mod h1:8uT4+lcM6553yJjUAhDQ9Md5c1Klf7zubAClxmeqeNE=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260330204446-7330851ccb58 h1:8nmj78sqaLsqRs2Bfd3DjAIxvhuInMvxjOIZcmB3rJ0=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260330204446-7330851ccb58/go.mod h1:8uT4+lcM6553yJjUAhDQ9Md5c1Klf7zubAClxmeqeNE=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260331000809-0ffdf2a4039a h1:u/Qr05RB+ofU8cCE5IRCU5oDfVhqBKRszIhZsmy4TIo=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260331000809-0ffdf2a4039a/go.mod h1:8uT4+lcM6553yJjUAhDQ9Md5c1Klf7zubAClxmeqeNE=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260331002309-4d5ca50d6c76 h1:edFDuQqEe/4bseT1EgmkZFzontb+mhVxc45Zefse7cQ=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260331002309-4d5ca50d6c76/go.mod h1:8uT4+lcM6553yJjUAhDQ9Md5c1Klf7zubAClxmeqeNE=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260331144835-accd4bddb3cc h1:zMiACP0UKuqBW4TNr9kToKw44BXDpkI47tXOfHvL/KE=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260331144835-accd4bddb3cc/go.mod h1:8uT4+lcM6553yJjUAhDQ9Md5c1Klf7zubAClxmeqeNE=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
 github.com/awnumar/memcall v0.4.0 h1:B7hgZYdfH6Ot1Goaz8jGne/7i8xD4taZie/PNSFZ29g=
