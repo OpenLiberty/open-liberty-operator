@@ -293,7 +293,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 		}
 		if encryptionSecret != nil {
 			if encryptionKeyLastRotation, found := encryptionSecret.LockedData.Get("lastRotation"); found && subtle.ConstantTimeCompare(encryptionKeyLastRotation, []byte{}) != 1 {
-				ltpaSecret.LockedData.Set("encryptionKeyLastRotation", []byte(encryptionKeyLastRotation))
+				ltpaSecret.LockedData.SetCopy("encryptionKeyLastRotation", encryptionKeyLastRotation)
 			}
 		}
 		lastRotation := strconv.FormatInt(time.Now().Unix(), 10)
