@@ -282,12 +282,12 @@ func TestLTPALeaderTracker(t *testing.T) {
 	err1 = r.RemoveLeaderTrackerReference(instance, LTPA_RESOURCE_SHARING_FILE_NAME)
 	err2 = r.RemoveLeader(instance, leaderTracker, leaderTrackers, LTPA_RESOURCE_SHARING_FILE_NAME)
 	_, leaderTrackers, leaderTrackerErr := lutils.GetLeaderTracker(instance, OperatorShortName, LTPA_RESOURCE_SHARING_FILE_NAME, r.GetClient())
-	var nilLeaderTrackers *[]lutils.LeaderTracker
+	emptyLeaderTrackers := &[]lutils.LeaderTracker{}
 	tests = []Test{
 		{"remove LTPA - deleteLTPAKeysResource errors", nil, err1},
 		{"remove LTPA - RemoveLeader errors", nil, err2},
 		{"remove LTPA - GetLeaderTracker is not found", true, kerrors.IsNotFound(leaderTrackerErr)},
-		{"remove LTPA - leader trackers list is nil", nilLeaderTrackers, leaderTrackers},
+		{"remove LTPA - leader trackers list is empty", emptyLeaderTrackers, leaderTrackers},
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)

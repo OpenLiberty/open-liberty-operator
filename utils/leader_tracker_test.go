@@ -332,11 +332,11 @@ func TestGetLeaderTrackerWithoutSecret(t *testing.T) {
 	s.AddKnownTypes(openlibertyv1.GroupVersion, instance)
 	cl := fakeclient.NewFakeClient(objs...)
 
-	var referenceLeaderTrackers *[]LeaderTracker
+	emptyLeaderTrackers := &[]LeaderTracker{}
 	leaderTrackerSecret, leaderTrackers, err := GetLeaderTracker(instance, "olo", "ltpa", cl)
 	tests := []Test{
 		{"get leader tracker without secret - secret name matches", "olo-managed-leader-tracking-ltpa", leaderTrackerSecret.Name},
-		{"get leader tracker without secret - leaderTrackers is nil", referenceLeaderTrackers, leaderTrackers},
+		{"get leader tracker without secret - leaderTrackers is empty", emptyLeaderTrackers, leaderTrackers},
 		{"get leader tracker without secret - resource not found", true, kerrors.IsNotFound(err)},
 	}
 	if err := verifyTests(tests); err != nil {
