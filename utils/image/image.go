@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/application-stacks/runtime-component-operator/common"
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
@@ -38,15 +37,15 @@ var ValidLibertyVersionLabels = []string{"liberty.version", "io.openliberty.vers
 type NamespaceCredentialsContext struct {
 	transport         http.RoundTripper
 	insecureTransport http.RoundTripper
-	protectedSecrets  []*common.LockedBufferSecret
+	secrets           []corev1.Secret
 	contexts          sync.Map
 	reqLogger         logr.Logger
 }
 
-func NewNamespaceCredentialsContext(reqLogger logr.Logger, protectedSecrets []*common.LockedBufferSecret, namespace string) *NamespaceCredentialsContext {
+func NewNamespaceCredentialsContext(reqLogger logr.Logger, secrets []corev1.Secret, namespace string) *NamespaceCredentialsContext {
 	return &NamespaceCredentialsContext{
-		protectedSecrets: protectedSecrets,
-		reqLogger:        reqLogger.WithValues("Request.Namespace", namespace).V(2).WithName("NamespaceCredentialsContext"),
+		secrets:   secrets,
+		reqLogger: reqLogger.WithValues("Request.Namespace", namespace).V(2).WithName("NamespaceCredentialsContext"),
 	}
 }
 
@@ -73,29 +72,8 @@ func (s *NamespaceCredentialsContext) Repository(
 		return importCtx.Repository(ctx, defRef.RegistryURL(), defRef.RepositoryName(), insecure)
 	}
 
-	// Convert protected secrets to regular secrets temporarily for keyring creation
-	// The secrets.MakeDockerKeyring function requires []corev1.Secret
-	regularSecrets := make([]corev1.Secret, 0, len(s.protectedSecrets))
-	for _, protectedSecret := range s.protectedSecrets {
-		regularSecret := &corev1.Secret{}
-		common.CopySecret(protectedSecret, regularSecret)
-		regularSecrets = append(regularSecrets, *regularSecret)
-	}
-
-	// Clear unprotected secret data after use
-	defer func() {
-		for i := range regularSecrets {
-			for key := range regularSecrets[i].Data {
-				clear(regularSecrets[i].Data[key])
-			}
-			clear(regularSecrets[i].Data)
-			clear(regularSecrets[i].StringData)
-		}
-		clear(regularSecrets)
-	}()
-
 	instanceKeyring := &credentialprovider.BasicDockerKeyring{}
-	keyring, err := secrets.MakeDockerKeyring(regularSecrets, instanceKeyring)
+	keyring, err := secrets.MakeDockerKeyring(s.secrets, instanceKeyring)
 	if err != nil {
 		s.reqLogger.Error(err, "Failed to create docker keyring")
 		return nil, err

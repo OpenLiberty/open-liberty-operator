@@ -1139,13 +1139,15 @@ func (r *ReconcileOpenLiberty) deletePVC(reqLogger logr.Logger, pvcName string, 
 }
 
 func (r *ReconcileOpenLiberty) getContainerImageMetadata(reqLogger logr.Logger, olapp *openlibertyv1.OpenLibertyApplication, imageRef imagev1.DockerImageReference) (string, *runtime.RawExtension, error) {
-	var protectedSecrets []*common.LockedBufferSecret
-
+	olappSecrets := []corev1.Secret{}
+	var pullSecret *corev1.Secret
 	if olapp.GetPullSecret() != nil {
 		pullSecretNames := oputils.DecodeStringToList(*olapp.GetPullSecret())
 		for _, pullSecretName := range pullSecretNames {
-			pullSecret, err := common.GetSecret(r.GetClient(), pullSecretName, olapp.GetNamespace())
-			defer pullSecret.Destroy()
+			pullSecret = &corev1.Secret{}
+			pullSecret.Name = pullSecretName
+			pullSecret.Namespace = olapp.GetNamespace()
+			err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: pullSecretName, Namespace: olapp.GetNamespace()}, pullSecret)
 			if err != nil {
 				if !kerrors.IsNotFound(err) {
 					reqLogger.Error(err, fmt.Sprintf("Failed to get the instance pull secret %s", pullSecretName))
@@ -1154,10 +1156,12 @@ func (r *ReconcileOpenLiberty) getContainerImageMetadata(reqLogger logr.Logger, 
 				reqLogger.Info(fmt.Sprintf("The instance pull secret %s does not exist", pullSecretName))
 				break
 			}
-			protectedSecrets = append(protectedSecrets, pullSecret)
+			if pullSecret != nil {
+				olappSecrets = append(olappSecrets, *pullSecret)
+			}
 		}
 	}
-	return libertyimage.NewNamespaceCredentialsContext(reqLogger, protectedSecrets, olapp.GetNamespace()).GetContainerImageMetadata(context.TODO(), imageRef, false)
+	return libertyimage.NewNamespaceCredentialsContext(reqLogger, olappSecrets, olapp.GetNamespace()).GetContainerImageMetadata(context.TODO(), imageRef, false)
 }
 
 func (r *ReconcileOpenLiberty) checkLibertyVersionGuards(instance *openlibertyv1.OpenLibertyApplication) error {
