@@ -205,20 +205,24 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		return reconcile.Result{}, nil
 	}
 
-	// Check if previously tracked encryption key still exists before reconciling resources
-	if r.isPasswordEncryptionKeySharingEnabled(instance) {
-		secretNameRef := instance.Status.GetReferences()[lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)]
-		if secretNameRef != "" {
-			passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{}
-			passwordEncryptionSecretName, dataFieldName := r.getEncryptionKeyNameFromRef(secretNameRef, passwordEncryptionMetadata.Name)
-			_, err := common.GetSecret(r.GetClient(), passwordEncryptionSecretName, instance.GetNamespace())
-			if kerrors.IsNotFound(err) {
-				err := errors.Wrapf(fmt.Errorf("Secret %q not found", passwordEncryptionSecretName), "Secret for Password Encryption was not found. Create a secret named %q in namespace %q with the encryption key specified in data field %q", passwordEncryptionSecretName, instance.GetNamespace(), dataFieldName)
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			} else if err != nil {
-				return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-			}
+	// Reconciles the shared password encryption key state for the instance namespace only if the shared key already exists
+	var passwordEncryptionMetadataList *lutils.PasswordEncryptionMetadataList
+	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{}
+	if r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata) {
+		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
+		if err != nil {
+			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 		}
+		passwordEncryptionMetadataList = leaderMetadataList.(*lutils.PasswordEncryptionMetadataList)
+		if passwordEncryptionMetadataList != nil && len(passwordEncryptionMetadataList.Items) == 1 {
+			passwordEncryptionMetadata = passwordEncryptionMetadataList.Items[0].(*lutils.PasswordEncryptionMetadata)
+		}
+	} else if r.isPasswordEncryptionKeySharingEnabled(instance) {
+		// error if the password encryption key sharing is enabled but the Secret is not found
+		secretNameRef := ba.GetStatus().GetReferences()[lutils.GetTrackedResourceName(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)]
+		passwordEncryptionSecretName, dataFieldName := r.getEncryptionKeyNameFromRef(secretNameRef, passwordEncryptionMetadata.Name)
+		err := errors.Wrapf(fmt.Errorf("Secret %q not found", passwordEncryptionSecretName), "Secret for Password Encryption was not found. Create a secret named %q in namespace %q with the encryption key specified in data field %q", passwordEncryptionSecretName, instance.GetNamespace(), dataFieldName)
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
 	if r.IsOpenShift() {
@@ -398,19 +402,6 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		if ltpaMetadataList != nil && len(ltpaMetadataList.Items) == 2 {
 			ltpaKeysMetadata = ltpaMetadataList.Items[0].(*lutils.LTPAMetadata)
 			ltpaConfigMetadata = ltpaMetadataList.Items[1].(*lutils.LTPAMetadata)
-		}
-	}
-	// Reconciles the shared password encryption key state for the instance namespace only if the shared key already exists
-	var passwordEncryptionMetadataList *lutils.PasswordEncryptionMetadataList
-	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{}
-	if r.isUsingPasswordEncryptionKeySharing(instance, passwordEncryptionMetadata) {
-		leaderMetadataList, err := r.reconcileResourceTrackingState(instance, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
-		if err != nil {
-			return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-		}
-		passwordEncryptionMetadataList = leaderMetadataList.(*lutils.PasswordEncryptionMetadataList)
-		if passwordEncryptionMetadataList != nil && len(passwordEncryptionMetadataList.Items) == 1 {
-			passwordEncryptionMetadata = passwordEncryptionMetadataList.Items[0].(*lutils.PasswordEncryptionMetadata)
 		}
 	}
 
