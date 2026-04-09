@@ -172,6 +172,7 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `networkPolicy.disable` |  [[crd-spec-networkPolicy-disable]] A Boolean to disable the creation of the network policy. The default value is `false`. By default, network policies for an application are created and limit incoming traffic.
 | `networkPolicy.fromLabels` | The labels of one or more pods from which incoming traffic is allowed.
 | `networkPolicy.namespaceLabels` | The labels of namespaces from which incoming traffic is allowed.
+| `priorityClassName` | The name of the PriorityClass to assign to the application pod. PriorityClasses define the scheduling priority and preemption behaviour of pods. For examples, see link:++https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/++[Pod Priority and Preemption].
 | `probes` | Defines health checks on an application container to determine whether it is alive or ready to receive traffic. For examples, see link:#configure-probes[Configure probes].
 | `probes.liveness` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request++[Kubernetes liveness probe] that controls when Kubernetes needs to restart the pod.
 | `probes.readiness`   | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes++[Kubernetes readiness probe] that controls when the pod is ready to receive traffic.
@@ -179,7 +180,6 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `probes.enableFileBased` | Enable file-based health checks for the Liberty container. Requires Liberty 25.0.0.6 or later with `mpHealth-4.0` feature installed and enabled within your application image at build time. Defaults to false. For examples, see link:#configure-file-based-probes[Configure file-based probes with mpHealth-4.0].
 | `probes.checkInterval` | The interval at which the Liberty runtime queries to update the file-based health check files. The value is a number followed by an optional time unit of `ms` for milliseconds or `s` for seconds. Only used when `.spec.probes.enableFiledBased` is set to `true`. Defaults to `5s`.
 | `probes.startupCheckInterval` | The interval at which the Liberty runtime queries until the UP statuses for all three health check types are established during the startup and the health check files are created. The value is a number followed by an optional time unit of `ms` for milliseconds or `s` for seconds. If no time unit is specified for a value, the value is in milliseconds by default. Only used when `.spec.probes.enableFiledBased` is set to `true`. Defaults to `100ms`.
-
 | `pullPolicy` | The policy used when pulling the image.  One of: `Always`, `Never`, and `IfNotPresent`.
 | `pullSecret` | If using a registry that requires authentication, the name of the secret containing credentials.
 | `replicas` | The static number of desired replica pods that run simultaneously.
