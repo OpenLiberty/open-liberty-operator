@@ -446,6 +446,9 @@ spec:
         path: affinity.podAffinity
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:podAffinity
+      - description: Name of the PriorityClass for the pod.
+        displayName: Priority Class Name
+        path: priorityClassName
       - description: Enables the ability to prevent running a pod on the same node
           as another pod.
         displayName: Pod Anti Affinity
