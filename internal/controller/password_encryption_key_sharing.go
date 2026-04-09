@@ -275,11 +275,9 @@ func (r *ReconcileOpenLiberty) getValidInternalEncryptionKey(instance *olv1.Open
 	passwordFoundAndValid := passwordFound && passwordValid
 
 	if aesFoundAndValid {
-		// Destroy the secret we're NOT returning
 		passwordSecret.Destroy()
 		return aesSecret, sharingEnabled, aesFound, nil
 	} else if passwordFoundAndValid {
-		// Destroy the secret we're NOT returning
 		aesSecret.Destroy()
 		return passwordSecret, sharingEnabled, aesFound, nil
 	}
