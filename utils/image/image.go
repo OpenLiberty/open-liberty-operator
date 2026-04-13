@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,8 +16,6 @@ import (
 	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/distribution/distribution/v3/registry/client/auth"
 	"github.com/go-logr/logr"
-	"github.com/moby/moby/api/types/registry"
-	dockerregistry "github.com/moby/moby/v2/daemon/pkg/registry"
 	godigest "github.com/opencontainers/go-digest"
 	imagev1 "github.com/openshift/api/image/v1"
 	"github.com/openshift/library-go/pkg/image/reference"
@@ -34,6 +33,11 @@ const (
 
 var ValidLibertyVersionLabels = []string{"liberty.version", "io.openliberty.version", "com.ibm.websphere.liberty.version", "org.opencontainers.image.version", "version"}
 
+type staticCredentialStore struct {
+	username string
+	password string
+}
+
 type NamespaceCredentialsContext struct {
 	transport         http.RoundTripper
 	insecureTransport http.RoundTripper
@@ -47,6 +51,17 @@ func NewNamespaceCredentialsContext(reqLogger logr.Logger, secrets []corev1.Secr
 		secrets:   secrets,
 		reqLogger: reqLogger.WithValues("Request.Namespace", namespace).V(2).WithName("NamespaceCredentialsContext"),
 	}
+}
+
+func (s staticCredentialStore) Basic(*url.URL) (string, string) {
+	return s.username, s.password
+}
+
+func (s staticCredentialStore) RefreshToken(*url.URL, string) string {
+	return ""
+}
+
+func (s staticCredentialStore) SetRefreshToken(*url.URL, string, string) {
 }
 
 func convertImageV1ToReferenceDockerImageReference(refIn imagev1.DockerImageReference) reference.DockerImageReference {
@@ -91,10 +106,10 @@ func (s *NamespaceCredentialsContext) Repository(
 
 	var credentials auth.CredentialStore = registryclient.NoCredentials
 	if auths, found := keyring.Lookup(defRef.String()); found {
-		credentials = dockerregistry.NewStaticCredentialStore(&registry.AuthConfig{
-			Username: auths[0].Username,
-			Password: auths[0].Password,
-		})
+		credentials = staticCredentialStore{
+			username: auths[0].Username,
+			password: auths[0].Password,
+		}
 		s.reqLogger.Info(fmt.Sprintf("Created auth credentials for user %s based on image ref %s", auths[0].Username, defRef.String()))
 	}
 
