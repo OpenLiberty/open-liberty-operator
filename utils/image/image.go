@@ -34,8 +34,9 @@ const (
 var ValidLibertyVersionLabels = []string{"liberty.version", "io.openliberty.version", "com.ibm.websphere.liberty.version", "org.opencontainers.image.version", "version"}
 
 type staticCredentialStore struct {
-	username string
-	password string
+	username      string
+	password      string
+	identityToken string
 }
 
 type NamespaceCredentialsContext struct {
@@ -58,10 +59,11 @@ func (s staticCredentialStore) Basic(*url.URL) (string, string) {
 }
 
 func (s staticCredentialStore) RefreshToken(*url.URL, string) string {
-	return ""
+	return s.identityToken
 }
 
-func (s staticCredentialStore) SetRefreshToken(*url.URL, string, string) {
+func (s staticCredentialStore) SetRefreshToken(u *url.URL, service, token string) {
+	s.identityToken = token
 }
 
 func convertImageV1ToReferenceDockerImageReference(refIn imagev1.DockerImageReference) reference.DockerImageReference {
