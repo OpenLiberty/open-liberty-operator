@@ -170,6 +170,10 @@ type OpenLibertyApplicationSpec struct {
 	// The list of hostnames and IPs that will be injected into the application pod's hosts file
 	// +operator-sdk:csv:customresourcedefinitions:order=36,type=spec,displayName="Host Aliases"
 	HostAliases []corev1.HostAlias `json:"hostAliases,omitempty"`
+
+	// Name of the PriorityClass for the pod.
+	// +operator-sdk:csv:customresourcedefinitions:order=38,type=spec,displayName="Priority Class Name"
+	PriorityClassName *string `json:"priorityClassName,omitempty"`
 }
 
 // Defines the DNS
@@ -1392,6 +1396,10 @@ func (d *OpenLibertyApplicationDNS) GetConfig() *corev1.PodDNSConfig {
 
 func (cr *OpenLibertyApplication) GetHostAliases() []corev1.HostAlias {
 	return cr.Spec.HostAliases
+}
+
+func (cr *OpenLibertyApplication) GetPriorityClassName() *string {
+	return cr.Spec.PriorityClassName
 }
 
 // Initialize sets default values
