@@ -1158,6 +1158,22 @@ func (r *ReconcileOpenLiberty) getContainerImageMetadata(reqLogger logr.Logger, 
 			}
 		}
 	}
+
+	// If running on OpenShift, also read from the global pull secret
+	if r.IsOpenShift() {
+		globalPullSecret := &corev1.Secret{}
+		if err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}, globalPullSecret); err != nil {
+			if kerrors.IsNotFound(err) {
+				reqLogger.Info("Global pull secret does not exist in openshift-config namespace")
+			} else {
+				reqLogger.Error(err, "Failed to get global pull secret from openshift-config namespace")
+			}
+		} else {
+			olappSecrets = append(olappSecrets, *globalPullSecret)
+			reqLogger.Info("Added global pull secret from openshift-config namespace to credentials")
+		}
+	}
+
 	return libertyimage.NewNamespaceCredentialsContext(reqLogger, olappSecrets, olapp.GetNamespace()).GetContainerImageMetadata(context.TODO(), imageRef, pullSecret, false)
 }
 
