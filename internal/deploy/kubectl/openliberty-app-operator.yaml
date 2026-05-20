@@ -362,9 +362,17 @@ spec:
       serviceAccountName: olo-controller-manager
       terminationGracePeriodSeconds: 10
       volumes:
-      - emptyDir:
-          sizeLimit: 20Mi
+      - ephemeral:
+          volumeClaimTemplate:
+            spec:
+              resources:
+                requests:
+                  storage: 20Mi
         name: scratch
-      - emptyDir:
-          sizeLimit: 20Mi
+      - ephemeral:
+          volumeClaimTemplate:
+            spec:
+              resources:
+                requests:
+                  storage: 20Mi
         name: socket
