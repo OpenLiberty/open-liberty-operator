@@ -103,6 +103,7 @@ spec:
           ephemeral:
             volumeClaimTemplate:
               spec:
+                accessModes: [ "ReadWriteOnce" ]
                 resources:
                   requests:
                     storage: 20Mi
@@ -110,6 +111,7 @@ spec:
           ephemeral:
             volumeClaimTemplate:
               spec:
+                accessModes: [ "ReadWriteOnce" ]
                 resources:
                   requests:
                     storage: 20Mi
