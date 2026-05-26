@@ -3,8 +3,7 @@ module github.com/OpenLiberty/open-liberty-operator
 go 1.26
 
 require (
-	github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260420201825-86f60777cac0
-	github.com/awnumar/memguard v0.23.0
+	github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260331145758-2360ea65d016
 	github.com/cert-manager/cert-manager v1.19.4
 	github.com/distribution/distribution/v3 v3.0.0
 	github.com/go-logr/logr v1.4.3
@@ -30,6 +29,7 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/awnumar/memcall v0.4.0 // indirect
+	github.com/awnumar/memguard v0.23.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/blendle/zapdriver v1.3.1 // indirect
