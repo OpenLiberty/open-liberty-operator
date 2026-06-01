@@ -482,6 +482,11 @@ func (r *ReconcileOpenLiberty) reconcileSemeruDeployment(ola *openlibertyv1.Open
 	deploy.Spec.Template.Spec.Containers[0].SecurityContext = utils.GetSecurityContext(ola)
 
 	lutils.AddSecretHashAsAnnotation(&deploy.Spec.Template, ola, r.GetClient(), ola.Status.SemeruCompiler.TLSSecretName)
+
+	// Copy PriorityClassName from the OpenLibertyApplication CR
+	if ola.GetPriorityClassName() != nil {
+		deploy.Spec.Template.Spec.PriorityClassName = *ola.GetPriorityClassName()
+	}
 }
 
 func reconcileSemeruService(svc *corev1.Service, ola *openlibertyv1.OpenLibertyApplication) {
