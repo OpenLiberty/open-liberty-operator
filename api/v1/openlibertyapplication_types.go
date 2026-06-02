@@ -172,7 +172,7 @@ type OpenLibertyApplicationSpec struct {
 	HostAliases []corev1.HostAlias `json:"hostAliases,omitempty"`
 
 	// Name of the PriorityClass for the application pods.
-	// +operator-sdk:csv:customresourcedefinitions:order=38,type=spec,displayName="Priority Class Name"
+	// +operator-sdk:csv:customresourcedefinitions:order=38,type=spec,displayName="Priority Class Name",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	PriorityClassName *string `json:"priorityClassName,omitempty"`
 }
 

@@ -104,7 +104,7 @@ metadata:
     categories: Application Runtime
     certified: "true"
     containerImage: icr.io/appcafe/open-liberty-operator:daily
-    createdAt: "2026-06-01T18:45:38Z"
+    createdAt: "2026-06-02T00:38:18Z"
     description: Deploy and manage containerized Liberty applications
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "true"
@@ -527,11 +527,6 @@ spec:
           application pod's hosts file
         displayName: Host Aliases
         path: hostAliases
-      - description: Name of the PriorityClass for the application pods.
-        displayName: Priority Class Name
-        path: priorityClassName
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
       - description: Tolerations to be added to application pods. Tolerations allow
           the scheduler to schedule pods on nodes with matching taints.
         displayName: Tolerations
@@ -551,6 +546,11 @@ spec:
         path: affinity.podAffinity
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:podAffinity
+      - description: Name of the PriorityClass for the application pods.
+        displayName: Priority Class Name
+        path: priorityClassName
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       - description: Enables the ability to prevent running a pod on the same node
           as another pod.
         displayName: Pod Anti Affinity
