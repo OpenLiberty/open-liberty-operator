@@ -173,7 +173,7 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `networkPolicy.disable` |  [[crd-spec-networkPolicy-disable]] A Boolean to disable the creation of the network policy. The default value is `false`. By default, network policies for an application are created and limit incoming traffic.
 | `networkPolicy.fromLabels` | The labels of one or more pods from which incoming traffic is allowed.
 | `networkPolicy.namespaceLabels` | The labels of namespaces from which incoming traffic is allowed.
-| `priorityClassName` | The name of the PriorityClass to assign to the application pod. PriorityClasses define the scheduling priority and preemption behaviour of pods. For examples, see link:++https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/++[Pod Priority and Preemption].
+| `priorityClassName` | The name of the PriorityClass to assign to the application pod. PriorityClasses define the scheduling priority and preemption behaviour of pods. If applicable, the PriorityClass is also applied to the associated Semeru Cloud Compiler instance. For more information, see link:#pod-priority-and-preemption[Pod Priority and Preemption].
 | `probes` | Defines health checks on an application container to determine whether it is alive or ready to receive traffic. For examples, see link:#configure-probes[Configure probes].
 | `probes.liveness` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request++[Kubernetes liveness probe] that controls when Kubernetes needs to restart the pod.
 | `probes.readiness`   | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes++[Kubernetes readiness probe] that controls when the pod is ready to receive traffic.
@@ -507,6 +507,7 @@ Open Liberty Operator builds upon link:#common-component-documentation[component
 * link:#configure-tolerations-spectolerations[Configure tolerations] (`.spec.tolerations`)
 * link:#configure-dns-specdnspolicy-and-specdnsconfig[Configure DNS] (`.spec.dns.policy` and `.spec.dns.config`)
 * link:#configure-etc-hosts-spechostaliases[Configure /etc/hosts] (`.spec.hostAliases`)
+* link:#pod-priority-and-preemption[Pod Priority and Preemption] (`.spec.priorityClassName`)
 
 === Override console logging environment variable default values (`.spec.env`) image:images/docs_openliberty_logo.png[OL,30] [[override-console-logging-environment-variable-default-values]]
 
@@ -1996,6 +1997,39 @@ spec:
 
 For more information on taints and toleration, see the link:https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/[Kubernetes taints and toleration documentation].
 
+[[pod-priority-and-preemption]]
+=== Pod Priority and Preemption (`.spec.priorityClassName`)
+
+Pods can be assigned a priority that indicates their scheduling importance relative to other pods. When a node lacks the resources to schedule all pods, the scheduler can preempt (evict) lower-priority pods to make room for higher-priority ones.
+
+Priority can be defined by creating one or more `PriorityClass` resources as cluster-admin. Priority is assigned to pods managed by an `OpenLibertyApplication` CR by referencing the `PriorityClass` name using the `.spec.priorityClassName` field.
+
+The following example creates a `PriorityClass` object with the name `high-priority` and a value of 1000000.
+
+[source,yaml]
+----
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: high-priority
+value: 1000000
+----
+
+Configure an `OpenLibertyApplication` CR to use the `PriorityClass` by setting the `.spec.priorityClassName` field.
+
+[source,yaml]
+----
+spec:
+  priorityClassName: high-priority
+----
+
+The operator will then apply the priority value to all pods of the application instance, and if enabled, to all pods of the Semeru Cloud Compiler instance.
+
+`PriorityClass` objects are cluster-wide. An `OpenLibertyApplication` in any namespace may reference the same set of priority classes. If the named `PriorityClass` does not exist, the pod is rejected by the scheduler. 
+
+By default, all operator-managed pods that do not reference a defined `PriorityClass` object are assigned a priority of 0.
+
+For more information on pod priority and preemption, see link:https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/[Pod Priority and Preemption].
 
 [[generating-certificates-with-certificate-manager]]
 === Generating certificates with certificate manager 
