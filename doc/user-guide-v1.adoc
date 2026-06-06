@@ -2000,6 +2000,8 @@ For more information on taints and toleration, see the link:https://kubernetes.i
 [[pod-priority-and-preemption]]
 === Pod Priority and Preemption (`.spec.priorityClassName`)
 
+NOTE: Only available for operator version 1.6.2+
+
 Pods can be assigned a priority that indicates their scheduling importance relative to other pods. When a node lacks the resources to schedule all pods, the scheduler can preempt (evict) lower-priority pods to make room for higher-priority ones.
 
 Priority can be defined by creating one or more `PriorityClass` resources as cluster-admin. Priority is assigned to pods managed by an `OpenLibertyApplication` CR by referencing the `PriorityClass` name using the `.spec.priorityClassName` field.
