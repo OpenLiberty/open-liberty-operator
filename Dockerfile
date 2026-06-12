@@ -17,9 +17,9 @@ RUN if [ -z "${GO_VERSION_ARG}" ]; then \
       GO_VERSION=${GO_VERSION_ARG}; \
     fi; \
     rm -rf /usr/local/go; \
-    curl -L --output - "https://golang.org/dl/go${GO_VERSION}.linux-${GO_PLATFORM}.tar.gz" | tar -xz -C /usr/local/; \
+    curl -fsSL --retry 3 --output - "https://golang.org/dl/go${GO_VERSION}.linux-${GO_PLATFORM}.tar.gz" | tar -xz -C /usr/local/; \
     mkdir -p liberty; \
-    curl -L -o liberty.zip "https://repo1.maven.org/maven2/io/openliberty/openliberty-kernel/${LIBERTY_VERSION}/openliberty-kernel-${LIBERTY_VERSION}.zip"; \
+    curl -fsSL --retry 3 -o liberty.zip "https://repo1.maven.org/maven2/io/openliberty/openliberty-kernel/${LIBERTY_VERSION}/openliberty-kernel-${LIBERTY_VERSION}.zip"; \
     unzip liberty.zip -d liberty; \
     mv -f liberty/wlp/* liberty; \
     rmdir liberty/wlp; \
