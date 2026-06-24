@@ -2,9 +2,11 @@
 
 There are multiple ways to contribute: report bugs, request features, fix bugs, contribute code, improve documentation, etc. You must follow the established process and guidelines. We welcome your contributions!
 
-- [Raising issues](#Raising-Issues)
-- [Legal](#Legal)
-- [Coding Standards](#Coding-Standards)
+- [Contributing to the Open Liberty Operator](#contributing-to-the-open-liberty-operator)
+  - [Raising Issues](#raising-issues)
+  - [Legal](#legal)
+  - [Coding Standards](#coding-standards)
+  - [GenAI Guidelines](#genai-guidelines)
 
 ## Raising Issues
 
@@ -62,3 +64,8 @@ If you are an IBMer, please contact us directly, as the contribution process is 
 
 Please ensure you follow the coding standards used throughout the existing code base.
 
+
+
+## GenAI Guidelines
+
+Code contributions that include output from generative AI (GenAI) tools must follow the [GenAI Usage for Code Contributions guidelines](GENAI_GUIDELINES.md).
