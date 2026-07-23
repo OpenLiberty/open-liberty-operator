@@ -2,10 +2,13 @@ package image
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -26,6 +29,26 @@ import (
 	"k8s.io/kubernetes/pkg/credentialprovider"
 	"k8s.io/kubernetes/pkg/credentialprovider/secrets"
 )
+
+const (
+	ClusterCABundlePath = "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
+)
+
+// ClusterCATransport returns an *http.Transport whose TLS trust pool is seeded
+// from the system cert pool and augmented with the OpenShift cluster CA bundle
+// mounted at ClusterCABundlePath
+func ClusterCATransport() http.RoundTripper {
+	pool, _ := x509.SystemCertPool()
+	if pool == nil {
+		pool = x509.NewCertPool()
+	}
+	if pem, err := os.ReadFile(ClusterCABundlePath); err == nil {
+		pool.AppendCertsFromPEM(pem)
+	}
+	return &http.Transport{
+		TLSClientConfig: &tls.Config{RootCAs: pool},
+	}
+}
 
 const (
 	NilLibertyVersion = "0.0.0.0"
@@ -51,6 +74,15 @@ func NewNamespaceCredentialsContext(reqLogger logr.Logger, secrets []corev1.Secr
 	return &NamespaceCredentialsContext{
 		secrets:   secrets,
 		reqLogger: reqLogger.WithValues("Request.Namespace", namespace).V(2).WithName("NamespaceCredentialsContext"),
+	}
+}
+
+func NewNamespaceCredentialsContextWithTransport(reqLogger logr.Logger, secrets []corev1.Secret, namespace string, transport http.RoundTripper, insecureTransport http.RoundTripper) *NamespaceCredentialsContext {
+	return &NamespaceCredentialsContext{
+		transport:         transport,
+		insecureTransport: insecureTransport,
+		secrets:           secrets,
+		reqLogger:         reqLogger.WithValues("Request.Namespace", namespace).V(2).WithName("NamespaceCredentialsContext"),
 	}
 }
 

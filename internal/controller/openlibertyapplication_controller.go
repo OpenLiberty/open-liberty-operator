@@ -1158,6 +1158,11 @@ func (r *ReconcileOpenLiberty) getContainerImageMetadata(reqLogger logr.Logger, 
 			}
 		}
 	}
+	// On OpenShift, build a transport that trusts the cluster CA bundle so that
+	// image pulls from internal mirror registries succeed
+	if r.IsOpenShift() {
+		return libertyimage.NewNamespaceCredentialsContextWithTransport(reqLogger, olappSecrets, olapp.GetNamespace(), libertyimage.ClusterCATransport(), nil).GetContainerImageMetadata(context.TODO(), imageRef, pullSecret, false)
+	}
 	return libertyimage.NewNamespaceCredentialsContext(reqLogger, olappSecrets, olapp.GetNamespace()).GetContainerImageMetadata(context.TODO(), imageRef, pullSecret, false)
 }
 

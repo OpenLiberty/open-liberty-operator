@@ -5,6 +5,14 @@ metadata:
     control-plane: controller-manager
   name: system
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trusted-ca
+  namespace: system
+  labels:
+    config.openshift.io/inject-trusted-cabundle: "true"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -98,6 +106,9 @@ spec:
           - name: socket
             mountPath: /tmp
             subPath: operator.sock
+          - name: trusted-ca
+            mountPath: /etc/pki/ca-trust/extracted/pem
+            readOnly: true
       volumes:
         - name: scratch
           emptyDir:
@@ -105,6 +116,13 @@ spec:
         - name: socket
           emptyDir:
             sizeLimit: 20Mi
+        - name: trusted-ca
+          configMap:
+            name: trusted-ca
+            items:
+              - key: ca-bundle.crt
+                path: tls-ca-bundle.pem
+            optional: true
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
       affinity:
