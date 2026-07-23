@@ -253,6 +253,15 @@ subjects:
 - kind: ServiceAccount
   name: olo-controller-manager
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: open-liberty-operator
+    app.kubernetes.io/name: open-liberty-operator
+    config.openshift.io/inject-trusted-cabundle: "true"
+  name: olo-trusted-ca
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -352,6 +361,9 @@ spec:
         - mountPath: /tmp
           name: socket
           subPath: operator.sock
+        - mountPath: /etc/pki/ca-trust/extracted/pem
+          name: trusted-ca
+          readOnly: true
       hostIPC: false
       hostNetwork: false
       hostPID: false
@@ -368,3 +380,10 @@ spec:
       - emptyDir:
           sizeLimit: 20Mi
         name: socket
+      - configMap:
+          items:
+          - key: ca-bundle.crt
+            path: tls-ca-bundle.pem
+          name: olo-trusted-ca
+          optional: true
+        name: trusted-ca
