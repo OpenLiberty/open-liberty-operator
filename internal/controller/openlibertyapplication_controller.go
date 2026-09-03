@@ -607,7 +607,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	// Create and manage the shared LTPA keys Secret if the feature is enabled
-	message, ltpaSecretName, ltpaKeysLastRotation, err := r.reconcileLTPAKeys(instance, ltpaKeysMetadata)
+	message, ltpaSecretName, ltpaKeysLastRotation, ltpaKeysGeneratedAESSecretName, err := r.reconcileLTPAKeys(instance, ltpaKeysMetadata)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -621,10 +621,18 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	// Using the LTPA keys and config metadata, create and manage the shared LTPA Liberty server XML if the feature is enabled
-	message, ltpaXMLSecretName, err := r.reconcileLTPAConfig(instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
+	message, ltpaXMLSecretName, ltpaConfigGeneratedAESSecretName, err := r.reconcileLTPAConfig(instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	}
+
+	if encryptionSecretName == "" {
+		if ltpaConfigGeneratedAESSecretName != "" {
+			encryptionSecretName = ltpaConfigGeneratedAESSecretName
+		} else if ltpaKeysGeneratedAESSecretName != "" {
+			encryptionSecretName = ltpaKeysGeneratedAESSecretName
+		}
 	}
 
 	if instance.Spec.StatefulSet != nil {
@@ -686,7 +694,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				}
 			}
 
-			if r.isPasswordEncryptionKeySharingEnabled(instance) && encryptionSecretName != "" {
+			if encryptionSecretName != "" {
 				lutils.ConfigurePasswordEncryption(&statefulSet.Spec.Template, instance, OperatorShortName, passwordEncryptionMetadata)
 				lastRotationAnnotation, err := lutils.GetSecretLastRotationAsLabelMap(instance, r.GetClient(), encryptionSecretName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 				if err != nil {
@@ -783,7 +791,7 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 				}
 			}
 
-			if r.isPasswordEncryptionKeySharingEnabled(instance) && encryptionSecretName != "" {
+			if encryptionSecretName != "" {
 				lutils.ConfigurePasswordEncryption(&deploy.Spec.Template, instance, OperatorShortName, passwordEncryptionMetadata)
 				lastRotationAnnotation, err := lutils.GetSecretLastRotationAsLabelMap(instance, r.GetClient(), encryptionSecretName, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME)
 				if err != nil {
