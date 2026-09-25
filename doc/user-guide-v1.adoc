@@ -163,6 +163,7 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `expose`   | A boolean that toggles the external exposure of this deployment via a Route or a Knative Route resource.
 | `hostAliases` | The list of hostnames and IPs that will be injected into the application pod's hosts file. For examples, see link:#configure-etchosts-spechostaliases[Configure /etc/hosts].
 | `initContainers` | The list of link:++https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#container-v1-core++[Init Container] definitions.
+| `lifecycle` | Lifecycle hooks for the application container. For more information, see link:++https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/++[Container Lifecycle Hooks].
 | `manageLTPA`  | A Boolean that enables management of Lightweight Third-Party Authentication (LTPA) key sharing among Liberty containers. The default is `false`. For more information, see link:#configuring-ltpa[Configuring Lightweight Third-Party Authentication (LTPA)].
 | `managePasswordEncryption` | Enable management of password encryption key sharing amongst Liberty containers. Defaults to false. For more information, see link:#manage-password-encryption[Managing Password Encryption].
 | `manageTLS`   | [[crd-spec-managetls]] A boolean to toggle automatic certificate generation and mounting TLS secret into the pod. The default value for this field is `true`.
@@ -173,6 +174,7 @@ Each `OpenLibertyApplication` CR must specify `.spec.applicationImage` field. Sp
 | `networkPolicy.disable` |  [[crd-spec-networkPolicy-disable]] A Boolean to disable the creation of the network policy. The default value is `false`. By default, network policies for an application are created and limit incoming traffic.
 | `networkPolicy.fromLabels` | The labels of one or more pods from which incoming traffic is allowed.
 | `networkPolicy.namespaceLabels` | The labels of namespaces from which incoming traffic is allowed.
+| `podTerminationGracePeriodSeconds` | Optional duration in seconds the pod needs to terminate gracefully. Value must be non-negative integer. The value zero indicates stop immediately via the kill signal.
 | `priorityClassName` | The name of the PriorityClass to assign to the application pod. PriorityClasses define the scheduling priority and preemption behaviour of pods. If applicable, the PriorityClass is also applied to the associated Semeru Cloud Compiler instance. For more information, see link:#pod-priority-and-preemption[Pod Priority and Preemption].
 | `probes` | Defines health checks on an application container to determine whether it is alive or ready to receive traffic. For examples, see link:#configure-probes[Configure probes].
 | `probes.liveness` | A YAML object configuring the link:++https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request++[Kubernetes liveness probe] that controls when Kubernetes needs to restart the pod.

@@ -457,12 +457,22 @@ spec:
         path: affinity.podAntiAffinity
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:podAntiAffinity
+      - description: Lifecycle hooks for the application container.
+        displayName: Lifecycle
+        path: lifecycle
       - description: A YAML object that contains a set of required labels and their
           values.
         displayName: Node Affinity Labels
         path: affinity.nodeAffinityLabels
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Optional duration in seconds the pod needs to terminate gracefully.
+          Value must be non-negative integer. The value zero indicates stop immediately
+          via the kill signal.
+        displayName: Pod Termination Grace Period Seconds
+        path: podTerminationGracePeriodSeconds
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
       - description: Annotations to be added to the Route.
         displayName: Route Annotations
         path: route.annotations
