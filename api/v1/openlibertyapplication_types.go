@@ -174,6 +174,15 @@ type OpenLibertyApplicationSpec struct {
 	// Name of the PriorityClass for the application pods.
 	// +operator-sdk:csv:customresourcedefinitions:order=38,type=spec,displayName="Priority Class Name",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	PriorityClassName *string `json:"priorityClassName,omitempty"`
+
+	// Lifecycle hooks for the application container.
+	// +operator-sdk:csv:customresourcedefinitions:order=39,type=spec,displayName="Lifecycle"
+	Lifecycle *corev1.Lifecycle `json:"lifecycle,omitempty"`
+
+	// Optional duration in seconds the pod needs to terminate gracefully. Value must be non-negative integer. The value zero indicates stop immediately via the kill signal.
+	// +kubebuilder:validation:Minimum=0
+	// +operator-sdk:csv:customresourcedefinitions:order=40,type=spec,displayName="Pod Termination Grace Period Seconds",xDescriptors="urn:alm:descriptor:com.tectonic.ui:number"
+	PodTerminationGracePeriodSeconds *int64 `json:"podTerminationGracePeriodSeconds,omitempty"`
 }
 
 // Defines the DNS
@@ -1400,6 +1409,16 @@ func (cr *OpenLibertyApplication) GetHostAliases() []corev1.HostAlias {
 
 func (cr *OpenLibertyApplication) GetPriorityClassName() *string {
 	return cr.Spec.PriorityClassName
+}
+
+// GetLifecycle returns the lifecycle hooks for the application container
+func (cr *OpenLibertyApplication) GetLifecycle() *corev1.Lifecycle {
+	return cr.Spec.Lifecycle
+}
+
+// GetPodTerminationGracePeriodSeconds returns the pod termination grace period
+func (cr *OpenLibertyApplication) GetPodTerminationGracePeriodSeconds() *int64 {
+	return cr.Spec.PodTerminationGracePeriodSeconds
 }
 
 // Initialize sets default values

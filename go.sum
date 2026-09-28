@@ -6,8 +6,8 @@ github.com/Masterminds/semver/v3 v3.4.0 h1:Zog+i5UMtVoCU8oKka5P7i9q9HgrJeGzI9SA1
 github.com/Masterminds/semver/v3 v3.4.0/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
-github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260921232539-e73f2ca8ace1 h1:P/AW0SVD6dpoYgPeHXrMprAPj1wp4B0HdgHW+BeoTMw=
-github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260921232539-e73f2ca8ace1/go.mod h1:hhT/12v6fZfyvHv2x3oa10SYSH4+xPRA5idHGbVN334=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260925190423-ce41e9ef79f8 h1:nx9ZYho784l8OGLPIwR6BvxIhbc9vj0ZBeAf0n8N618=
+github.com/application-stacks/runtime-component-operator v1.0.0-20220602-0850.0.20260925190423-ce41e9ef79f8/go.mod h1:hhT/12v6fZfyvHv2x3oa10SYSH4+xPRA5idHGbVN334=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
