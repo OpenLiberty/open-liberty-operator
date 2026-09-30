@@ -20,6 +20,14 @@ RUN if [ -z "${GO_VERSION_ARG}" ]; then \
     curl -fsSL --retry 3 --output - "https://golang.org/dl/go${GO_VERSION}.linux-${GO_PLATFORM}.tar.gz" | tar -xz -C /usr/local/; \
     mkdir -p liberty; \
     curl -fsSL --retry 3 -o liberty.zip "https://repo1.maven.org/maven2/io/openliberty/openliberty-kernel/${LIBERTY_VERSION}/openliberty-kernel-${LIBERTY_VERSION}.zip"; \
+    if [ $? -ne 0 ]; then \
+      echo "Failed to download liberty.zip from Maven. Trying from https://public.dhe.ibm.com"; \
+      curl -fsSL --retry 3 -o liberty.zip "https://public.dhe.ibm.com/ibmdl/export/pub/software/openliberty/runtime/release/${LIBERTY_VERSION}/openliberty-kernel-${LIBERTY_VERSION}.zip"; \
+      if [ $? -ne 0 ]; then \
+        echo "Failed to download liberty.zip from both sources. Build FAILED"; \
+        exit 1; \
+      fi; \
+    fi; \
     unzip liberty.zip -d liberty; \
     mv -f liberty/wlp/* liberty; \
     rmdir liberty/wlp; \
