@@ -1,0 +1,9 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: olo-leader-election-watched-rolebinding
+  namespace: olo-watched-ns
+subjects:
+- kind: ServiceAccount
+  name: olo-controller-manager
+  namespace: olo-ns2

@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: olo-ns2
+
+
+resources:
+- ../../../overlays/watch-another-namespace
+patches:
+- path: olo-deployment.yaml
+- path: olo-leader-election-role.yaml
+- path: olo-manager-role.yaml
+- path: olo-leader-election-rolebinding.yaml
+- path: olo-manager-rolebinding.yaml
+- path: olo-sa.yaml
