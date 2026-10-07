@@ -408,3 +408,57 @@ func Test_kebabToCamelCase(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 }
+
+func TestGetRandomAlphanumeric(t *testing.T) {
+	validChars := make(map[rune]bool, len(mixedAlphanumeric))
+	for _, ch := range mixedAlphanumeric {
+		validChars[ch] = true
+	}
+
+	for _, length := range []int{1, 10, 32, 64} {
+		result := GetRandomAlphanumeric(length)
+		if len([]rune(result)) != length {
+			t.Errorf("GetRandomAlphanumeric(%d): got length %d", length, len([]rune(result)))
+		}
+		for _, ch := range result {
+			if !validChars[ch] {
+				t.Errorf("GetRandomAlphanumeric(%d): unexpected character %q", length, ch)
+			}
+		}
+	}
+
+	// two calls should not produce the same string (astronomically unlikely with length 32)
+	a, b := GetRandomAlphanumeric(32), GetRandomAlphanumeric(32)
+	if a == b {
+		t.Errorf("GetRandomAlphanumeric produced identical strings on consecutive calls: %q", a)
+	}
+}
+
+func TestGetRandomLowerAlphanumericSuffix(t *testing.T) {
+	validChars := make(map[rune]bool, len(lowerAlphanumeric))
+	for _, ch := range lowerAlphanumeric {
+		validChars[ch] = true
+	}
+
+	for _, length := range []int{1, 10, 32} {
+		result := GetRandomLowerAlphanumericSuffix(length)
+		if result[0] != '-' {
+			t.Errorf("GetRandomLowerAlphanumericSuffix(%d): expected leading '-', got %q", length, result)
+		}
+		suffix := []rune(result[1:])
+		if len(suffix) != length {
+			t.Errorf("GetRandomLowerAlphanumericSuffix(%d): got suffix length %d", length, len(suffix))
+		}
+		for _, ch := range suffix {
+			if !validChars[ch] {
+				t.Errorf("GetRandomLowerAlphanumericSuffix(%d): unexpected character %q", length, ch)
+			}
+		}
+	}
+
+	// uniqueness check
+	a, b := GetRandomLowerAlphanumericSuffix(32), GetRandomLowerAlphanumericSuffix(32)
+	if a == b {
+		t.Errorf("GetRandomLowerAlphanumericSuffix produced identical strings on consecutive calls: %q", a)
+	}
+}
