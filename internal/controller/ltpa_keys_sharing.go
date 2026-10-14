@@ -367,12 +367,15 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 				}
 			}
 		}
-	} else if kerrors.IsNotFound(getErr) && !r.isPasswordEncryptionKeySharingEnabled(instance) {
-		aesSecretName, _, err := r.reconcileGeneratedAESKey(instance, passwordEncryptionMetadata)
-		if err != nil {
-			return "", "", "", "", err
+	} else if kerrors.IsNotFound(getErr) {
+		if !r.isPasswordEncryptionKeySharingEnabled(instance) {
+			aesSecretName, _, err := r.reconcileGeneratedAESKey(instance, passwordEncryptionMetadata)
+			if err != nil {
+				return "", "", "", "", err
+			}
+			existingGeneratedAESSecretName = aesSecretName
 		}
-		existingGeneratedAESSecretName = aesSecretName
+		// user is managing their own encryption key, no generated key needed
 	} else if getErr != nil {
 		return "", "", "", "", getErr
 	}
@@ -566,12 +569,15 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 					}
 				}
 			}
-		} else if kerrors.IsNotFound(getErr) && !r.isPasswordEncryptionKeySharingEnabled(instance) {
-			aesSecretName, _, err := r.reconcileGeneratedAESKey(instance, passwordEncryptionMetadata)
-			if err != nil {
-				return ltpaXMLSecret.Name, "", err
+		} else if kerrors.IsNotFound(getErr) {
+			if !r.isPasswordEncryptionKeySharingEnabled(instance) {
+				aesSecretName, _, err := r.reconcileGeneratedAESKey(instance, passwordEncryptionMetadata)
+				if err != nil {
+					return ltpaXMLSecret.Name, "", err
+				}
+				generatedAESSecretName = aesSecretName
 			}
-			generatedAESSecretName = aesSecretName
+			// user is managing their own encryption key, no generated key needed
 		} else if getErr != nil {
 			return ltpaXMLSecret.Name, "", getErr
 		}
