@@ -6,9 +6,9 @@ The following document covers various topics for configuring and integrating you
 
 Open Liberty logs inside a Kubernetes environment can be managed by deploying log aggregation tools onto a Kubernetes cluster. Log aggregation tools help you persist, search, and visualize the log data that is gathered from the pods across the cluster. 
 
-=== Application logging with Loki and Vector
+=== Application logging with the full RHOCP Stack (Vector, Loki, and COO)
 
-Another choice for application logging with log aggregation is by using Loki and Vector. If you are deploying Loki and Vector on OpenShift, see the following link:openshift-logging-rhocp_4.18+.adoc[guide].
+RHOCP provides a stack for application logging with log aggregation using Vector, Loki and Cluster Observability Operator (COO). To deploy this, see the following link:openshift-logging-rhocp_4.18+.adoc[guide].
 
 === Parsing JSON logs for readability
 
