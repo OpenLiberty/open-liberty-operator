@@ -4,11 +4,12 @@ The following guide has been tested and is supported with Red Hat OpenShift Cont
 
 Pod processes running in Kubernetes frequently produce logs. To effectively manage this log data and ensure no loss of log data occurs when a pod terminates, a log aggregation tool should be deployed on the Kubernetes cluster. Log aggregation tools help users persist, search, and visualize the log data that is gathered from the pods across the cluster. Logging 6.0 manages log storage, collection, and visualization using Loki, Vector, and the Cluster Observability's new Logging UI Plugin. After a successful installation, the Loki and log collector pods should reside inside the *openshift-logging* namespace of the cluster. Check out this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.0/html/upgrading_logging/upgrading-to-logging-6#changes-in-logging-6_upgrading-to-logging-6[doc] for more information on the new changes introduced in Logging 6.0.
 
+link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6[Red Hat OpenShift Logging 6.6] is currently the latest version offered by RedHat. It follows a different versioning number system than the Red Hat OpenShift Container Platform.
+
 ## Prerequisites
 
 We will deploy the full Red Hat OpenShift Logging stack by following the link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/index[provided install documentation]. This guide will assume that the web console is being used, and OpenShift Data Foundation is used as the object storage system. link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/verify-cluster-prerequisites[Chapter 1] of the guide details that LokiStack requires both block and object storage (object storage not covered by RHOCP guide).
 
-link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6[Red Hat OpenShift Logging 6.6] is currently the latest version offered by RedHat. It follows a different versioning number system than the Red Hat OpenShift Container Platform.
 
 ### Setting up object storage
 
@@ -20,7 +21,7 @@ Note: After step 2.2, you can either click the "Configure" button that comes wit
 
 ## Preparing object storage for LokiStack
 
-For link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/prepare-object-storage-for-lokistack[prepare object storage for LokiStack], choose the object storage system most appropriate to your installation scenario. For example, if using ODF, follow the steps in 2.6.
+For the chapter: link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/prepare-object-storage-for-lokistack[prepare object storage for LokiStack], choose the object storage system most appropriate to your installation scenario. For example, if using ODF, follow the steps in 2.6.
 
 Note: If the namespace openshift-logging is not found, create it using `oc create namespace openshift-logging`.
 
