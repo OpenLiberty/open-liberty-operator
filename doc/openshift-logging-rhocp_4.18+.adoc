@@ -18,12 +18,7 @@ link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6[Red 
 
 ### Cluster Prerequisites
 
-We will deploy the full Red Hat OpenShift Logging stack by following the link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/index[provided install documentation]. This guide will go through each section individually.
-
-link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/verify-cluster-prerequisites[Chapter 1] of the guide deetails that LokiStack requires:
-
-* Block storage
-* Object storage (not covered by the install guide)
+We will deploy the full Red Hat OpenShift Logging stack by following the link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/index[provided install documentation]. This guide will go through each section individually. link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/verify-cluster-prerequisites[Chapter 1] of the guide details that LokiStack requires both Block storage and  Object storage (object storage not covered by the install guide).
 
 #### Setting up object storage
 
@@ -31,17 +26,13 @@ You must have existing object storage in order to configure LokiStack. Loki Oper
 
 If you have object storage set up, skip this section, otherwise, follow steps 2.1 to 2.3 link:https://docs.redhat.com/en/documentation/red_hat_openshift_data_foundation/4.22/html/deploying_openshift_data_foundation_on_any_platform/deploy-using-local-storage-devices-bm[Red Hat OpenShift Data Foundation guide] to deploy ODF. The default procedures for install can be followed.
 
-Notes: 
-
-* After step 2.2, you can either click the "Configure" button that comes with the operator intallation prompt to create your storage system, or you can go to `Storage > Data Foundation > Object storage > Configure Data Foundation`, which starts step 2.3.
+Note: After step 2.2, you can either click the "Configure" button that comes with the operator intallation prompt to create your storage system, or you can go to `Storage > Data Foundation > Object storage > Configure Data Foundation`, which starts step 2.3.
 
 ### Preparing object storage for LokiStack
 
 For link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/prepare-object-storage-for-lokistack[prepare object storage for LokiStack], choose the object storage system most appropriate to your installation scenario. For example, if using ODF, follow the steps in 2.6.
 
-Notes:
-
-* If the namespace openshift-logging is not found, create it using `oc create namespace openshift-logging`.
+Note: If the namespace openshift-logging is not found, create it using `oc create namespace openshift-logging`.
 
 
 After the LokiStack and ClusterLogForwarder deployments are completed, you should see the following pods running in the openshift-logging namespace.
