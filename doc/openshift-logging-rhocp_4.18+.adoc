@@ -2,6 +2,8 @@
 
 The following guide has been tested and is supported with Red Hat OpenShift Container Platform (RHOCP) version 4.22, 4.21, 4.20, 4.19, and 4.18.
 
+link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6[Red Hat OpenShift Logging 6.6] is currently the latest version offered by RedHat. It follows a different versioning number system than the Red Hat OpenShift Container Platform.
+
 Pod processes running in Kubernetes frequently produce logs. To effectively manage this log data and ensure no loss of log data occurs when a pod terminates, a log aggregation tool should be deployed on the Kubernetes cluster. Log aggregation tools help users persist, search, and visualize the log data that is gathered from the pods across the cluster. Log aggregation tools in the market today include:  EFK, LogDNA, Splunk, Datadog, IBM Operations Analytics, etc.  When considering log aggregation tools, enterprises make choices that are inclusive of their journey to cloud, both new cloud-native applications running in Kubernetes and their existing traditional IT choices.
 
 With the release of Logging 6.0, the EFK stack is no longer supported. Logging 6.0 now manages log storage, collection, and visualization using Loki, Vector, and the Cluster Observability's new Logging UI Plugin. This guide describes the process of deploying the new stack using the Loki, RedHat OpenShift Logging, and Cluster Observability Operators. Use this stack to aggregate all container logs. After a successful installation, the Loki and log collector pods should reside inside the *openshift-logging* namespace of the cluster. Check out this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.0/html/upgrading_logging/upgrading-to-logging-6#changes-in-logging-6_upgrading-to-logging-6[doc] for more information on the new changes introduced in Logging 6.0.
@@ -10,29 +12,72 @@ With the release of Logging 6.0, the EFK stack is no longer supported. Logging 6
 
 This guide assumes a running application has been deployed to the RHOCP cluster inside project/namespace called "my-project", and that it is generating logs.
 
-## Deploying the full RHOCP Logging Stack
+## Cluster Prerequisites
 
-### Preamble
+We will deploy the full Red Hat OpenShift Logging stack by following the link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/index[provided install documentation]. This guide will assume that the web console is being used, and OpenShift Data Foundation is used as the object storage system. link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/verify-cluster-prerequisites[Chapter 1] of the guide details that LokiStack requires both block and object storage (object storage not covered by RHOCP guide).
 
-link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6[Red Hat OpenShift Logging 6.6] is currently the latest version offered by RedHat. It follows a different versioning number system than the Red Hat OpenShift Container Platform.
+### Setting up object storage
 
-### Cluster Prerequisites
-
-We will deploy the full Red Hat OpenShift Logging stack by following the link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/index[provided install documentation]. This guide will go through each section individually. link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/verify-cluster-prerequisites[Chapter 1] of the guide details that LokiStack requires both Block storage and  Object storage (object storage not covered by the install guide).
-
-#### Setting up object storage
-
-You must have existing object storage in order to configure LokiStack. Loki Operator supports AWS S3, Azure, GCS, Minio, OpenShift Data Foundation, and Swift as options for LokiStack object storage.
+You must have existing object storage in order to configure LokiStack. Loki Operator supports AWS S3, Azure, GCS, Minio, OpenShift Data Foundation, and Swift as options for LokiStack object storage. Instructions to set up supported object storage, including secret setup, can be found in link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/prepare-object-storage-for-lokistack[chapter 2 of the install guide.]
 
 If you have object storage set up, skip this section, otherwise, follow steps 2.1 to 2.3 link:https://docs.redhat.com/en/documentation/red_hat_openshift_data_foundation/4.22/html/deploying_openshift_data_foundation_on_any_platform/deploy-using-local-storage-devices-bm[Red Hat OpenShift Data Foundation guide] to deploy ODF. The default procedures for install can be followed.
 
 Note: After step 2.2, you can either click the "Configure" button that comes with the operator intallation prompt to create your storage system, or you can go to `Storage > Data Foundation > Object storage > Configure Data Foundation`, which starts step 2.3.
 
-### Preparing object storage for LokiStack
+## Preparing object storage for LokiStack
 
 For link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/prepare-object-storage-for-lokistack[prepare object storage for LokiStack], choose the object storage system most appropriate to your installation scenario. For example, if using ODF, follow the steps in 2.6.
 
 Note: If the namespace openshift-logging is not found, create it using `oc create namespace openshift-logging`.
+
+## Installing the Loki Operator
+
+For link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/install-the-loki-operator[installing the Loki operator], follow the steps in 3.2 and 3.3. If you followed the instructions for ODF, 3.4 is not neccessary because the secret was already created in 2.6.
+
+Note: for 3.3, if the namespace already exists, you acn add the openshift.io/cluster-monitoring label using: `oc label namespace openshift-logging openshift.io/cluster-monitoring=true`.
+
+## Creating a LokiStack instance
+
+In Ecosystem > Installed Operators > LokiStack, create a new LokiStack instance. An example of a YAML file is below:
+[source, sh]
+----
+apiVersion: loki.grafana.com/v1
+kind: LokiStack
+metadata:
+  name: logging-loki
+  namespace: openshift-logging
+spec:
+  managementState: Managed
+  size: 1x.extra-small
+  storage:
+    schemas:
+    - effectiveDate: '2024-10-01'
+      version: v13
+    secret:
+      name: logging-loki-odf
+      type: s3
+  storageClassName: ocs-storagecluster-ceph-rbd
+  tenants:
+    mode: openshift-logging
+----
+
+## Installing the Red Hat OpenShift Logging Operator
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 After the LokiStack and ClusterLogForwarder deployments are completed, you should see the following pods running in the openshift-logging namespace.
@@ -64,20 +109,6 @@ collector-z75z5                                1/1     Running   0          3h16
 ## Tips
 
 You can configure LokiStack and the CustomLogForwarder according to your needs. Check out this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.4/html/configuring_logging/configuring-lokistack-storage[doc] for how to configure LokiStack storage, and this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.4/html/configuring_logging/configuring-log-forwarding[doc] for how to configure log fowarding.
-
-### Object storage
-
-Create a secret `logging-loki-s3` inside the `openshift-logging` namespace that contains the required fields needed for LokiStack to access your object storage. As an example, the command below creates a secret that allows access to an OpenShift Data Foundation managed S3 bucket running inside the cluster.
-
-[source,sh]
-----
-  oc create secret generic logging-loki-s3 \
-    --from-literal=access_key_id=key \
-    --from-literal=access_key_secret=secret \
-    --from-literal=bucketnames=bucket-name \
-    --from-literal=endpoint=endpoint \
-    --namespace openshift-logging
-----
 
 ### Parsing JSON logs
 
