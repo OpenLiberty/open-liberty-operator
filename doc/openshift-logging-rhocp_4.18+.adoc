@@ -39,7 +39,7 @@ Note: for 3.3, if the namespace already exists, you acn add the openshift.io/clu
 ## Creating a LokiStack instance
 
 In Ecosystem > Installed Operators > LokiStack, create a new LokiStack instance. An example of a YAML file is below:
-[source, sh]
+[source, yaml]
 ----
 apiVersion: loki.grafana.com/v1
 kind: LokiStack
@@ -63,24 +63,39 @@ spec:
 
 ## Installing the Red Hat OpenShift Logging Operator
 
+Follow link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/install-the-red-hat-openshift-logging-operator#installing-the-clo-web-console_install-the-red-hat-openshift-logging-operator[chapter 4.4] to Install the Red Hat OpenShift Logging operator using the web console.
+
+### Parsing JSON logs
+
+By default, if container logs are being output in JSON format, they will be nested inside the Vector JSON document's message field. To solve this problem, add the following YAML to the ClusterLogForwarder CR you created earlier:
+
+[source,yaml]
+----
+ kind: ClusterLogForwarder
+ spec:
+   ...
+   filters:
+    - name: parse-json
+      type: parse
+   ...
+   pipelines:
+   - name: infra-app-logs
+     ...
+     filterRefs:
+     - parse-json
+----
+The addition of the JSON filter above will copy the nested JSON container log into a separate `structured` field inside the Vector JSON document, where the individual fields from the JSON container log can be accessed as `structured. <field_name>`.
+
+### Verify logging installation
+
+Follow link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/install-the-red-hat-openshift-logging-operator#verifying-logging-installation_install-the-red-hat-openshift-logging-operator[chapter 4.6], procedure step 1 and 2 to verify the collect pods are running correctly.
 
 
+### Check running pods.
 
+After the LokiStack and ClusterLogForwarder deployments are completed, you should see the following pods (or similar) running in the openshift-logging namespace.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-After the LokiStack and ClusterLogForwarder deployments are completed, you should see the following pods running in the openshift-logging namespace.
+`oc get pods -n openshift-logging`
 
 [source,sh]
 ----
@@ -106,30 +121,35 @@ collector-vzlm4                                1/1     Running   0          3h16
 collector-z75z5                                1/1     Running   0          3h16m
 ----
 
+## Install the Cluster Observability Operator
+
+Follow link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/install-the-cluster-observability-operator#install-the-coo-web-console_install-the-cluster-observability-operator[chapter 5.2] to install the Cluster Observability Operator.
+
+## Enable the Logs tab in the web console
+
+Follow link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/enable-the-logs-tab-in-the-web-console#enabling-the-logs-tab_enable-the-logs-tab-in-the-web-console[chapter 5.1] to enable the Logs tab showing up in the web console.
+
+After doing this, you should see the `Observe > Logs` tab show up in the OCP console.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## Tips
 
 You can configure LokiStack and the CustomLogForwarder according to your needs. Check out this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.4/html/configuring_logging/configuring-lokistack-storage[doc] for how to configure LokiStack storage, and this link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.4/html/configuring_logging/configuring-log-forwarding[doc] for how to configure log fowarding.
 
-### Parsing JSON logs
 
-By default, if container logs are being output in JSON format, they will be nested inside the Vector JSON document's message field. To solve this problem, add the following YAML to the ClusterLogForwarder CR you created earlier:
-
-[source,yaml]
-----
- kind: ClusterLogForwarder
- spec:
-   ...
-   filters:
-    - name: parse-json
-      type: parse
-   ...
-   pipelines:
-   - name: default-logstore
-     ...
-     filterRefs:
-     - parse-json
-----
-The addition of the JSON filter above will copy the nested JSON container log into a separate `structured` field inside the Vector JSON document, where the individual fields from the JSON container log can be accessed as `structured. <field_name>`.
 
 
 ## Visualizing your logs using the Cluster Observability Operator's Logging UI Plugin
