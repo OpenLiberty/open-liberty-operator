@@ -83,7 +83,7 @@ spec:
 
 . Deploy the following template by creating an instance of the Grafana Dashboard in the Grafana operator link:++https://github.com/OpenLiberty/open-liberty-operator/blob/main/doc/guides-code/grafana_dashboard.yaml.txt++[grafana_dashboard.yaml.txt] to see all the services currently being monitored. Please ensure that the namespace in this yaml is configured to the namespace already deployed.
 
-. Under Networking > Routes, visit Grafana to see the template dashboard. You can now consume all the application metrics gathered by Prometheus on the Grafana dashboard.
+. Under `Networking > Routes`, visit Grafana to see the template dashboard. You can now consume all the application metrics gathered by Prometheus on the Grafana dashboard.
 
 # Installation Complete
 
