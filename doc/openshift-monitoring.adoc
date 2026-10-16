@@ -36,7 +36,7 @@ spec:
 
 == Deploying an additional Grafana instance for custom dashboards
 
-. The following instructions are based on the guide link:++https://www.redhat.com/en/blog/custom-grafana-dashboards-red-hat-openshift-container-platform-4++[Custom Grafana dashboards for Red Hat OpenShift Container Platform 4]. This Grafana instance will be connected to OpenShift monitoring in the `openshift-monitoring` namespace and additional Grafana dashboards will increase the load on the Prometheus service, so pay attention to Prometheus' CPU and memory usage when deploying dashboards.
+The following instructions are based on the guide link:++https://www.redhat.com/en/blog/custom-grafana-dashboards-red-hat-openshift-container-platform-4++[Custom Grafana dashboards for Red Hat OpenShift Container Platform 4]. This Grafana instance will be connected to OpenShift monitoring in the `openshift-monitoring` namespace and additional Grafana dashboards will increase the load on the Prometheus service, so pay attention to Prometheus' CPU and memory usage when deploying dashboards.
 
 . Create a new namespace (e.g. `my-grafana`).
 
@@ -45,10 +45,10 @@ spec:
 . From Installed Operators, select the Grafana Operator.  For the Grafana resource, press Create Instance to create a new Grafana instance (default name is `grafana-a`). Take note of the username and password for login (by default, it is `start` and `root`).
 
 . Upon creating the new Grafana instance the service account `grafana-a-sa` will be created. We will give it the cluster-monitoring-view role using `oc adm policy add-cluster-role-to-user cluster-monitoring-view -z grafana-a-sa` and then obtain a service account token secret using `oc create token grafana-a-sa --duration=8760h -n my-grafana`.
-
++
 Example Grafana instance YAML files can be found link:++https://grafana.github.io/grafana-operator/docs/examples/grafana/++[here]. Note: The Grafana Operator's `apiVersion` and Custom Resources have been renamed since the creation of the RedHat blog above. When you are deploying the Grafana Datasource in the blog, use the following YAML instead.
 
-. Next, create a Grafana Data Source, and use this YAML below. Substitude `${BEARER_TOKEN}` with the token you created in the previous step.
+. Next, create a Grafana Data Source, and use this YAML below. Substitute `${BEARER_TOKEN}` with the token you created in the previous step.
 
 +
 [source,yaml]
@@ -81,7 +81,7 @@ spec:
 ----
 +
 
-. Deploy the following template Grafana Dashboard in the Grafana operator. link:++https://github.com/OpenLiberty/open-liberty-operator/blob/main/doc/guides-code/grafana_dashboard.yaml.txt++[grafana_dashboard.yaml.txt] to see all the services currently being monitored. Please ensure that the namespace in this yaml is configured to the namespace already deployed.
+. Deploy the following template by creating an instance of the Grafana Dashboard in the Grafana operator link:++https://github.com/OpenLiberty/open-liberty-operator/blob/main/doc/guides-code/grafana_dashboard.yaml.txt++[grafana_dashboard.yaml.txt] to see all the services currently being monitored. Please ensure that the namespace in this yaml is configured to the namespace already deployed.
 
 . Under Networking > Routes, visit Grafana to see the template dashboard. You can now consume all the application metrics gathered by Prometheus on the Grafana dashboard.
 
