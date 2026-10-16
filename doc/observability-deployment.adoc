@@ -8,7 +8,7 @@ Open Liberty logs inside a Kubernetes environment can be managed by deploying lo
 
 === Application logging with the full RHOCP Stack (Vector, Loki, and COO)
 
-RHOCP provides a stack for application logging with log aggregation using Vector, Loki, and Cluster Observability Operator (COO). To deploy this, see the following link:openshift-logging-rhocp_4.18+.adoc[guide].
+RHOCP provides a stack for application logging with log aggregation using Vector, Loki, and Cluster Observability Operator (COO). To deploy this, see the following link:openshift-logging.adoc[guide].
 
 === Parsing JSON logs for readability
 
