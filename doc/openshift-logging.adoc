@@ -8,13 +8,12 @@ link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6[Red 
 
 == Prerequisites
 
-We will deploy the full Red Hat OpenShift Logging stack by following the link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/index[provided install documentation]. This guide assumes that the web console is being used and OpenShift Data Foundation (ODF) is used as the object storage system. link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/verify-cluster-prerequisites[Chapter 1] of the guide details that LokiStack requires both block and object storage.
+We will deploy the full Red Hat OpenShift Logging stack by following the link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/index[provided install documentation]. 
+This guide assumes that the web console is being used and OpenShift Data Foundation (ODF) is used as the object storage system, which can be set up by following steps 2.1 to 2.3 in the link:https://docs.redhat.com/en/documentation/red_hat_openshift_data_foundation/4.22/html/deploying_openshift_data_foundation_on_any_platform/deploy-using-local-storage-devices-bm[Red Hat OpenShift Data Foundation guide].
 
 === Setting up object storage
 
 You must have existing object storage in order to configure LokiStack. Loki Operator supports AWS S3, Azure, GCS, Minio, OpenShift Data Foundation, and Swift as options for LokiStack object storage. Instructions to set up supported object storage, including secret configuration, can be found in link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/prepare-object-storage-for-lokistack[Chapter 2 of the install guide].
-
-If you already have object storage set up, skip this section. Otherwise, follow steps 2.1 to 2.3 in the link:https://docs.redhat.com/en/documentation/red_hat_openshift_data_foundation/4.22/html/deploying_openshift_data_foundation_on_any_platform/deploy-using-local-storage-devices-bm[Red Hat OpenShift Data Foundation guide] to deploy ODF. The default procedures for installation can be followed.
 
 NOTE: After step 2.2, you can either click the "Configure" button that comes with the operator installation prompt to create your storage system, or you can go to `Storage > Data Foundation > Object storage > Configure Data Foundation`, which starts step 2.3.
 
