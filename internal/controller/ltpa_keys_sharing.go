@@ -365,7 +365,8 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 	lastRotation := string(ltpaSecret.Data["lastRotation"])
 
 	existingGeneratedAESSecretName := ""
-	if isGeneratedAESKeyAllowed(ltpaMetadata) {
+	ltpaSecretPathIndex := ltpaSecret.Labels[lutils.ResourcePathIndexLabel]
+	if isGeneratedAESKeyAllowed(&lutils.LTPAMetadata{PathIndex: ltpaSecretPathIndex}) {
 		generatedAESKeySecret := &corev1.Secret{}
 		generatedAESKeySecret.Name = lutils.GeneratedAESEncryptionKeyRootName + passwordEncryptionMetadata.Name
 		generatedAESKeySecret.Namespace = instance.GetNamespace()
