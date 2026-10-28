@@ -34,7 +34,7 @@ func (r *ReconcileOpenLiberty) reconcileResourceTrackingState(instance *olv1.Ope
 
 	// return the metadata specific to the operator version, instance configuration, and shared resource being reconciled
 	if leaderTrackerType == LTPA_RESOURCE_SHARING_FILE_NAME {
-		ltpaMetadataList, err := r.reconcileLTPAMetadata(instance, treeMap, latestOperandVersion, nil)
+		ltpaMetadataList, err := r.reconcileLTPAMetadata(instance, treeMap, replaceMap, latestOperandVersion, nil)
 		if err != nil {
 			return nil, err
 		}

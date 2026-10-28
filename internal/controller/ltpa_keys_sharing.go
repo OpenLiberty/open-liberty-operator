@@ -37,7 +37,7 @@ func init() {
 	lutils.LeaderTrackerMutexes.Store(LTPA_RESOURCE_SHARING_FILE_NAME, &sync.Mutex{})
 }
 
-func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, latestOperandVersion string, assetsFolder *string) (lutils.LeaderTrackerMetadataList, error) {
+func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyApplication, treeMap map[string]interface{}, replaceMap map[string]map[string]string, latestOperandVersion string, assetsFolder *string) (lutils.LeaderTrackerMetadataList, error) {
 	metadataList := &lutils.LTPAMetadataList{}
 	metadataList.Items = []lutils.LeaderTrackerMetadata{}
 
@@ -70,6 +70,17 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 		// if the leaderTracker is on a mismatched version, wait for a subsequent reconcile loop to re-create the leader tracker
 		if leaderTracker.Labels[lutils.LeaderVersionLabel] != latestOperandVersion {
 			return metadataList, fmt.Errorf("waiting for the Leader Tracker to be updated")
+		}
+
+		// If the desired path is not in the leader tracker, fall back to a stored path that upgrades to it
+		if lutils.CommaSeparatedStringContains(string(leaderTracker.Data[lutils.ResourcePathsKey]), validSubPath) == -1 {
+			storedPaths := lutils.GetCommaSeparatedArray(string(leaderTracker.Data[lutils.ResourcePathsKey]))
+			for _, storedPath := range storedPaths {
+				if upgradedPath, err := tree.ReplacePath(storedPath, latestOperandVersion, treeMap, replaceMap); err == nil && upgradedPath == validSubPath {
+					validSubPath = storedPath
+					break
+				}
+			}
 		}
 
 		// to avoid limitation with Kubernetes label values having a max length of 63, translate validSubPath into a path index
@@ -118,8 +129,9 @@ func (r *ReconcileOpenLiberty) getLTPAPathOptionsAndChoices(instance *olv1.OpenL
 }
 
 const generatedAESKeyMinOperandVersion = "v1_6_3"
+const ltpaLegacyPath = "legacy"
 
-// Generated AES keys are only supported on v1_6_3 and later, and not for the legacy path (secrets upgraded from v1_4_0)
+// Generated AES keys are only supported on v1_6_3 and later, and not for the legacy path
 func isGeneratedAESKeyAllowed(metadata *lutils.LTPAMetadata) bool {
 	if metadata == nil {
 		return false
@@ -127,7 +139,61 @@ func isGeneratedAESKeyAllowed(metadata *lutils.LTPAMetadata) bool {
 	version := strings.Split(metadata.PathIndex, ".")[0]
 	return lutils.IsValidOperandVersion(version) &&
 		lutils.CompareOperandVersion(version, generatedAESKeyMinOperandVersion) >= 0 &&
-		!strings.Contains(metadata.Path, "legacy")
+		!strings.Contains(metadata.Path, ltpaLegacyPath)
+}
+
+func resolveLTPAKeySecretMetadata(pathIndex string) *lutils.LTPAMetadata {
+	metadata := &lutils.LTPAMetadata{PathIndex: pathIndex}
+	if treeMap, _, err := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, nil); err == nil {
+		if parts := strings.Split(pathIndex, "."); len(parts) == 2 {
+			if idx, err := strconv.ParseInt(parts[1], 10, 64); err == nil {
+				if resolvedPath, err := tree.GetPathFromLeafIndex(treeMap, parts[0], int(idx)); err == nil {
+					metadata.Path = resolvedPath
+				}
+			}
+		}
+	}
+	return metadata
+}
+
+// upgradeLTPAKeySecretLabel patches the LTPA key secret label when it carries a pre-v1_6_3 path index
+func (r *ReconcileOpenLiberty) upgradeLTPAKeySecretLabel(ltpaSecret *corev1.Secret) (*lutils.LTPAMetadata, error) {
+	pathIndex := ltpaSecret.Labels[lutils.ResourcePathIndexLabel]
+	version := strings.Split(pathIndex, ".")[0]
+	treeMap, replaceMap, err := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, nil)
+	if err != nil {
+		return nil, err
+	}
+	latestOperandVersion, err := tree.GetLatestOperandVersion(treeMap, "")
+	if err != nil {
+		return nil, err
+	}
+	if lutils.IsValidOperandVersion(version) && lutils.CompareOperandVersion(version, latestOperandVersion) < 0 {
+		var leafIdx int = -1
+		if parts := strings.Split(pathIndex, "."); len(parts) == 2 {
+			if idx, e := strconv.ParseInt(parts[1], 10, 64); e == nil {
+				leafIdx = int(idx)
+			}
+		}
+		currPath, pathErr := tree.GetPathFromLeafIndex(treeMap, version, leafIdx)
+		if pathErr != nil {
+			return resolveLTPAKeySecretMetadata(pathIndex), nil // can't resolve; leave label as-is
+		}
+		upgradedPath, upgradeErr := tree.ReplacePath(currPath, latestOperandVersion, treeMap, replaceMap)
+		if upgradeErr != nil {
+			return resolveLTPAKeySecretMetadata(pathIndex), nil // no upgrade path; leave label as-is
+		}
+		newPathIndex := strings.Split(upgradedPath, ".")[0] + "." + strconv.FormatInt(int64(tree.GetLeafIndex(treeMap, upgradedPath)), 10)
+		// NOTE: Update is important here for compatibility with an operator upgrade from v1_4_0
+		if err := r.CreateOrUpdate(ltpaSecret, nil, func() error {
+			ltpaSecret.Labels[lutils.ResourcePathIndexLabel] = newPathIndex
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+		return &lutils.LTPAMetadata{PathIndex: newPathIndex, Path: upgradedPath}, nil
+	}
+	return resolveLTPAKeySecretMetadata(pathIndex), nil
 }
 
 func (r *ReconcileOpenLiberty) getLTPAMetadataName(instance *olv1.OpenLibertyApplication, leaderTracker *corev1.Secret, validSubPath string, assetsFolder *string, ltpaResourceType LTPAResource) string {
@@ -367,16 +433,9 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 	lastRotation := string(ltpaSecret.Data["lastRotation"])
 
 	existingGeneratedAESSecretName := ""
-	ltpaSecretPathIndex := ltpaSecret.Labels[lutils.ResourcePathIndexLabel]
-	ltpaSecretStoredMetadata := &lutils.LTPAMetadata{PathIndex: ltpaSecretPathIndex}
-	if treeMap, _, parseErr := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, nil); parseErr == nil {
-		if indexParts := strings.Split(ltpaSecretPathIndex, "."); len(indexParts) == 2 {
-			if indexInt, parseIntErr := strconv.ParseInt(indexParts[1], 10, 64); parseIntErr == nil {
-				if resolvedPath, pathErr := tree.GetPathFromLeafIndex(treeMap, indexParts[0], int(indexInt)); pathErr == nil {
-					ltpaSecretStoredMetadata.Path = resolvedPath
-				}
-			}
-		}
+	ltpaSecretStoredMetadata, err := r.upgradeLTPAKeySecretLabel(ltpaSecret)
+	if err != nil {
+		return "", "", leaderName, "", err
 	}
 	if isGeneratedAESKeyAllowed(ltpaSecretStoredMetadata) {
 		generatedAESKeySecret := &corev1.Secret{}
@@ -442,6 +501,10 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 			return ltpaXMLSecret.Name, "", fmt.Errorf("Waiting for OpenLibertyApplication instance '%s' to generate the shared LTPA keys file for the namespace '%s'.", leaderName, instance.Namespace)
 		}
 		return ltpaXMLSecret.Name, "", fmt.Errorf("An unknown error has occurred generating the LTPA Secret for namespace '%s'.", instance.Namespace)
+	}
+	ltpaKeySecretStoredMetadata, upgradeErr := r.upgradeLTPAKeySecretLabel(ltpaSecret)
+	if upgradeErr != nil {
+		return ltpaXMLSecret.Name, "", upgradeErr
 	}
 	// LTPA config leader starts here
 	leaderName, thisInstanceIsLeader, _, err := r.reconcileLeader(instance, ltpaConfigMetadata, LTPA_RESOURCE_SHARING_FILE_NAME, true)
@@ -545,7 +608,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 				}
 			}
 
-			if isGeneratedAESKeyAllowed(ltpaConfigMetadata) && currentAESEncryptionKey == nil && currentPasswordEncryptionKey == nil {
+			if isGeneratedAESKeyAllowed(ltpaKeySecretStoredMetadata) && currentAESEncryptionKey == nil && currentPasswordEncryptionKey == nil {
 				var aesSecretName string
 				aesSecretName, currentAESEncryptionKey, err = r.reconcileGeneratedAESKey(instance, passwordEncryptionMetadata)
 				if err != nil {
@@ -581,7 +644,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 		}
 	} else if err != nil {
 		return ltpaXMLSecret.Name, "", err
-	} else if isGeneratedAESKeyAllowed(ltpaConfigMetadata) {
+	} else if isGeneratedAESKeyAllowed(ltpaKeySecretStoredMetadata) {
 		generatedAESKeySecret := &corev1.Secret{}
 		generatedAESKeySecret.Name = lutils.GeneratedAESEncryptionKeyRootName + passwordEncryptionMetadata.Name
 		generatedAESKeySecret.Namespace = instance.GetNamespace()
