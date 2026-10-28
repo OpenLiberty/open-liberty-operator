@@ -119,13 +119,15 @@ func (r *ReconcileOpenLiberty) getLTPAPathOptionsAndChoices(instance *olv1.OpenL
 
 const generatedAESKeyMinOperandVersion = "v1_6_3"
 
-// Generated AES keys are only supported on v1_6_3 and later
+// Generated AES keys are only supported on v1_6_3 and later, and not for the legacy path (secrets upgraded from v1_4_0)
 func isGeneratedAESKeyAllowed(metadata *lutils.LTPAMetadata) bool {
 	if metadata == nil {
 		return false
 	}
 	version := strings.Split(metadata.PathIndex, ".")[0]
-	return lutils.IsValidOperandVersion(version) && lutils.CompareOperandVersion(version, generatedAESKeyMinOperandVersion) >= 0
+	return lutils.IsValidOperandVersion(version) &&
+		lutils.CompareOperandVersion(version, generatedAESKeyMinOperandVersion) >= 0 &&
+		!strings.Contains(metadata.Path, "legacy")
 }
 
 func (r *ReconcileOpenLiberty) getLTPAMetadataName(instance *olv1.OpenLibertyApplication, leaderTracker *corev1.Secret, validSubPath string, assetsFolder *string, ltpaResourceType LTPAResource) string {
@@ -366,7 +368,17 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 
 	existingGeneratedAESSecretName := ""
 	ltpaSecretPathIndex := ltpaSecret.Labels[lutils.ResourcePathIndexLabel]
-	if isGeneratedAESKeyAllowed(&lutils.LTPAMetadata{PathIndex: ltpaSecretPathIndex}) {
+	ltpaSecretStoredMetadata := &lutils.LTPAMetadata{PathIndex: ltpaSecretPathIndex}
+	if treeMap, _, parseErr := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, nil); parseErr == nil {
+		if indexParts := strings.Split(ltpaSecretPathIndex, "."); len(indexParts) == 2 {
+			if indexInt, parseIntErr := strconv.ParseInt(indexParts[1], 10, 64); parseIntErr == nil {
+				if resolvedPath, pathErr := tree.GetPathFromLeafIndex(treeMap, indexParts[0], int(indexInt)); pathErr == nil {
+					ltpaSecretStoredMetadata.Path = resolvedPath
+				}
+			}
+		}
+	}
+	if isGeneratedAESKeyAllowed(ltpaSecretStoredMetadata) {
 		generatedAESKeySecret := &corev1.Secret{}
 		generatedAESKeySecret.Name = lutils.GeneratedAESEncryptionKeyRootName + passwordEncryptionMetadata.Name
 		generatedAESKeySecret.Namespace = instance.GetNamespace()
