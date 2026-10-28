@@ -86,7 +86,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 
 func (r *ReconcileOpenLiberty) getLTPAPathOptionsAndChoices(instance *olv1.OpenLibertyApplication, latestOperandVersion string) ([][]string, [][]string) {
 	var pathOptionsList, pathChoicesList [][]string
-	if latestOperandVersion == "v1_4_0" {
+	if latestOperandVersion == "v1_4_0" || latestOperandVersion == "v1_6_3" {
 		isKeySharingEnabled := r.isLTPAKeySharingEnabled(instance)
 		if isKeySharingEnabled {
 			// 1. Generate a path option/choice for a leader to manage the LTPA key
@@ -115,6 +115,17 @@ func (r *ReconcileOpenLiberty) getLTPAPathOptionsAndChoices(instance *olv1.OpenL
 	// 	pathChoices = []string{"aes", strconv.FormatBool(r.isPasswordEncryptionKeySharingEnabled(instance))}
 	// }
 	return pathOptionsList, pathChoicesList
+}
+
+const generatedAESKeyMinOperandVersion = "v1_6_3"
+
+// Generated AES keys are only supported on v1_6_3 and later
+func isGeneratedAESKeyAllowed(metadata *lutils.LTPAMetadata) bool {
+	if metadata == nil {
+		return false
+	}
+	version := strings.Split(metadata.PathIndex, ".")[0]
+	return lutils.IsValidOperandVersion(version) && lutils.CompareOperandVersion(version, generatedAESKeyMinOperandVersion) >= 0
 }
 
 func (r *ReconcileOpenLiberty) getLTPAMetadataName(instance *olv1.OpenLibertyApplication, leaderTracker *corev1.Secret, validSubPath string, assetsFolder *string, ltpaResourceType LTPAResource) string {
@@ -310,7 +321,7 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 		}
 
 		generatedAESSecretName := ""
-		if currentAESEncryptionKey == nil && currentPasswordEncryptionKey == nil {
+		if isGeneratedAESKeyAllowed(ltpaMetadata) && currentAESEncryptionKey == nil && currentPasswordEncryptionKey == nil {
 			var aesSecretName string
 			aesSecretName, currentAESEncryptionKey, err = r.reconcileGeneratedAESKey(instance, passwordEncryptionMetadata)
 			if err != nil {
@@ -354,30 +365,32 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 	lastRotation := string(ltpaSecret.Data["lastRotation"])
 
 	existingGeneratedAESSecretName := ""
-	generatedAESKeySecret := &corev1.Secret{}
-	generatedAESKeySecret.Name = lutils.GeneratedAESEncryptionKeyRootName + passwordEncryptionMetadata.Name
-	generatedAESKeySecret.Namespace = instance.GetNamespace()
-	if getErr := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: generatedAESKeySecret.Name, Namespace: generatedAESKeySecret.Namespace}, generatedAESKeySecret); getErr == nil {
-		existingGeneratedAESSecretName = generatedAESKeySecret.Name
-		// Re-apply the Base64 AES XML config when managePasswordEncryption is false
-		if !r.isPasswordEncryptionKeySharingEnabled(instance) {
-			if aesKey, exists := generatedAESKeySecret.Data[AESEncryptionKey]; exists {
-				if err := r.createAESEncryptionKeyLibertyConfig(instance, passwordEncryptionMetadata, string(aesKey)); err != nil {
-					return "", "", "", "", err
+	if isGeneratedAESKeyAllowed(ltpaMetadata) {
+		generatedAESKeySecret := &corev1.Secret{}
+		generatedAESKeySecret.Name = lutils.GeneratedAESEncryptionKeyRootName + passwordEncryptionMetadata.Name
+		generatedAESKeySecret.Namespace = instance.GetNamespace()
+		if getErr := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: generatedAESKeySecret.Name, Namespace: generatedAESKeySecret.Namespace}, generatedAESKeySecret); getErr == nil {
+			existingGeneratedAESSecretName = generatedAESKeySecret.Name
+			// Re-apply the Base64 AES XML config when managePasswordEncryption is false
+			if !r.isPasswordEncryptionKeySharingEnabled(instance) {
+				if aesKey, exists := generatedAESKeySecret.Data[AESEncryptionKey]; exists {
+					if err := r.createAESEncryptionKeyLibertyConfig(instance, passwordEncryptionMetadata, string(aesKey)); err != nil {
+						return "", "", "", "", err
+					}
 				}
 			}
-		}
-	} else if kerrors.IsNotFound(getErr) {
-		if !r.isPasswordEncryptionKeySharingEnabled(instance) {
-			aesSecretName, _, err := r.reconcileGeneratedAESKey(instance, passwordEncryptionMetadata)
-			if err != nil {
-				return "", "", "", "", err
+		} else if kerrors.IsNotFound(getErr) {
+			if !r.isPasswordEncryptionKeySharingEnabled(instance) {
+				aesSecretName, _, err := r.reconcileGeneratedAESKey(instance, passwordEncryptionMetadata)
+				if err != nil {
+					return "", "", "", "", err
+				}
+				existingGeneratedAESSecretName = aesSecretName
 			}
-			existingGeneratedAESSecretName = aesSecretName
+			// user is managing their own encryption key, no generated key needed
+		} else if getErr != nil {
+			return "", "", "", "", getErr
 		}
-		// user is managing their own encryption key, no generated key needed
-	} else if getErr != nil {
-		return "", "", "", "", getErr
 	}
 	return ltpaSecret.Name, lastRotation, leaderName, existingGeneratedAESSecretName, nil
 }
@@ -519,7 +532,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 				}
 			}
 
-			if currentAESEncryptionKey == nil && currentPasswordEncryptionKey == nil {
+			if isGeneratedAESKeyAllowed(ltpaConfigMetadata) && currentAESEncryptionKey == nil && currentPasswordEncryptionKey == nil {
 				var aesSecretName string
 				aesSecretName, currentAESEncryptionKey, err = r.reconcileGeneratedAESKey(instance, passwordEncryptionMetadata)
 				if err != nil {
@@ -555,7 +568,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 		}
 	} else if err != nil {
 		return ltpaXMLSecret.Name, "", err
-	} else {
+	} else if isGeneratedAESKeyAllowed(ltpaConfigMetadata) {
 		generatedAESKeySecret := &corev1.Secret{}
 		generatedAESKeySecret.Name = lutils.GeneratedAESEncryptionKeyRootName + passwordEncryptionMetadata.Name
 		generatedAESKeySecret.Namespace = instance.GetNamespace()
