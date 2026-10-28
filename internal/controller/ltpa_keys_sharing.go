@@ -72,11 +72,15 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 			return metadataList, fmt.Errorf("waiting for the Leader Tracker to be updated")
 		}
 
-		// If the desired path is not in the leader tracker, fall back to a stored path that upgrades to it
+		// If the desired path is not in the leader tracker, fall back to a stored path that either
+		// upgrades to it (older version) or is a same-version sibling (e.g. v1_6_3.key.legacy for v1_6_3.key.true)
 		if lutils.CommaSeparatedStringContains(string(leaderTracker.Data[lutils.ResourcePathsKey]), validSubPath) == -1 {
 			storedPaths := lutils.GetCommaSeparatedArray(string(leaderTracker.Data[lutils.ResourcePathsKey]))
+			validSubPathParent := validSubPath[:strings.LastIndex(validSubPath, ".")]
 			for _, storedPath := range storedPaths {
-				if upgradedPath, err := tree.ReplacePath(storedPath, latestOperandVersion, treeMap, replaceMap); err == nil && upgradedPath == validSubPath {
+				upgradedPath, err := tree.ReplacePath(storedPath, latestOperandVersion, treeMap, replaceMap)
+				storedPathParent := storedPath[:strings.LastIndex(storedPath, ".")]
+				if (err == nil && upgradedPath == validSubPath) || storedPathParent == validSubPathParent {
 					validSubPath = storedPath
 					break
 				}
