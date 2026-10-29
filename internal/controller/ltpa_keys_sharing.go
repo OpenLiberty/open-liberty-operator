@@ -76,11 +76,14 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 		// upgrades to it (older version) or is a same-version sibling (e.g. v1_6_3.key.legacy for v1_6_3.key.true)
 		if lutils.CommaSeparatedStringContains(string(leaderTracker.Data[lutils.ResourcePathsKey]), validSubPath) == -1 {
 			storedPaths := lutils.GetCommaSeparatedArray(string(leaderTracker.Data[lutils.ResourcePathsKey]))
-			validSubPathParent := validSubPath[:strings.LastIndex(validSubPath, ".")]
+			validSubPathParent := getPathParent(validSubPath)
 			for _, storedPath := range storedPaths {
+				if storedPath == "" {
+					continue
+				}
 				upgradedPath, err := tree.ReplacePath(storedPath, latestOperandVersion, treeMap, replaceMap)
-				storedPathParent := storedPath[:strings.LastIndex(storedPath, ".")]
-				if (err == nil && upgradedPath == validSubPath) || storedPathParent == validSubPathParent {
+				storedPathParent := getPathParent(storedPath)
+				if (err == nil && upgradedPath == validSubPath) || (storedPathParent != "" && storedPathParent == validSubPathParent) {
 					validSubPath = storedPath
 					break
 				}
@@ -97,6 +100,14 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 		metadataList.Items = append(metadataList.Items, metadata)
 	}
 	return metadataList, nil
+}
+
+func getPathParent(path string) string {
+	idx := strings.LastIndex(path, ".")
+	if idx < 0 {
+		return ""
+	}
+	return path[:idx]
 }
 
 func (r *ReconcileOpenLiberty) getLTPAPathOptionsAndChoices(instance *olv1.OpenLibertyApplication, latestOperandVersion string) ([][]string, [][]string) {
