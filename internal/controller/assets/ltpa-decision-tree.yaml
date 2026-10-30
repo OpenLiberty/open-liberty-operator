@@ -27,10 +27,10 @@ tree:
     config:
       - passwordencryption    # this leader will generate a Job to encode the LTPA password and config to mount Liberty XML (with a password encryption key)
       - default               # this leader will generate a Job to encode the LTPA password and config to mount Liberty XML (without a password encryption key)
-  v1_6_3: # same as v1_4_0, but supports the generated AES key; legacy path for secrets originally created at v1_4_0
+  v1_6_3: # supports generated AES key for fresh keys (default), and legacy path (true) for upgraded v1_4_0 keys
     key:
-      - legacy  # LTPA secrets upgraded from v1_4_0; no generated AES key
-      - true    # LTPA secrets created at v1_6_3 or later; generated AES key is allowed
+      - default   # fresh v1_6_3 keys (generates AES key)
+      - true      # upgraded legacy keys from v1_4_0 (no generated AES key)
     config:
       - passwordencryption
       - default
@@ -38,7 +38,7 @@ replace:
   v1_4_0:
     "v1_3_3.default": "v1_4_0.key.true"
   v1_6_3:
-    "v1_4_0.key.true": "v1_6_3.key.legacy"
+    "v1_4_0.key.true": "v1_6_3.key.true"
     "v1_4_0.config.default": "v1_6_3.config.default"
     "v1_4_0.config.passwordencryption": "v1_6_3.config.passwordencryption"
 ## An example of how .replace.* is used:

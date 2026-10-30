@@ -73,7 +73,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 		}
 
 		// If the desired path is not in the leader tracker, fall back to a stored path that either
-		// upgrades to it (older version) or is a same-version sibling (e.g. v1_6_3.key.legacy for v1_6_3.key.true)
+		// upgrades to it (older version) or is a same-version sibling (for LTPAKey only, e.g. v1_6_3.key.true for v1_6_3.key.default)
 		if lutils.CommaSeparatedStringContains(string(leaderTracker.Data[lutils.ResourcePathsKey]), validSubPath) == -1 {
 			storedPaths := lutils.GetCommaSeparatedArray(string(leaderTracker.Data[lutils.ResourcePathsKey]))
 			validSubPathParent := getPathParent(validSubPath)
@@ -83,7 +83,7 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 				}
 				upgradedPath, err := tree.ReplacePath(storedPath, latestOperandVersion, treeMap, replaceMap)
 				storedPathParent := getPathParent(storedPath)
-				if (err == nil && upgradedPath == validSubPath) || (storedPathParent != "" && storedPathParent == validSubPathParent) {
+				if (err == nil && upgradedPath == validSubPath) || (LTPAResource(i) == LTPAKey && storedPathParent != "" && storedPathParent == validSubPathParent) {
 					validSubPath = storedPath
 					break
 				}
@@ -112,12 +112,12 @@ func getPathParent(path string) string {
 
 func (r *ReconcileOpenLiberty) getLTPAPathOptionsAndChoices(instance *olv1.OpenLibertyApplication, latestOperandVersion string) ([][]string, [][]string) {
 	var pathOptionsList, pathChoicesList [][]string
-	if latestOperandVersion == "v1_4_0" || latestOperandVersion == "v1_6_3" {
+	if latestOperandVersion == "v1_6_3" {
 		isKeySharingEnabled := r.isLTPAKeySharingEnabled(instance)
 		if isKeySharingEnabled {
 			// 1. Generate a path option/choice for a leader to manage the LTPA key
-			pathOptions := []string{"key"}  // ordering matters, it must follow the nodes of the LTPA decision tree in ltpa-decision-tree.yaml
-			pathChoices := []string{"true"} // fix LTPA to use the default password encryption key (no suffix)
+			pathOptions := []string{"key"}     // ordering matters, it must follow the nodes of the LTPA decision tree in ltpa-decision-tree.yaml
+			pathChoices := []string{"default"} // fresh v1_6_3 LTPA key uses default (generates AES key)
 			pathOptionsList = append(pathOptionsList, pathOptions)
 			pathChoicesList = append(pathChoicesList, pathChoices)
 
@@ -127,24 +127,16 @@ func (r *ReconcileOpenLiberty) getLTPAPathOptionsAndChoices(instance *olv1.OpenL
 			if r.isUsingPasswordEncryptionKeySharing(instance, &lutils.PasswordEncryptionMetadata{Name: ""}) {
 				configChoice = "passwordencryption"
 			}
-			pathChoices = []string{configChoice} // fix LTPA to use the default password encryption key (no suffix)
+			pathChoices = []string{configChoice}
 			pathOptionsList = append(pathOptionsList, pathOptions)
 			pathChoicesList = append(pathChoicesList, pathChoices)
 		}
 	}
-	// else if latestOperandVersion == "v1_4_1" {
-	// 	// for instance, say v1_4_1 introduces a new "type" variable with options "aes", "xor" or "hash"
-	// 	// The sequence must match .tree.v1_4_1.type.aes.managePasswordEncryption -> false located in the ltpa-decision-tree.yaml file
-	// 	// It is also possible that "type" is set to "xor" which will look like .tree.v1_4_1.type.xor.managePasswordEncryption -> false
-	// 	// Since CanTraverseTree checks for a subpath and ".tree.v1_4_1.type.xor" terminates at a leaf, .tree.v1_4_1.type.xor.managePasswordEncryption will pass validation
-	// 	pathOptions = []string{"type", "managePasswordEncryption"} // ordering matters, it must follow the nodes of the LTPA decision tree in ltpa-decision-tree.yaml
-	// 	pathChoices = []string{"aes", strconv.FormatBool(r.isPasswordEncryptionKeySharingEnabled(instance))}
-	// }
 	return pathOptionsList, pathChoicesList
 }
 
 const generatedAESKeyMinOperandVersion = "v1_6_3"
-const ltpaLegacyPath = "legacy"
+const ltpaLegacyPath = "true"
 
 // Generated AES keys are only supported on v1_6_3 and later, and not for the legacy path
 func isGeneratedAESKeyAllowed(metadata *lutils.LTPAMetadata) bool {
@@ -152,9 +144,16 @@ func isGeneratedAESKeyAllowed(metadata *lutils.LTPAMetadata) bool {
 		return false
 	}
 	version := strings.Split(metadata.PathIndex, ".")[0]
-	return lutils.IsValidOperandVersion(version) &&
-		lutils.CompareOperandVersion(version, generatedAESKeyMinOperandVersion) >= 0 &&
-		!strings.Contains(metadata.Path, ltpaLegacyPath)
+	if !lutils.IsValidOperandVersion(version) || lutils.CompareOperandVersion(version, generatedAESKeyMinOperandVersion) < 0 {
+		return false
+	}
+	path := metadata.Path
+	if path == "" {
+		if resolved := resolveLTPAKeySecretMetadata(metadata.PathIndex); resolved != nil {
+			path = resolved.Path
+		}
+	}
+	return path != "" && !strings.HasSuffix(path, "."+ltpaLegacyPath)
 }
 
 func resolveLTPAKeySecretMetadata(pathIndex string) *lutils.LTPAMetadata {
