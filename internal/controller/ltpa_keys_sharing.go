@@ -138,13 +138,15 @@ func (r *ReconcileOpenLiberty) getLTPAPathOptionsAndChoices(instance *olv1.OpenL
 const generatedAESKeyMinOperandVersion = "v1_6_3"
 const ltpaLegacyPath = "true"
 
-// Generated AES keys are only supported on v1_6_3 and later, and not for the legacy path
+// Generated AES keys are only supported on v1_6_3 and later, and not for the legacy path.
+// An unlabelled secret (empty PathIndex) is treated as eligible — it predates the label and
+// was not written via the legacy path, so AES key generation should proceed.
 func isGeneratedAESKeyAllowed(metadata *lutils.LTPAMetadata) bool {
 	if metadata == nil {
 		return false
 	}
 	version := strings.Split(metadata.PathIndex, ".")[0]
-	if !lutils.IsValidOperandVersion(version) || lutils.CompareOperandVersion(version, generatedAESKeyMinOperandVersion) < 0 {
+	if lutils.IsValidOperandVersion(version) && lutils.CompareOperandVersion(version, generatedAESKeyMinOperandVersion) < 0 {
 		return false
 	}
 	path := metadata.Path
@@ -153,7 +155,11 @@ func isGeneratedAESKeyAllowed(metadata *lutils.LTPAMetadata) bool {
 			path = resolved.Path
 		}
 	}
-	return path != "" && !strings.HasSuffix(path, "."+ltpaLegacyPath)
+	// An unlabelled secret has no path — allow AES key generation (not a legacy path)
+	if path == "" {
+		return true
+	}
+	return !strings.HasSuffix(path, "."+ltpaLegacyPath)
 }
 
 func resolveLTPAKeySecretMetadata(pathIndex string) *lutils.LTPAMetadata {
