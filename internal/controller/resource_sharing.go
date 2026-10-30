@@ -34,7 +34,7 @@ func (r *ReconcileOpenLiberty) reconcileResourceTrackingState(instance *olv1.Ope
 
 	// return the metadata specific to the operator version, instance configuration, and shared resource being reconciled
 	if leaderTrackerType == LTPA_RESOURCE_SHARING_FILE_NAME {
-		ltpaMetadataList, err := r.reconcileLTPAMetadata(instance, treeMap, latestOperandVersion, nil)
+		ltpaMetadataList, err := r.reconcileLTPAMetadata(instance, treeMap, replaceMap, latestOperandVersion, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -202,9 +202,14 @@ func (r *ReconcileOpenLiberty) reconcileLeaderTracker(instance *olv1.OpenLiberty
 	} else if err != nil {
 		return err
 	}
-	// If the Leader Tracker is outdated, delete it so that it gets recreated in another reconcile
+	// If the Leader Tracker is on an older/different version, update it to the latest operand version in-place
 	if leaderTracker.Labels[lutils.LeaderVersionLabel] != latestOperandVersion {
-		r.DeleteLeaderTracker(leaderTracker, leaderTrackerType)
+		leaderTracker.Labels[lutils.LeaderVersionLabel] = latestOperandVersion
+		leaderTrackers, err := r.createNewLeaderTrackerList(instance, treeMap, replaceMap, latestOperandVersion, leaderTrackerType, assetsFolder)
+		if err != nil {
+			return err
+		}
+		return r.SaveLeaderTracker(leaderTracker, leaderTrackers, leaderTrackerType)
 	}
 	return nil
 }
@@ -217,7 +222,14 @@ func (r *ReconcileOpenLiberty) SaveLeaderTracker(leaderTracker *corev1.Secret, t
 	leaderMutex.(*sync.Mutex).Lock()
 	defer leaderMutex.(*sync.Mutex).Unlock()
 
+	version := leaderTracker.Labels[lutils.LeaderVersionLabel]
 	return r.CreateOrUpdate(leaderTracker, nil, func() error {
+		if leaderTracker.Labels == nil {
+			leaderTracker.Labels = make(map[string]string)
+		}
+		if version != "" {
+			leaderTracker.Labels[lutils.LeaderVersionLabel] = version
+		}
 		lutils.CustomizeLeaderTracker(leaderTracker, trackerList)
 		return nil
 	})

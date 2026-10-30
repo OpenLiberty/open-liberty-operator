@@ -431,14 +431,14 @@ func TestCanTraverseTreeSubPath(t *testing.T) {
 func testGetPathFromLeafIndex(testName string, treeMap map[string]interface{}, validPath string, i int) (Test, Test) {
 	path, err := GetPathFromLeafIndex(treeMap, strings.Split(validPath, ".")[0], GetLeafIndex(treeMap, validPath))
 	return Test{
-			test:     testName + " error " + fmt.Sprint(i),
-			expected: nil,
-			actual:   err,
-		}, Test{
-			test:     testName + " path " + fmt.Sprint(i),
-			expected: validPath,
-			actual:   path,
-		}
+		test:     testName + " error " + fmt.Sprint(i),
+		expected: nil,
+		actual:   err,
+	}, Test{
+		test:     testName + " path " + fmt.Sprint(i),
+		expected: validPath,
+		actual:   path,
+	}
 }
 
 func getControllerFolder() string {
