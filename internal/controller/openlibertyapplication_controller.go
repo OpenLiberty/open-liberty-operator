@@ -606,8 +606,18 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
 	}
 
+	// Generate an AES key for LTPA when the user does not manage the encryption key (a user provided key takes precedence)
+	generatedAES, err := r.reconcileGeneratedAESKey(instance, ltpaKeysMetadata, passwordEncryptionMetadata)
+	if err != nil {
+		reqLogger.Error(err, "Failed to reconcile the generated AES key")
+		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
+	}
+	if generatedAES != nil && encryptionSecretName == "" {
+		encryptionSecretName = generatedAES.SecretName
+	}
+
 	// Create and manage the shared LTPA keys Secret if the feature is enabled
-	message, ltpaSecretName, ltpaKeysLastRotation, ltpaKeysGeneratedAESSecretName, err := r.reconcileLTPAKeys(instance, ltpaKeysMetadata)
+	message, ltpaSecretName, ltpaKeysLastRotation, err := r.reconcileLTPAKeys(instance, ltpaKeysMetadata, generatedAES)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
@@ -621,18 +631,10 @@ func (r *ReconcileOpenLiberty) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	// Using the LTPA keys and config metadata, create and manage the shared LTPA Liberty server XML if the feature is enabled
-	message, ltpaXMLSecretName, ltpaConfigGeneratedAESSecretName, err := r.reconcileLTPAConfig(instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
+	message, ltpaXMLSecretName, err := r.reconcileLTPAConfig(instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation, generatedAES)
 	if err != nil {
 		reqLogger.Error(err, message)
 		return r.ManageError(err, common.StatusConditionTypeReconciled, instance)
-	}
-
-	if encryptionSecretName == "" {
-		if ltpaConfigGeneratedAESSecretName != "" {
-			encryptionSecretName = ltpaConfigGeneratedAESSecretName
-		} else if ltpaKeysGeneratedAESSecretName != "" {
-			encryptionSecretName = ltpaKeysGeneratedAESSecretName
-		}
 	}
 
 	if instance.Spec.StatefulSet != nil {
