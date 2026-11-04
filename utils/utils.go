@@ -68,6 +68,7 @@ const PasswordEncryptionKeyRootName = "wlp-password-encryption-key"
 const LocalPasswordEncryptionKeyRootName = "olo-wlp-password-encryption-key"
 const AESEncryptionKeyRootName = "wlp-aes-encryption-key"
 const LocalAESEncryptionKeyRootName = "olo-wlp-aes-encryption-key"
+const GeneratedAESEncryptionKeyRootName = "olo-wlp-generated-aes-encryption-key"
 
 // File-based probe constants
 const StartupProbeFileBasedScriptName = "startupHealthCheck.sh"

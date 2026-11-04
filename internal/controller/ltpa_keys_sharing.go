@@ -72,6 +72,11 @@ func (r *ReconcileOpenLiberty) reconcileLTPAMetadata(instance *olv1.OpenLibertyA
 			return metadataList, fmt.Errorf("waiting for the Leader Tracker to be updated")
 		}
 
+		// A stored legacy LTPA key path (key.true) wins so upgraded installs never move to the generated AES key path
+		if LTPAResource(i) == LTPAKey && lutils.CommaSeparatedStringContains(string(leaderTracker.Data[lutils.ResourcePathsKey]), ltpaLegacyKeyPath) != -1 {
+			validSubPath = ltpaLegacyKeyPath
+		}
+
 		// to avoid limitation with Kubernetes label values having a max length of 63, translate validSubPath into a path index
 		pathIndex := tree.GetLeafIndex(treeMap, validSubPath)
 		versionedPathIndex := fmt.Sprintf("%s.%d", latestOperandVersion, pathIndex)
@@ -90,8 +95,8 @@ func (r *ReconcileOpenLiberty) getLTPAPathOptionsAndChoices(instance *olv1.OpenL
 		isKeySharingEnabled := r.isLTPAKeySharingEnabled(instance)
 		if isKeySharingEnabled {
 			// 1. Generate a path option/choice for a leader to manage the LTPA key
-			pathOptions := []string{"key"}  // ordering matters, it must follow the nodes of the LTPA decision tree in ltpa-decision-tree.yaml
-			pathChoices := []string{"true"} // fix LTPA to use the default password encryption key (no suffix)
+			pathOptions := []string{"key"} // ordering matters, it must follow the nodes of the LTPA decision tree in ltpa-decision-tree.yaml
+			pathChoices := []string{ltpaGenerateAESChoice}
 			pathOptionsList = append(pathOptionsList, pathOptions)
 			pathChoicesList = append(pathChoicesList, pathChoices)
 
@@ -101,20 +106,35 @@ func (r *ReconcileOpenLiberty) getLTPAPathOptionsAndChoices(instance *olv1.OpenL
 			if r.isUsingPasswordEncryptionKeySharing(instance, &lutils.PasswordEncryptionMetadata{Name: ""}) {
 				configChoice = "passwordencryption"
 			}
-			pathChoices = []string{configChoice} // fix LTPA to use the default password encryption key (no suffix)
+			pathChoices = []string{configChoice}
 			pathOptionsList = append(pathOptionsList, pathOptions)
 			pathChoicesList = append(pathChoicesList, pathChoices)
 		}
 	}
-	// else if latestOperandVersion == "v1_4_1" {
-	// 	// for instance, say v1_4_1 introduces a new "type" variable with options "aes", "xor" or "hash"
-	// 	// The sequence must match .tree.v1_4_1.type.aes.managePasswordEncryption -> false located in the ltpa-decision-tree.yaml file
-	// 	// It is also possible that "type" is set to "xor" which will look like .tree.v1_4_1.type.xor.managePasswordEncryption -> false
-	// 	// Since CanTraverseTree checks for a subpath and ".tree.v1_4_1.type.xor" terminates at a leaf, .tree.v1_4_1.type.xor.managePasswordEncryption will pass validation
-	// 	pathOptions = []string{"type", "managePasswordEncryption"} // ordering matters, it must follow the nodes of the LTPA decision tree in ltpa-decision-tree.yaml
-	// 	pathChoices = []string{"aes", strconv.FormatBool(r.isPasswordEncryptionKeySharingEnabled(instance))}
-	// }
 	return pathOptionsList, pathChoicesList
+}
+
+const ltpaLegacyKeyPath = "v1_4_0.key.true"
+const ltpaGenerateAESChoice = "generateaes"
+const ltpaGenerateAESKeyPath = "v1_4_0.key." + ltpaGenerateAESChoice
+
+// A generated AES key is only allowed for an LTPA key Secret on the v1_4_0.key.generateaes path.
+// Anything that does not resolve to that path (key.true, v1_3_3, unlabelled) is denied.
+func isGeneratedAESKeyPathIndex(pathIndex string) bool {
+	parts := strings.Split(pathIndex, ".")
+	if len(parts) != 2 {
+		return false
+	}
+	leafIdx, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return false
+	}
+	treeMap, _, err := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, nil)
+	if err != nil {
+		return false
+	}
+	path, err := tree.GetPathFromLeafIndex(treeMap, parts[0], leafIdx)
+	return err == nil && path == ltpaGenerateAESKeyPath
 }
 
 func (r *ReconcileOpenLiberty) getLTPAMetadataName(instance *olv1.OpenLibertyApplication, leaderTracker *corev1.Secret, validSubPath string, assetsFolder *string, ltpaResourceType LTPAResource) string {
@@ -184,11 +204,11 @@ func hasLTPAConfigResourceSuffixesEnv(instance *olv1.OpenLibertyApplication) (st
 }
 
 // Create or use an existing LTPA Secret identified by LTPA metadata for the OpenLibertyApplication instance
-func (r *ReconcileOpenLiberty) reconcileLTPAKeys(instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata) (string, string, string, error) {
+func (r *ReconcileOpenLiberty) reconcileLTPAKeys(instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, generatedAES *generatedAESKey) (string, string, string, error) {
 	ltpaSecretName := ""
 	ltpaKeysLastRotation := ""
 	if r.isLTPAKeySharingEnabled(instance) {
-		ltpaSecretNameTemp, ltpaKeysLastRotationTemp, _, err := r.generateLTPAKeys(instance, ltpaKeysMetadata)
+		ltpaSecretNameTemp, ltpaKeysLastRotationTemp, _, err := r.generateLTPAKeys(instance, ltpaKeysMetadata, generatedAES)
 		ltpaKeysLastRotation = ltpaKeysLastRotationTemp
 		ltpaSecretName = ltpaSecretNameTemp
 		if err != nil {
@@ -204,11 +224,11 @@ func (r *ReconcileOpenLiberty) reconcileLTPAKeys(instance *olv1.OpenLibertyAppli
 }
 
 // Create or use an existing LTPA Secret identified by LTPA metadata for the OpenLibertyApplication instance
-func (r *ReconcileOpenLiberty) reconcileLTPAConfig(instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, ltpaKeysLastRotation string, lastKeyRelatedRotation string) (string, string, error) {
+func (r *ReconcileOpenLiberty) reconcileLTPAConfig(instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, ltpaKeysLastRotation string, lastKeyRelatedRotation string, generatedAES *generatedAESKey) (string, string, error) {
 	var err error
 	var ltpaXMLSecretName string
 	if r.isLTPAKeySharingEnabled(instance) {
-		ltpaXMLSecretName, err = r.generateLTPAConfig(instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation)
+		ltpaXMLSecretName, err = r.generateLTPAConfig(instance, ltpaKeysMetadata, ltpaConfigMetadata, passwordEncryptionMetadata, ltpaKeysLastRotation, lastKeyRelatedRotation, generatedAES)
 		if err != nil {
 			return "Failed to generate the shared LTPA config Secret", ltpaXMLSecretName, err
 		}
@@ -221,8 +241,105 @@ func (r *ReconcileOpenLiberty) reconcileLTPAConfig(instance *olv1.OpenLibertyApp
 	return "", ltpaXMLSecretName, nil
 }
 
-// Generates the LTPA keys file and returns the name of the Secret storing its metadata
-func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata) (string, string, string, error) {
+// Records the lastRotation of the encryption key a Secret's password was encoded with
+const encryptionKeyLastRotationField = "encryptionKeyLastRotation"
+
+// Returns true when the generated AES key was rotated since the Secret's password was encoded
+func isEncodedWithStaleGeneratedAESKey(secret *corev1.Secret, generatedAES *generatedAESKey) bool {
+	recorded, found := secret.Data[encryptionKeyLastRotationField]
+	return generatedAES != nil && found && string(recorded) != generatedAES.LastRotation
+}
+
+// Deletes a Secret encoded with a previous generated AES key so it is regenerated
+func (r *ReconcileOpenLiberty) deleteSecretEncodedWithStaleGeneratedAESKey(secret *corev1.Secret, description string) error {
+	if err := r.DeleteResource(secret); err != nil {
+		return err
+	}
+	return fmt.Errorf("the %s was encoded with a previous generated AES key; waiting for it to be regenerated", description)
+}
+
+// The operator generated AES key used to encode LTPA passwords when the user does not manage the encryption key
+type generatedAESKey struct {
+	SecretName   string
+	Key          string
+	LastRotation string
+	UsingAES     bool
+}
+
+// Creates the generated AES key Secret and its Liberty config for LTPA keys on the generated AES key path.
+// Returns nil when the user manages the encryption key (it takes precedence) or the LTPA keys are not on that path.
+func (r *ReconcileOpenLiberty) reconcileGeneratedAESKey(instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata) (*generatedAESKey, error) {
+	if !r.isLTPAKeySharingEnabled(instance) || ltpaKeysMetadata == nil || r.isPasswordEncryptionKeySharingEnabled(instance) {
+		return nil, nil
+	}
+	// A user provided key in the namespace takes precedence, even when managed by another instance
+	if _, found, _ := r.hasUserAESEncryptionKeySecret(instance, passwordEncryptionMetadata); found {
+		_ = r.mirrorEncryptionKeySecretState(instance, passwordEncryptionMetadata, r.hasUserAESEncryptionKeySecret, r.hasInternalAESEncryptionKeySecret, AESEncryptionKey)
+		if aesInternal, foundInternal, _ := r.hasInternalAESEncryptionKeySecret(instance, passwordEncryptionMetadata); foundInternal {
+			if key, lastRotation, valid := r.getEncryptionKeyData(aesInternal, AESEncryptionKey); valid {
+				_ = r.createAESEncryptionKeyLibertyConfig(instance, passwordEncryptionMetadata, key)
+				return &generatedAESKey{SecretName: aesInternal.Name, Key: key, LastRotation: lastRotation, UsingAES: true}, nil
+			}
+		}
+	}
+	if _, found, _ := r.hasUserEncryptionKeySecret(instance, passwordEncryptionMetadata); found {
+		_ = r.mirrorEncryptionKeySecretState(instance, passwordEncryptionMetadata, r.hasUserEncryptionKeySecret, r.hasInternalEncryptionKeySecret, PasswordEncryptionKey)
+		if pwInternal, foundInternal, _ := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata); foundInternal {
+			if key, lastRotation, valid := r.getEncryptionKeyData(pwInternal, PasswordEncryptionKey); valid {
+				_ = r.createPasswordEncryptionKeyLibertyConfig(instance, passwordEncryptionMetadata, key)
+				return &generatedAESKey{SecretName: pwInternal.Name, Key: key, LastRotation: lastRotation, UsingAES: false}, nil
+			}
+		}
+	}
+
+	// Use the stored LTPA keys Secret's path when it exists (it may be unlabelled or on key.true), otherwise the path about to be created
+	pathIndex := ltpaKeysMetadata.PathIndex
+	ltpaSecret := &corev1.Secret{}
+	ltpaSecretName := types.NamespacedName{Name: OperatorShortName + "-managed-ltpa" + ltpaKeysMetadata.Name, Namespace: instance.GetNamespace()}
+	if err := r.GetClient().Get(context.TODO(), ltpaSecretName, ltpaSecret); err == nil {
+		pathIndex = ltpaSecret.Labels[lutils.ResourcePathIndexLabel]
+	} else if !kerrors.IsNotFound(err) {
+		return nil, err
+	}
+	if !isGeneratedAESKeyPathIndex(pathIndex) {
+		return nil, nil
+	}
+
+	aesKeySecret := &corev1.Secret{}
+	aesKeySecret.Name = lutils.GeneratedAESEncryptionKeyRootName + passwordEncryptionMetadata.Name
+	aesKeySecret.Namespace = instance.GetNamespace()
+	getErr := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: aesKeySecret.Name, Namespace: aesKeySecret.Namespace}, aesKeySecret)
+	if getErr != nil && !kerrors.IsNotFound(getErr) {
+		return nil, getErr
+	}
+	if getErr != nil {
+		newKey, err := generateAESKeys()
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate AES key: %+v", err)
+		}
+		aesKeySecret.Labels = lutils.GetRequiredLabels(aesKeySecret.Name, "")
+		if err := r.CreateOrUpdate(aesKeySecret, nil, func() error {
+			if aesKeySecret.Data == nil {
+				aesKeySecret.Data = make(map[string][]byte)
+			}
+			if _, exists := aesKeySecret.Data[AESEncryptionKey]; !exists {
+				aesKeySecret.Data[AESEncryptionKey] = newKey
+				aesKeySecret.Data["lastRotation"] = []byte(strconv.FormatInt(time.Now().Unix(), 10))
+			}
+			return nil
+		}); err != nil {
+			return nil, fmt.Errorf("failed to persist generated AES key Secret: %+v", err)
+		}
+	}
+
+	key := string(aesKeySecret.Data[AESEncryptionKey])
+	if err := r.createAESEncryptionKeyLibertyConfig(instance, passwordEncryptionMetadata, key); err != nil {
+		return nil, fmt.Errorf("failed to create Liberty config for generated AES key: %+v", err)
+	}
+	return &generatedAESKey{SecretName: aesKeySecret.Name, Key: key, LastRotation: string(aesKeySecret.Data["lastRotation"]), UsingAES: true}, nil
+}
+
+func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata, generatedAES *generatedAESKey) (string, string, string, error) {
 	// Initialize LTPA resources
 	passwordEncryptionMetadata := &lutils.PasswordEncryptionMetadata{Name: ""}
 
@@ -260,21 +377,24 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 		if encryptionKeySharingEnabled && err != nil {
 			return "", "", "", err
 		}
-		keyExists := encryptionKey != ""
 		password := lutils.GetRandomAlphanumeric(15)
 
 		var currentPasswordEncryptionKey *string
-		if keyExists && !usingAES {
-			currentPasswordEncryptionKey = &encryptionKey
-		} else {
-			currentPasswordEncryptionKey = nil
-		}
-
 		var currentAESEncryptionKey *string
-		if keyExists && usingAES {
-			currentAESEncryptionKey = &encryptionKey
-		} else {
-			currentAESEncryptionKey = nil
+		if encryptionKeySharingEnabled {
+			keyExists := encryptionKey != ""
+			if keyExists && !usingAES {
+				currentPasswordEncryptionKey = &encryptionKey
+			}
+			if keyExists && usingAES {
+				currentAESEncryptionKey = &encryptionKey
+			}
+		} else if generatedAES != nil {
+			if generatedAES.UsingAES {
+				currentAESEncryptionKey = &generatedAES.Key
+			} else {
+				currentPasswordEncryptionKey = &generatedAES.Key
+			}
 		}
 
 		rawLTPAKeysStringData, err := createLTPAKeys(password, currentPasswordEncryptionKey, currentAESEncryptionKey, common.LoadFromConfig(common.Config, lutils.OpConfigPasswordEncodingType))
@@ -288,8 +408,11 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 
 		ltpaSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaMetadata.PathIndex
 		ltpaSecret.Data = make(map[string][]byte)
-		if keyExists && encryptionKeyLastRotation != "" {
-			ltpaSecret.Data["encryptionKeyLastRotation"] = []byte(encryptionKeyLastRotation)
+		if encryptionKeySharingEnabled && encryptionKeyLastRotation != "" {
+			ltpaSecret.Data[encryptionKeyLastRotationField] = []byte(encryptionKeyLastRotation)
+		} else if generatedAES != nil {
+			// record which generated AES key encoded the password
+			ltpaSecret.Data[encryptionKeyLastRotationField] = []byte(generatedAES.LastRotation)
 		}
 		lastRotation := strconv.FormatInt(time.Now().Unix(), 10)
 		ltpaSecret.Data["lastRotation"] = []byte(lastRotation)
@@ -310,11 +433,16 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 		return "", "", leaderName, err
 	}
 	lastRotation := string(ltpaSecret.Data["lastRotation"])
+
+	// The generated AES key was rotated, so ltpa.keys can no longer be decoded; delete it to regenerate
+	if isEncodedWithStaleGeneratedAESKey(ltpaSecret, generatedAES) {
+		return "", "", leaderName, r.deleteSecretEncodedWithStaleGeneratedAESKey(ltpaSecret, "LTPA keys Secret")
+	}
 	return ltpaSecret.Name, lastRotation, leaderName, nil
 }
 
 // Generates the LTPA keys file and returns the name of the Secret storing its metadata
-func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, ltpaKeysLastRotation string, lastKeyRelatedRotation string) (string, error) {
+func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyApplication, ltpaKeysMetadata *lutils.LTPAMetadata, ltpaConfigMetadata *lutils.LTPAMetadata, passwordEncryptionMetadata *lutils.PasswordEncryptionMetadata, ltpaKeysLastRotation string, lastKeyRelatedRotation string, generatedAES *generatedAESKey) (string, error) {
 	ltpaXMLSecret := &corev1.Secret{}
 	ltpaXMLSecretRootName := OperatorShortName + lutils.LTPAServerXMLSuffix
 	ltpaXMLSecret.Name = ltpaXMLSecretRootName + ltpaConfigMetadata.Name
@@ -432,22 +560,25 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 			// Check the aes/password encryption key
 			encryptionKey, encryptionKeyLastRotation, encryptionKeySharingEnabled, usingAES, err := r.getInternalEncryptionKeyState(instance, passwordEncryptionMetadata)
 			if encryptionKeySharingEnabled && err != nil {
-				return "", err
+				return ltpaXMLSecret.Name, err
 			}
 
-			keyExists := encryptionKey != ""
 			var currentPasswordEncryptionKey *string
-			if keyExists && !usingAES {
-				currentPasswordEncryptionKey = &encryptionKey
-			} else {
-				currentPasswordEncryptionKey = nil
-			}
-
 			var currentAESEncryptionKey *string
-			if keyExists && usingAES {
-				currentAESEncryptionKey = &encryptionKey
-			} else {
-				currentAESEncryptionKey = nil
+			if encryptionKeySharingEnabled {
+				keyExists := encryptionKey != ""
+				if keyExists && !usingAES {
+					currentPasswordEncryptionKey = &encryptionKey
+				}
+				if keyExists && usingAES {
+					currentAESEncryptionKey = &encryptionKey
+				}
+			} else if generatedAES != nil {
+				if generatedAES.UsingAES {
+					currentAESEncryptionKey = &generatedAES.Key
+				} else {
+					currentPasswordEncryptionKey = &generatedAES.Key
+				}
 			}
 
 			encodedPassword, err := encode(password, currentPasswordEncryptionKey, currentAESEncryptionKey, common.LoadFromConfig(common.Config, lutils.OpConfigPasswordEncodingType))
@@ -458,13 +589,16 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 				} else {
 					encodeErrorMessage = "failed to encode using the password encryption key"
 				}
-				return "", fmt.Errorf("%s: %+v", encodeErrorMessage, err)
+				return ltpaXMLSecret.Name, fmt.Errorf("%s: %+v", encodeErrorMessage, err)
 			}
 
 			ltpaConfigSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaConfigMetadata.PathIndex
 			ltpaConfigSecret.Data = make(map[string][]byte)
-			if keyExists && encryptionKeyLastRotation != "" {
-				ltpaConfigSecret.Data["encryptionKeyLastRotation"] = []byte(encryptionKeyLastRotation)
+			if encryptionKeySharingEnabled && encryptionKeyLastRotation != "" {
+				ltpaConfigSecret.Data[encryptionKeyLastRotationField] = []byte(encryptionKeyLastRotation)
+			} else if generatedAES != nil {
+				// record which generated AES key encoded the password
+				ltpaConfigSecret.Data[encryptionKeyLastRotationField] = []byte(generatedAES.LastRotation)
 			}
 			ltpaConfigSecret.Data["lastRotation"] = []byte(ltpaSecret.Data["lastRotation"])
 			ltpaConfigSecret.Data["password"] = encodedPassword
@@ -472,11 +606,14 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 			if err := r.CreateOrUpdate(ltpaConfigSecret, nil, func() error {
 				return nil
 			}); err != nil {
-				return "", err
+				return ltpaXMLSecret.Name, err
 			}
 		}
 	} else if err != nil {
 		return ltpaXMLSecret.Name, err
+	} else if isEncodedWithStaleGeneratedAESKey(ltpaConfigSecret, generatedAES) {
+		// The generated AES key was rotated, so the password can no longer be decoded; delete it to regenerate
+		return ltpaXMLSecret.Name, r.deleteSecretEncodedWithStaleGeneratedAESKey(ltpaConfigSecret, "LTPA password")
 	}
 
 	// if the LTPA password is outdated from the LTPA Secret, delete the LTPA password
@@ -497,7 +634,7 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 	if isPasswordEncryptionKeySharing {
 		internalEncryptionSecret, _, _, err := r.getValidInternalEncryptionKey(instance, passwordEncryptionMetadata)
 		if err != nil {
-			return "", err
+			return ltpaXMLSecret.Name, err
 		}
 		lastRotation, found := internalEncryptionSecret.Data["lastRotation"]
 		if !found {

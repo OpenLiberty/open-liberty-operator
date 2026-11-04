@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"bytes"
 	"fmt"
 	"os/exec"
 
@@ -10,6 +11,7 @@ import (
 const SECURITY_UTILITY_BINARY = "liberty/bin/securityUtility"
 const SECURITY_UTILITY_ENCODE = "encode"
 const SECURITY_UTILITY_CREATE_LTPA_KEYS = "createLTPAKeys"
+const SECURITY_UTILITY_GENERATE_AES_KEY = "generateAESKey"
 const SECURITY_UTILITY_OUTPUT_FOLDER = "liberty/output"
 
 var validPasswordEncodingTypes = []string{"aes", "aes-128"}
@@ -25,6 +27,16 @@ func encode(password string, passwordKey *string, passwordBase64AESKey *string, 
 	}
 	params = append(params, password)
 	return callSecurityUtility(params)
+}
+
+func generateAESKeys() ([]byte, error) {
+	params := []string{}
+	params = append(params, SECURITY_UTILITY_GENERATE_AES_KEY)
+	out, err := callSecurityUtility(params)
+	if err != nil {
+		return nil, err
+	}
+	return bytes.TrimSpace(out), nil
 }
 
 func createLTPAKeys(password string, passwordKey *string, passwordBase64AESKey *string, passwordEncodingType string) ([]byte, error) {

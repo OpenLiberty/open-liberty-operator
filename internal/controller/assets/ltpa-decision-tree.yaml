@@ -23,7 +23,10 @@
 tree:
   v1_3_3: default # 1.4.0 operator will assign LTPA keys (1.3.3 or below) with this label. The pointer will be updated through the v1_4_0, v1_4_x, .., and above replace command(s)
   v1_4_0:
-    key: true # this leader will generate the LTPA Job to create the LTPA keys Secret and LTPA password Secret
+    key:
+      # WARNING: leaf indexes are persisted in Secret labels, so only append to this list
+      - true          # existing installs (1.3.3 - 1.6.2); never generates an AES key
+      - generateaes   # fresh installs; the leader also generates the AES key
     config:
       - passwordencryption    # this leader will generate a Job to encode the LTPA password and config to mount Liberty XML (with a password encryption key)
       - default               # this leader will generate a Job to encode the LTPA password and config to mount Liberty XML (without a password encryption key)
