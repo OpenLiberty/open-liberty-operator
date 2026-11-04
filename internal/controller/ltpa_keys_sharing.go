@@ -263,6 +263,7 @@ type generatedAESKey struct {
 	SecretName   string
 	Key          string
 	LastRotation string
+	UsingAES     bool
 }
 
 // Creates the generated AES key Secret and its Liberty config for LTPA keys on the generated AES key path.
@@ -272,12 +273,25 @@ func (r *ReconcileOpenLiberty) reconcileGeneratedAESKey(instance *olv1.OpenLiber
 		return nil, nil
 	}
 	// A user provided key in the namespace takes precedence, even when managed by another instance
-	if _, found, _ := r.hasUserEncryptionKeySecret(instance, passwordEncryptionMetadata); found {
-		return nil, nil
-	}
 	if _, found, _ := r.hasUserAESEncryptionKeySecret(instance, passwordEncryptionMetadata); found {
-		return nil, nil
+		_ = r.mirrorEncryptionKeySecretState(instance, passwordEncryptionMetadata, r.hasUserAESEncryptionKeySecret, r.hasInternalAESEncryptionKeySecret, AESEncryptionKey)
+		if aesInternal, foundInternal, _ := r.hasInternalAESEncryptionKeySecret(instance, passwordEncryptionMetadata); foundInternal {
+			if key, lastRotation, valid := r.getEncryptionKeyData(aesInternal, AESEncryptionKey); valid {
+				_ = r.createAESEncryptionKeyLibertyConfig(instance, passwordEncryptionMetadata, key)
+				return &generatedAESKey{SecretName: aesInternal.Name, Key: key, LastRotation: lastRotation, UsingAES: true}, nil
+			}
+		}
 	}
+	if _, found, _ := r.hasUserEncryptionKeySecret(instance, passwordEncryptionMetadata); found {
+		_ = r.mirrorEncryptionKeySecretState(instance, passwordEncryptionMetadata, r.hasUserEncryptionKeySecret, r.hasInternalEncryptionKeySecret, PasswordEncryptionKey)
+		if pwInternal, foundInternal, _ := r.hasInternalEncryptionKeySecret(instance, passwordEncryptionMetadata); foundInternal {
+			if key, lastRotation, valid := r.getEncryptionKeyData(pwInternal, PasswordEncryptionKey); valid {
+				_ = r.createPasswordEncryptionKeyLibertyConfig(instance, passwordEncryptionMetadata, key)
+				return &generatedAESKey{SecretName: pwInternal.Name, Key: key, LastRotation: lastRotation, UsingAES: false}, nil
+			}
+		}
+	}
+
 	// Use the stored LTPA keys Secret's path when it exists (it may be unlabelled or on key.true), otherwise the path about to be created
 	pathIndex := ltpaKeysMetadata.PathIndex
 	ltpaSecret := &corev1.Secret{}
@@ -322,7 +336,7 @@ func (r *ReconcileOpenLiberty) reconcileGeneratedAESKey(instance *olv1.OpenLiber
 	if err := r.createAESEncryptionKeyLibertyConfig(instance, passwordEncryptionMetadata, key); err != nil {
 		return nil, fmt.Errorf("failed to create Liberty config for generated AES key: %+v", err)
 	}
-	return &generatedAESKey{SecretName: aesKeySecret.Name, Key: key, LastRotation: string(aesKeySecret.Data["lastRotation"])}, nil
+	return &generatedAESKey{SecretName: aesKeySecret.Name, Key: key, LastRotation: string(aesKeySecret.Data["lastRotation"]), UsingAES: true}, nil
 }
 
 func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata, generatedAES *generatedAESKey) (string, string, string, error) {
@@ -375,11 +389,12 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 			if keyExists && usingAES {
 				currentAESEncryptionKey = &encryptionKey
 			}
-		}
-
-		// The generated AES key is only set when the user does not manage the encryption key
-		if generatedAES != nil {
-			currentAESEncryptionKey = &generatedAES.Key
+		} else if generatedAES != nil {
+			if generatedAES.UsingAES {
+				currentAESEncryptionKey = &generatedAES.Key
+			} else {
+				currentPasswordEncryptionKey = &generatedAES.Key
+			}
 		}
 
 		rawLTPAKeysStringData, err := createLTPAKeys(password, currentPasswordEncryptionKey, currentAESEncryptionKey, common.LoadFromConfig(common.Config, lutils.OpConfigPasswordEncodingType))
@@ -558,11 +573,12 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 				if keyExists && usingAES {
 					currentAESEncryptionKey = &encryptionKey
 				}
-			}
-
-			// The generated AES key is only set when the user does not manage the encryption key
-			if generatedAES != nil {
-				currentAESEncryptionKey = &generatedAES.Key
+			} else if generatedAES != nil {
+				if generatedAES.UsingAES {
+					currentAESEncryptionKey = &generatedAES.Key
+				} else {
+					currentPasswordEncryptionKey = &generatedAES.Key
+				}
 			}
 
 			encodedPassword, err := encode(password, currentPasswordEncryptionKey, currentAESEncryptionKey, common.LoadFromConfig(common.Config, lutils.OpConfigPasswordEncodingType))
