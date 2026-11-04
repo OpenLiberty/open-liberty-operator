@@ -16,21 +16,15 @@ const SECURITY_UTILITY_OUTPUT_FOLDER = "liberty/output"
 
 var validPasswordEncodingTypes = []string{"aes", "aes-128"}
 
-// Helper for passing base64/password keys to securityUtility encode and createLTPAKeys
-func appendAESKeyParams(params []string, passwordBase64AESKey *string, passwordKey *string, base64KeyFlag string, keyFlag string) []string {
-	if passwordBase64AESKey != nil && *passwordBase64AESKey != "" {
-		return append(params, fmt.Sprintf("%s=%s", base64KeyFlag, *passwordBase64AESKey))
-	} else if passwordKey != nil && *passwordKey != "" {
-		return append(params, fmt.Sprintf("%s=%s", keyFlag, *passwordKey))
-	}
-	return params
-}
-
 func encode(password string, passwordKey *string, passwordBase64AESKey *string, passwordEncodingType string) ([]byte, error) {
 	params := []string{}
 	params = append(params, SECURITY_UTILITY_ENCODE)
 	params = append(params, fmt.Sprintf("--encoding=%s", parsePasswordEncodingType(passwordEncodingType)))
-	params = appendAESKeyParams(params, passwordBase64AESKey, passwordKey, "--base64Key", "--key")
+	if passwordBase64AESKey != nil && *passwordBase64AESKey != "" {
+		params = append(params, fmt.Sprintf("--base64Key=%s", *passwordBase64AESKey))
+	} else if passwordKey != nil && *passwordKey != "" {
+		params = append(params, fmt.Sprintf("--key=%s", *passwordKey))
+	}
 	params = append(params, password)
 	return callSecurityUtility(params)
 }
@@ -42,7 +36,7 @@ func generateAESKeys() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return bytes.TrimRight(out, "\r\n"), nil
+	return bytes.TrimSpace(out), nil
 }
 
 func createLTPAKeys(password string, passwordKey *string, passwordBase64AESKey *string, passwordEncodingType string) ([]byte, error) {
@@ -60,7 +54,11 @@ func createLTPAKeys(password string, passwordKey *string, passwordBase64AESKey *
 	params = append(params, SECURITY_UTILITY_CREATE_LTPA_KEYS)
 	params = append(params, fmt.Sprintf("--file=%s", tmpFilePath))
 	params = append(params, fmt.Sprintf("--passwordEncoding=%s", parsePasswordEncodingType(passwordEncodingType))) // use aes encoding
-	params = appendAESKeyParams(params, passwordBase64AESKey, passwordKey, "--passwordBase64Key", "--passwordKey")
+	if passwordBase64AESKey != nil && *passwordBase64AESKey != "" {
+		params = append(params, fmt.Sprintf("--passwordBase64Key=%s", *passwordBase64AESKey))
+	} else if passwordKey != nil && *passwordKey != "" {
+		params = append(params, fmt.Sprintf("--passwordKey=%s", *passwordKey))
+	}
 	params = append(params, fmt.Sprintf("--password=%s", password))
 	callSecurityUtility(params)
 
