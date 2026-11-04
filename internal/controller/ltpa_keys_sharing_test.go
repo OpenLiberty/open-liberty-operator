@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"reflect"
@@ -15,6 +16,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
@@ -590,4 +592,421 @@ func verifyTests(tests []Test) error {
 		}
 	}
 	return nil
+}
+
+// Leaf indexes are persisted in Secret labels, so they must never shift
+func TestLTPADecisionTreeLeafIndexes(t *testing.T) {
+	fileName := getAssetsFolder() + "/ltpa-decision-tree.yaml"
+	treeMap, _, err := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, &fileName)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	tests := []Test{
+		{"v1_4_0.config.passwordencryption index", 0, tree.GetLeafIndex(treeMap, "v1_4_0.config.passwordencryption")},
+		{"v1_4_0.config.default index", 1, tree.GetLeafIndex(treeMap, "v1_4_0.config.default")},
+		{"v1_4_0.key.true index (legacy, must not change)", 2, tree.GetLeafIndex(treeMap, "v1_4_0.key.true")},
+		{"v1_4_0.key.generateaes index", 3, tree.GetLeafIndex(treeMap, "v1_4_0.key.generateaes")},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+// Assets and securityUtility are read relative to the repo root
+func chdirToRepoRoot(t *testing.T) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	if strings.HasSuffix(cwd, "internal/controller") {
+		if err := os.Chdir("../.."); err != nil {
+			t.Fatalf("%v", err)
+		}
+		t.Cleanup(func() { os.Chdir(cwd) })
+	}
+}
+
+func TestIsGeneratedAESKeyAllowed(t *testing.T) {
+	chdirToRepoRoot(t)
+	tests := []Test{
+		{"nil metadata", false, isGeneratedAESKeyAllowed(nil)},
+		{"v1_3_3 key", false, isGeneratedAESKeyAllowed(&lutils.LTPAMetadata{PathIndex: "v1_3_3.0"})},
+		{"v1_4_0.key.true by path (legacy)", false, isGeneratedAESKeyAllowed(&lutils.LTPAMetadata{PathIndex: "v1_4_0.2", Path: "v1_4_0.key.true"})},
+		{"v1_4_0.key.generateaes by path", true, isGeneratedAESKeyAllowed(&lutils.LTPAMetadata{PathIndex: "v1_4_0.3", Path: "v1_4_0.key.generateaes"})},
+		{"v1_4_0.key.generateaes by path index", true, isGeneratedAESKeyAllowed(&lutils.LTPAMetadata{PathIndex: "v1_4_0.3"})},
+		{"v1_4_0.key.true by path index (legacy)", false, isGeneratedAESKeyAllowed(&lutils.LTPAMetadata{PathIndex: "v1_4_0.2"})},
+		{"config path is denied", false, isGeneratedAESKeyAllowed(&lutils.LTPAMetadata{PathIndex: "v1_4_0.0"})},
+		{"labelled but unresolvable path is denied", false, isGeneratedAESKeyAllowed(&lutils.LTPAMetadata{PathIndex: "v1_4_0.99"})},
+		{"unlabelled secret is denied", false, isGeneratedAESKeyAllowed(&lutils.LTPAMetadata{})},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func getLTPAKeyMetadataForStoredSecrets(t *testing.T, storedPathIndices map[string]string) *lutils.LTPAMetadata {
+	_, _, keyMetadata := setupLTPAKeyTest(t, storedPathIndices)
+	return keyMetadata
+}
+
+// Creates LTPA key Secrets with the given path indices (Secret suffix to path index) and returns the reconciler, app and chosen LTPA key metadata
+func setupLTPAKeyTest(t *testing.T, storedPathIndices map[string]string) (*ReconcileOpenLiberty, *openlibertyv1.OpenLibertyApplication, *lutils.LTPAMetadata) {
+	logf.SetLogger(zap.New())
+	os.Setenv("WATCH_NAMESPACE", namespace)
+	chdirToRepoRoot(t)
+	spec := openlibertyv1.OpenLibertyApplicationSpec{ManageLTPA: &trueValue}
+	instance := createOpenLibertyApp(name, namespace, spec)
+	r := createReconcilerFromOpenLibertyApp(instance)
+
+	fileName := getAssetsFolder() + "/ltpa-decision-tree.yaml"
+	treeMap, replaceMap, err := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, &fileName)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	ltpaRootName := "olo-managed-ltpa"
+	for suffix, pathIndex := range storedPathIndices {
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      ltpaRootName + suffix,
+				Namespace: namespace,
+				Labels: map[string]string{
+					lutils.ResourcePathIndexLabel: pathIndex,
+					"app.kubernetes.io/name":      ltpaRootName,
+				},
+			},
+			Data: map[string][]byte{"lastRotation": []byte("1700000000")},
+		}
+		if err := r.CreateOrUpdate(secret, nil, func() error { return nil }); err != nil {
+			t.Fatalf("%v", err)
+		}
+	}
+	assetsFolder := getAssetsFolder()
+	if err := r.reconcileLeaderTracker(instance, treeMap, replaceMap, "v1_4_0", LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder); err != nil {
+		t.Fatalf("%v", err)
+	}
+	metadataList, err := r.reconcileLTPAMetadata(instance, treeMap, replaceMap, "v1_4_0", &assetsFolder)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	if len(metadataList.GetItems()) != 2 {
+		t.Fatalf("expected 2 metadata items (key and config), got %d", len(metadataList.GetItems()))
+	}
+	return r, instance, metadataList.GetItems()[LTPAKey].(*lutils.LTPAMetadata)
+}
+
+func generatedAESSecretExists(r *ReconcileOpenLiberty) bool {
+	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: lutils.GeneratedAESEncryptionKeyRootName, Namespace: namespace}, &corev1.Secret{})
+	return err == nil
+}
+
+// securityUtility is unavailable in unit tests, so this error proves AES key generation was attempted
+func isAESKeyGenerationAttempted(r *ReconcileOpenLiberty, err error) bool {
+	return generatedAESSecretExists(r) || (err != nil && strings.Contains(err.Error(), "failed to generate AES key"))
+}
+
+func TestReconcileLTPAMetadataFreshInstallUsesDefaultKeyPath(t *testing.T) {
+	keyMetadata := getLTPAKeyMetadataForStoredSecrets(t, map[string]string{})
+	tests := []Test{
+		{"fresh install key path", "v1_4_0.key.generateaes", keyMetadata.Path},
+		{"fresh install key path index", "v1_4_0.3", keyMetadata.PathIndex},
+		{"fresh install generates AES key", true, isGeneratedAESKeyAllowed(keyMetadata)},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestReconcileLTPAMetadataUpgradeKeepsLegacyKeyPath(t *testing.T) {
+	// created by a 1.4.0 - 1.6.2 operator
+	keyMetadata := getLTPAKeyMetadataForStoredSecrets(t, map[string]string{"-aaaaa": "v1_4_0.2"})
+	tests := []Test{
+		{"upgrade key path", "v1_4_0.key.true", keyMetadata.Path},
+		{"upgrade key path index", "v1_4_0.2", keyMetadata.PathIndex},
+		{"upgrade key name re-used", "-aaaaa", keyMetadata.Name},
+		{"upgrade does not generate AES key", false, isGeneratedAESKeyAllowed(keyMetadata)},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestReconcileLTPAMetadataBothKeyPathsStoredPrefersLegacyKeyPath(t *testing.T) {
+	// a fresh install rolled back to 1.6.2 and forward again
+	keyMetadata := getLTPAKeyMetadataForStoredSecrets(t, map[string]string{"-aaaaa": "v1_4_0.3", "-bbbbb": "v1_4_0.2"})
+	tests := []Test{
+		{"both stored key path", "v1_4_0.key.true", keyMetadata.Path},
+		{"both stored key name", "-bbbbb", keyMetadata.Name},
+		{"both stored does not generate AES key", false, isGeneratedAESKeyAllowed(keyMetadata)},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+// Upgrade: an existing key.true Secret never generates an AES key
+func TestGenerateLTPAKeysUpgradeDoesNotGenerateAESKey(t *testing.T) {
+	r, instance, keyMetadata := setupLTPAKeyTest(t, map[string]string{"-aaaaa": "v1_4_0.2"})
+	_, _, _, aesSecretName, err := r.generateLTPAKeys(instance, keyMetadata)
+	tests := []Test{
+		{"upgrade generateLTPAKeys error", nil, err},
+		{"upgrade generated AES secret name", "", aesSecretName},
+		{"upgrade generated AES secret exists", false, generatedAESSecretExists(r)},
+		{"upgrade generated AES key generation attempted", false, isAESKeyGenerationAttempted(r, err)},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+// Fresh install: an existing key.generateaes Secret generates the AES key
+func TestGenerateLTPAKeysFreshInstallGeneratesAESKey(t *testing.T) {
+	r, instance, keyMetadata := setupLTPAKeyTest(t, map[string]string{"-aaaaa": "v1_4_0.3"})
+	_, _, _, _, err := r.generateLTPAKeys(instance, keyMetadata)
+	tests := []Test{
+		{"fresh install key path", "v1_4_0.key.generateaes", keyMetadata.Path},
+		{"fresh install generated AES key generation attempted", true, isAESKeyGenerationAttempted(r, err)},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+// Fresh install: a new key.generateaes Secret generates the AES key
+func TestGenerateLTPAKeysNewSecretOnGenerateAESPathGeneratesAESKey(t *testing.T) {
+	r, instance, keyMetadata := setupLTPAKeyTest(t, map[string]string{})
+	_, _, _, _, err := r.generateLTPAKeys(instance, keyMetadata)
+	tests := []Test{
+		{"new install key path", "v1_4_0.key.generateaes", keyMetadata.Path},
+		{"new install generated AES key generation attempted", true, isAESKeyGenerationAttempted(r, err)},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+// A new key.true Secret never generates an AES key
+func TestGenerateLTPAKeysNewSecretOnLegacyPathDoesNotGenerateAESKey(t *testing.T) {
+	r, instance, keyMetadata := setupLTPAKeyTest(t, map[string]string{})
+	keyMetadata.Path = "v1_4_0.key.true"
+	keyMetadata.PathIndex = "v1_4_0.2"
+	_, _, _, aesSecretName, err := r.generateLTPAKeys(instance, keyMetadata)
+	tests := []Test{
+		{"legacy new secret generateLTPAKeys error", nil, err},
+		{"legacy new secret generated AES secret name", "", aesSecretName},
+		{"legacy new secret generated AES key generation attempted", false, isAESKeyGenerationAttempted(r, err)},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+// Upgrade: an unlabelled Secret adopted by suffix never generates an AES key
+func TestGenerateLTPAKeysUnlabelledSecretDoesNotGenerateAESKey(t *testing.T) {
+	r, instance, keyMetadata := setupLTPAKeyTest(t, map[string]string{"-aaaaa": ""})
+	keyMetadata.Name = "-aaaaa" // adopt the existing Secret by suffix, as LTPA_KEY_RESOURCE_SUFFIXES does
+	_, _, _, aesSecretName, err := r.generateLTPAKeys(instance, keyMetadata)
+	tests := []Test{
+		{"unlabelled generateLTPAKeys error", nil, err},
+		{"unlabelled generated AES secret name", "", aesSecretName},
+		{"unlabelled generated AES key generation attempted", false, isAESKeyGenerationAttempted(r, err)},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestIsEncodedWithStaleGeneratedAESKey(t *testing.T) {
+	recorded := func(v string) *corev1.Secret {
+		return &corev1.Secret{Data: map[string][]byte{encryptionKeyLastRotationField: []byte(v)}}
+	}
+	tests := []Test{
+		{"same rotation", false, isEncodedWithStaleGeneratedAESKey(recorded("100"), "100")},
+		{"different rotation", true, isEncodedWithStaleGeneratedAESKey(recorded("100"), "200")},
+		{"no recorded rotation (legacy secret)", false, isEncodedWithStaleGeneratedAESKey(&corev1.Secret{}, "200")},
+		{"no generated AES rotation", false, isEncodedWithStaleGeneratedAESKey(recorded("100"), "")},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func createGeneratedAESSecretForTest(t *testing.T, r *ReconcileOpenLiberty, lastRotation string) {
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: lutils.GeneratedAESEncryptionKeyRootName, Namespace: namespace}, Data: map[string][]byte{"lastRotation": []byte(lastRotation)}}
+	if err := r.CreateOrUpdate(secret, nil, func() error { return nil }); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func ltpaKeySecretExistsForTest(r *ReconcileOpenLiberty, suffix string) bool {
+	return r.GetClient().Get(context.TODO(), types.NamespacedName{Name: "olo-managed-ltpa" + suffix, Namespace: namespace}, &corev1.Secret{}) == nil
+}
+
+// A rotated generated AES key deletes the LTPA keys Secret
+func TestGenerateLTPAKeysRotatedGeneratedAESKeyDeletesLTPAKeys(t *testing.T) {
+	r, instance, keyMetadata := setupLTPAKeyTest(t, map[string]string{"-aaaaa": "v1_4_0.3"})
+	keyMetadata.Name = "-aaaaa"
+	secret := &corev1.Secret{}
+	if err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: "olo-managed-ltpa-aaaaa", Namespace: namespace}, secret); err != nil {
+		t.Fatalf("%v", err)
+	}
+	secret.Data[encryptionKeyLastRotationField] = []byte("100")
+	if err := r.GetClient().Update(context.TODO(), secret); err != nil {
+		t.Fatalf("%v", err)
+	}
+	createGeneratedAESSecretForTest(t, r, "200")
+	_, _, _, _, err := r.generateLTPAKeys(instance, keyMetadata)
+	tests := []Test{
+		{"rotated generated AES key returns an error", true, err != nil},
+		{"rotated generated AES key deletes the LTPA keys Secret", false, ltpaKeySecretExistsForTest(r, "-aaaaa")},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+// A matching rotation keeps the LTPA keys Secret
+func TestGenerateLTPAKeysMatchingGeneratedAESKeyKeepsLTPAKeys(t *testing.T) {
+	r, instance, keyMetadata := setupLTPAKeyTest(t, map[string]string{"-aaaaa": "v1_4_0.3"})
+	keyMetadata.Name = "-aaaaa"
+	secret := &corev1.Secret{}
+	if err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: "olo-managed-ltpa-aaaaa", Namespace: namespace}, secret); err != nil {
+		t.Fatalf("%v", err)
+	}
+	secret.Data[encryptionKeyLastRotationField] = []byte("200")
+	if err := r.GetClient().Update(context.TODO(), secret); err != nil {
+		t.Fatalf("%v", err)
+	}
+	createGeneratedAESSecretForTest(t, r, "200")
+	_, _, _, aesSecretName, err := r.generateLTPAKeys(instance, keyMetadata)
+	tests := []Test{
+		{"matching rotation error", nil, err},
+		{"matching rotation generated AES secret name", lutils.GeneratedAESEncryptionKeyRootName, aesSecretName},
+		{"matching rotation keeps the LTPA keys Secret", true, ltpaKeySecretExistsForTest(r, "-aaaaa")},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+// A key.true Secret ignores the generated AES key rotation
+func TestGenerateLTPAKeysLegacyPathIgnoresGeneratedAESKeyRotation(t *testing.T) {
+	r, instance, keyMetadata := setupLTPAKeyTest(t, map[string]string{"-aaaaa": "v1_4_0.2"})
+	secret := &corev1.Secret{}
+	if err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: "olo-managed-ltpa-aaaaa", Namespace: namespace}, secret); err != nil {
+		t.Fatalf("%v", err)
+	}
+	secret.Data[encryptionKeyLastRotationField] = []byte("100")
+	if err := r.GetClient().Update(context.TODO(), secret); err != nil {
+		t.Fatalf("%v", err)
+	}
+	createGeneratedAESSecretForTest(t, r, "200")
+	_, _, _, _, err := r.generateLTPAKeys(instance, keyMetadata)
+	tests := []Test{
+		{"legacy path error", nil, err},
+		{"legacy path keeps the LTPA keys Secret", true, ltpaKeySecretExistsForTest(r, "-aaaaa")},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+// Creates the internal mirror of a user provided AES key
+func createInternalUserAESKeySecretForTest(t *testing.T, r *ReconcileOpenLiberty, lastRotation string) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: lutils.LocalAESEncryptionKeyRootName + "-internal", Namespace: namespace},
+		Data: map[string][]byte{
+			AESEncryptionKey: []byte("MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="), // base64 of a 32 byte key
+			"lastRotation":   []byte(lastRotation),
+		},
+	}
+	if err := r.CreateOrUpdate(secret, nil, func() error { return nil }); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+// A user provided key takes precedence over the generated AES key
+func TestGenerateLTPAKeysUserProvidedKeyTakesPrecedenceOverGeneratedAESKey(t *testing.T) {
+	r, instance, keyMetadata := setupLTPAKeyTest(t, map[string]string{})
+	instance.Spec.ManagePasswordEncryption = &trueValue
+	createInternalUserAESKeySecretForTest(t, r, "100")
+	_, _, _, aesSecretName, err := r.generateLTPAKeys(instance, keyMetadata)
+	tests := []Test{
+		{"user key new secret path", "v1_4_0.key.generateaes", keyMetadata.Path},
+		{"user key generated AES secret name", "", aesSecretName},
+		{"user key generated AES key not created", false, isAESKeyGenerationAttempted(r, err)},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+	secret := &corev1.Secret{}
+	if err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: "olo-managed-ltpa" + keyMetadata.Name, Namespace: namespace}, secret); err != nil {
+		t.Fatalf("%v", err)
+	}
+	if err := verifyTests([]Test{{"LTPA keys Secret records the user key rotation", "100", string(secret.Data[encryptionKeyLastRotationField])}}); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+// With a user provided key the generated AES key rotation is ignored
+func TestGenerateLTPAKeysUserProvidedKeyIgnoresGeneratedAESKeyRotation(t *testing.T) {
+	r, instance, keyMetadata := setupLTPAKeyTest(t, map[string]string{"-aaaaa": "v1_4_0.3"})
+	keyMetadata.Name = "-aaaaa"
+	instance.Spec.ManagePasswordEncryption = &trueValue
+	secret := &corev1.Secret{}
+	if err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: "olo-managed-ltpa-aaaaa", Namespace: namespace}, secret); err != nil {
+		t.Fatalf("%v", err)
+	}
+	secret.Data[encryptionKeyLastRotationField] = []byte("100")
+	if err := r.GetClient().Update(context.TODO(), secret); err != nil {
+		t.Fatalf("%v", err)
+	}
+	createInternalUserAESKeySecretForTest(t, r, "100")
+	createGeneratedAESSecretForTest(t, r, "200")
+	_, _, _, _, err := r.generateLTPAKeys(instance, keyMetadata)
+	tests := []Test{
+		{"user key with leftover generated key error", nil, err},
+		{"user key keeps the LTPA keys Secret", true, ltpaKeySecretExistsForTest(r, "-aaaaa")},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+// Switching managePasswordEncryption to false regenerates secrets encoded with the user's key
+func TestGenerateLTPAKeysSwitchFromUserKeyToGeneratedAESKeyDeletesLTPAKeys(t *testing.T) {
+	r, instance, keyMetadata := setupLTPAKeyTest(t, map[string]string{"-aaaaa": "v1_4_0.3"})
+	keyMetadata.Name = "-aaaaa"
+	instance.Spec.ManagePasswordEncryption = &falseValue
+	secret := &corev1.Secret{}
+	if err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: "olo-managed-ltpa-aaaaa", Namespace: namespace}, secret); err != nil {
+		t.Fatalf("%v", err)
+	}
+	secret.Data[encryptionKeyLastRotationField] = []byte("100") // recorded from the user's key
+	if err := r.GetClient().Update(context.TODO(), secret); err != nil {
+		t.Fatalf("%v", err)
+	}
+	createInternalUserAESKeySecretForTest(t, r, "100")
+	createGeneratedAESSecretForTest(t, r, "200")
+	_, _, _, _, err := r.generateLTPAKeys(instance, keyMetadata)
+	tests := []Test{
+		{"switch to generated key returns an error", true, err != nil},
+		{"switch to generated key deletes the LTPA keys Secret", false, ltpaKeySecretExistsForTest(r, "-aaaaa")},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+// managePasswordEncryption without a key Secret returns an error instead of generating a key
+func TestGenerateLTPAKeysManagePasswordEncryptionWithoutKeyDoesNotGenerateAESKey(t *testing.T) {
+	r, instance, keyMetadata := setupLTPAKeyTest(t, map[string]string{})
+	instance.Spec.ManagePasswordEncryption = &trueValue
+	_, _, _, _, err := r.generateLTPAKeys(instance, keyMetadata)
+	tests := []Test{
+		{"no user key returns an error", true, err != nil},
+		{"no user key generated AES key not created", false, isAESKeyGenerationAttempted(r, err)},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
 }
