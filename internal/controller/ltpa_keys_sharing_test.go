@@ -15,6 +15,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
@@ -560,6 +561,330 @@ func TestReconcileLeaderTrackerWhenLTPASecretsExistWithMultipleUpgradesAndDowngr
 	}
 	if err := verifyTests(tests); err != nil {
 		t.Fatalf("%v", err)
+	}
+}
+
+func TestGenerateLTPAKeysWithUserSecret(t *testing.T) {
+	spec := openlibertyv1.OpenLibertyApplicationSpec{
+		ManageLTPA: &trueValue,
+	}
+	instance := createOpenLibertyApp(name, namespace, spec)
+	r := createReconcilerFromOpenLibertyApp(instance)
+
+	latestOperandVersion := "v10_4_1"
+	fileName := getControllerFolder() + "/tests/ltpa-decision-tree-complex.yaml"
+	treeMap, replaceMap, err := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, &fileName)
+	if err != nil {
+		t.Fatalf("parse decision tree complex: %v", err)
+	}
+	assetsFolder := getAssetsFolder()
+	if err := r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder); err != nil {
+		t.Fatalf("initialize leader tracker: %v", err)
+	}
+
+	ltpaMetadata := &lutils.LTPAMetadata{
+		Name:      "",
+		Path:      "v1_4_0.key.true",
+		PathIndex: "v1_4_0.0",
+	}
+
+	// 1. Create a user LTPA Secret (e.g. mirrored from OpenBao)
+	userLTPASecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      lutils.LTPAKeysRootName,
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			lutils.LTPAKeysFileName: []byte("my-custom-binary-ltpa-keys-data"),
+			"rawPassword":           []byte("my-openbao-ltpa-password"),
+		},
+	}
+	if err := r.CreateOrUpdate(userLTPASecret, nil, func() error { return nil }); err != nil {
+		t.Fatalf("failed to create user LTPA secret: %v", err)
+	}
+
+	secretName, lastRotation, leaderName, err := r.generateLTPAKeys(instance, ltpaMetadata)
+	if err != nil {
+		t.Fatalf("generateLTPAKeys returned error: %v", err)
+	}
+
+	managedSecret := &corev1.Secret{}
+	if err := r.GetClient().Get(nil, types.NamespacedName{Name: secretName, Namespace: namespace}, managedSecret); err != nil {
+		t.Fatalf("failed to get managed LTPA secret: %v", err)
+	}
+
+	tests := []Test{
+		{"managed secret name", "olo-managed-ltpa", secretName},
+		{"managed secret leaderName", "app", leaderName},
+		{"managed secret keys match user keys", "my-custom-binary-ltpa-keys-data", string(managedSecret.Data[lutils.LTPAKeysFileName])},
+		{"managed secret rawPassword matches user rawPassword", "my-openbao-ltpa-password", string(managedSecret.Data["rawPassword"])},
+		{"managed secret has lastRotation", lastRotation, string(managedSecret.Data["lastRotation"])},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// 2. Rotate the user LTPA Secret (e.g. OpenBao update)
+	if err := r.CreateOrUpdate(userLTPASecret, nil, func() error {
+		userLTPASecret.Data["rawPassword"] = []byte("new-rotated-password")
+		userLTPASecret.Data[lutils.LTPAKeysFileName] = []byte("new-rotated-keys-data")
+		return nil
+	}); err != nil {
+		t.Fatalf("failed to update user LTPA secret: %v", err)
+	}
+
+	secretName2, lastRotation2, _, err := r.generateLTPAKeys(instance, ltpaMetadata)
+	if err != nil {
+		t.Fatalf("generateLTPAKeys rotation returned error: %v", err)
+	}
+
+	if err := r.GetClient().Get(nil, types.NamespacedName{Name: secretName2, Namespace: namespace}, managedSecret); err != nil {
+		t.Fatalf("failed to get managed LTPA secret after rotation: %v", err)
+	}
+
+	tests = []Test{
+		{"rotated managed secret keys match new user keys", "new-rotated-keys-data", string(managedSecret.Data[lutils.LTPAKeysFileName])},
+		{"rotated managed secret rawPassword matches new user rawPassword", "new-rotated-password", string(managedSecret.Data["rawPassword"])},
+		{"rotated managed secret has new lastRotation", lastRotation2, string(managedSecret.Data["lastRotation"])},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// 3. Test base64 encoded user LTPA keys decoding
+	encodedKeys := []byte("c29tZS1iYXNlNjQtZW5jb2RlZC1rZXlz") // base64 of "some-base64-encoded-keys"
+	if err := r.CreateOrUpdate(userLTPASecret, nil, func() error {
+		userLTPASecret.Data[lutils.LTPAKeysFileName] = encodedKeys
+		userLTPASecret.Data["password"] = []byte("password-field-test")
+		delete(userLTPASecret.Data, "rawPassword")
+		return nil
+	}); err != nil {
+		t.Fatalf("failed to update user LTPA secret with base64: %v", err)
+	}
+
+	_, _, _, err = r.generateLTPAKeys(instance, ltpaMetadata)
+	if err != nil {
+		t.Fatalf("generateLTPAKeys with base64 returned error: %v", err)
+	}
+
+	if err := r.GetClient().Get(nil, types.NamespacedName{Name: secretName, Namespace: namespace}, managedSecret); err != nil {
+		t.Fatalf("failed to get managed LTPA secret: %v", err)
+	}
+
+	tests = []Test{
+		{"base64 user keys decoded to binary", "some-base64-encoded-keys", string(managedSecret.Data[lutils.LTPAKeysFileName])},
+		{"password field alias recognized", "password-field-test", string(managedSecret.Data["rawPassword"])},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// 4. Test real LTPA key file format content (starts with #comment / properties)
+	realLTPAContent := []byte("#Tue Nov 10 17:36:18 GMT 2026\ncom.ibm.websphere.CreationDate=Tue Nov 10 17\\:36\\:18 GMT 2026\ncom.ibm.websphere.CreationHost=localhost\ncom.ibm.websphere.ltpa.3DESKey=IDzNmMSY9nJi6B0UB49peEjMcsI0d4YTYZvg4o0qFwQ\\=\ncom.ibm.websphere.ltpa.Realm=defaultRealm\ncom.ibm.websphere.ltpa.version=1.0\n")
+	if err := r.CreateOrUpdate(userLTPASecret, nil, func() error {
+		userLTPASecret.Data[lutils.LTPAKeysFileName] = realLTPAContent
+		userLTPASecret.Data["rawPassword"] = []byte("IfAKtBtYOMPDzYF")
+		return nil
+	}); err != nil {
+		t.Fatalf("failed to update user LTPA secret with real LTPA content: %v", err)
+	}
+
+	_, _, _, err = r.generateLTPAKeys(instance, ltpaMetadata)
+	if err != nil {
+		t.Fatalf("generateLTPAKeys with real LTPA content returned error: %v", err)
+	}
+
+	if err := r.GetClient().Get(nil, types.NamespacedName{Name: secretName, Namespace: namespace}, managedSecret); err != nil {
+		t.Fatalf("failed to get managed LTPA secret: %v", err)
+	}
+
+	tests = []Test{
+		{"real LTPA key file content preserved intact", string(realLTPAContent), string(managedSecret.Data[lutils.LTPAKeysFileName])},
+		{"real password preserved", "IfAKtBtYOMPDzYF", string(managedSecret.Data["rawPassword"])},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+// The user LTPA Secret (wlp-ltpa-keys) has a fixed name; the leader tracker suffix (e.g. "-cq06s") only applies to the managed Secret.
+func TestGenerateLTPAKeysWithUserSecretAndSuffix(t *testing.T) {
+	spec := openlibertyv1.OpenLibertyApplicationSpec{
+		ManageLTPA: &trueValue,
+	}
+	instance := createOpenLibertyApp(name, namespace, spec)
+	r := createReconcilerFromOpenLibertyApp(instance)
+
+	latestOperandVersion := "v10_4_1"
+	fileName := getControllerFolder() + "/tests/ltpa-decision-tree-complex.yaml"
+	treeMap, replaceMap, err := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, &fileName)
+	if err != nil {
+		t.Fatalf("parse decision tree complex: %v", err)
+	}
+	assetsFolder := getAssetsFolder()
+	if err := r.reconcileLeaderTracker(instance, treeMap, replaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder); err != nil {
+		t.Fatalf("initialize leader tracker: %v", err)
+	}
+
+	ltpaMetadata := &lutils.LTPAMetadata{
+		Name:      "-cq06s",
+		Path:      "v1_4_0.key.true",
+		PathIndex: "v1_4_0.0",
+	}
+
+	userLTPASecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      lutils.LTPAKeysRootName,
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			lutils.LTPAKeysFileName: []byte("initial-keys"),
+			"rawPassword":           []byte("initial-password"),
+		},
+	}
+	if err := r.CreateOrUpdate(userLTPASecret, nil, func() error { return nil }); err != nil {
+		t.Fatalf("failed to create user LTPA secret: %v", err)
+	}
+
+	secretName, _, _, err := r.generateLTPAKeys(instance, ltpaMetadata)
+	if err != nil {
+		t.Fatalf("generateLTPAKeys returned error: %v", err)
+	}
+	managedSecret := &corev1.Secret{}
+	if err := r.GetClient().Get(nil, types.NamespacedName{Name: secretName, Namespace: namespace}, managedSecret); err != nil {
+		t.Fatalf("failed to get managed LTPA secret: %v", err)
+	}
+	tests := []Test{
+		{"suffixed managed secret name", "olo-managed-ltpa-cq06s", secretName},
+		{"suffixed managed secret keys match user keys", "initial-keys", string(managedSecret.Data[lutils.LTPAKeysFileName])},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// Modify the user Secret, the suffixed managed Secret must be updated with a new lastRotation
+	if err := r.CreateOrUpdate(userLTPASecret, nil, func() error {
+		userLTPASecret.Data[lutils.LTPAKeysFileName] = []byte("rotated-keys")
+		userLTPASecret.Data["rawPassword"] = []byte("rotated-password")
+		return nil
+	}); err != nil {
+		t.Fatalf("failed to update user LTPA secret: %v", err)
+	}
+	_, lastRotation2, _, err := r.generateLTPAKeys(instance, ltpaMetadata)
+	if err != nil {
+		t.Fatalf("generateLTPAKeys rotation returned error: %v", err)
+	}
+	if err := r.GetClient().Get(nil, types.NamespacedName{Name: secretName, Namespace: namespace}, managedSecret); err != nil {
+		t.Fatalf("failed to get managed LTPA secret after rotation: %v", err)
+	}
+	tests = []Test{
+		{"suffixed managed secret rotated keys", "rotated-keys", string(managedSecret.Data[lutils.LTPAKeysFileName])},
+		{"suffixed managed secret rotated password", "rotated-password", string(managedSecret.Data["rawPassword"])},
+		{"suffixed managed secret lastRotation", lastRotation2, string(managedSecret.Data["lastRotation"])},
+	}
+	if err := verifyTests(tests); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestUserLTPASecretWithPasswordEncryption(t *testing.T) {
+	cwd, _ := os.Getwd()
+	if strings.HasSuffix(cwd, "internal/controller") {
+		os.Chdir("../..")
+		defer os.Chdir(cwd)
+	}
+
+	spec := openlibertyv1.OpenLibertyApplicationSpec{
+		ManageLTPA:               &trueValue,
+		ManagePasswordEncryption: &trueValue,
+	}
+	instance := createOpenLibertyApp(name, namespace, spec)
+	r := createReconcilerFromOpenLibertyApp(instance)
+
+	// Initialize password encryption leader tracker
+	latestOperandVersion := "v10_4_1"
+	encFileName := getControllerFolder() + "/assets/password-encryption-decision-tree.yaml"
+	encTreeMap, encReplaceMap, err := tree.ParseDecisionTree(PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, &encFileName)
+	if err != nil {
+		t.Fatalf("parse enc tree: %v", err)
+	}
+	assetsFolder := getAssetsFolder()
+	if err := r.reconcileLeaderTracker(instance, encTreeMap, encReplaceMap, latestOperandVersion, PASSWORD_ENCRYPTION_RESOURCE_SHARING_FILE_NAME, &assetsFolder); err != nil {
+		t.Fatalf("init enc leader tracker: %v", err)
+	}
+
+	// Initialize LTPA leader tracker
+	ltpaFileName := getControllerFolder() + "/tests/ltpa-decision-tree-complex.yaml"
+	ltpaTreeMap, ltpaReplaceMap, err := tree.ParseDecisionTree(LTPA_RESOURCE_SHARING_FILE_NAME, &ltpaFileName)
+	if err != nil {
+		t.Fatalf("parse ltpa tree: %v", err)
+	}
+	if err := r.reconcileLeaderTracker(instance, ltpaTreeMap, ltpaReplaceMap, latestOperandVersion, LTPA_RESOURCE_SHARING_FILE_NAME, &assetsFolder); err != nil {
+		t.Fatalf("init ltpa leader tracker: %v", err)
+	}
+
+	// 1. Create user password encryption key (mirrored from OpenBao)
+	userEncSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      lutils.PasswordEncryptionKeyRootName,
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			PasswordEncryptionKey: []byte("my-encryption-key-secret"),
+		},
+	}
+	if err := r.CreateOrUpdate(userEncSecret, nil, func() error { return nil }); err != nil {
+		t.Fatalf("failed to create user encryption secret: %v", err)
+	}
+
+	// Reconcile encryption key
+	pwdEncMeta := &lutils.PasswordEncryptionMetadata{Name: ""}
+	_, encSecretName, encLastRotation, err := r.reconcileEncryptionKey(instance, pwdEncMeta)
+	if err != nil {
+		t.Fatalf("reconcileEncryptionKey failed: %v", err)
+	}
+	if encSecretName == "" || encLastRotation == "" {
+		t.Fatalf("expected encSecretName and encLastRotation to be set, got %s, %s", encSecretName, encLastRotation)
+	}
+
+	// 2. Create user LTPA key secret (mirrored from OpenBao)
+	userLTPASecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      lutils.LTPAKeysRootName,
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			lutils.LTPAKeysFileName: []byte("#sample-ltpa-keys-data"),
+			"rawPassword":           []byte("IfAKtBtYOMPDzYF"),
+		},
+	}
+	if err := r.CreateOrUpdate(userLTPASecret, nil, func() error { return nil }); err != nil {
+		t.Fatalf("failed to create user LTPA secret: %v", err)
+	}
+
+	ltpaKeysMeta := &lutils.LTPAMetadata{Name: "", Path: "v1_4_0.key.true", PathIndex: "v1_4_0.0"}
+	ltpaConfigMeta := &lutils.LTPAMetadata{Name: "", Path: "v1_4_0.config.passwordencryption", PathIndex: "v1_4_0.1"}
+
+	_, ltpaSecretName, ltpaLastRotation, err := r.reconcileLTPAKeys(instance, ltpaKeysMeta)
+	if err != nil {
+		t.Fatalf("reconcileLTPAKeys failed: %v", err)
+	}
+	if ltpaSecretName == "" || ltpaLastRotation == "" {
+		t.Fatalf("expected ltpaSecretName and ltpaLastRotation to be set")
+	}
+
+	lastKeyRelatedRotation, err := lutils.GetMaxTime(encLastRotation, ltpaLastRotation)
+	if err != nil {
+		t.Fatalf("GetMaxTime failed: %v", err)
+	}
+
+	// Reconcile LTPA config
+	_, ltpaXMLSecretName, err := r.reconcileLTPAConfig(instance, ltpaKeysMeta, ltpaConfigMeta, pwdEncMeta, ltpaLastRotation, lastKeyRelatedRotation)
+	if err != nil {
+		t.Fatalf("reconcileLTPAConfig failed: %v", err)
+	}
+	if ltpaXMLSecretName == "" {
+		t.Fatalf("expected ltpaXMLSecretName to be set")
 	}
 }
 

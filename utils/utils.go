@@ -53,6 +53,7 @@ const LTPAServerXMLMountSuffix = "-managed-ltpa-mount-server-xml"
 const LTPAKeysFileName = "ltpa.keys"
 const LTPAKeysXMLFileName = "managedLTPA.xml"
 const LTPAKeysMountXMLFileName = "managedLTPAMount.xml"
+const LTPAKeysRootName = "wlp-ltpa-keys"
 
 // Mount constants
 const SecureMountPath = "/output/liberty-operator"

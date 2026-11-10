@@ -221,6 +221,12 @@ func (r *ReconcileOpenLiberty) reconcileLTPAConfig(instance *olv1.OpenLibertyApp
 	return "", ltpaXMLSecretName, nil
 }
 
+// Returns the Secret that contains the LTPA keys provided by the user (or mirrored from OpenBao/Vault).
+// The user Secret has a fixed name; the leader-tracker-assigned suffix in ltpaMetadata.Name only applies to the operator-managed resources.
+func (r *ReconcileOpenLiberty) hasUserLTPASecret(instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata) (*corev1.Secret, bool, error) {
+	return r.getSecret(instance, lutils.LTPAKeysRootName)
+}
+
 // Generates the LTPA keys file and returns the name of the Secret storing its metadata
 func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplication, ltpaMetadata *lutils.LTPAMetadata) (string, string, string, error) {
 	// Initialize LTPA resources
@@ -243,6 +249,108 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 	ltpaSecret.Name = ltpaSecretRootName + ltpaMetadata.Name
 	ltpaSecret.Namespace = instance.GetNamespace()
 	ltpaSecret.Labels = lutils.GetRequiredLabels(ltpaSecretRootName, ltpaSecret.Name)
+
+	// Check if a user-provided / OpenBao-mirrored LTPA Secret (wlp-ltpa-keys) exists
+	userLTPASecret, userLTPAFound, userLTPAErr := r.hasUserLTPASecret(instance, ltpaMetadata)
+	if userLTPAFound && userLTPAErr != nil {
+		return "", "", "", userLTPAErr
+	}
+
+	if userLTPAFound {
+		leaderName, thisInstanceIsLeader, _, err := r.reconcileLeader(instance, ltpaMetadata, LTPA_RESOURCE_SHARING_FILE_NAME, true)
+		if err != nil {
+			return "", "", leaderName, err
+		}
+
+		userLTPAKeys, foundKeys := userLTPASecret.Data[lutils.LTPAKeysFileName]
+		if !foundKeys || len(userLTPAKeys) == 0 {
+			return "", "", leaderName, fmt.Errorf("the user LTPA Secret '%s' was found but missing '%s'", userLTPASecret.Name, lutils.LTPAKeysFileName)
+		}
+
+		// If user LTPA keys are base64-encoded, decode them to binary
+		if decodedKeys, err := base64.StdEncoding.DecodeString(string(userLTPAKeys)); err == nil && len(decodedKeys) > 0 {
+			userLTPAKeys = decodedKeys
+		}
+
+		userPassword := ""
+		if pw, found := userLTPASecret.Data["rawPassword"]; found && len(pw) > 0 {
+			userPassword = string(pw)
+		} else if pw, found := userLTPASecret.Data["password"]; found && len(pw) > 0 {
+			userPassword = string(pw)
+		} else if pw, found := userLTPASecret.Data["keysPassword"]; found && len(pw) > 0 {
+			userPassword = string(pw)
+		} else {
+			return "", "", leaderName, fmt.Errorf("the user LTPA Secret '%s' was found but missing 'rawPassword', 'password', or 'keysPassword'", userLTPASecret.Name)
+		}
+
+		// Check the aes/password encryption key
+		_, encryptionKeyLastRotation, encryptionKeySharingEnabled, _, err := r.getInternalEncryptionKeyState(instance, passwordEncryptionMetadata)
+		if encryptionKeySharingEnabled && err != nil {
+			return "", "", "", err
+		}
+
+		if thisInstanceIsLeader {
+			err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaSecret.Name, Namespace: ltpaSecret.Namespace}, ltpaSecret)
+			if err != nil && kerrors.IsNotFound(err) {
+				lastRotation := strconv.FormatInt(time.Now().Unix(), 10)
+				if err := r.CreateOrUpdate(ltpaSecret, nil, func() error {
+					ltpaSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaMetadata.PathIndex
+					if ltpaSecret.Data == nil {
+						ltpaSecret.Data = make(map[string][]byte)
+					}
+					if encryptionKeyLastRotation != "" {
+						ltpaSecret.Data["encryptionKeyLastRotation"] = []byte(encryptionKeyLastRotation)
+					}
+					ltpaSecret.Data["lastRotation"] = []byte(lastRotation)
+					ltpaSecret.Data["rawPassword"] = []byte(userPassword)
+					ltpaSecret.Data[lutils.LTPAKeysFileName] = userLTPAKeys
+					return nil
+				}); err != nil {
+					return "", "", "", err
+				}
+				return ltpaSecret.Name, lastRotation, leaderName, nil
+			} else if err != nil {
+				return "", "", "", err
+			}
+
+			// Managed secret already exists - check if user secret has changed
+			currentKeys := ltpaSecret.Data[lutils.LTPAKeysFileName]
+			currentPassword := string(ltpaSecret.Data["rawPassword"])
+			if string(currentKeys) != string(userLTPAKeys) || currentPassword != userPassword {
+				lastRotation := strconv.FormatInt(time.Now().Unix(), 10)
+				if err := r.CreateOrUpdate(ltpaSecret, nil, func() error {
+					if ltpaSecret.Data == nil {
+						ltpaSecret.Data = make(map[string][]byte)
+					}
+					if encryptionKeyLastRotation != "" {
+						ltpaSecret.Data["encryptionKeyLastRotation"] = []byte(encryptionKeyLastRotation)
+					}
+					ltpaSecret.Data["lastRotation"] = []byte(lastRotation)
+					ltpaSecret.Data["rawPassword"] = []byte(userPassword)
+					ltpaSecret.Data[lutils.LTPAKeysFileName] = userLTPAKeys
+					return nil
+				}); err != nil {
+					return "", "", "", err
+				}
+				return ltpaSecret.Name, lastRotation, leaderName, nil
+			}
+
+			lastRotation := string(ltpaSecret.Data["lastRotation"])
+			return ltpaSecret.Name, lastRotation, leaderName, nil
+		}
+
+		// Non-leader instance
+		err = r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaSecret.Name, Namespace: ltpaSecret.Namespace}, ltpaSecret)
+		if err != nil {
+			if kerrors.IsNotFound(err) {
+				return "", "", leaderName, fmt.Errorf("Waiting for OpenLibertyApplication instance '%s' to mirror the shared LTPA keys Secret for the namespace '%s'.", leaderName, instance.Namespace)
+			}
+			return "", "", leaderName, err
+		}
+		lastRotation := string(ltpaSecret.Data["lastRotation"])
+		return ltpaSecret.Name, lastRotation, leaderName, nil
+	}
+
 	// If the LTPA Secret does not exist, run the Kubernetes Job to generate the shared ltpa.keys file and Secret
 	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: ltpaSecret.Name, Namespace: ltpaSecret.Namespace}, ltpaSecret)
 	if err != nil && kerrors.IsNotFound(err) {
@@ -286,17 +394,18 @@ func (r *ReconcileOpenLiberty) generateLTPAKeys(instance *olv1.OpenLibertyApplic
 			return "", "", "", err
 		}
 
-		ltpaSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaMetadata.PathIndex
-		ltpaSecret.Data = make(map[string][]byte)
-		if keyExists && encryptionKeyLastRotation != "" {
-			ltpaSecret.Data["encryptionKeyLastRotation"] = []byte(encryptionKeyLastRotation)
-		}
 		lastRotation := strconv.FormatInt(time.Now().Unix(), 10)
-		ltpaSecret.Data["lastRotation"] = []byte(lastRotation)
-		ltpaSecret.Data["rawPassword"] = []byte(password)
-		ltpaSecret.Data[lutils.LTPAKeysFileName] = ltpaKeysStringData
-
 		if err := r.CreateOrUpdate(ltpaSecret, nil, func() error {
+			ltpaSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaMetadata.PathIndex
+			if ltpaSecret.Data == nil {
+				ltpaSecret.Data = make(map[string][]byte)
+			}
+			if keyExists && encryptionKeyLastRotation != "" {
+				ltpaSecret.Data["encryptionKeyLastRotation"] = []byte(encryptionKeyLastRotation)
+			}
+			ltpaSecret.Data["lastRotation"] = []byte(lastRotation)
+			ltpaSecret.Data["rawPassword"] = []byte(password)
+			ltpaSecret.Data[lutils.LTPAKeysFileName] = ltpaKeysStringData
 			return nil
 		}); err != nil {
 			return "", "", "", err
@@ -461,15 +570,16 @@ func (r *ReconcileOpenLiberty) generateLTPAConfig(instance *olv1.OpenLibertyAppl
 				return "", fmt.Errorf("%s: %+v", encodeErrorMessage, err)
 			}
 
-			ltpaConfigSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaConfigMetadata.PathIndex
-			ltpaConfigSecret.Data = make(map[string][]byte)
-			if keyExists && encryptionKeyLastRotation != "" {
-				ltpaConfigSecret.Data["encryptionKeyLastRotation"] = []byte(encryptionKeyLastRotation)
-			}
-			ltpaConfigSecret.Data["lastRotation"] = []byte(ltpaSecret.Data["lastRotation"])
-			ltpaConfigSecret.Data["password"] = encodedPassword
-
 			if err := r.CreateOrUpdate(ltpaConfigSecret, nil, func() error {
+				if ltpaConfigSecret.Data == nil {
+					ltpaConfigSecret.Data = make(map[string][]byte)
+				}
+				ltpaConfigSecret.Labels[lutils.ResourcePathIndexLabel] = ltpaConfigMetadata.PathIndex
+				if keyExists && encryptionKeyLastRotation != "" {
+					ltpaConfigSecret.Data["encryptionKeyLastRotation"] = []byte(encryptionKeyLastRotation)
+				}
+				ltpaConfigSecret.Data["lastRotation"] = []byte(ltpaSecret.Data["lastRotation"])
+				ltpaConfigSecret.Data["password"] = encodedPassword
 				return nil
 			}); err != nil {
 				return "", err

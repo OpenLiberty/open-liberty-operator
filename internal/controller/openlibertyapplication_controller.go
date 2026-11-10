@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -1078,6 +1079,43 @@ func (r *ReconcileOpenLiberty) SetupWithManager(mgr ctrl.Manager) error {
 				},
 			})
 		}
+
+		predSharedSecret := predicate.Funcs{
+			UpdateFunc: func(e event.UpdateEvent) bool {
+				return isClusterWide || watchNamespacesMap[e.ObjectOld.GetNamespace()]
+			},
+			CreateFunc: func(e event.CreateEvent) bool {
+				return isClusterWide || watchNamespacesMap[e.Object.GetNamespace()]
+			},
+			DeleteFunc: func(e event.DeleteEvent) bool {
+				return isClusterWide || watchNamespacesMap[e.Object.GetNamespace()]
+			},
+			GenericFunc: func(e event.GenericEvent) bool {
+				return false
+			},
+		}
+
+		b = b.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+			secretName := obj.GetName()
+			if strings.HasPrefix(secretName, lutils.LTPAKeysRootName) ||
+				strings.HasPrefix(secretName, lutils.PasswordEncryptionKeyRootName) ||
+				strings.HasPrefix(secretName, lutils.AESEncryptionKeyRootName) {
+				appList := &openlibertyv1.OpenLibertyApplicationList{}
+				if err := mgr.GetClient().List(ctx, appList, client.InNamespace(obj.GetNamespace())); err == nil {
+					var requests []reconcile.Request
+					for _, app := range appList.Items {
+						requests = append(requests, reconcile.Request{
+							NamespacedName: types.NamespacedName{
+								Name:      app.GetName(),
+								Namespace: app.GetNamespace(),
+							},
+						})
+					}
+					return requests
+				}
+			}
+			return nil
+		}), builder.WithPredicates(predSharedSecret))
 	}
 
 	maxConcurrentReconciles := oputils.GetMaxConcurrentReconciles()
