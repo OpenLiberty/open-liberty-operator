@@ -121,7 +121,7 @@ Follow link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6
 
 == Enable the Logs tab in the web console
 
-Follow link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/enable-the-logs-tab-in-the-web-console#enabling-the-logs-tab_enable-the-logs-tab-in-the-web-console[chapter 5.1] to enable the Logs tab in the web console.
+Follow link:https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.6/html/install/enable-the-logs-tab-in-the-web-console#enabling-the-logs-tab_enable-the-logs-tab-in-the-web-console[chapter 6.1] to enable the Logs tab in the web console.
 
 After doing this, you should see the `Observe > Logs` tab appear in the OCP console.
 
