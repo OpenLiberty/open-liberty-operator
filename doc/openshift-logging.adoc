@@ -101,7 +101,7 @@ image::images/app-logging-ocp-ui-plugin-4.18.png[See logs in OCP UI plugin]
 +
 [source, text]
 ----
-{ log_type="application" } | json | structured_type="liberty_message" | line_format "[{{.structured_loglevel}}] {{.structured_message}}"
+{ log_type="application" } | json | line_format "{{.message}}" | json lm_type="type", lm_level="loglevel", lm_message="message" | lm_type="liberty_message" | line_format "[{{.lm_level}}] {{.lm_message}}"
 ----
 image::images/app-logging-ocp-LogQL-4.18.png[Query logs using LogQL]
 
