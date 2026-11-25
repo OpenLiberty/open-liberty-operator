@@ -11,7 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"math/rand/v2"
+	"crypto/rand"
+	"math/big"
 
 	olv1 "github.com/OpenLiberty/open-liberty-operator/api/v1"
 	"github.com/application-stacks/runtime-component-operator/common"
@@ -1248,21 +1249,31 @@ func GetCommaSeparatedArray(stringList string) []string {
 	return []string{stringList}
 }
 
-var letterNums = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
-var letterNums2 = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890")
+var lowerAlphanumeric = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
+var mixedAlphanumeric = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890")
 
 func GetRandomAlphanumeric(length int) string {
 	b := make([]rune, length)
+	n := big.NewInt(int64(len(mixedAlphanumeric)))
 	for i := range b {
-		b[i] = letterNums2[rand.IntN(len(letterNums2))]
+		idx, err := rand.Int(rand.Reader, n)
+		if err != nil {
+			panic(fmt.Sprintf("crypto/rand failed: %v", err))
+		}
+		b[i] = mixedAlphanumeric[idx.Int64()]
 	}
 	return string(b)
 }
 
 func GetRandomLowerAlphanumericSuffix(length int) string {
 	b := make([]rune, length)
+	n := big.NewInt(int64(len(lowerAlphanumeric)))
 	for i := range b {
-		b[i] = letterNums[rand.IntN(len(letterNums))]
+		idx, err := rand.Int(rand.Reader, n)
+		if err != nil {
+			panic(fmt.Sprintf("crypto/rand failed: %v", err))
+		}
+		b[i] = lowerAlphanumeric[idx.Int64()]
 	}
 	return "-" + string(b)
 }
