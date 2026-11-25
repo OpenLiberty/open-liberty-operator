@@ -287,6 +287,10 @@ func (r *ReconcileOpenLiberty) getInternalEncryptionKeyState(instance *olv1.Open
 	if !sharingEnabled {
 		return "", "", sharingEnabled, false, nil
 	}
+	if encryptionSecret == nil {
+		// getValidInternalEncryptionKey does not error when no key Secret exists
+		return "", "", sharingEnabled, false, fmt.Errorf("a password encryption key Secret was either not found or misconfigured")
+	}
 	matchedKey := ""
 	if usingAES {
 		matchedKey = AESEncryptionKey
