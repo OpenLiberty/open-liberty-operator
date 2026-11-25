@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: open-liberty-operator
+  namespace: openshift-gitops
+spec:
+  sourceRepos:
+  - 'https://github.com/OpenLiberty/open-liberty-operator'
+  destinations:
+  - namespace: '!kube-*'
+    server: '*'
+  - namespace: '!openshift-*'
+    server: '*'
+  - namespace: '*'
+    server: '*'
+  clusterResourceWhitelist:
+  - group: apiextensions.k8s.io
+    kind: CustomResourceDefinition
+  - group: ''
+    kind: Namespace
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: open-liberty-operator
+  namespace: openshift-gitops
+spec:
+  project: open-liberty-operator
+  source:
+    path: deploy/releases/1.4.3/kustomize/base
+    repoURL: 'https://github.com/OpenLiberty/open-liberty-operator'
+    targetRevision: HEAD
+    kustomize:
+      namespace: open-liberty
+  destination:
+    namespace: open-liberty
+    server: 'https://kubernetes.default.svc'
+  ignoreDifferences:
+  - group: ''
+    kind: ConfigMap
+    name: open-liberty-operator
+  syncPolicy:
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=true
